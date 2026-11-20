@@ -138,7 +138,7 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	_ = json.Unmarshal(consents, &u.Consents)
 	_ = json.Unmarshal(settings, &u.Settings)
 
-	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM energy_ledger WHERE user_id=$1 AND day=$2 AND reason IN ('activity','rollback')`,
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM energy_ledger WHERE user_id=$1 AND day=$2 AND reason='activity'`,
 		id, clock.Today()).Scan(&u.EnergyToday); err != nil {
 		return u, err
 	}

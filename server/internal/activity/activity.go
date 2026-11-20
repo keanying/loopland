@@ -363,7 +363,7 @@ func saveResult(ctx context.Context, tx pgx.Tx, id int64, st Settlement) error {
 // EarnedToday is activity energy already granted today (counts against the cap).
 func EarnedToday(ctx context.Context, q db.Querier, user int64) (int, error) {
 	var n int
-	err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM energy_ledger WHERE user_id=$1 AND day=$2 AND reason IN ('activity','rollback')`,
+	err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM energy_ledger WHERE user_id=$1 AND day=$2 AND reason='activity'`,
 		user, clock.Today()).Scan(&n)
 	return n, err
 }
