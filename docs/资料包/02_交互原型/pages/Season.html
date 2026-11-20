@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>赛季、奖牌与补给站</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+
+<style>html,body{min-height:100%}body{display:flex;justify-content:center;align-items:flex-start;padding:24px 0;box-sizing:border-box}#dc-root>div{border-radius:44px;box-shadow:0 20px 60px rgba(0,0,0,.5)}</style>
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:2px">
+<h1 style="margin:0;font-size:26px;font-weight:900;letter-spacing:1px"><span style="font-family:Orbitron,sans-serif;color:#DCF26A">S3</span> 冬季赛</h1>
+<div style="font-size:12px;color:#B5B5BE">11.01 – 12.31 · 剩余 42 天</div>
+</div>
+<button style="height:44px;padding:0 16px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;font-size:13px;cursor:pointer">规则</button>
+</div>
+
+<div style="background:#DCF26A;color:#121212;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700;color:#3D4415">当前段位</span><span style="font-size:28px;font-weight:900">白银 II</span></div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:12px;font-weight:700;color:#3D4415">赛季占领</span><span><span style="font-family:Orbitron,sans-serif;font-size:24px;font-weight:800">2.36</span><span style="font-size:12px;font-weight:700"> km²</span></span></div>
+</div>
+<div style="height:10px;border-radius:5px;background:rgba(18,18,18,.14);overflow:hidden"><div style="width:66%;height:10px;border-radius:5px;background:#121212"></div></div>
+<div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;font-size:11px;font-weight:700;text-align:center">
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#3D4415">青铜</span>
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:#121212;color:#DCF26A">白银</span>
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#3D4415">黄金</span>
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#3D4415">铂金</span>
+<span style="height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#3D4415">钻石</span>
+</div>
+<div style="font-size:12px;color:#2B300E">距 黄金 I 还差 1.24 km² · 黄金段位解锁跑鞋店补给站</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<a href="Events.html" style="background:#1B1B20;border:1px solid #2A2A31;color:#F4F4F5;border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="width:36px;height:36px;border-radius:18px;background:#6FD3E8;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"></path></svg></span>
+<span style="font-size:13px;font-weight:700">赛事中心</span>
+<span style="font-size:11px;color:#B5B5BE">城南 vs 城西</span>
+</a>
+<a href="Local.html" style="background:#1B1B20;border:1px solid #2A2A31;color:#F4F4F5;border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="width:36px;height:36px;border-radius:18px;background:#F28DC0;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6"></path></svg></span>
+<span style="font-size:13px;font-weight:700">本地生活</span>
+<span style="font-size:11px;color:#B5B5BE">订场 · 联名</span>
+</a>
+<a href="Local.html" style="background:#1B1B20;border:1px solid #2A2A31;color:#F4F4F5;border-radius:22px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<span style="width:36px;height:36px;border-radius:18px;background:#FFC857;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg></span>
+<span style="font-size:13px;font-weight:700">能量商城</span>
+<span style="font-size:11px;color:#B5B5BE">1,280 可用</span>
+</a>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:26px;background:#1B1B20">
+<button onClick="{{tabMedal}}" aria-pressed="{{pMedal}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sMedal}}">奖牌</button>
+<button onClick="{{tabLand}}" aria-pressed="{{pLand}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sLand}}">地标挑战</button>
+<button onClick="{{tabSupply}}" aria-pressed="{{pSupply}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sSupply}}">补给站</button>
+</div>
+
+<template data-sc="if" value="{{showMedal}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<template data-sc="for" list="{{medals}}" as="m" hint-placeholder-count="4">
+<button onClick="{{m.open}}" aria-label="查看奖牌 {{m.name}}" style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;color:#F4F4F5">
+<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="38" fill="{{m.color}}" fill-opacity="{{m.op}}"></circle><circle cx="42" cy="42" r="29" fill="#121212"></circle><circle cx="42" cy="42" r="29" fill="none" stroke="{{m.color}}" stroke-width="2" stroke-dasharray="3 4"></circle><path d="{{m.glyph}}" fill="none" stroke="{{m.color}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span style="font-size:14px;font-weight:700">{{m.name}}</span>
+<span style="height:24px;padding:0 10px;border-radius:12px;font-size:11px;font-weight:700;display:flex;align-items:center;{{m.pill}}">{{m.status}}</span>
+</button>
+</template>
+</div>
+</template>
+
+<template data-sc="if" value="{{showLand}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<template data-sc="for" list="{{lands}}" as="l" hint-placeholder-count="3">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="width:40px;height:40px;border-radius:20px;background:{{l.color}};color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"></path><circle cx="12" cy="9" r="2.5"></circle></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:15px;font-weight:700">{{l.name}}</span><span style="font-size:12px;color:#B5B5BE">{{l.sub}}</span></span>
+<span style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700">{{l.done}}/{{l.total}}</span>
+</div>
+<div style="height:8px;border-radius:4px;background:#2A2A31;overflow:hidden"><div style="height:8px;border-radius:4px;background:{{l.color}};width:{{l.pct}}%"></div></div>
+<div style="font-size:12px;color:#C9C9D1">奖励 · {{l.reward}}</div>
+</div>
+</template>
+</div>
+</template>
+
+<template data-sc="if" value="{{showSupply}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<template data-sc="for" list="{{supply}}" as="c" hint-placeholder-count="3">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="width:44px;height:44px;border-radius:14px;background:{{c.color}};color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16l-1.5 11h-13z"></path><path d="M8 9V7a4 4 0 0 1 8 0v2"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1;min-width:0"><span style="font-size:14px;font-weight:700">{{c.brand}}</span><span style="font-size:11px;color:#B5B5BE">{{c.dist}}</span></span>
+</div>
+<div style="background:#24242A;border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+<span style="font-size:16px;font-weight:900;color:{{c.color}}">{{c.perk}}</span>
+<span style="font-size:12px;color:#C9C9D1">条件 · {{c.cond}}</span>
+</div>
+<button onClick="{{c.claim}}" style="height:44px;border-radius:22px;font-size:14px;font-weight:700;cursor:pointer;{{c.btn}}">{{c.label}}</button>
+</div>
+</template>
+<div style="font-size:11px;color:#9A9AA4;text-align:center;padding-top:4px">门店可在商家后台设为补给站 · 按到店核销计费</div>
+</div>
+</template>
+
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.html" aria-label="领地" aria-current="page" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Codex.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+
+<template data-sc="if" value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.66);display:flex;flex-direction:column;justify-content:flex-end">
+<div role="dialog" aria-label="奖牌详情" style="background:#1B1B20;border-top-left-radius:32px;border-top-right-radius:32px;padding:20px 20px 32px;display:flex;flex-direction:column;align-items:center;gap:12px">
+<div style="align-self:stretch;display:flex;justify-content:flex-end">
+<button onClick="{{close}}" aria-label="关闭" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<svg width="150" height="150" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="38" fill="{{cur.color}}" fill-opacity="{{cur.op}}"></circle><circle cx="42" cy="42" r="29" fill="#121212"></circle><circle cx="42" cy="42" r="29" fill="none" stroke="{{cur.color}}" stroke-width="2" stroke-dasharray="3 4"></circle><path d="{{cur.glyph}}" fill="none" stroke="{{cur.color}}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div style="font-size:22px;font-weight:900">{{cur.name}}</div>
+<div style="font-size:13px;color:#C9C9D1;text-align:center;line-height:1.6">{{cur.desc}}</div>
+<div style="align-self:stretch;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#B5B5BE"><span>进度</span><span style="font-family:Orbitron,sans-serif;font-weight:700;color:#F4F4F5">{{cur.prog}}</span></div>
+<div style="height:8px;border-radius:4px;background:#2A2A31;overflow:hidden"><div style="height:8px;border-radius:4px;background:{{cur.color}};width:{{cur.pct}}%"></div></div>
+</div>
+<template data-sc="if" value="{{cur.unlocked}}" hint-placeholder-val="{{ false }}">
+<button onClick="{{order}}" style="align-self:stretch;height:52px;border-radius:26px;border:0;cursor:pointer;font-size:15px;font-weight:700;{{orderStyle}}">{{orderLabel}}</button>
+</template>
+<template data-sc="if" value="{{cur.locked}}" hint-placeholder-val="{{ true }}">
+<a href="Run.html" style="align-self:stretch;height:52px;border-radius:26px;background:#DCF26A;color:#121212;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center">去完成</a>
+<div style="font-size:12px;color:#9A9AA4">解锁后可领取实体奖牌 · ¥49 包邮</div>
+</template>
+</div>
+</div>
+</template>
+
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'medal', sel: null, ordered: false, claimed: {} };
+  }
+  renderVals() {
+    const st = this.state;
+    const t = st.tab;
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const G = {
+      shield: 'M42 27 L55 32 V43 C55 51 49 56 42 58 C35 56 29 51 29 43 V32 Z',
+      loop: 'M53 42 A11 11 0 1 1 49 33.5 M50 28 V34 H44',
+      grid: 'M31 31 H41 V41 H31 Z M43 43 H53 V53 H43 Z M43 31 H53 V41 M31 43 V53 H41',
+      snow: 'M42 28 V56 M30 35 L54 49 M30 49 L54 35'
+    };
+    const raw = [
+      { id: 'bj', name: '滨江守护者', desc: '赛季内守住滨江公园的全部 5 块地，并累计持有 30 天。', color: '#DCF26A', status: '进行中 3/5', prog: '3 / 5', pct: 60, unlocked: false, glyph: G.shield },
+      { id: 'ten', name: '一夜十圈', desc: '单次夜跑内完成 10 个闭环圈地。你在 11 月 8 日做到了。', color: '#B4A3F5', status: '已解锁', prog: '10 / 10', pct: 100, unlocked: true, glyph: G.loop },
+      { id: 'puzzle', name: '城市拼图 · 城南', desc: '占领城南片区 40 个地块中的任意 20 个。', color: '#6FD3E8', status: '进行中 12/20', prog: '12 / 20', pct: 60, unlocked: false, glyph: G.grid },
+      { id: 'winter', name: '冬至夜跑', desc: '12 月 21 日限定：冬至当晚完成一次 5 km 以上的闭环。', color: '#F28DC0', status: '12.21 开启', prog: '0 / 1', pct: 0, unlocked: false, glyph: G.snow }
+    ];
+    const medals = raw.map((m) => ({
+      ...m,
+      locked: !m.unlocked,
+      op: m.unlocked ? 1 : 0.35,
+      pill: m.unlocked ? 'background:#B4A3F5;color:#121212' : 'background:#2A2A31;color:#D6D6DD',
+      open: () => this.setState({ sel: m.id })
+    }));
+    const lands = [
+      { name: '滨江公园', sub: '占领全部 5 块地', done: 3, total: 5, pct: 60, reward: '滨江守护者 奖牌', color: '#DCF26A' },
+      { name: '老街口夜市', sub: '22:00 后在此圈地 3 次', done: 2, total: 3, pct: 67, reward: '夜行者 头像框', color: '#B4A3F5' },
+      { name: '城南体育场外环', sub: '沿外环完成一次闭环', done: 0, total: 1, pct: 0, reward: '+200 赛季积分', color: '#6FD3E8' }
+    ];
+    const cl = st.claimed;
+    const sraw = [
+      { id: 'c1', brand: '[合作咖啡品牌] · 滨江店', dist: '距你 0.6 km · 你已占领周边地块', perk: '美式 8 折', cond: '占领门店 300 m 内任一地块', color: '#DCF26A', ok: true },
+      { id: 'c2', brand: '[合作便利店] · 东港店', dist: '距你 1.2 km', perk: '运动饮料 买一送一', cond: '从门口出发完成一次闭环', color: '#6FD3E8', ok: false },
+      { id: 'c3', brand: '[合作跑鞋店] · 城南店', dist: '距你 2.4 km', perk: '免费步态分析 + 试跑', cond: '赛季段位达到 黄金 I', color: '#F28DC0', ok: false }
+    ];
+    const supply = sraw.map((c) => {
+      const got = !!cl[c.id];
+      let label = '领取', btn = 'border:0;background:#DCF26A;color:#121212';
+      if (got) { label = '已领取 · 到店出示'; btn = 'border:1.5px solid #DCF26A;background:transparent;color:#DCF26A'; }
+      else if (!c.ok) { label = '未达成条件'; btn = 'border:1.5px solid #3A3A42;background:transparent;color:#B5B5BE'; }
+      return { ...c, label, btn, claim: () => { if (c.ok) this.setState({ claimed: { ...this.state.claimed, [c.id]: true } }); } };
+    });
+    const cur = medals.find((m) => m.id === st.sel) || medals[0];
+    return {
+      sMedal: t === 'medal' ? on : off,
+      sLand: t === 'land' ? on : off,
+      sSupply: t === 'supply' ? on : off,
+      pMedal: t === 'medal' ? 'true' : 'false',
+      pLand: t === 'land' ? 'true' : 'false',
+      pSupply: t === 'supply' ? 'true' : 'false',
+      tabMedal: () => this.setState({ tab: 'medal' }),
+      tabLand: () => this.setState({ tab: 'land' }),
+      tabSupply: () => this.setState({ tab: 'supply' }),
+      showMedal: t === 'medal',
+      showLand: t === 'land',
+      showSupply: t === 'supply',
+      medals, lands, supply,
+      hasSel: !!st.sel,
+      cur,
+      close: () => this.setState({ sel: null }),
+      order: () => this.setState({ ordered: true }),
+      orderLabel: st.ordered ? '已下单 · 预计 7 天内发货' : '领取实体奖牌 · ¥49 包邮',
+      orderStyle: st.ordered ? 'background:#2A2A31;color:#DCF26A' : 'background:#DCF26A;color:#121212'
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

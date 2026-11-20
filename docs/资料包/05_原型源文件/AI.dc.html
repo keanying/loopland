@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>AI 助手</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button,input{font-family:inherit}
+input::placeholder{color:#8A8A94}
+div::-webkit-scrollbar{display:none}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif;display:flex;flex-direction:column">
+
+<div style="padding:18px 16px 10px;display:flex;align-items:center;gap:12px">
+<a href="Main.dc.html" aria-label="返回地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<span style="width:44px;height:44px;border-radius:22px;background:#B4A3F5;color:#121212;display:flex;align-items:center;justify-content:center;font-family:Orbitron,sans-serif;font-size:14px;font-weight:800;flex-shrink:0">AI</span>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<span style="font-size:18px;font-weight:900">圈圈 · AI 助手</span>
+<span style="font-size:11px;color:#B5B5BE">懂你的领地、配速和附近的搭子</span>
+</div>
+</div>
+
+<div ref="{{listRef}}" style="flex-grow:1;overflow-y:auto;padding:6px 16px 12px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none">
+<sc-for list="{{msgs}}" as="m" hint-placeholder-count="2">
+<sc-if value="{{m.isUser}}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-end;max-width:78%;background:#DCF26A;color:#121212;border-radius:20px;border-bottom-right-radius:6px;padding:10px 14px;font-size:14px;line-height:1.5">{{m.text}}</div>
+</sc-if>
+<sc-if value="{{m.isAI}}" hint-placeholder-val="{{ true }}">
+<div style="align-self:flex-start;max-width:90%;display:flex;flex-direction:column;gap:8px">
+<div style="background:#1B1B20;border:1px solid #2A2A31;border-radius:20px;border-bottom-left-radius:6px;padding:12px 14px;font-size:14px;line-height:1.6;white-space:pre-line">{{m.text}}</div>
+
+<sc-if value="{{m.route}}" hint-placeholder-val="{{ false }}">
+<div style="background:#1B1B20;border:1px solid #DCF26A;border-radius:22px;overflow:hidden">
+<svg width="300" height="130" viewBox="0 0 300 130" style="display:block" aria-hidden="true"><rect width="300" height="130" fill="#15151A"></rect><g stroke="#212128" stroke-width="5"><path d="M-10 40 L310 30M90 -10 L110 140M220 -10 L200 140"></path></g><path d="M10 90 C 60 70 120 120 180 96 S 270 70 310 84 L310 110 C 270 98 230 126 180 122 S 60 100 10 116 Z" fill="#162330"></path><path d="M40 62 L120 14 L176 50 L150 70 L240 40 L262 96 L136 104 Z" fill="#F28DC0" fill-opacity="0.25"></path><path d="M40 62 L120 14 L176 50 L150 70 L240 40 L262 96 L136 104 Z" fill="none" stroke="#DCF26A" stroke-width="3" stroke-linejoin="round" stroke-dasharray="7 5"></path><circle cx="40" cy="62" r="6" fill="#F4F4F5"></circle></svg>
+<div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;text-align:center">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700">4.2</span><span style="font-size:10px;color:#B5B5BE">km</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700">0.38</span><span style="font-size:10px;color:#B5B5BE">可圈 km²</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700">24</span><span style="font-size:10px;color:#B5B5BE">分钟</span></div>
+</div>
+<a href="Run.dc.html" style="height:44px;border-radius:22px;background:#DCF26A;color:#121212;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">按这条路线开跑</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{m.targets}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{targets}}" as="t" hint-placeholder-count="3">
+<div style="background:#1B1B20;border:1px solid #2A2A31;border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+<span style="width:10px;height:10px;border-radius:5px;background:{{t.color}};flex-shrink:0"></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:13px;font-weight:700">{{t.name}}</span><span style="font-size:11px;color:#B5B5BE">{{t.meta}}</span></span>
+<span style="font-size:12px;font-weight:700;color:{{t.color}}">{{t.tag}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{m.report}}" hint-placeholder-val="{{ false }}">
+<div style="background:#DCF26A;color:#121212;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:8px">
+<span style="font-size:11px;font-weight:700">AI 战报 · 11.19 夜跑</span>
+<span style="font-size:17px;font-weight:900;line-height:1.4">夜袭滨江！阿杰 31 分钟连圈 3 块，从城西跑团手里抢回 0.12 km²</span>
+<span style="font-size:12px;line-height:1.6;color:#2B300E">配速 5′30″ 稳得像节拍器。东门一块守卫值只剩 42，今晚是最佳反击时机。夜跑兔本周领地 +2.1 km²，距第二名只差 2.5 km²。</span>
+<a href="Social.dc.html" style="height:40px;border-radius:20px;background:#121212;color:#DCF26A;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">发到动态</a>
+</div>
+</sc-if>
+
+<sc-if value="{{m.plan}}" hint-placeholder-val="{{ false }}">
+<div style="background:#1B1B20;border:1px solid #B4A3F5;border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{plan}}" as="p" hint-placeholder-count="4">
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="height:22px;padding:0 8px;border-radius:11px;background:#B4A3F5;color:#121212;font-size:11px;font-weight:700;display:flex;align-items:center;flex-shrink:0">{{p.w}}</span><span style="font-size:12px;line-height:1.6;color:#D6D6DD">{{p.t}}</span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{m.mates}}" hint-placeholder-val="{{ false }}">
+<a href="Social.dc.html" style="background:#1B1B20;border:1px solid #F28DC0;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:10px;color:#F4F4F5">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:13px;font-weight:700">今晚 21:00 匹克球双打 · 还差 2 人</span><span style="font-size:11px;color:#B5B5BE">城南全民健身中心 · 匹配度 88%</span></span>
+<span style="font-size:12px;font-weight:700;color:#F28DC0">去看看</span>
+</a>
+</sc-if>
+
+<sc-if value="{{m.food}}" hint-placeholder-val="{{ false }}">
+<div style="background:#1B1B20;border:1px solid #FFC857;border-radius:20px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;font-size:13px"><span style="font-weight:700">牛肉面 + 卤蛋</span><span style="font-family:Orbitron,sans-serif;font-weight:700">≈680 kcal</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px"><div style="width:58%;background:#FFC857"></div><div style="width:24%;background:#DCF26A"></div><div style="width:18%;background:#F28DC0"></div></div>
+<div style="font-size:11px;color:#B5B5BE">碳水 58% · 蛋白质 24% · 脂肪 18%</div>
+</div>
+</sc-if>
+</div>
+</sc-if>
+</sc-for>
+<sc-if value="{{typing}}" hint-placeholder-val="{{ false }}">
+<div style="align-self:flex-start;background:#1B1B20;border:1px solid #2A2A31;border-radius:20px;padding:12px 16px;display:flex;gap:6px" aria-label="AI 正在输入">
+<span style="width:8px;height:8px;border-radius:4px;background:#B4A3F5;animation:blink 1s infinite"></span><span style="width:8px;height:8px;border-radius:4px;background:#B4A3F5;animation:blink 1s .2s infinite"></span><span style="width:8px;height:8px;border-radius:4px;background:#B4A3F5;animation:blink 1s .4s infinite"></span>
+</div>
+</sc-if>
+</div>
+
+<div style="padding:8px 16px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="6">
+<button onClick="{{c.ask}}" style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #3A3A42;background:#1B1B20;color:#F4F4F5;font-size:12px;white-space:nowrap;flex-shrink:0;cursor:pointer">{{c.label}}</button>
+</sc-for>
+</div>
+<div style="padding:10px 16px 26px;display:flex;gap:8px;align-items:center">
+<button aria-label="拍照记录饮食" onClick="{{askFood}}" style="width:48px;height:48px;border-radius:24px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></button>
+<input aria-label="问 AI" value="{{draft}}" onChange="{{onDraft}}" onKeyDown="{{onKey}}" placeholder="问问圈圈，比如：今晚去哪抢地？" style="flex-grow:1;min-width:0;height:48px;border-radius:24px;border:1px solid #2A2A31;background:#1B1B20;color:#F4F4F5;padding:0 16px;font-size:14px;outline:none">
+<button aria-label="发送" onClick="{{send}}" style="width:48px;height:48px;border-radius:24px;border:0;background:#DCF26A;color:#121212;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      msgs: [{ role: 'ai', kind: 'text', text: '晚上好阿杰！今天你已经拿了 320 能量。\n「城西跑团」正在靠近滨江公园，要我帮你规划一条守地路线吗？' }],
+      typing: false, draft: ''
+    };
+  }
+  componentDidUpdate() { if (this.list) this.list.scrollTop = this.list.scrollHeight; }
+  componentWillUnmount() { clearTimeout(this.tm); }
+  ask(q, kind, text) {
+    this.setState({ msgs: this.state.msgs.concat([{ role: 'user', kind: 'text', text: q }]), typing: true, draft: '' });
+    clearTimeout(this.tm);
+    this.tm = setTimeout(() => {
+      this.setState({ msgs: this.state.msgs.concat([{ role: 'ai', kind, text }]), typing: false });
+    }, 900);
+  }
+  renderVals() {
+    const st = this.state;
+    const Q = [
+      { label: '规划圈地路线', kind: 'route', text: '按你最近的配速 5′30″ 和时间，我挑了一条 4.2 km 的路线：\n先加固滨江公园，再顺路夺回西岸草坪（守卫值只有 42）。\n轨迹会在两处交叉，能连圈 2 块。' },
+      { label: '今晚去哪抢地', kind: 'targets', text: '离你 2 km 内最值得去的 3 块地：' },
+      { label: '生成今日战报', kind: 'report', text: '根据你今天的跑步记录，战报写好了：' },
+      { label: '帮我排训练计划', kind: 'plan', text: '目标：4 周后跑完半马，同时守住现在的领地。计划如下：' },
+      { label: '找个搭子', kind: 'mates', text: '你常去城南，水平 2.5 级左右，这个局最适合你：' },
+      { label: '下雨了怎么守地', kind: 'text', text: '下雨不用出门：\n· 跳绳 1,000 个 ≈ 100 能量，够把滨江公园守卫值拉回 80\n· 或者 20 分钟 HIIT 跟练\n要我直接打开 AI 跟练吗？' }
+    ];
+    const chips = Q.map((q) => ({ label: q.label, ask: () => this.ask(q.label, q.kind, q.text) }));
+    const msgs = st.msgs.map((m) => ({
+      ...m, isUser: m.role === 'user', isAI: m.role === 'ai',
+      route: m.kind === 'route', targets: m.kind === 'targets', report: m.kind === 'report',
+      plan: m.kind === 'plan', mates: m.kind === 'mates', food: m.kind === 'food'
+    }));
+    return {
+      msgs, chips, typing: st.typing, draft: st.draft,
+      listRef: (el) => { this.list = el; },
+      targets: [
+        { name: '西岸草坪', meta: '城西跑团 · 0.33 km² · 距你 0.9 km', tag: '守卫值 42 · 最好抢', color: '#F28DC0' },
+        { name: '东港步道', meta: 'Kai · 0.37 km² · 距你 1.4 km', tag: '守卫值 55', color: '#FF9F5A' },
+        { name: '云杉坡（队友）', meta: '小鹿 · 正被进攻 · 距你 1.1 km', tag: '去支援', color: '#B4A3F5' }
+      ],
+      plan: [
+        { w: '第 1 周', t: '3 次轻松跑 5 km，周末 10 km 长距离，顺路加固滨江公园' },
+        { w: '第 2 周', t: '加 1 次间歇跑，长距离 13 km，路线绕西岸草坪一圈' },
+        { w: '第 3 周', t: '长距离 16 km，配合跑团周六集结跑' },
+        { w: '第 4 周', t: '减量调整，赛前 2 天只做 20 分钟拉伸跟练' }
+      ],
+      askFood: () => this.ask('[拍了一张午饭照片]', 'food', '识别出来了，这顿大约 680 千卡。今晚跑 6 km 左右就能消耗掉：'),
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter') this.sendDraft(); },
+      send: () => this.sendDraft()
+    };
+  }
+  sendDraft() {
+    const q = (this.state.draft || '').trim();
+    if (!q) return;
+    this.ask(q, 'text', '收到！我结合你的领地、配速和附近的情况看了一下。\n这个原型里我只会回答下方的快捷问题，正式版会接入大模型实时回答。');
+  }
+}
+</script>
+</body>
+</html>

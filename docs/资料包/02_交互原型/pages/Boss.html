@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>怪兽来袭</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+button:disabled{cursor:not-allowed}
+div::-webkit-scrollbar{display:none}
+@keyframes hit{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px) rotate(-3deg)}40%{transform:translateX(8px) rotate(3deg)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+</style>
+<style>
+
+@keyframes cardspin{to{transform:rotate(360deg)}}
+@keyframes flick{0%,100%{transform:scale(1)}50%{transform:scale(1.06,.94)}}
+</style>
+<style>html,body{min-height:100%}body{display:flex;justify-content:center;align-items:flex-start;padding:24px 0;box-sizing:border-box}#dc-root>div{border-radius:44px;box-shadow:0 20px 60px rgba(0,0,0,.5)}</style>
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Main.html" aria-label="返回领地地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<h1 style="margin:0;font-size:24px;font-weight:900;letter-spacing:1px">怪兽来袭</h1>
+<div style="font-size:12px;color:#B5B5BE">夜跑兔 · 滨江公园一带</div>
+</div>
+<div style="height:40px;padding:0 12px;border-radius:20px;background:#2A1A14;border:1px solid #FF6A3D;color:#FF9F5A;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2M9 2h6"></path></svg><span style="font-family:Orbitron,sans-serif">{{timer}}</span></div>
+</div>
+
+<div style="background:#16161B;border:1.5px solid #2A2A31;border-radius:30px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px">
+<div style="animation:{{anim}}">
+<template data-sc="import" name="CardArt" art="sofa" w="{{ 180 }}" hint-size="180px,216px"></template>
+</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:900">沙发怪</span><span style="height:24px;padding:0 8px;border-radius:12px;background:#FF6A3D;color:#121212;font-size:11px;font-weight:900;display:flex;align-items:center">首领 Lv.12</span></div>
+<div style="font-size:12px;color:#C9C9D1;text-align:center;line-height:1.6">它代表"懒得动"。周末出没在滨江公园一带，霸占了 3 块地，让附近领地的能量产出减半。</div>
+<div style="align-self:stretch;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#B5B5BE">剩余血量</span><span style="font-family:Orbitron,sans-serif;font-weight:700">{{hpText}} / 10,000</span></div>
+<div style="height:14px;border-radius:7px;background:#2A2A31;overflow:hidden;border:1.5px solid #121212"><div style="height:14px;border-radius:7px;background:#FF6A3D;width:{{hpPct}}%;transition:width .5s"></div></div>
+</div>
+</div>
+
+<template data-sc="if" value="{{alive}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">跑步 / 骑行</span><span style="font-size:12px;color:#DCF26A">每 1 km = 100 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">跳绳 / 跟练</span><span style="font-size:12px;color:#DCF26A">每 100 个 = 30 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">球馆签到</span><span style="font-size:12px;color:#DCF26A">每 30 分钟 = 120 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">投入能量</span><span style="font-size:12px;color:#DCF26A">每 100 能量 = 40 伤害</span></div>
+</div>
+<div style="display:flex;gap:10px">
+<a href="Sports.html" style="flex-grow:1;height:52px;border-radius:26px;background:#DCF26A;color:#121212;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>去运动出战</a>
+<button onClick="{{attack}}" disabled="{{cantAttack}}" style="height:52px;padding:0 16px;border-radius:26px;border:0;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;{{atkSt}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>{{atkLabel}}</button>
+</div>
+<div style="font-size:11px;color:#8A8A94;text-align:center;line-height:1.5">合击：消耗你 100 能量，召集在线队友一起出手。剩余 {{energyText}} 能量</div>
+</template>
+
+<template data-sc="if" value="{{dead}}" hint-placeholder-val="{{ false }}">
+<div style="background:#DCF26A;color:#121212;border-radius:26px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:20px;font-weight:900">击退成功！夜跑兔守住了滨江</div>
+<div style="font-size:12px;color:#2B300E">被霸占的 3 块地已解放，能量产出恢复。你的战利品：</div>
+<div style="display:flex;gap:10px;align-items:flex-end">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;animation:floaty 2s ease-in-out infinite"><template data-sc="import" name="CardArt" art="banner" w="{{ 84 }}" hint-size="84px,101px"></template><span style="font-size:12px;font-weight:900">旗手卡 ×1</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700"><span>能量 +200</span><span>赛季积分 +150</span><span>徽章「赶走沙发怪」</span></div>
+</div>
+<a href="Codex.html" style="height:44px;border-radius:22px;background:#121212;color:#DCF26A;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">去图鉴查看</a>
+</div>
+</template>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:900">夜跑兔伤害榜</span><span style="font-size:11px;color:#B5B5BE">已有 23 人出战</span></div>
+<template data-sc="for" list="{{board}}" as="b" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:14px;{{b.box}}">
+<span style="width:18px;font-family:Orbitron,sans-serif;font-size:12px;font-weight:700;color:#B5B5BE">{{b.rank}}</span>
+<span style="width:28px;height:28px;border-radius:14px;background:{{b.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900">{{b.ini}}</span>
+<span style="font-size:13px;font-weight:700;flex-grow:1">{{b.name}}</span>
+<span style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:700">{{b.dmg}}</span>
+</div>
+</template>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:14px;font-weight:900">击退奖励 · 掉落概率公示</span>
+<div style="display:flex;gap:8px">
+<template data-sc="for" list="{{drops}}" as="d" hint-placeholder-count="4">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><template data-sc="import" name="CardArt" art="{{d.art}}" w="{{ 70 }}" hint-size="70px,84px"></template><span style="font-size:11px;font-weight:700">{{d.name}}</span><span style="font-family:Orbitron,sans-serif;font-size:11px;color:#DCF26A">{{d.p}}</span></div>
+</template>
+</div>
+<span style="font-size:11px;color:#8A8A94;line-height:1.5">掉落只能通过运动和合力击退获得，不支持付费抽取。</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:14px;font-weight:900">本周怪兽日历</span>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#1B1B20;border-radius:18px;padding:8px;display:flex;align-items:center;gap:8px"><template data-sc="import" name="CardArt" art="bat" w="{{ 48 }}" hint-size="48px,58px"></template><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700">熬夜蝠</span><span style="font-size:10px;color:#B5B5BE">每晚 23:00</span></span></div>
+<div style="flex:1;background:#1B1B20;border-radius:18px;padding:8px;display:flex;align-items:center;gap:8px"><template data-sc="import" name="CardArt" art="sugar" w="{{ 48 }}" locked="{{ true }}" hint-size="48px,58px"></template><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700">???</span><span style="font-size:10px;color:#B5B5BE">节假日出没</span></span></div>
+</div>
+</div>
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.html" aria-label="领地" aria-current="page" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Codex.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</template>
+<template data-dc-name="CardArt">
+
+<div role="img" aria-label="{{label}}" style="width:{{w}}px;height:{{h}}px;border-radius:{{r}}px;overflow:hidden;position:relative;background:{{bg}};border:2px solid #121212;box-sizing:border-box">
+<svg width="100%" height="100%" viewBox="0 0 100 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="display:block">
+<defs><filter id="cardsil"><feColorMatrix type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.18  0 0 0 0 0.21  0 0 0 0.95 0"></feColorMatrix></filter></defs>
+
+<template data-sc="if" value="{{landscape}}" hint-placeholder-val="{{ true }}">
+<g stroke="#121212" stroke-width="2" stroke-linejoin="round">
+<path d="M8 34 a7 7 0 0 1 12 -5 a9 9 0 0 1 16 2 a6 6 0 0 1 3 10 H10 a6 6 0 0 1 -2 -7 Z" fill="#F4F4F5"></path>
+<path d="M66 22 a6 6 0 0 1 10 -4 a8 8 0 0 1 14 2 a5 5 0 0 1 2 9 H68 a5 5 0 0 1 -2 -7 Z" fill="#F4F4F5"></path>
+<path d="M-4 96 Q 26 80 56 90 T 104 86 L104 124 L-4 124 Z" fill="#9BD84A"></path>
+<path d="M14 108 q4 -6 8 0 M74 104 q4 -6 8 0" fill="none"></path>
+</g>
+</template>
+<template data-sc="if" value="{{isPet}}" hint-placeholder-val="{{ false }}">
+<g stroke="#121212" stroke-width="2.2" stroke-linecap="round" fill="none"><path d="M12 22 l5 7 M20 16 l2 9 M84 18 l-4 8 M90 28 l-7 4 M16 112 h14 M70 112 h18"></path></g>
+</template>
+<template data-sc="if" value="{{isBoss}}" hint-placeholder-val="{{ false }}">
+<g stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-width="2"><path d="M8 18 l6 -4 l2 6 l6 -4" stroke="#FF9F5A"></path><path d="M78 14 l4 6 l5 -5 l4 6" stroke="#FFC857"></path><path d="M10 104 l6 -5 l3 6 l6 -5" stroke="#FFC857"></path><path d="M80 106 l5 -6 l3 6" stroke="#FF9F5A"></path><circle cx="20" cy="40" r="1.6" fill="#FFC857" stroke="none"></circle><circle cx="86" cy="44" r="1.6" fill="#FF9F5A" stroke="none"></circle></g>
+</template>
+
+<g filter="{{sil}}" stroke="#121212" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round">
+
+<template data-sc="if" value="{{is.archer}}" hint-placeholder-val="{{ true }}">
+<path d="M70 40 Q 90 68 70 96" fill="none" stroke-width="5"></path><path d="M70 40 Q 90 68 70 96" fill="none" stroke="#B9783E" stroke-width="3"></path><path d="M70 40 L70 96" stroke-width="0.8" fill="none"></path>
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#5BBF6A"></rect><rect x="36" y="74" width="28" height="4" fill="#B9783E"></rect>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle>
+<path d="M35 47 C 32 26 68 26 65 47 C 62 38 38 38 35 47 Z" fill="#5BBF6A"></path><path d="M50 27 L60 18" fill="none"></path><path d="M60 18 L66 16 L63 22 Z" fill="#FF6A3D"></path>
+<circle cx="45.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><path d="M47 52 h6" fill="none"></path>
+<path d="M56 68 L84 68" fill="none"></path><path d="M84 68 L79 65 L79 71 Z" fill="#C9C9D1"></path><circle cx="66" cy="68" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.knight}}" hint-placeholder-val="{{ false }}">
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#C9C9D1"></rect><rect x="42" y="58" width="16" height="30" rx="3" fill="#B4A3F5"></rect>
+<path d="M50 30 C 52 20 62 16 66 20 C 60 22 56 26 53 32 Z" fill="#F28DC0"></path>
+<path d="M36 50 C 34 28 66 28 64 50 L64 56 L36 56 Z" fill="#C9C9D1"></path><path d="M40 45 H60" fill="none" stroke-width="3"></path><path d="M50 45 V54" fill="none"></path>
+<rect x="68" y="44" width="5" height="34" rx="1" fill="#F4F4F5"></rect><rect x="63" y="76" width="15" height="4" rx="1" fill="#FFC857"></rect><rect x="68.5" y="80" width="4" height="9" fill="#B9783E"></rect>
+<path d="M20 62 H42 V74 C 42 84 31 90 31 90 C 31 90 20 84 20 74 Z" fill="#B4A3F5"></path><path d="M31 64 V86 M23 72 H39" fill="none" stroke="#DCF26A" stroke-width="3"></path>
+</template>
+
+<template data-sc="if" value="{{is.smith}}" hint-placeholder-val="{{ false }}">
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="34" y="56" width="32" height="36" rx="10" fill="#A0643C"></rect><rect x="40" y="62" width="20" height="28" rx="3" fill="#F4E9D8"></rect>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle><path d="M37 40 H63" fill="none" stroke="#FF6A3D" stroke-width="3"></path>
+<path d="M37 47 C 38 64 62 64 63 47 C 58 54 42 54 37 47 Z" fill="#FF6A3D"></path>
+<circle cx="45.5" cy="45" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="45" r="1.6" fill="#121212" stroke="none"></circle>
+<path d="M64 92 L80 56" fill="none" stroke-width="6"></path><path d="M64 92 L80 56" fill="none" stroke="#B9783E" stroke-width="3.5"></path><path d="M70 48 L90 56 L86 66 L66 58 Z" fill="#8A8A94"></path>
+<circle cx="66" cy="78" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.monk}}" hint-placeholder-val="{{ false }}">
+<path d="M72 34 L72 102" fill="none" stroke-width="5"></path><path d="M72 34 L72 102" fill="none" stroke="#B9783E" stroke-width="3"></path><circle cx="72" cy="28" r="7" fill="#FFC857"></circle><circle cx="72" cy="28" r="3" fill="#FF6A3D"></circle>
+<path d="M32 100 L37 58 C 40 51 60 51 63 58 L68 100 Z" fill="#B4A3F5"></path><path d="M44 62 L50 80 L56 62" fill="none"></path>
+<circle cx="50" cy="44" r="12" fill="#F6D2B0"></circle>
+<path d="M34 50 C 31 24 69 24 66 50 C 63 38 37 38 34 50 Z" fill="#8E7BE0"></path>
+<path d="M44 46 q2 2 4 0 M52 46 q2 2 4 0" fill="none"></path><path d="M47 51 q3 2 6 0" fill="none"></path>
+<circle cx="70" cy="72" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.scout}}" hint-placeholder-val="{{ false }}">
+<rect x="26" y="58" width="14" height="26" rx="5" fill="#FF9F5A"></rect><path d="M28 66 H38" fill="none"></path>
+<path d="M68 58 L76 102" fill="none" stroke-width="5"></path><path d="M68 58 L76 102" fill="none" stroke="#B9783E" stroke-width="3"></path>
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#6FD3E8"></rect><path d="M38 58 C 44 64 56 64 62 58 L60 66 C 54 70 46 70 40 66 Z" fill="#F28DC0"></path>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle>
+<ellipse cx="50" cy="35" rx="22" ry="5" fill="#A0643C"></ellipse><path d="M39 35 C 39 22 61 22 61 35 Z" fill="#A0643C"></path><path d="M40 31 H60" fill="none" stroke="#FFC857" stroke-width="2.5"></path>
+<circle cx="45.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><path d="M47 51 q3 3 6 0" fill="none"></path>
+<circle cx="67" cy="72" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.banner}}" hint-placeholder-val="{{ false }}">
+<path d="M72 14 L72 102" fill="none" stroke-width="5"></path><path d="M72 14 L72 102" fill="none" stroke="#B9783E" stroke-width="3"></path><path d="M72 16 H96 L89 24 L96 32 H72 Z" fill="#FFC857"></path>
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#F28DC0"></rect><path d="M36 64 L64 82" fill="none" stroke="#FFC857" stroke-width="3"></path>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle><path d="M36 42 C 36 28 64 28 64 42 C 58 36 42 36 36 42 Z" fill="#FF6A3D"></path>
+<circle cx="45.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><path d="M46 51 q4 4 8 0" fill="none"></path>
+<circle cx="69" cy="66" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.alchemist}}" hint-placeholder-val="{{ false }}">
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#6FD3E8"></rect><circle cx="44" cy="70" r="2" fill="#FFC857"></circle><circle cx="56" cy="70" r="2" fill="#F28DC0"></circle>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle>
+<path d="M36 44 C 32 24 68 24 64 44 C 60 34 40 34 36 44 Z" fill="#5B3E8C"></path><circle cx="50" cy="24" r="6" fill="#5B3E8C"></circle>
+<circle cx="44" cy="37" r="4" fill="#FFC857"></circle><circle cx="56" cy="37" r="4" fill="#FFC857"></circle>
+<circle cx="45.5" cy="47" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="47" r="1.6" fill="#121212" stroke="none"></circle><path d="M47 52 h6" fill="none"></path>
+<rect x="70" y="58" width="7" height="8" fill="#F4F4F5"></rect><circle cx="73.5" cy="74" r="10" fill="#DCF26A"></circle><path d="M64 72 h19" fill="none" stroke-width="1.5"></path>
+<circle cx="72" cy="50" r="2.5" fill="#FFC857"></circle><circle cx="78" cy="44" r="2" fill="#FFC857"></circle>
+</template>
+
+<template data-sc="if" value="{{is.farmer}}" hint-placeholder-val="{{ false }}">
+<path d="M72 34 L72 102" fill="none" stroke-width="5"></path><path d="M72 34 L72 102" fill="none" stroke="#B9783E" stroke-width="3"></path><path d="M65 26 V36 H79 V26 M72 36 V24" fill="none" stroke="#8A8A94" stroke-width="2.5"></path>
+<path d="M22 100 V72 M22 74 l-4 -5 M22 80 l4 -5 M22 86 l-4 -5" fill="none" stroke="#FFC857" stroke-width="2.5"></path>
+<rect x="41" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect><rect x="52" y="88" width="7" height="12" rx="2" fill="#2A2A31"></rect>
+<rect x="36" y="56" width="28" height="36" rx="9" fill="#FF9F5A"></rect><rect x="42" y="66" width="16" height="22" rx="3" fill="#5B7FD1"></rect>
+<circle cx="50" cy="44" r="13" fill="#F6D2B0"></circle>
+<ellipse cx="50" cy="33" rx="23" ry="6" fill="#FFC857"></ellipse><path d="M39 33 C 39 20 61 20 61 33 Z" fill="#FFC857"></path><path d="M39 30 H61" fill="none" stroke="#FF6A3D" stroke-width="2.5"></path>
+<circle cx="45.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><circle cx="54.5" cy="46" r="1.6" fill="#121212" stroke="none"></circle><path d="M46 51 q4 4 8 0" fill="none"></path>
+<circle cx="69" cy="70" r="4" fill="#F6D2B0"></circle>
+</template>
+
+<template data-sc="if" value="{{is.tower}}" hint-placeholder-val="{{ false }}">
+<path d="M28 36 L50 14 L72 36 Z" fill="#2A2A31"></path>
+<rect x="31" y="34" width="38" height="10" fill="#C9C9D1"></rect><rect x="35" y="44" width="30" height="52" fill="#C9C9D1"></rect>
+<path d="M36 34 v-5 h6 v5 M47 34 v-5 h6 v5 M58 34 v-5 h6 v5" fill="#C9C9D1"></path>
+<rect x="46" y="52" width="8" height="11" rx="1" fill="#2A2A31"></rect><path d="M43 96 V84 a7 7 0 0 1 14 0 V96 Z" fill="#2A2A31"></path>
+<rect x="38" y="70" width="7" height="4" fill="#F28DC0"></rect><rect x="56" y="62" width="7" height="4" fill="#F28DC0"></rect><rect x="57" y="80" width="6" height="4" fill="#F28DC0"></rect>
+</template>
+
+<template data-sc="if" value="{{is.campfire}}" hint-placeholder-val="{{ false }}">
+<path d="M22 92 L74 78 L78 87 L26 101 Z" fill="#A0643C"></path><path d="M26 78 L78 94 L74 103 L22 87 Z" fill="#B9783E"></path>
+<g style="transform-origin:50px 76px;animation:flick 1.2s ease-in-out infinite">
+<path d="M50 24 C 62 40 72 52 68 68 C 65 80 35 80 32 68 C 28 54 38 46 43 36 C 45 46 49 48 52 44 C 55 38 53 32 50 24 Z" fill="#FF6A3D"></path>
+<path d="M50 48 C 57 56 60 62 58 70 C 56 76 44 76 42 70 C 40 63 45 58 50 48 Z" fill="#FFC857"></path>
+</g>
+<circle cx="30" cy="40" r="2" fill="#FFC857"></circle><circle cx="72" cy="34" r="2" fill="#FFC857"></circle>
+</template>
+
+<template data-sc="if" value="{{is.mill}}" hint-placeholder-val="{{ false }}">
+<path d="M36 98 L41 56 H59 L64 98 Z" fill="#F4E9D8"></path><path d="M36 58 L50 42 L64 58 Z" fill="#FF6A3D"></path><path d="M45 98 V88 a5 5 0 0 1 10 0 V98 Z" fill="#2A2A31"></path>
+<g style="transform-origin:50px 46px;animation:cardspin 9s linear infinite">
+<rect x="47" y="14" width="6" height="30" fill="#5BBF6A"></rect><rect x="47" y="14" width="6" height="30" fill="#5BBF6A" transform="rotate(90 50 46)"></rect><rect x="47" y="14" width="6" height="30" fill="#2A2A31" transform="rotate(180 50 46)"></rect><rect x="47" y="14" width="6" height="30" fill="#2A2A31" transform="rotate(270 50 46)"></rect>
+<circle cx="50" cy="46" r="4" fill="#FFC857"></circle>
+</g>
+</template>
+
+<template data-sc="if" value="{{is.chapel}}" hint-placeholder-val="{{ false }}">
+<path d="M50 6 V14 M46 9 H54" fill="none"></path>
+<rect x="44" y="26" width="12" height="16" fill="#F4E9D8"></rect><path d="M42 28 L50 14 L58 28 Z" fill="#FF6A3D"></path>
+<rect x="28" y="58" width="44" height="38" fill="#F4E9D8"></rect><path d="M24 60 L50 38 L76 60 Z" fill="#FF6A3D"></path>
+<path d="M44 96 V84 a6 6 0 0 1 12 0 V96 Z" fill="#2A2A31"></path><circle cx="50" cy="70" r="4" fill="#6FD3E8"></circle><path d="M47 34 a3 3 0 0 1 6 0 V40 h-6 Z" fill="#2A2A31"></path>
+</template>
+
+<template data-sc="if" value="{{is.well}}" hint-placeholder-val="{{ false }}">
+<path d="M22 44 L50 24 L78 44 Z" fill="#FF6A3D"></path>
+<rect x="31" y="42" width="5" height="26" fill="#B9783E"></rect><rect x="64" y="42" width="5" height="26" fill="#B9783E"></rect>
+<rect x="38" y="48" width="24" height="7" rx="3" fill="#F4E9D8"></rect><path d="M50 55 V62" fill="none"></path><rect x="46" y="62" width="8" height="7" fill="#8A8A94"></rect>
+<rect x="27" y="66" width="46" height="8" fill="#F4E9D8"></rect><rect x="30" y="74" width="40" height="22" fill="#F28DC0"></rect>
+<path d="M30 81 H70 M30 88 H70 M42 74 V81 M58 74 V81 M50 81 V88 M38 88 V96 M62 88 V96" fill="none" stroke-width="1.5"></path>
+</template>
+
+<template data-sc="if" value="{{is.tent}}" hint-placeholder-val="{{ false }}">
+<path d="M50 34 V14" fill="none"></path><path d="M50 15 H64 L59 20 L64 25 H50 Z" fill="#F28DC0"></path>
+<path d="M18 96 L50 34 L82 96 Z" fill="#FFC857"></path><path d="M50 34 L40 96 H60 Z" fill="#F28DC0"></path><path d="M50 34 L28 96 M50 34 L72 96" fill="none" stroke-width="1.5"></path>
+<path d="M50 70 L43 96 H57 Z" fill="#2A2A31"></path>
+</template>
+
+<template data-sc="if" value="{{is.forge}}" hint-placeholder-val="{{ false }}">
+<path d="M42 44 L46 54 L56 56 L46 58 L42 68 L38 58 L28 56 L38 54 Z" fill="#FFC857"></path>
+<path d="M58 66 L82 40" fill="none" stroke-width="6"></path><path d="M58 66 L82 40" fill="none" stroke="#B9783E" stroke-width="3.5"></path><path d="M74 30 L88 42 L82 49 L68 37 Z" fill="#8A8A94"></path>
+<path d="M24 70 H76 C 76 77 69 79 62 79 V85 H68 V94 H32 V85 H38 V79 C 31 79 24 77 24 70 Z" fill="#C9C9D1"></path>
+</template>
+
+<template data-sc="if" value="{{is.house}}" hint-placeholder-val="{{ false }}">
+<path d="M66 34 C 60 30 72 24 64 16" fill="none" stroke="#F4F4F5" stroke-width="2.5"></path>
+<rect x="61" y="36" width="7" height="16" fill="#F28DC0"></rect>
+<rect x="28" y="58" width="44" height="38" fill="#F4E9D8"></rect><path d="M22 60 L50 34 L78 60 Z" fill="#FF6A3D"></path>
+<path d="M33 96 V82 a6 6 0 0 1 12 0 V96 Z" fill="#B9783E"></path><rect x="52" y="68" width="13" height="12" fill="#6FD3E8"></rect><path d="M58.5 68 V80 M52 74 H65" fill="none" stroke-width="1.5"></path>
+</template>
+
+<template data-sc="if" value="{{isPet}}" hint-placeholder-val="{{ false }}">
+<path d="{{pet.tail}}" fill="none" stroke-width="10"></path><path d="{{pet.tail}}" fill="none" stroke="{{pet.c1}}" stroke-width="6"></path>
+<path d="M40 86 L33 99 M62 86 L69 99" fill="none" stroke-width="7"></path><path d="M40 86 L33 99 M62 86 L69 99" fill="none" stroke="{{pet.c1}}" stroke-width="3.5"></path>
+<ellipse cx="50" cy="80" rx="21" ry="11" fill="{{pet.c1}}"></ellipse>
+<path d="{{pet.back}}" fill="{{pet.c2}}"></path>
+<ellipse cx="72" cy="66" rx="14" ry="12" fill="{{pet.c1}}"></ellipse>
+<circle cx="76" cy="60" r="7" fill="#F4F4F5"></circle><circle cx="77.5" cy="60" r="3.2" fill="#121212" stroke="none"></circle>
+<circle cx="{{pet.e2x}}" cy="58" r="{{pet.e2r}}" fill="#F4F4F5"></circle><circle cx="{{pet.e2x}}" cy="58" r="{{pet.e2p}}" fill="#121212" stroke="none"></circle>
+<path d="M64 73 Q 73 79 84 71" fill="none"></path>
+<circle cx="44" cy="78" r="2.4" fill="{{pet.c2}}" stroke="none"></circle><circle cx="54" cy="83" r="2" fill="{{pet.c2}}" stroke="none"></circle><circle cx="58" cy="75" r="1.8" fill="{{pet.c2}}" stroke="none"></circle>
+</template>
+
+<template data-sc="if" value="{{is.sofa}}" hint-placeholder-val="{{ false }}">
+<rect x="22" y="36" width="56" height="30" rx="9" fill="#FF9F5A"></rect>
+<rect x="18" y="60" width="64" height="26" rx="8" fill="#FF9F5A"></rect><rect x="10" y="54" width="14" height="34" rx="6" fill="#FF6A3D"></rect><rect x="76" y="54" width="14" height="34" rx="6" fill="#FF6A3D"></rect>
+<rect x="22" y="86" width="6" height="10" fill="#2A2A31"></rect><rect x="72" y="86" width="6" height="10" fill="#2A2A31"></rect>
+<circle cx="40" cy="50" r="7" fill="#F4F4F5"></circle><circle cx="60" cy="50" r="7" fill="#F4F4F5"></circle><circle cx="41" cy="52" r="3" fill="#121212" stroke="none"></circle><circle cx="59" cy="52" r="3" fill="#121212" stroke="none"></circle>
+<path d="M32 40 L46 44 M68 40 L54 44" fill="none" stroke-width="3"></path>
+<path d="M32 66 H68 L63 78 H37 Z" fill="#121212"></path><path d="M36 66 L39 72 L42 66 M46 66 L49 72 L52 66 M56 66 L59 72 L62 66" fill="#F4F4F5" stroke-width="1.2"></path>
+<path d="M66 78 q2 6 0 10" fill="none" stroke="#6FD3E8" stroke-width="2.5"></path>
+</template>
+
+<template data-sc="if" value="{{is.bat}}" hint-placeholder-val="{{ false }}">
+<path d="M76 18 a10 10 0 1 0 8 14 a8 8 0 1 1 -8 -14 Z" fill="#FFC857"></path>
+<path d="M48 62 C 34 40 16 42 6 56 C 14 58 18 64 20 72 C 26 66 32 66 36 72 C 40 66 44 64 48 62 Z" fill="#8E7BE0"></path>
+<path d="M52 62 C 66 40 84 42 94 56 C 86 58 82 64 80 72 C 74 66 68 66 64 72 C 60 66 56 64 52 62 Z" fill="#8E7BE0"></path>
+<path d="M40 50 L36 36 L46 46 Z M60 50 L64 36 L54 46 Z" fill="#FFC857"></path>
+<circle cx="50" cy="66" r="18" fill="#5B3E8C"></circle>
+<circle cx="50" cy="60" r="9" fill="#F4F4F5"></circle><circle cx="50" cy="61" r="4.5" fill="#FF6A3D"></circle><circle cx="50" cy="61" r="2" fill="#121212" stroke="none"></circle>
+<path d="M40 74 Q 50 82 60 74" fill="none"></path><path d="M44 76 L46 81 L48 77 M52 77 L54 81 L56 76" fill="#F4F4F5" stroke-width="1.2"></path>
+<path d="M44 84 V96 M56 84 V96" fill="none"></path>
+</template>
+
+<template data-sc="if" value="{{is.smog}}" hint-placeholder-val="{{ false }}">
+<path d="M22 76 a14 14 0 0 1 4 -27 a16 16 0 0 1 28 -10 a14 14 0 0 1 24 10 a13 13 0 0 1 2 27 Z" fill="#8A8A94"></path>
+<circle cx="50" cy="56" r="12" fill="#F4F4F5"></circle><circle cx="52" cy="57" r="6" fill="#DCF26A"></circle><circle cx="52" cy="57" r="2.6" fill="#121212" stroke="none"></circle>
+<path d="M36 44 L44 48 M64 44 L56 48" fill="none" stroke-width="3"></path>
+<path d="M38 70 Q 50 64 62 70" fill="none"></path>
+<path d="M30 76 v8 a3 3 0 0 0 6 0 v-8 M48 76 v14 a3 3 0 0 0 6 0 v-14 M66 76 v6 a3 3 0 0 0 6 0 v-6" fill="#8A8A94"></path>
+</template>
+
+<template data-sc="if" value="{{is.sugar}}" hint-placeholder-val="{{ false }}">
+<circle cx="50" cy="22" r="6" fill="#FF6A3D"></circle><path d="M50 16 q4 -8 10 -8" fill="none"></path>
+<path d="M24 64 C 16 52 30 40 38 46 C 40 30 60 30 62 46 C 70 40 84 52 76 64 Z" fill="#F4E9D8"></path>
+<path d="M26 64 L34 98 H66 L74 64 Z" fill="#F28DC0"></path><path d="M38 64 L42 98 M50 64 V98 M62 64 L58 98" fill="none" stroke-width="1.4"></path>
+<path d="M36 72 L46 76 M64 72 L54 76" fill="none" stroke-width="3"></path><circle cx="42" cy="79" r="3" fill="#121212" stroke="none"></circle><circle cx="58" cy="79" r="3" fill="#121212" stroke="none"></circle>
+<path d="M40 88 H60 L56 94 H44 Z" fill="#121212"></path><path d="M43 88 L45 92 L47 88 M53 88 L55 92 L57 88" fill="#F4F4F5" stroke-width="1"></path>
+<circle cx="34" cy="54" r="2" fill="#6FD3E8" stroke="none"></circle><circle cx="52" cy="44" r="2" fill="#FFC857" stroke="none"></circle><circle cx="66" cy="54" r="2" fill="#DCF26A" stroke="none"></circle>
+</template>
+
+</g>
+</svg>
+<template data-sc="if" value="{{locked}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center"><span style="width:{{lockSize}}px;height:{{lockSize}}px;border-radius:50%;background:rgba(14,14,16,.85);color:#F4F4F5;display:flex;align-items:center;justify-content:center;font-family:Orbitron,sans-serif;font-weight:800;font-size:{{lockFont}}px">?</span></div>
+</template>
+</div>
+</template>
+<script type="text/x-dc" id="dc-script-CardArt">
+class Component extends DCLogic {
+  renderVals() {
+    const art = this.props.art || 'archer';
+    const w = Number(this.props.w) || 200;
+    const locked = !!this.props.locked;
+    const chars = ['archer', 'knight', 'smith', 'monk', 'scout', 'banner', 'alchemist', 'farmer'];
+    const builds = ['tower', 'campfire', 'mill', 'chapel', 'well', 'tent', 'forge', 'house'];
+    const bosses = ['sofa', 'bat', 'smog', 'sugar'];
+    const tailA = 'M32 82 C 16 84 10 96 18 104 C 24 108 30 103 27 99';
+    const P = {
+      gecko: { bg: '#6FD3E8', c1: '#FFC857', c2: '#FF6A3D', tail: tailA, back: 'M40 70 L44 64 L48 70 Z', e2x: 66, e2r: 0, e2p: 0 },
+      axolotl: { bg: '#B4A3F5', c1: '#F7B6D2', c2: '#FF6A3D', tail: tailA, back: 'M58 56 C 52 46 48 50 52 56 Z M62 52 C 60 40 54 42 56 50 Z M66 50 C 68 38 62 38 61 47 Z', e2x: 66, e2r: 0, e2p: 0 },
+      frog: { bg: '#FFC857', c1: '#5BBF6A', c2: '#DCF26A', tail: 'M36 86 C 30 90 28 94 30 98', back: 'M40 72 L41 72 Z', e2x: 64, e2r: 6, e2p: 3 },
+      spiky: { bg: '#EBC9F7', c1: '#FF9F5A', c2: '#FFC857', tail: tailA, back: 'M32 74 L36 64 L40 72 L44 62 L48 71 L52 62 L56 71 L60 64 L62 72 Z', e2x: 66, e2r: 0, e2p: 0 },
+      firetail: { bg: '#DCF26A', c1: '#6FD3E8', c2: '#FF6A3D', tail: tailA, back: 'M10 104 C 6 94 14 92 14 86 C 18 92 26 94 22 104 Z', e2x: 66, e2r: 0, e2p: 0 },
+      nightnewt: { bg: '#F4E9D8', c1: '#8E7BE0', c2: '#DCF26A', tail: tailA, back: 'M44 70 a3 3 0 1 0 0.1 0 Z M56 68 a2.5 2.5 0 1 0 0.1 0 Z', e2x: 66, e2r: 0, e2p: 0 }
+    };
+    const isChar = chars.indexOf(art) >= 0, isBuild = builds.indexOf(art) >= 0, isBoss = bosses.indexOf(art) >= 0, isPet = !!P[art];
+    const is = {};
+    chars.concat(builds, bosses).forEach((k) => { is[k] = k === art; });
+    const NAMES = { archer: '弓箭手', knight: '骑士', smith: '铁匠', monk: '修士', scout: '斥候', banner: '旗手', alchemist: '药剂师', farmer: '农夫', tower: '瞭望塔', campfire: '篝火', mill: '风车磨坊', chapel: '礼拜堂', well: '水井', tent: '营帐', forge: '铁匠铺', house: '小屋', gecko: '闪电壁虎', axolotl: '云朵螈', frog: '泡泡蛙', spiky: '尖刺蜥', firetail: '火尾蜥', nightnewt: '夜行蝾螈', sofa: '沙发怪', bat: '熬夜蝠', smog: '雾霾眼', sugar: '糖分怪' };
+    let bg = '#6FD3E8';
+    if (isPet) bg = P[art].bg;
+    if (isBoss) bg = '#1B1B20';
+    if (locked) bg = '#24242A';
+    return {
+      w, h: Math.round(w * 1.2), r: Math.max(8, Math.round(w * 0.1)),
+      bg, is, isPet, isBoss,
+      landscape: (isChar || isBuild) && !locked,
+      pet: isPet ? P[art] : P.gecko,
+      sil: locked ? 'url(#cardsil)' : 'none',
+      locked, lockSize: Math.round(w * 0.3), lockFont: Math.round(w * 0.16),
+      label: locked ? '未解锁的卡牌' : (NAMES[art] || art)
+    };
+  }
+}
+</script>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { hp: 3800, mine: 420, energy: 1280, left: 5 * 3600 + 42 * 60 + 10, hitKey: 0 };
+  }
+  componentDidMount() { this.t = setInterval(() => this.setState({ left: Math.max(0, this.state.left - 1) }), 1000); }
+  componentWillUnmount() { clearInterval(this.t); clearTimeout(this.ht); }
+  renderVals() {
+    const st = this.state;
+    const pad = (n) => String(n).padStart(2, '0');
+    const timer = pad(Math.floor(st.left / 3600)) + ':' + pad(Math.floor((st.left % 3600) / 60)) + ':' + pad(st.left % 60);
+    const dead = st.hp <= 0;
+    const rows = [
+      { ini: '鹿', name: '小鹿', color: '#B4A3F5', dmg: 1820 },
+      { ini: '珍', name: '阿珍', color: '#DCF26A', dmg: 1210 },
+      { ini: '张', name: '老张', color: '#FFC857', dmg: 860 },
+      { ini: '杰', name: '阿杰（你）', color: '#B4A3F5', dmg: st.mine, me: true }
+    ].sort((a, b) => b.dmg - a.dmg);
+    const board = rows.map((r, i) => ({ ...r, rank: i + 1, dmg: r.dmg.toLocaleString('en-US'), box: r.me ? 'background:#262236;border:1.5px solid #B4A3F5' : 'background:#24242A;border:1.5px solid transparent' }));
+    const cant = dead || st.energy < 100;
+    return {
+      timer, board,
+      energyText: st.energy.toLocaleString('en-US'),
+      hpText: Math.max(0, st.hp).toLocaleString('en-US'),
+      hpPct: Math.max(0, Math.round((st.hp / 10000) * 100)),
+      alive: !dead, dead,
+      anim: st.hitKey % 2 === 1 ? 'hit .45s ease-out' : (st.hitKey > 0 ? 'hit .46s ease-out' : 'none'),
+      cantAttack: cant,
+      atkSt: cant ? 'background:#2A2A31;color:#8A8A94' : 'background:#FF6A3D;color:#121212',
+      atkLabel: st.energy < 100 ? '能量不足' : '发起合击',
+      attack: () => {
+        if (this.state.hp <= 0 || this.state.energy < 100) return;
+        const big = this.state.hp <= 1200 ? 1200 : 400;
+        this.setState({ hp: this.state.hp - big, mine: this.state.mine + big, energy: this.state.energy - 100, hitKey: this.state.hitKey + 1 });
+      },
+      drops: [
+        { art: 'banner', name: '旗手卡', p: '35%' },
+        { art: 'knight', name: '骑士卡', p: '20%' },
+        { art: 'tent', name: '营帐图纸', p: '10%' },
+        { art: 'firetail', name: '火尾蜥蛋', p: '5%' }
+      ]
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

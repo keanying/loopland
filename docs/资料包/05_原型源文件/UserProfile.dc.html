@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Kai 的主页</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;justify-content:space-between">
+<a href="Feed.dc.html" aria-label="返回动态" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<button aria-label="更多操作" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg></button>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:14px">
+<span style="width:72px;height:72px;border-radius:36px;border:3px solid #FF9F5A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0"><span style="width:60px;height:60px;border-radius:30px;background:#FF9F5A;color:#121212;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900">K</span></span>
+<div style="display:flex;flex-direction:column;gap:3px;flex-grow:1;min-width:0">
+<h1 style="margin:0;font-size:22px;font-weight:900">Kai</h1>
+<span style="font-size:12px;color:#B5B5BE">@kai_runs · LV.9 独行侠</span>
+</div>
+<button onClick="{{follow}}" aria-pressed="{{fPressed}}" style="height:42px;padding:0 18px;border-radius:21px;border:0;cursor:pointer;font-size:14px;font-weight:900;flex-shrink:0;{{fStyle}}">{{fLabel}}</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;font-size:13px;color:#D6D6DD;line-height:1.5">
+<span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#FF9F5A" aria-hidden="true"><path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 2 1 3 3 3 5"></path></svg>自由圈地爱好者，东港一带都是我的</span>
+<span style="display:flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF9F5A" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"></path></svg>城南 · 每周 4 跑 · 偶尔匹克球</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;text-align:center">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">86</span><span style="font-size:11px;color:#B5B5BE">动态</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">{{fans}}</span><span style="font-size:11px;color:#B5B5BE">粉丝</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">210</span><span style="font-size:11px;color:#B5B5BE">关注</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">18.6K</span><span style="font-size:11px;color:#B5B5BE">获赞</span></div>
+</div>
+<div style="display:flex;gap:8px">
+<button onClick="{{dm}}" style="flex-grow:1;height:42px;border-radius:21px;border:1.5px solid #3A3A42;background:transparent;color:#F4F4F5;cursor:pointer;font-size:13px;font-weight:700">私信</button>
+<button onClick="{{challenge}}" style="flex-grow:1;height:42px;border-radius:21px;border:1.5px solid #FF9F5A;background:transparent;color:#FF9F5A;cursor:pointer;font-size:13px;font-weight:700">{{chLabel}}</button>
+</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#B5B5BE"><span style="display:flex"><span style="width:22px;height:22px;border-radius:11px;background:#B4A3F5;border:2px solid #1B1B20"></span><span style="width:22px;height:22px;border-radius:11px;background:#6FD3E8;border:2px solid #1B1B20;margin-left:-8px"></span></span>小鹿、Momo 也关注了他</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="background:#FF9F5A;color:#121212;border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">6.12</span><span style="font-size:11px;font-weight:700">领地 km²</span></div>
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">#1</span><span style="font-size:11px;color:#B5B5BE">城南个人榜</span></div>
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:20px;padding:12px;display:flex;flex-direction:column;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">41</span><span style="font-size:11px;color:#B5B5BE">最长守地 天</span></div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:1px solid #232329">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" aria-label="{{t.name}}" style="height:48px;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:{{t.color}};border-bottom:3px solid {{t.line}};margin-bottom:-1px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.ic}}"></path></svg><span style="font-size:11px">{{t.name}}</span></button>
+</sc-for>
+</div>
+
+<sc-if value="{{showGrid}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+<sc-for list="{{tiles}}" as="g" hint-placeholder-count="9">
+<a href="{{g.href}}" aria-label="{{g.aria}}" style="position:relative;display:block;height:150px;border-radius:18px;overflow:hidden;background:#15151A">
+<svg width="116" height="150" viewBox="0 0 116 150" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M-5 40 L120 30M-5 100 L120 92M40 -5 L46 155M84 -5 L80 155" stroke="#212128" stroke-width="4"></path><path d="{{g.poly}}" fill="{{g.color}}" fill-opacity="0.4" stroke="{{g.color}}" stroke-width="2"></path></svg>
+<sc-if value="{{g.isVideo}}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:8px;top:8px;width:22px;height:22px;border-radius:11px;background:rgba(14,14,16,.85);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="#F4F4F5" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span></sc-if>
+<span style="position:absolute;left:6px;bottom:6px;height:22px;padding:0 7px;border-radius:11px;background:rgba(14,14,16,.85);color:#F4F4F5;font-size:10px;font-weight:700;display:flex;align-items:center;gap:4px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle></svg>{{g.views}}</span>
+</a>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{showLand}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{lands}}" as="l" hint-placeholder-count="4">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+<span style="width:12px;height:12px;border-radius:6px;background:#FF9F5A"></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">{{l.name}}</span><span style="font-size:11px;color:#B5B5BE">{{l.meta}}</span></span>
+<a href="Run.dc.html" style="height:34px;padding:0 12px;border-radius:17px;background:#DCF26A;color:#121212;font-size:12px;font-weight:700;display:flex;align-items:center">去抢</a>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" aria-current="page" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;left:50%;top:72px;transform:translateX(-50%);height:40px;padding:0 16px;border-radius:20px;background:#F4F4F5;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)">{{toast}}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { followed: false, tab: 'post', challenged: false, toast: '' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 1800); }
+  renderVals() {
+    const st = this.state;
+    const TB = [
+      { id: 'post', name: '动态', ic: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
+      { id: 'video', name: '回放', ic: 'M4 5h16v14H4zM10 9v6l5-3z' },
+      { id: 'land', name: '领地', ic: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14' }
+    ];
+    const tabs = TB.map((t) => ({ ...t, pressed: st.tab === t.id ? 'true' : 'false', color: st.tab === t.id ? '#DCF26A' : '#8A8A94', line: st.tab === t.id ? '#DCF26A' : 'transparent', pick: () => this.setState({ tab: t.id }) }));
+    const polys = ['M20 60 L70 40 L90 90 L40 110 Z', 'M30 30 L90 50 L80 120 L24 100 Z', 'M14 80 L60 30 L100 70 L60 130 Z', 'M24 40 L96 40 L96 110 L24 110 Z', 'M50 20 L96 60 L70 130 L20 90 Z', 'M20 50 L60 30 L100 60 L80 120 L30 110 Z'];
+    const colors = ['#FF9F5A', '#FF9F5A', '#F28DC0', '#FF9F5A', '#6FD3E8', '#FF9F5A'];
+    const views = ['2.8K', '12K', '3.2K', '1.1K', '20K', '2.3K', '980', '6.4K', '1.5K'];
+    const isV = st.tab === 'video';
+    const tiles = views.map((v, i) => ({ views: v, poly: polys[i % polys.length], color: colors[i % colors.length], isVideo: isV || i % 3 === 1, href: isV ? 'Reels.dc.html' : 'Post.dc.html', aria: (isV ? '回放 ' : '动态 ') + (i + 1) + '，' + v + ' 次浏览' }));
+    const lands = [
+      { name: '东港步道', meta: '0.37 km² · 守卫值 55 · 持有 9 天' },
+      { name: '东港桥下环线', meta: '0.24 km² · 守卫值 70 · 持有 2 天' },
+      { name: '江湾北段', meta: '0.31 km² · 守卫值 38 · 持有 14 天' },
+      { name: '城南体育场外环', meta: '0.18 km² · 守卫值 81 · 持有 41 天' }
+    ];
+    const fw = st.followed;
+    return {
+      tabs, tiles, lands,
+      showGrid: st.tab !== 'land', showLand: st.tab === 'land',
+      fans: fw ? '3,215' : '3,214',
+      fPressed: fw ? 'true' : 'false', fLabel: fw ? '已关注' : '关注',
+      fStyle: fw ? 'background:#2A2A31;color:#B5B5BE' : 'background:#DCF26A;color:#121212',
+      follow: () => { this.setState({ followed: !fw }); this.flash(fw ? '已取消关注' : '已关注 Kai，他开跑时你会在快拍里看到'); },
+      dm: () => this.flash('私信：打开与 Kai 的对话'),
+      chLabel: st.challenged ? '已发起挑战' : '发起领地挑战',
+      challenge: () => { this.setState({ challenged: true }); this.flash('已向 Kai 发起 7 天领地挑战'); },
+      hasToast: !!st.toast, toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>我的</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:14px">
+<div style="width:64px;height:64px;border-radius:32px;background:#B4A3F5;color:#121212;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;flex-shrink:0">杰</div>
+<div style="display:flex;flex-direction:column;gap:4px;flex-grow:1">
+<h1 style="margin:0;font-size:22px;font-weight:900">阿杰</h1>
+<div style="font-size:12px;color:#B5B5BE;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#DCF26A" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>夜跑兔 · LV.7 城市巡游者</div>
+</div>
+<button style="height:40px;padding:0 14px;border-radius:20px;border:1.5px solid #3A3A42;background:transparent;color:#F4F4F5;font-size:13px;cursor:pointer">编辑</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:6px 4px">
+<a href="Feed.dc.html" style="color:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">24</span><span style="font-size:11px;color:#B5B5BE">动态</span></a>
+<a href="Feed.dc.html" style="color:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">86</span><span style="font-size:11px;color:#B5B5BE">关注</span></a>
+<a href="Inbox.dc.html" style="color:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">312</span><span style="font-size:11px;color:#B5B5BE">粉丝</span></a>
+<a href="Inbox.dc.html" style="color:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">4.8K</span><span style="font-size:11px;color:#B5B5BE">获赞</span></a>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<a href="Compose.dc.html" style="height:46px;border-radius:23px;background:#DCF26A;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>发动态</a>
+<a href="Feed.dc.html" style="height:46px;border-radius:23px;background:#1B1B20;border:1px solid #2A2A31;color:#F4F4F5;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>收藏 17</a>
+<a href="Inbox.dc.html" style="height:46px;border-radius:23px;background:#1B1B20;border:1px solid #2A2A31;color:#F4F4F5;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;position:relative">消息<span style="min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#FF5C7A;color:#121212;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;box-sizing:border-box">5</span></a>
+</div>
+
+<a href="Codex.dc.html" style="background:#1B1B20;border:1px solid #2A2A31;border-radius:22px;padding:10px 14px 10px 10px;display:flex;align-items:center;gap:12px;color:#F4F4F5">
+<span style="display:flex;gap:4px"><dc-import name="CardArt" art="archer" w="{{ 40 }}" hint-size="40px,48px"></dc-import><dc-import name="CardArt" art="tower" w="{{ 40 }}" hint-size="40px,48px"></dc-import><dc-import name="CardArt" art="gecko" w="{{ 40 }}" hint-size="40px,48px"></dc-import></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">我的图鉴</span><span style="font-size:12px;color:#B5B5BE">已收集 18 / 30</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+
+<div style="background:#1B1B20;border:1px solid #2A2A31;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:900">钱包与福利</span><span style="font-size:12px;color:#B5B5BE;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#FFC857" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>1,280 能量</span></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<a href="Local.dc.html" style="background:#24242A;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;color:#F4F4F5"><span style="width:32px;height:32px;border-radius:16px;background:#F28DC0;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6"></path></svg></span><span style="font-size:12px;font-weight:700">订场</span></a>
+<a href="Local.dc.html" style="background:#24242A;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;color:#F4F4F5"><span style="width:32px;height:32px;border-radius:16px;background:#DCF26A;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7C10 3 7 3 7 5s5 2 5 2M12 7c2-4 5-4 5-2s-5 2-5 2"></path></svg></span><span style="font-size:12px;font-weight:700">联名福利</span></a>
+<a href="Local.dc.html" style="background:#24242A;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;color:#F4F4F5"><span style="width:32px;height:32px;border-radius:16px;background:#FFC857;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg></span><span style="font-size:12px;font-weight:700">能量商城</span></a>
+</div>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:16px;font-weight:700">本周 · 11 月第 3 周</span>
+<span style="font-size:12px;color:#B5B5BE">共 <span style="font-family:Orbitron,sans-serif;font-weight:700;color:#F4F4F5">18.4</span> km</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+<button onClick="{{d.pick}}" aria-pressed="{{d.pressed}}" aria-label="{{d.aria}}" style="border:0;background:transparent;color:#F4F4F5;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px">
+<span style="height:70px;display:flex;align-items:flex-end"><span style="width:14px;border-radius:7px;height:{{d.h}}px;background:{{d.bar}}"></span></span>
+<span style="font-size:11px;color:#B5B5BE">{{d.wd}}</span>
+<span style="width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;{{d.dot}}">{{d.date}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px;{{dayCard}}">
+<span style="width:42px;height:42px;border-radius:21px;display:flex;align-items:center;justify-content:center;flex-shrink:0;{{dayIcon}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-3-6.2"></path><path d="M20 4v5h-5"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:15px;font-weight:900">{{sel.title}}</span><span style="font-size:12px;{{daySub}}">{{sel.sub}}</span></span>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<div style="background:#DCF26A;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700">总领地</span><span><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">2.36</span><span style="font-size:12px;font-weight:700"> km²</span></span><span style="font-size:11px;color:#2B300E">城南个人榜 #12</span></div>
+<div style="background:#B4A3F5;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700">本月跑量</span><span><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">86.4</span><span style="font-size:12px;font-weight:700"> km</span></span><span style="font-size:11px;color:#2A2440">共 14 次</span></div>
+<div style="background:#EBC9F7;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700">夺回次数</span><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">14</span><span style="font-size:11px;color:#3A2742">本赛季</span></div>
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700">连续守地</span><span><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">23</span><span style="font-size:12px;font-weight:700"> 天</span></span><span style="font-size:11px;color:#B5B5BE">最长 31 天</span></div>
+</div>
+
+<div style="background:#1B1B20;border:1.5px solid #B4A3F5;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:8px">
+<span style="height:26px;padding:0 10px;border-radius:13px;background:#B4A3F5;color:#121212;font-family:Orbitron,sans-serif;font-size:12px;font-weight:800;display:flex;align-items:center">PRO</span>
+<span style="font-size:16px;font-weight:700">解锁更多玩法</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:#D6D6DD">
+<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>领地热力图：看全城哪里最好抢</span>
+<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>3D 轨迹回放与分享视频</span>
+<span style="display:flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>AI 圈地训练计划</span>
+</div>
+<button style="height:48px;border-radius:24px;border:0;background:#B4A3F5;color:#121212;font-size:15px;font-weight:700;cursor:pointer">开通 PRO · 7 天免费试用</button>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:6px 16px;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #26262C">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">隐私区</span><span style="font-size:12px;color:#B5B5BE">隐藏家和公司周边 200 m 的起终点</span></span>
+<button onClick="{{togglePrivacy}}" aria-pressed="{{pPrivacy}}" aria-label="隐私区开关" style="width:52px;height:32px;border-radius:16px;border:0;padding:3px;cursor:pointer;display:flex;{{privTrack}}"><span style="width:26px;height:26px;border-radius:13px;background:#121212"></span></button>
+</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:64px;border-bottom:1px solid #26262C">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">领地被抢提醒</span><span style="font-size:12px;color:#B5B5BE">有人进攻你的地块时立刻通知</span></span>
+<button onClick="{{toggleNotify}}" aria-pressed="{{pNotify}}" aria-label="领地被抢提醒开关" style="width:52px;height:32px;border-radius:16px;border:0;padding:3px;cursor:pointer;display:flex;{{notiTrack}}"><span style="width:26px;height:26px;border-radius:13px;background:#121212"></span></button>
+</div>
+<button style="display:flex;align-items:center;gap:12px;min-height:64px;border:0;background:transparent;color:#F4F4F5;cursor:pointer;padding:0;text-align:left">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">运动手表同步</span><span style="font-size:12px;color:#B5B5BE">已连接 1 台 · 跑完自动导入</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B5B5BE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</div>
+
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" aria-current="page" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { day: 3, privacy: true, notify: true };
+  }
+  renderVals() {
+    const st = this.state;
+    const raw = [
+      { wd: '一', date: 16, km: 5.0, h: 40, title: '夜跑 5.0 km · 圈地 +0.10 km²', sub: '老街口 · 配速 5′42″', kind: 'run' },
+      { wd: '二', date: 17, km: 0, h: 6, title: '休息日', sub: '昨天跑得不错，今天放松一下', kind: 'rest' },
+      { wd: '三', date: 18, km: 8.2, h: 64, title: '晨跑 8.2 km · 夺回 0.24 km²', sub: '从「城西跑团」夺回滨江公园北段', kind: 'run' },
+      { wd: '四', date: 19, km: 5.2, h: 42, title: '今天 · 夜跑 5.2 km · +0.18 km²', sub: '滨江公园 · 配速 5′30″', kind: 'run' },
+      { wd: '五', date: 20, km: 0, h: 6, title: '还没有记录', sub: '跑一圈守住滨江公园吧', kind: 'future' },
+      { wd: '六', date: 21, km: 0, h: 6, title: '计划 · 周六集结跑 07:00', sub: '夜跑兔 · 目标夺回西岸草坪', kind: 'future' },
+      { wd: '日', date: 22, km: 0, h: 6, title: '还没有记录', sub: '周日适合跑一次长距离', kind: 'future' }
+    ];
+    const days = raw.map((d, i) => {
+      const selected = i === st.day;
+      return {
+        ...d,
+        pressed: selected ? 'true' : 'false',
+        aria: '11 月 ' + d.date + ' 日，星期' + d.wd,
+        bar: d.kind === 'run' ? (selected ? '#DCF26A' : '#B4A3F5') : '#2A2A31',
+        dot: selected ? 'background:#DCF26A;color:#121212' : (i === 3 ? 'border:1.5px solid #DCF26A;color:#F4F4F5' : 'color:#F4F4F5'),
+        pick: () => this.setState({ day: i })
+      };
+    });
+    const sel = raw[st.day];
+    const isRun = sel.kind === 'run';
+    const onTrack = 'background:#DCF26A;justify-content:flex-end';
+    const offTrack = 'background:#3A3A42;justify-content:flex-start';
+    return {
+      days,
+      sel,
+      dayCard: isRun ? 'background:#DCF26A;color:#121212' : 'background:#1B1B20;border:1px solid #232329;color:#F4F4F5',
+      dayIcon: isRun ? 'background:#121212;color:#DCF26A' : 'background:#2A2A31;color:#B5B5BE',
+      daySub: isRun ? 'color:#2B300E' : 'color:#B5B5BE',
+      privTrack: st.privacy ? onTrack : offTrack,
+      notiTrack: st.notify ? onTrack : offTrack,
+      pPrivacy: st.privacy ? 'true' : 'false',
+      pNotify: st.notify ? 'true' : 'false',
+      togglePrivacy: () => this.setState({ privacy: !this.state.privacy }),
+      toggleNotify: () => this.setState({ notify: !this.state.notify })
+    };
+  }
+}
+</script>
+</body>
+</html>

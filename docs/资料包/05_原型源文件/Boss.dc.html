@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>怪兽来袭</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+button:disabled{cursor:not-allowed}
+div::-webkit-scrollbar{display:none}
+@keyframes hit{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px) rotate(-3deg)}40%{transform:translateX(8px) rotate(3deg)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Main.dc.html" aria-label="返回领地地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<h1 style="margin:0;font-size:24px;font-weight:900;letter-spacing:1px">怪兽来袭</h1>
+<div style="font-size:12px;color:#B5B5BE">夜跑兔 · 滨江公园一带</div>
+</div>
+<div style="height:40px;padding:0 12px;border-radius:20px;background:#2A1A14;border:1px solid #FF6A3D;color:#FF9F5A;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l3 2M9 2h6"></path></svg><span style="font-family:Orbitron,sans-serif">{{timer}}</span></div>
+</div>
+
+<div style="background:#16161B;border:1.5px solid #2A2A31;border-radius:30px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px">
+<div style="animation:{{anim}}">
+<dc-import name="CardArt" art="sofa" w="{{ 180 }}" hint-size="180px,216px"></dc-import>
+</div>
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:900">沙发怪</span><span style="height:24px;padding:0 8px;border-radius:12px;background:#FF6A3D;color:#121212;font-size:11px;font-weight:900;display:flex;align-items:center">首领 Lv.12</span></div>
+<div style="font-size:12px;color:#C9C9D1;text-align:center;line-height:1.6">它代表"懒得动"。周末出没在滨江公园一带，霸占了 3 块地，让附近领地的能量产出减半。</div>
+<div style="align-self:stretch;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#B5B5BE">剩余血量</span><span style="font-family:Orbitron,sans-serif;font-weight:700">{{hpText}} / 10,000</span></div>
+<div style="height:14px;border-radius:7px;background:#2A2A31;overflow:hidden;border:1.5px solid #121212"><div style="height:14px;border-radius:7px;background:#FF6A3D;width:{{hpPct}}%;transition:width .5s"></div></div>
+</div>
+</div>
+
+<sc-if value="{{alive}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">跑步 / 骑行</span><span style="font-size:12px;color:#DCF26A">每 1 km = 100 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">跳绳 / 跟练</span><span style="font-size:12px;color:#DCF26A">每 100 个 = 30 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">球馆签到</span><span style="font-size:12px;color:#DCF26A">每 30 分钟 = 120 伤害</span></div>
+<div style="background:#1B1B20;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;font-weight:700">投入能量</span><span style="font-size:12px;color:#DCF26A">每 100 能量 = 40 伤害</span></div>
+</div>
+<div style="display:flex;gap:10px">
+<a href="Sports.dc.html" style="flex-grow:1;height:52px;border-radius:26px;background:#DCF26A;color:#121212;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>去运动出战</a>
+<button onClick="{{attack}}" disabled="{{cantAttack}}" style="height:52px;padding:0 16px;border-radius:26px;border:0;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;{{atkSt}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>{{atkLabel}}</button>
+</div>
+<div style="font-size:11px;color:#8A8A94;text-align:center;line-height:1.5">合击：消耗你 100 能量，召集在线队友一起出手。剩余 {{energyText}} 能量</div>
+</sc-if>
+
+<sc-if value="{{dead}}" hint-placeholder-val="{{ false }}">
+<div style="background:#DCF26A;color:#121212;border-radius:26px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:20px;font-weight:900">击退成功！夜跑兔守住了滨江</div>
+<div style="font-size:12px;color:#2B300E">被霸占的 3 块地已解放，能量产出恢复。你的战利品：</div>
+<div style="display:flex;gap:10px;align-items:flex-end">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;animation:floaty 2s ease-in-out infinite"><dc-import name="CardArt" art="banner" w="{{ 84 }}" hint-size="84px,101px"></dc-import><span style="font-size:12px;font-weight:900">旗手卡 ×1</span></div>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700"><span>能量 +200</span><span>赛季积分 +150</span><span>徽章「赶走沙发怪」</span></div>
+</div>
+<a href="Codex.dc.html" style="height:44px;border-radius:22px;background:#121212;color:#DCF26A;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">去图鉴查看</a>
+</div>
+</sc-if>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:900">夜跑兔伤害榜</span><span style="font-size:11px;color:#B5B5BE">已有 23 人出战</span></div>
+<sc-for list="{{board}}" as="b" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:14px;{{b.box}}">
+<span style="width:18px;font-family:Orbitron,sans-serif;font-size:12px;font-weight:700;color:#B5B5BE">{{b.rank}}</span>
+<span style="width:28px;height:28px;border-radius:14px;background:{{b.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900">{{b.ini}}</span>
+<span style="font-size:13px;font-weight:700;flex-grow:1">{{b.name}}</span>
+<span style="font-family:Orbitron,sans-serif;font-size:13px;font-weight:700">{{b.dmg}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:14px;font-weight:900">击退奖励 · 掉落概率公示</span>
+<div style="display:flex;gap:8px">
+<sc-for list="{{drops}}" as="d" hint-placeholder-count="4">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><dc-import name="CardArt" art="{{d.art}}" w="{{ 70 }}" hint-size="70px,84px"></dc-import><span style="font-size:11px;font-weight:700">{{d.name}}</span><span style="font-family:Orbitron,sans-serif;font-size:11px;color:#DCF26A">{{d.p}}</span></div>
+</sc-for>
+</div>
+<span style="font-size:11px;color:#8A8A94;line-height:1.5">掉落只能通过运动和合力击退获得，不支持付费抽取。</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<span style="font-size:14px;font-weight:900">本周怪兽日历</span>
+<div style="display:flex;gap:8px">
+<div style="flex:1;background:#1B1B20;border-radius:18px;padding:8px;display:flex;align-items:center;gap:8px"><dc-import name="CardArt" art="bat" w="{{ 48 }}" hint-size="48px,58px"></dc-import><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700">熬夜蝠</span><span style="font-size:10px;color:#B5B5BE">每晚 23:00</span></span></div>
+<div style="flex:1;background:#1B1B20;border-radius:18px;padding:8px;display:flex;align-items:center;gap:8px"><dc-import name="CardArt" art="sugar" w="{{ 48 }}" locked="{{ true }}" hint-size="48px,58px"></dc-import><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;font-weight:700">???</span><span style="font-size:10px;color:#B5B5BE">节假日出没</span></span></div>
+</div>
+</div>
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" aria-current="page" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { hp: 3800, mine: 420, energy: 1280, left: 5 * 3600 + 42 * 60 + 10, hitKey: 0 };
+  }
+  componentDidMount() { this.t = setInterval(() => this.setState({ left: Math.max(0, this.state.left - 1) }), 1000); }
+  componentWillUnmount() { clearInterval(this.t); clearTimeout(this.ht); }
+  renderVals() {
+    const st = this.state;
+    const pad = (n) => String(n).padStart(2, '0');
+    const timer = pad(Math.floor(st.left / 3600)) + ':' + pad(Math.floor((st.left % 3600) / 60)) + ':' + pad(st.left % 60);
+    const dead = st.hp <= 0;
+    const rows = [
+      { ini: '鹿', name: '小鹿', color: '#B4A3F5', dmg: 1820 },
+      { ini: '珍', name: '阿珍', color: '#DCF26A', dmg: 1210 },
+      { ini: '张', name: '老张', color: '#FFC857', dmg: 860 },
+      { ini: '杰', name: '阿杰（你）', color: '#B4A3F5', dmg: st.mine, me: true }
+    ].sort((a, b) => b.dmg - a.dmg);
+    const board = rows.map((r, i) => ({ ...r, rank: i + 1, dmg: r.dmg.toLocaleString('en-US'), box: r.me ? 'background:#262236;border:1.5px solid #B4A3F5' : 'background:#24242A;border:1.5px solid transparent' }));
+    const cant = dead || st.energy < 100;
+    return {
+      timer, board,
+      energyText: st.energy.toLocaleString('en-US'),
+      hpText: Math.max(0, st.hp).toLocaleString('en-US'),
+      hpPct: Math.max(0, Math.round((st.hp / 10000) * 100)),
+      alive: !dead, dead,
+      anim: st.hitKey % 2 === 1 ? 'hit .45s ease-out' : (st.hitKey > 0 ? 'hit .46s ease-out' : 'none'),
+      cantAttack: cant,
+      atkSt: cant ? 'background:#2A2A31;color:#8A8A94' : 'background:#FF6A3D;color:#121212',
+      atkLabel: st.energy < 100 ? '能量不足' : '发起合击',
+      attack: () => {
+        if (this.state.hp <= 0 || this.state.energy < 100) return;
+        const big = this.state.hp <= 1200 ? 1200 : 400;
+        this.setState({ hp: this.state.hp - big, mine: this.state.mine + big, energy: this.state.energy - 100, hitKey: this.state.hitKey + 1 });
+      },
+      drops: [
+        { art: 'banner', name: '旗手卡', p: '35%' },
+        { art: 'knight', name: '骑士卡', p: '20%' },
+        { art: 'tent', name: '营帐图纸', p: '10%' },
+        { art: 'firetail', name: '火尾蜥蛋', p: '5%' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

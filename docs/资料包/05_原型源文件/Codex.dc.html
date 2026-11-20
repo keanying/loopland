@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>图鉴</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+@keyframes wob{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:flex-end;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:2px">
+<h1 style="margin:0;font-size:26px;font-weight:900;letter-spacing:1px">图鉴</h1>
+<div style="font-size:12px;color:#B5B5BE">运动招募角色 · 领地盖建筑 · 里程孵伙伴 · 合力打怪兽</div>
+</div>
+<span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:800">{{got}}<span style="font-size:13px;color:#8A8A94"> / {{total}}</span></span>
+</div>
+<div style="height:8px;flex-shrink:0;border-radius:4px;background:#24242A;overflow:hidden"><div style="height:8px;border-radius:4px;background:#DCF26A;width:{{pct}}%"></div></div>
+
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<button onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" style="height:38px;padding:0 14px;border-radius:19px;border:0;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:6px;{{t.st}}">{{t.name}}<span style="font-family:Orbitron,sans-serif;font-size:11px;opacity:.75">{{t.count}}</span></button>
+</sc-for>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:18px;padding:10px 12px;font-size:12px;color:#C9C9D1;line-height:1.6">{{hint}}</div>
+
+<sc-if value="{{isPet}}" hint-placeholder-val="{{ false }}">
+<div style="background:#26223A;border:1.5px solid #B4A3F5;border-radius:24px;padding:14px;display:flex;align-items:center;gap:14px">
+<svg width="64" height="76" viewBox="0 0 64 76" role="img" aria-label="正在孵化的神秘蛋" style="animation:wob 2.4s ease-in-out infinite;flex-shrink:0"><path d="M32 4 C 14 4 6 36 6 50 C 6 66 18 72 32 72 C 46 72 58 66 58 50 C 58 36 50 4 32 4 Z" fill="#F4E9D8" stroke="#121212" stroke-width="3"></path><path d="M14 40 l8 -6 l8 6 l8 -6 l8 6 l8 -6" fill="none" stroke="#B4A3F5" stroke-width="3" stroke-linejoin="round"></path><circle cx="22" cy="56" r="4" fill="#DCF26A"></circle><circle cx="42" cy="58" r="3" fill="#F28DC0"></circle></svg>
+<div style="display:flex;flex-direction:column;gap:6px;flex-grow:1">
+<span style="font-size:15px;font-weight:900">神秘蛋 · 孵化中</span>
+<span style="font-size:12px;color:#D6D6DD">再跑 <b style="font-family:Orbitron,sans-serif">1.8</b> km 孵化，可能是稀有伙伴</span>
+<div style="height:8px;border-radius:4px;background:rgba(244,244,245,.15);overflow:hidden"><div style="height:8px;width:64%;border-radius:4px;background:#B4A3F5"></div></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isMedal}}" hint-placeholder-val="{{ false }}">
+<a href="Season.dc.html" style="background:#DCF26A;color:#121212;border-radius:24px;padding:16px;display:flex;align-items:center;gap:12px">
+<span style="width:48px;height:48px;border-radius:24px;background:#121212;color:#DCF26A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15" r="5.5"></circle><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:16px;font-weight:900">赛季奖牌 · 已解锁 1 / 4</span><span style="font-size:12px;color:#2B300E">奖牌跟着赛季走，解锁后可以领取实体奖牌</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+</sc-if>
+
+<sc-if value="{{hasGrid}}" hint-placeholder-val="{{ true }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="6">
+<button onClick="{{c.open}}" aria-label="{{c.aria}}" style="border:0;background:#1B1B20;border-radius:18px;padding:5px 5px 8px;cursor:pointer;color:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:6px">
+<dc-import name="CardArt" art="{{c.art}}" w="{{ 104 }}" locked="{{c.locked}}" hint-size="104px,125px"></dc-import>
+<span style="font-size:13px;font-weight:700">{{c.title}}</span>
+<span style="font-size:10px;color:{{c.subColor}};text-align:center;line-height:1.3;padding:0 2px">{{c.sub}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Codex.dc.html" aria-label="图鉴" aria-current="page" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:flex;flex-direction:column;justify-content:flex-end">
+<div role="dialog" aria-label="卡牌详情" style="background:#1B1B20;border-top-left-radius:32px;border-top-right-radius:32px;padding:18px 20px 30px;display:flex;flex-direction:column;align-items:center;gap:12px">
+<div style="align-self:stretch;display:flex;align-items:center;justify-content:space-between">
+<span style="height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;display:flex;align-items:center;{{cur.rareSt}}">{{cur.rare}}</span>
+<button onClick="{{close}}" aria-label="关闭" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<dc-import name="CardArt" art="{{cur.art}}" w="{{ 170 }}" locked="{{cur.locked}}" hint-size="170px,204px"></dc-import>
+<div style="font-size:22px;font-weight:900">{{cur.title}}</div>
+<div style="align-self:stretch;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;gap:10px;font-size:13px;line-height:1.5"><span style="color:#8A8A94;width:56px;flex-shrink:0">获得方式</span><span>{{cur.how}}</span></div>
+<div style="display:flex;gap:10px;font-size:13px;line-height:1.5"><span style="color:#8A8A94;width:56px;flex-shrink:0">效果</span><span>{{cur.effect}}</span></div>
+<div style="display:flex;gap:10px;font-size:13px;line-height:1.5"><span style="color:#8A8A94;width:56px;flex-shrink:0">拥有</span><span>{{cur.own}}</span></div>
+</div>
+<div style="align-self:stretch;display:flex;gap:10px;margin-top:4px">
+<a href="{{cur.href}}" style="flex-grow:1;height:50px;border-radius:25px;background:#DCF26A;color:#121212;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center">{{cur.cta}}</a>
+<sc-if value="{{cur.isPetOwned}}" hint-placeholder-val="{{ false }}"><button onClick="{{setBuddy}}" style="height:50px;padding:0 16px;border-radius:25px;cursor:pointer;font-size:14px;font-weight:700;{{buddySt}}">{{buddyLabel}}</button></sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'char', sel: null, buddy: 'gecko' };
+  }
+  renderVals() {
+    const st = this.state;
+    const C = {
+      char: [
+        { art: 'archer', sport: '跑步', title: '弓箭手', how: '跑步每累计 5 km 招募 1 名', effect: '驻守时领地守卫值 +8', own: 'Lv.3 · 拥有 5 名', rare: '普通' },
+        { art: 'knight', sport: '骑行', title: '骑士', how: '骑行每累计 20 km 招募 1 名', effect: '骑行圈地面积 +10%', own: 'Lv.1 · 拥有 1 名', rare: '稀有' },
+        { art: 'smith', title: '铁匠', how: '力量训练累计 10 次', effect: '建筑升级花费 -15%', own: '', rare: '稀有', locked: true, cond: '力量训练 3 / 10 次' },
+        { art: 'monk', sport: '瑜伽', title: '修士', how: '瑜伽或拉伸累计 300 分钟', effect: '领地被抢后 6 小时内，自动回复 10 点守卫值', own: 'Lv.2 · 拥有 2 名', rare: '普通' },
+        { art: 'scout', sport: '徒步', title: '斥候', how: '徒步或越野单次超过 10 km', effect: '地图视野 +1 km，更早发现宝箱和怪兽', own: 'Lv.1 · 拥有 1 名', rare: '稀有' },
+        { art: 'banner', title: '旗手', how: '参加 3 次跑团集结跑', effect: '集结跑时全员能量 +10%', own: '', rare: '史诗', locked: true, cond: '集结跑 1 / 3 次' },
+        { art: 'alchemist', sport: '跳绳', title: '药剂师', how: '跳绳或 HIIT 累计 5,000 次', effect: '居家跟练获得的能量 +20%', own: 'Lv.1 · 拥有 3 名', rare: '普通' },
+        { art: 'farmer', sport: '健走', title: '农夫', how: '健走或每日步数达到 8,000', effect: '每天的步数额外转化为能量', own: 'Lv.2 · 拥有 4 名', rare: '普通' }
+      ],
+      build: [
+        { art: 'tower', title: '瞭望塔', how: '消耗 300 能量建造', effect: '所在领地守卫值 +20%', own: '已建 2 座', rare: '普通' },
+        { art: 'campfire', title: '篝火', how: '消耗 150 能量建造', effect: '每天自动产出 30 能量', own: '已建 3 座', rare: '普通' },
+        { art: 'mill', title: '风车磨坊', how: '消耗 400 能量建造', effect: '步数转化能量的效率 ×1.2', own: '已建 1 座', rare: '稀有' },
+        { art: 'chapel', title: '礼拜堂', how: '赛季段位达到黄金解锁', effect: '领地被抢后 24 小时内，跑半圈就能夺回', own: '', rare: '史诗', locked: true, cond: '黄金段位解锁' },
+        { art: 'well', title: '水井', how: '消耗 200 能量建造', effect: '伙伴孵化速度 +20%', own: '已建 1 座', rare: '普通' },
+        { art: 'tent', title: '营帐', how: '跑团等级 5 级解锁', effect: '作为跑团集结点，集结跑能量 ×1.5', own: '', rare: '稀有', locked: true, cond: '跑团 Lv.4 / 5' },
+        { art: 'forge', title: '铁匠铺', how: '招募铁匠后解锁', effect: '角色可以在这里升级', own: '', rare: '稀有', locked: true, cond: '先招募铁匠' },
+        { art: 'house', title: '小屋', how: '消耗 250 能量建造', effect: '这块领地的驻守角色上限 +1', own: '已建 2 座', rare: '普通' }
+      ],
+      pet: [
+        { art: 'gecko', title: '闪电壁虎', how: '孵化 · 跑满 5 km', effect: '陪跑时配速提醒更灵敏，能量 +5%', own: '已拥有', rare: '普通' },
+        { art: 'axolotl', title: '云朵螈', how: '孵化 · 跑满 5 km', effect: '雨天运动能量 +15%', own: '已拥有', rare: '稀有' },
+        { art: 'frog', title: '泡泡蛙', how: '孵化 · 跳绳 1,000 个', effect: '跳绳能量 +10%', own: '已拥有', rare: '普通' },
+        { art: 'spiky', title: '尖刺蜥', how: '孵化 · 越野爬升 500 m', effect: '山野图层能量 +15%', own: '', rare: '稀有', locked: true, cond: '神秘蛋可能孵出' },
+        { art: 'firetail', title: '火尾蜥', how: '孵化 · 单次跑 10 km', effect: '长距离跑步能量 +10%', own: '', rare: '史诗', locked: true, cond: '单次 10 km 掉落' },
+        { art: 'nightnewt', title: '夜行蝾螈', how: '孵化 · 22:00 后夜跑 10 次', effect: '夜跑圈地守卫值 +10', own: '', rare: '史诗', locked: true, cond: '夜跑 6 / 10 次' }
+      ],
+      boss: [
+        { art: 'sofa', title: '沙发怪', how: '每周末出没 · 跑团合力击退', effect: '击退掉落：角色卡 + 能量', own: '已击退 3 次', rare: '首领' },
+        { art: 'bat', title: '熬夜蝠', how: '每晚 23:00 后出没', effect: '击退掉落：夜行蝾螈的蛋', own: '已击退 1 次', rare: '首领' },
+        { art: 'smog', title: '雾霾眼', how: '空气质量差的日子出没', effect: '击退掉落：建筑图纸', own: '', rare: '首领', locked: true, cond: '还没遇到过' },
+        { art: 'sugar', title: '糖分怪', how: '节假日出没', effect: '击退掉落：限定奖牌碎片', own: '', rare: '首领', locked: true, cond: '还没遇到过' }
+      ]
+    };
+    const T = [{ id: 'char', name: '角色' }, { id: 'build', name: '建筑' }, { id: 'pet', name: '伙伴' }, { id: 'boss', name: '怪兽' }, { id: 'medal', name: '奖牌' }];
+    const H = {
+      char: '不同运动招募不同角色。角色可以派去驻守领地，提供加成；重复招募会升级。',
+      build: '在自己的领地上盖建筑，每块地有 6 个建造位。建筑加成只对所在领地生效。',
+      pet: '靠里程孵化伙伴，设为陪跑伙伴后，它会在你跑过的路上留下足迹。',
+      boss: '怪兽代表坏习惯，会在地图上出没。跑团合力用运动把它打退，掉落卡牌。',
+      medal: '奖牌按赛季发放，可以领取实体奖牌。'
+    };
+    const countOf = (k) => (C[k] ? C[k].filter((x) => !x.locked).length + '/' + C[k].length : '1/4');
+    const on = 'background:#DCF26A;color:#121212';
+    const off = 'background:#1F1F25;color:#C9C9D1';
+    const tabs = T.map((t) => ({ ...t, count: countOf(t.id), pressed: st.tab === t.id ? 'true' : 'false', st: st.tab === t.id ? on : off, pick: () => this.setState({ tab: t.id, sel: null }) }));
+    const list = C[st.tab] || [];
+    const cards = list.map((c, i) => ({
+      ...c, locked: !!c.locked,
+      title: c.locked ? '???' : c.title,
+      sub: c.locked ? c.cond : (st.tab === 'char' ? c.sport + ' · ' + c.own.split(' · ')[0] : c.own),
+      subColor: c.locked ? '#8A8A94' : '#C9C9D1',
+      aria: c.locked ? '未解锁卡牌，' + c.cond : c.title,
+      open: () => this.setState({ sel: i })
+    }));
+    let all = 0, got = 0;
+    Object.keys(C).forEach((k) => { all += C[k].length; got += C[k].filter((x) => !x.locked).length; });
+    all += 4; got += 1;
+    const RS = { '普通': 'background:#2A2A31;color:#D6D6DD', '稀有': 'background:#6FD3E8;color:#121212', '史诗': 'background:#B4A3F5;color:#121212', '首领': 'background:#FF6A3D;color:#121212' };
+    const raw = st.sel !== null && list[st.sel] ? list[st.sel] : (list[0] || C.char[0]);
+    const CTA = { char: ['派去驻守', 'City.dc.html', '去招募', 'Sports.dc.html'], build: ['去建造', 'City.dc.html', '去解锁', 'Season.dc.html'], pet: ['带它去跑步', 'Run.dc.html', '去孵化', 'Run.dc.html'], boss: ['去讨伐', 'Boss.dc.html', '去地图找找', 'Main.dc.html'] };
+    const ct = CTA[st.tab] || CTA.char;
+    const cur = {
+      ...raw, locked: !!raw.locked,
+      title: raw.locked ? '??? · ' + raw.title : raw.title,
+      own: raw.locked ? '未解锁 · ' + raw.cond : raw.own,
+      rareSt: RS[raw.rare] || RS['普通'],
+      cta: raw.locked ? ct[2] : ct[0], href: raw.locked ? ct[3] : ct[1],
+      isPetOwned: st.tab === 'pet' && !raw.locked
+    };
+    const isBuddy = st.buddy === raw.art;
+    return {
+      tabs, cards, cur,
+      hint: H[st.tab],
+      isPet: st.tab === 'pet', isMedal: st.tab === 'medal', hasGrid: st.tab !== 'medal',
+      got, total: all, pct: Math.round((got / all) * 100),
+      hasSel: st.sel !== null && st.tab !== 'medal',
+      close: () => this.setState({ sel: null }),
+      setBuddy: () => this.setState({ buddy: raw.art }),
+      buddyLabel: isBuddy ? '陪跑中' : '设为陪跑',
+      buddySt: isBuddy ? 'border:1.5px solid #DCF26A;background:transparent;color:#DCF26A' : 'border:1.5px solid #3A3A42;background:transparent;color:#F4F4F5'
+    };
+  }
+}
+</script>
+</body>
+</html>

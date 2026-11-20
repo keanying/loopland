@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>玩法中心</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Main.dc.html" aria-label="返回地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px">
+<h1 style="margin:0;font-size:24px;font-weight:900;letter-spacing:1px">玩法中心</h1>
+<div style="font-size:12px;color:#B5B5BE">8 种玩法 · 都会给你的领地加分</div>
+</div>
+</div>
+
+<div style="border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px;background:{{cur.color}};color:#121212">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="height:26px;padding:0 10px;border-radius:13px;background:#121212;color:{{cur.color}};font-size:12px;font-weight:700;display:flex;align-items:center">{{cur.kind}}</span>
+<span style="font-size:12px;font-weight:700">{{cur.players}}</span>
+</div>
+<div style="font-size:24px;font-weight:900">{{cur.name}}</div>
+<div style="font-size:13px;line-height:1.6;color:#1E1E1E">{{cur.desc}}</div>
+
+<sc-if value="{{isFaction}}" hint-placeholder-val="{{ false }}">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+<sc-for list="{{factions}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="height:64px;border-radius:18px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;{{f.box}}">
+<span style="width:14px;height:14px;border-radius:7px;background:{{f.color}}"></span>
+<span style="font-size:13px;font-weight:700">{{f.name}}</span>
+</button>
+</sc-for>
+</div>
+<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:3px"><div style="width:41%;background:#121212"></div><div style="width:34%;background:rgba(18,18,18,.55)"></div><div style="width:25%;background:rgba(18,18,18,.25)"></div></div>
+<div style="font-size:12px;color:#2A2440">本周全城占比：晨光 41% · 夜行 34% · 山野 25%{{factionNote}}</div>
+</sc-if>
+
+<sc-if value="{{isPet}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:14px;background:rgba(18,18,18,.08);border-radius:22px;padding:12px">
+<svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="跑步伙伴小芽"><ellipse cx="42" cy="54" rx="26" ry="22" fill="#121212"></ellipse><path d="M42 32c0-10 6-16 14-16-1 9-6 14-14 16z" fill="#DCF26A"></path><path d="M42 32c0-8-5-13-11-13 1 7 5 11 11 13z" fill="#DCF26A"></path><circle cx="34" cy="52" r="4" fill="#F4F4F5"></circle><circle cx="50" cy="52" r="4" fill="#F4F4F5"></circle><path d="M37 62c3 2 7 2 10 0" stroke="#F4F4F5" stroke-width="2.5" fill="none" stroke-linecap="round"></path></svg>
+<div style="display:flex;flex-direction:column;gap:6px;flex-grow:1">
+<div style="font-size:16px;font-weight:900">小芽 · Lv.{{petLv}}</div>
+<div style="height:8px;border-radius:4px;background:rgba(18,18,18,.15);overflow:hidden"><div style="height:8px;border-radius:4px;background:#121212;width:{{petExp}}%;transition:width .4s"></div></div>
+<div style="font-size:11px">经验 {{petExp}} / 100 · 已陪你开花 1,326 米</div>
+</div>
+</div>
+<button onClick="{{feed}}" style="height:44px;border-radius:22px;border:0;background:#121212;color:#F28DC0;font-size:14px;font-weight:700;cursor:pointer">喂 50 能量</button>
+</sc-if>
+
+<sc-if value="{{isOrient}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{points}}" as="p" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:10px;height:34px;padding:0 12px;border-radius:17px;{{p.box}}"><span style="font-family:Orbitron,sans-serif;font-size:12px;font-weight:700">{{p.no}}</span><span style="font-size:13px;font-weight:500;flex-grow:1">{{p.name}}</span><span style="font-size:11px;font-weight:700">{{p.state}}</span></div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isStory}}" hint-placeholder-val="{{ false }}">
+<div style="background:#121212;color:#F4F4F5;border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+<button onClick="{{toggleListen}}" aria-label="试听剧情" style="width:44px;height:44px;border-radius:22px;border:0;background:#FF9F5A;color:#121212;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{listenIcon}}"></path></svg></button>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:700">今晚剧情 ·《护送最后一盏灯》</span><span style="font-size:11px;color:#B5B5BE">{{listenText}}</span></div>
+</div>
+</sc-if>
+
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{cur.steps}}" as="s" hint-placeholder-count="3">
+<div style="display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.5"><span style="width:18px;height:18px;border-radius:9px;background:#121212;color:{{cur.color}};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{s.n}}</span><span>{{s.t}}</span></div>
+</sc-for>
+</div>
+<div style="font-size:12px;font-weight:700">奖励 · {{cur.reward}}</div>
+<a href="{{cur.href}}" style="height:48px;border-radius:24px;background:#121212;color:{{cur.color}};font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">{{cur.cta}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+</div>
+
+<div style="font-size:13px;color:#B5B5BE">全部玩法</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<sc-for list="{{modes}}" as="m" hint-placeholder-count="8">
+<button onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="border-radius:22px;padding:14px;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;color:#F4F4F5;{{m.box}}">
+<span style="width:38px;height:38px;border-radius:19px;background:{{m.color}};color:#121212;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{m.ic}}"></path></svg></span>
+<span style="font-size:14px;font-weight:700">{{m.name}}</span>
+<span style="font-size:11px;color:#B5B5BE">{{m.kind}}</span>
+</button>
+</sc-for>
+</div>
+
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" aria-current="page" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'war', faction: 'night', exp: 62, lv: 4, listening: false };
+  }
+  renderVals() {
+    const st = this.state;
+    const steps = (a) => a.map((t, i) => ({ n: i + 1, t }));
+    const M = [
+      { id: 'war', name: '城市争霸', kind: '核心玩法', color: '#DCF26A', players: '全城 2.1 万人在玩', ic: 'M4 20V5l8-2 8 2v15M4 12h16M12 3v17',
+        desc: '自由跑就能圈地，轨迹交叉自动占领。地块可以被抢、被夺回，地图上每块颜色都是一个真人。',
+        steps: steps(['随便跑，路线一交叉就圈下一块', '守卫值低的地最容易被抢，常回去跑一圈加固', '赛季结束按领地面积发奖']), reward: '赛季段位 · 实体奖牌', cta: '去开跑', href: 'Run.dc.html' },
+      { id: 'faction', name: '阵营战', kind: '每周对抗', color: '#B4A3F5', players: '本周第 47 轮', ic: 'M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z',
+        desc: '全城分成三大阵营，每周一结算。你的每一块地、每一份能量都算进阵营总分。',
+        steps: steps(['选择一个阵营，一个赛季内不能更换', '阵营占领全城比例最高的一周，成员能量 ×1.2', '阵营专属头像框和地图边框']), reward: '阵营周冠 · 能量加成', cta: '查看阵营地图', href: 'Main.dc.html' },
+      { id: 'chest', name: '能量宝箱', kind: '每日刷新', color: '#FFC857', players: '今天附近刷新 6 个', ic: 'M4 10h16v10H4zM4 10l2-5h12l2 5M12 10v10',
+        desc: '地图上每天会刷新宝箱，跑到附近自动开启。可能开出能量、合作商户的券，或者限定领地皮肤。',
+        steps: steps(['在地图上找到金色宝箱', '跑到 30 米内自动开启', '商户宝箱的券可在「本地生活」里查看']), reward: '能量 · 商户券 · 限定皮肤', cta: '去地图找宝箱', href: 'Main.dc.html' },
+      { id: 'orient', name: '城市定向', kind: '打卡路线', color: '#6FD3E8', players: '城南线 · 5 个点', ic: 'M12 3a8 8 0 1 0 0 18 8 8 0 1 0 0-18zM15 9l-2 5-4 1 2-5z',
+        desc: '按任务卡依次打卡城市地标，像一场城市寻宝。走路、跑步、骑车都可以参加。',
+        steps: steps(['领取路线任务卡', '按顺序到达每个点位自动打卡', '全部完成获得限定徽章和商户券']), reward: '城南徽章 · 咖啡券', cta: '继续这条路线', href: 'Run.dc.html' },
+      { id: 'pet', name: '跑步伙伴', kind: '养成', color: '#F28DC0', players: '陪你 23 天', ic: 'M12 20c-5 0-8-3-8-7s3-6 8-6 8 2 8 6-3 7-8 7zM12 7c0-3 2-5 5-5',
+        desc: '你的伙伴「小芽」会跟着你跑，在你跑过的路上开花，朋友在地图上能看到这条花路。',
+        steps: steps(['运动获得的能量可以喂给小芽', '升级解锁新外观和花朵颜色', '小芽等级越高，领地守卫值加成越多']), reward: '外观 · 守卫加成', cta: '带小芽去跑步', href: 'Run.dc.html' },
+      { id: 'story', name: 'AI 剧情夜跑', kind: 'AI 语音', color: '#FF9F5A', players: '每晚生成新剧情', ic: 'M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v6H4zM17 14h3v6h-3z',
+        desc: 'AI 根据你今晚的路线和城市地标实时生成剧情，用耳机听着跑。路过真实地标时剧情会推进。',
+        steps: steps(['戴上耳机，选一个剧情主题', 'AI 按你的配速调整剧情节奏', '完成剧情章节解锁收藏卡']), reward: '剧情收藏卡', cta: '开始剧情跑', href: 'Run.dc.html' },
+      { id: 'art', name: '轨迹绘画', kind: '创意', color: '#DCF26A', players: '本周主题：冬天', ic: 'M4 20c4-8 8 0 12-8 2-4 4-6 4-8',
+        desc: '用跑步轨迹在地图上画画。AI 会识别你画的是什么，评分高的作品进入城市画廊。',
+        steps: steps(['选一个本周主题', '跑出图形，AI 自动识别打分', '高分作品登上城市画廊']), reward: '画廊展示 · 能量', cta: '开始画画跑', href: 'Run.dc.html' },
+      { id: 'relay', name: '跑团接力', kind: '团队', color: '#B4A3F5', players: '夜跑兔 · 3/6 棒', ic: 'M3 12h6l3-6 3 12 3-6h3',
+        desc: '跑团成员轮流接力跑同一块地的闭环，一天内接满 6 棒，这块地守卫值翻倍。',
+        steps: steps(['跑团长发起接力', '成员 24 小时内依次完成闭环', '接满 6 棒守卫值 ×2']), reward: '守卫值 ×2', cta: '去接下一棒', href: 'Run.dc.html' }
+    ];
+    const cur = M.find((m) => m.id === st.mode);
+    const modes = M.map((m) => ({
+      ...m,
+      pressed: m.id === st.mode ? 'true' : 'false',
+      box: m.id === st.mode ? 'border:1.5px solid ' + m.color + ';background:#1E1E24' : 'border:1.5px solid #232329;background:#1B1B20',
+      pick: () => this.setState({ mode: m.id })
+    }));
+    const F = [{ id: 'dawn', name: '晨光', color: '#121212' }, { id: 'night', name: '夜行', color: '#F4F4F5' }, { id: 'wild', name: '山野', color: '#6FD3E8' }];
+    const factions = F.map((f) => ({
+      ...f,
+      pressed: f.id === st.faction ? 'true' : 'false',
+      box: f.id === st.faction ? 'border:2px solid #121212;background:rgba(18,18,18,.14);color:#121212' : 'border:2px solid transparent;background:rgba(18,18,18,.06);color:#121212',
+      pick: () => this.setState({ faction: f.id })
+    }));
+    const fname = F.find((f) => f.id === st.faction).name;
+    const P = [
+      { no: '01', name: '拱桥', done: true }, { no: '02', name: '老街口', done: true }, { no: '03', name: '滨江码头', done: false, next: true },
+      { no: '04', name: '城南体育场', done: false }, { no: '05', name: '[合作咖啡品牌] 终点站', done: false }
+    ];
+    const points = P.map((p) => ({ ...p, state: p.done ? '已打卡' : (p.next ? '下一站' : ''), box: p.done ? 'background:#121212;color:#6FD3E8' : (p.next ? 'background:rgba(18,18,18,.16);color:#121212' : 'background:rgba(18,18,18,.06);color:#121212') }));
+    return {
+      cur, modes, factions, points,
+      factionNote: ' · 你在「' + fname + '」',
+      isFaction: st.mode === 'faction',
+      isPet: st.mode === 'pet',
+      isOrient: st.mode === 'orient',
+      isStory: st.mode === 'story',
+      petLv: st.lv, petExp: st.exp,
+      feed: () => { const e = this.state.exp + 50; this.setState(e >= 100 ? { exp: e - 100, lv: this.state.lv + 1 } : { exp: e }); },
+      toggleListen: () => this.setState({ listening: !this.state.listening }),
+      listenIcon: st.listening ? 'M7 5h4v14H7zM13 5h4v14h-4z' : 'M8 5v14l11-7z',
+      listenText: st.listening ? '试听中：「前方滨江码头的灯塔还亮着……」' : '点击试听开场 30 秒'
+    };
+  }
+}
+</script>
+</body>
+</html>

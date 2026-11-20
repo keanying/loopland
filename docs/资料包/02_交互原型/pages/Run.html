@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>开跑 · 圈地流程</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+@keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(3);opacity:0}}
+</style>
+
+<style>html,body{min-height:100%}body{display:flex;justify-content:center;align-items:flex-start;padding:24px 0;box-sizing:border-box}#dc-root>div{border-radius:44px;box-shadow:0 20px 60px rgba(0,0,0,.5)}</style>
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+
+<template data-sc="if" value="{{isReady}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;padding:18px 16px 36px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<a href="Main.html" aria-label="返回地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="font-size:18px;font-weight:700">开跑</div>
+<button aria-label="跑步设置" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg></button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:26px;background:#1B1B20">
+<button onClick="{{setRun}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{modeRun}}">跑步</button>
+<button onClick="{{setWalk}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{modeWalk}}">步行</button>
+<button onClick="{{setBike}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{modeBike}}">骑行</button>
+</div>
+
+<div style="position:relative;height:236px;border-radius:28px;background:#15151A;overflow:hidden;flex-shrink:0">
+<svg width="358" height="236" viewBox="0 0 358 236" style="position:absolute;left:0;top:0" aria-hidden="true">
+<path d="M-10 160 C 60 130 140 200 220 168 S 330 130 370 150 L370 190 C 320 170 280 210 220 210 S 80 180 -10 206 Z" fill="#162330"></path>
+<g stroke="#212128" stroke-width="6" fill="none"><path d="M-10 60 L370 44"></path><path d="M110 -10 L130 250"></path><path d="M260 -10 L240 250"></path></g>
+<path d="M60 150 C 40 100 90 40 170 36 S 290 60 296 112 S 250 186 176 180 S 80 196 60 150 Z" fill="#DCF26A" fill-opacity="0.12" stroke="#DCF26A" stroke-width="2.5" stroke-dasharray="6 6"></path>
+<circle cx="60" cy="150" r="6" fill="#DCF26A"></circle>
+</svg>
+<div style="position:absolute;left:52px;top:142px;width:16px;height:16px;border-radius:8px;background:#DCF26A;animation:pulse 1.8s ease-out infinite" aria-hidden="true"></div>
+<div style="position:absolute;left:12px;bottom:12px;height:32px;padding:0 12px;border-radius:16px;background:rgba(14,14,16,.9);font-size:12px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#DCF26A"></span>{{readyLabel}}</div>
+</div>
+
+<div style="font-size:13px;color:#B5B5BE;margin-top:2px">本次目标</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<button onClick="{{setFree}}" aria-pressed="{{pFree}}" style="height:62px;border-radius:20px;padding:0 14px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#F4F4F5;text-align:left;{{tFree}}">
+<span style="width:38px;height:38px;border-radius:19px;background:#B4A3F5;color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17c3-6 6 2 9-4s6 2 9-4"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:15px;font-weight:700">自由圈地 · 推荐</span><span style="font-size:12px;color:#B5B5BE">随便跑，轨迹一交叉就自动圈地，可连圈多块</span></span>
+</button>
+<button onClick="{{setLoop}}" aria-pressed="{{pLoop}}" style="height:62px;border-radius:20px;padding:0 14px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#F4F4F5;text-align:left;{{tLoop}}">
+<span style="width:38px;height:38px;border-radius:19px;background:#DCF26A;color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-3-6.2"></path><path d="M20 4v5h-5"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:15px;font-weight:700">AI 推荐闭环</span><span style="font-size:12px;color:#B5B5BE">AI 按你的配速规划一圈，回到起点圈下整块大地</span></span>
+</button>
+<button onClick="{{setTake}}" aria-pressed="{{pTake}}" style="height:62px;border-radius:20px;padding:0 14px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#F4F4F5;text-align:left;{{tTake}}">
+<span style="width:38px;height:38px;border-radius:19px;background:#F28DC0;color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4h11l-2 4 2 4H5"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:15px;font-weight:700">夺回 西岸草坪</span><span style="font-size:12px;color:#B5B5BE">「城西跑团」占领 · 守卫值 42，较易夺回</span></span>
+</button>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:12px;color:#B5B5BE">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#DCF26A"></span>GPS 信号良好</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#DCF26A"></span>手表已连接</span>
+</div>
+<div style="flex-grow:1"></div>
+<div style="display:flex;justify-content:center">
+<button onClick="{{start}}" style="width:116px;height:116px;border-radius:58px;border:0;background:#DCF26A;color:#121212;font-size:22px;font-weight:900;letter-spacing:2px;cursor:pointer;box-shadow:0 0 0 10px rgba(220,242,106,.14)">开始</button>
+</div>
+</div>
+</template>
+
+<template data-sc="if" value="{{isLive}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;padding:18px 16px 28px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="height:36px;padding:0 14px;border-radius:18px;background:#1B1B20;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:4px;background:{{statusDot}}"></span>{{statusText}}</div>
+<div style="font-size:12px;color:#B5B5BE">目标 · {{targetLabel}}</div>
+</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding-top:4px">
+<div style="font-size:12px;color:#B5B5BE">用时</div>
+<div style="font-family:Orbitron,sans-serif;font-size:52px;font-weight:800;letter-spacing:1px;opacity:{{timerOpacity}}">{{time}}</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:700">{{dist}}</span><span style="font-size:11px;color:#B5B5BE">距离 km</span></div>
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:700">{{pace}}</span><span style="font-size:11px;color:#B5B5BE">配速 /km</span></div>
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:700">{{hr}}</span><span style="font-size:11px;color:#B5B5BE">心率 bpm</span></div>
+</div>
+
+<div style="position:relative;height:226px;border-radius:28px;background:#15151A;overflow:hidden;flex-shrink:0">
+<svg width="358" height="262" viewBox="0 0 358 262" style="position:absolute;left:0;top:0" aria-hidden="true">
+<path d="M-10 176 C 60 146 140 216 220 184 S 330 146 370 166 L370 206 C 320 186 280 226 220 226 S 80 196 -10 222 Z" fill="#162330"></path>
+<g stroke="#212128" stroke-width="6" fill="none"><path d="M-10 66 L370 50"></path><path d="M110 -10 L130 280"></path><path d="M260 -10 L240 280"></path></g>
+<path d="M60 166 C 40 112 90 50 170 46 S 290 70 296 124 S 250 200 176 194 S 80 210 60 166 Z" fill="#DCF26A" fill-opacity="{{fillOp}}" stroke="#3A3A42" stroke-width="2" stroke-dasharray="5 6"></path>
+<path d="M60 166 C 40 112 90 50 170 46 S 290 70 296 124 S 250 200 176 194 S 80 210 60 166" pathLength="100" fill="none" stroke="#DCF26A" stroke-width="5" stroke-linecap="round" stroke-dasharray="100" stroke-dashoffset="{{trailOffset}}" style="transition:stroke-dashoffset 1s linear"></path>
+<path d="M64 150 L104 112 L122 160 Z" fill="#DCF26A" fill-opacity="{{fp1}}" stroke="#DCF26A" stroke-opacity="{{fp1}}" stroke-width="2" style="transition:fill-opacity .5s"></path>
+<path d="M150 52 L212 46 L200 104 Z" fill="#DCF26A" fill-opacity="{{fp2}}" stroke="#DCF26A" stroke-opacity="{{fp2}}" stroke-width="2" style="transition:fill-opacity .5s"></path>
+<path d="M256 82 L298 120 L262 160 Z" fill="#DCF26A" fill-opacity="{{fp3}}" stroke="#DCF26A" stroke-opacity="{{fp3}}" stroke-width="2" style="transition:fill-opacity .5s"></path>
+<circle cx="60" cy="166" r="9" fill="none" stroke="#F4F4F5" stroke-width="2" stroke-dasharray="3 3"></circle>
+<circle cx="60" cy="166" r="4" fill="#F4F4F5"></circle>
+</svg>
+<div style="position:absolute;right:12px;top:12px;height:30px;padding:0 12px;border-radius:15px;background:rgba(14,14,16,.9);font-size:12px;display:flex;align-items:center">起点 · 滨江公园东门</div>
+</div>
+
+<template data-sc="if" value="{{loopOpen}}" hint-placeholder-val="{{ false }}">
+<div style="background:#B4A3F5;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700">再跑 {{remain}} m 回到起点即可圈地</span><span style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700">{{pct}}%</span></div>
+<div style="height:8px;border-radius:4px;background:rgba(18,18,18,.16);overflow:hidden"><div style="height:8px;border-radius:4px;background:#121212;width:{{pct}}%;transition:width 1s linear"></div></div>
+</div>
+</template>
+<template data-sc="if" value="{{isFree}}" hint-placeholder-val="{{ true }}">
+<div style="background:#DCF26A;color:#121212;border-radius:24px;padding:12px 16px;display:flex;align-items:center;gap:12px">
+<span style="font-family:Orbitron,sans-serif;font-size:30px;font-weight:800;width:44px;text-align:center">{{claims}}</span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:900">自由圈地 · 已自动圈 {{claims}} 块</span><span style="font-size:12px;color:#2B300E">{{freeHint}}</span></span>
+</div>
+</template>
+<div style="display:flex;align-items:center;gap:8px;background:#26223A;border-radius:16px;padding:8px 12px">
+<span style="height:22px;padding:0 8px;border-radius:11px;background:#B4A3F5;color:#121212;font-family:Orbitron,sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;flex-shrink:0">AI</span>
+<span style="font-size:12px;line-height:1.5;color:#E2DCFB">{{aiLine}}</span>
+</div>
+<template data-sc="if" value="{{loopClosed}}" hint-placeholder-val="{{ false }}">
+<div style="background:#DCF26A;color:#121212;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+<span style="width:36px;height:36px;border-radius:18px;background:#121212;color:#DCF26A;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;font-weight:900">已成环！</span><span style="font-size:12px;color:#2B300E">结束即可占领 0.42 km²，继续跑可再圈一块</span></span>
+</div>
+</template>
+
+<div style="flex-grow:1"></div>
+<div style="display:flex;align-items:flex-end;justify-content:center;gap:36px">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<button onClick="{{finish}}" aria-label="结束跑步" style="width:64px;height:64px;border-radius:32px;border:0;background:#24242A;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg></button>
+<span style="font-size:12px;color:#B5B5BE">结束</span>
+</div>
+<template data-sc="if" value="{{isRun}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<button onClick="{{pause}}" aria-label="暂停" style="width:84px;height:84px;border-radius:42px;border:0;background:#B4A3F5;color:#121212;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5"></rect><rect x="14" y="5" width="4" height="14" rx="1.5"></rect></svg></button>
+<span style="font-size:12px;color:#B5B5BE">暂停</span>
+</div>
+</template>
+<template data-sc="if" value="{{isPaused}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<button onClick="{{resume}}" aria-label="继续" style="width:84px;height:84px;border-radius:42px;border:0;background:#DCF26A;color:#121212;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></button>
+<span style="font-size:12px;color:#B5B5BE">继续</span>
+</div>
+</template>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+<button aria-label="锁定屏幕" style="width:64px;height:64px;border-radius:32px;border:0;background:#24242A;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg></button>
+<span style="font-size:12px;color:#B5B5BE">锁屏</span>
+</div>
+</div>
+</div>
+</template>
+
+<template data-sc="if" value="{{isDone}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;padding:18px 16px 30px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<a href="Main.html" aria-label="回到地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+<div style="font-size:16px;font-weight:700">本次记录</div>
+<div style="width:44px"></div>
+</div>
+
+<template data-sc="if" value="{{closed}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px">
+<div style="font-size:14px;font-weight:700;color:#DCF26A">占领成功</div>
+<div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:Orbitron,sans-serif;font-size:60px;font-weight:800;color:#DCF26A">+{{areaText}}</span><span style="font-size:18px;font-weight:700;color:#DCF26A">km²</span></div>
+<div style="font-size:13px;color:#C9C9D1">{{doneSub}}</div>
+</div>
+</template>
+<template data-sc="if" value="{{notClosed}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px">
+<div style="font-size:14px;font-weight:700;color:#B4A3F5">本次未成环</div>
+<div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:Orbitron,sans-serif;font-size:60px;font-weight:800">0.00</span><span style="font-size:18px;font-weight:700">km²</span></div>
+<div style="font-size:13px;color:#C9C9D1;text-align:center">{{openSub}}</div>
+</div>
+</template>
+
+<div style="position:relative;height:176px;border-radius:28px;background:#15151A;overflow:hidden;flex-shrink:0">
+<svg width="358" height="214" viewBox="0 0 358 214" style="position:absolute;left:0;top:0" aria-hidden="true">
+<g stroke="#212128" stroke-width="6" fill="none"><path d="M-10 50 L370 36"></path><path d="M110 -10 L130 230"></path><path d="M260 -10 L240 230"></path></g>
+<path d="M60 150 C 40 100 90 40 170 36 S 290 60 296 112 S 250 186 176 180 S 80 196 60 150 Z" fill="#DCF26A" fill-opacity="{{doneFill}}" stroke="#DCF26A" stroke-width="3"></path>
+<path d="M60 150 C 40 100 90 40 170 36 S 200 40 210 46" fill="#F28DC0" fill-opacity="{{takeFill}}" stroke="none"></path>
+</svg>
+<div style="position:absolute;left:12px;bottom:12px;height:30px;padding:0 12px;border-radius:15px;background:rgba(14,14,16,.9);font-size:12px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#DCF26A"></span>滨江公园 · 新领地</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:700">{{dist}}</span><span style="font-size:11px;color:#B5B5BE">距离 km</span></div>
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:700">{{timeShort}}</span><span style="font-size:11px;color:#B5B5BE">用时</span></div>
+<div style="background:#1B1B20;border-radius:20px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:700">{{kcal}}</span><span style="font-size:11px;color:#B5B5BE">千卡</span></div>
+</div>
+
+<template data-sc="if" value="{{shared}}" hint-placeholder-val="{{ false }}">
+<div style="background:#26223A;border:1px solid #B4A3F5;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+<span style="font-size:11px;font-weight:700;color:#B4A3F5"><span style="font-family:Orbitron,sans-serif">AI</span> 战报 · 已生成</span>
+<span style="font-size:15px;font-weight:900;line-height:1.4">{{reportTitle}}</span>
+<span style="font-size:12px;line-height:1.6;color:#D6D6DD">{{reportBody}}</span>
+<a href="Compose.html" style="align-self:flex-start;height:36px;padding:0 14px;border-radius:18px;background:#B4A3F5;color:#121212;font-size:12px;font-weight:700;display:flex;align-items:center;margin-top:4px">带上战报发动态</a>
+</div>
+</template>
+<template data-sc="if" value="{{notShared}}" hint-placeholder-val="{{ true }}">
+<a href="Season.html" style="background:#B4A3F5;color:#121212;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+<span style="width:40px;height:40px;border-radius:20px;background:#121212;color:#B4A3F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="15" r="5.5"></circle><path d="M8.5 10.5 6 3h4l2 5 2-5h4l-2.5 7.5"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">滨江守护者 · {{medalProg}}</span><span style="font-size:12px;color:#2A2440">集齐 5 块解锁实体奖牌</span></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</a>
+</template>
+
+<div style="flex-grow:1"></div>
+<div style="display:flex;gap:10px">
+<button onClick="{{share}}" style="flex-grow:1;height:52px;border-radius:26px;border:0;background:#DCF26A;color:#121212;font-size:15px;font-weight:700;cursor:pointer">{{shareLabel}}</button>
+<button onClick="{{again}}" style="height:52px;padding:0 20px;border-radius:26px;border:1.5px solid #3A3A42;background:transparent;color:#F4F4F5;font-size:14px;font-weight:500;cursor:pointer">再跑一次</button>
+</div>
+</div>
+</template>
+
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { phase: 'ready', sec: 0, mode: 'run', target: 'free', shared: false };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      if (this.state.phase === 'running') this.setState({ sec: this.state.sec + 20 });
+    }, 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+  }
+  renderVals() {
+    const st = this.state;
+    const sec = st.sec;
+    const dist = sec / 330;
+    const loop = 3.6;
+    const prog = Math.min(1, dist / loop);
+    const free = st.target === 'free';
+    const claims = free ? Math.min(3, Math.floor(dist / 1.1)) : 0;
+    const closed = free ? claims >= 1 : prog >= 1;
+    const areaVal = free ? [0, 0.14, 0.29, 0.47][claims] : 0.42;
+    const areaText = closed ? areaVal.toFixed(2) : '0.00';
+    const remainLoop = Math.max(0, Math.round((loop - dist) * 1000));
+    let aiLine;
+    if (st.phase === 'paused') aiLine = '已暂停，领地不会丢，休息好再继续';
+    else if (free) aiLine = ['前方 300 m 右转绕回来，就能和刚才的轨迹交叉', '漂亮！沿江再跑 1 km，能把西岸草坪一角也圈进来', '配速 5′30″ 很稳，再交叉一次就能连圈 3 块', '今晚已连圈 3 块，可以收工了，记得拉伸'][claims];
+    else aiLine = closed ? '已成环，现在结束就能占领 0.42 km²' : '保持配速，前方路口直行，按推荐路线还剩 ' + remainLoop + ' m';
+    const pad = (n) => String(n).padStart(2, '0');
+    const time = pad(Math.floor(sec / 3600)) + ':' + pad(Math.floor((sec % 3600) / 60)) + ':' + pad(sec % 60);
+    const timeShort = pad(Math.floor(sec / 60)) + ':' + pad(sec % 60);
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const tOn = 'border:1.5px solid #DCF26A;background:#1E2213';
+    const tOff = 'border:1.5px solid #2A2A31;background:#1B1B20';
+    const done = st.phase === 'done';
+    return {
+      isReady: st.phase === 'ready',
+      isRun: st.phase === 'running',
+      isPaused: st.phase === 'paused',
+      isLive: st.phase === 'running' || st.phase === 'paused',
+      isDone: done,
+      time, timeShort,
+      dist: dist.toFixed(2),
+      pace: sec > 0 ? '5′30″' : '--',
+      hr: sec > 0 ? 138 + Math.min(26, Math.round(dist * 7)) : '--',
+      kcal: Math.round(dist * 62),
+      pct: Math.round(prog * 100),
+      remain: Math.max(0, Math.round((loop - dist) * 1000)),
+      closed, notClosed: !closed,
+      isFree: free,
+      loopOpen: !free && !closed,
+      loopClosed: !free && closed,
+      claims,
+      fp1: claims >= 1 ? 0.45 : 0, fp2: claims >= 2 ? 0.45 : 0, fp3: claims >= 3 ? 0.45 : 0,
+      freeHint: claims === 0 ? '继续跑，轨迹交叉时自动圈地' : (claims >= 3 ? '已连圈 3 块 · 共 ' + areaText + ' km²' : '已占领 ' + areaText + ' km² · 下一次交叉就是第 ' + (claims + 1) + ' 块'),
+      aiLine,
+      readyLabel: { free: '自由圈地 · 轨迹一交叉就占领', loop: 'AI 推荐闭环 3.6 km · 可圈 0.42 km²', take: '夺回路线 2.8 km · 目标 西岸草坪' }[st.target],
+      areaText,
+      doneSub: free ? '轨迹交叉 ' + claims + ' 次，连圈 ' + claims + ' 块 · 含从「城西跑团」夺回的 0.12 km²' : '其中 0.12 km² 从「城西跑团」手中夺回',
+      openSub: free ? '这次轨迹没有交叉，下次绕回来跑过自己的路线就能圈地' : '下次回到起点 50 m 内再结束，这一圈就是你的',
+      shareLabel: st.shared ? '发到动态' : 'AI 生成战报',
+      notShared: !st.shared,
+      reportTitle: '夜袭滨江！阿杰 ' + Math.max(1, Math.round(sec / 60)) + ' 分钟圈下 ' + areaText + ' km²',
+      reportBody: '配速 5′30″ 稳得像节拍器，' + (free ? '轨迹交叉 ' + claims + ' 次，连圈 ' + claims + ' 块。' : '一圈闭环拿下整块滨江公园。') + '夜跑兔本周领地 +2.1 km²，距第二名只差 2.5 km²。',
+      trailOffset: (100 - prog * 100).toFixed(1),
+      fillOp: !free && closed ? 0.3 : 0,
+      doneFill: closed ? 0.4 : 0,
+      takeFill: closed ? 0.55 : 0,
+      timerOpacity: st.phase === 'paused' ? '0.45' : '1',
+      statusText: st.phase === 'paused' ? '已暂停' : '跑步中 · 圈地模式',
+      statusDot: st.phase === 'paused' ? '#FF9F5A' : '#DCF26A',
+      targetLabel: { loop: '闭环圈地', take: '夺回 西岸草坪', free: '自由跑' }[st.target],
+      medalProg: closed ? '4 / 5' : '3 / 5',
+      modeRun: st.mode === 'run' ? on : off,
+      modeWalk: st.mode === 'walk' ? on : off,
+      modeBike: st.mode === 'bike' ? on : off,
+      setRun: () => this.setState({ mode: 'run' }),
+      setWalk: () => this.setState({ mode: 'walk' }),
+      setBike: () => this.setState({ mode: 'bike' }),
+      tLoop: st.target === 'loop' ? tOn : tOff,
+      tTake: st.target === 'take' ? tOn : tOff,
+      tFree: st.target === 'free' ? tOn : tOff,
+      pLoop: st.target === 'loop' ? 'true' : 'false',
+      pTake: st.target === 'take' ? 'true' : 'false',
+      pFree: st.target === 'free' ? 'true' : 'false',
+      setLoop: () => this.setState({ target: 'loop' }),
+      setTake: () => this.setState({ target: 'take' }),
+      setFree: () => this.setState({ target: 'free' }),
+      start: () => this.setState({ phase: 'running', sec: 0, shared: false }),
+      pause: () => this.setState({ phase: 'paused' }),
+      resume: () => this.setState({ phase: 'running' }),
+      finish: () => this.setState({ phase: 'done' }),
+      again: () => this.setState({ phase: 'ready', sec: 0, shared: false }),
+      share: () => this.setState({ shared: true }),
+      shared: st.shared
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>动态详情与评论</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button,input{font-family:inherit}
+input::placeholder{color:#8A8A94}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif;display:flex;flex-direction:column">
+
+<div style="padding:18px 16px 10px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+<a href="Feed.dc.html" aria-label="返回动态" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="font-size:18px;font-weight:900;flex-grow:1">动态详情</div>
+<button onClick="{{openShare}}" aria-label="分享" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10l7 3 3 7zM21 3 10 13"></path></svg></button>
+</div>
+
+<div style="flex-grow:1;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+<div style="display:flex;align-items:center;gap:10px">
+<a href="UserProfile.dc.html" style="display:flex;align-items:center;gap:10px;flex-grow:1;color:#F4F4F5">
+<span style="width:48px;height:48px;border-radius:24px;border:2px solid #FF9F5A;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="width:40px;height:40px;border-radius:20px;background:#FF9F5A;color:#121212;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900">K</span></span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:700">Kai</span><span style="font-size:11px;color:#B5B5BE">1 小时前 · 东港 · 城南个人榜 #1</span></span>
+</a>
+<button onClick="{{follow}}" aria-pressed="{{fPressed}}" style="height:36px;padding:0 16px;border-radius:18px;cursor:pointer;font-size:13px;font-weight:700;{{fStyle}}">{{fLabel}}</button>
+</div>
+<div style="font-size:15px;line-height:1.7">自由圈地一次连圈 4 块，轨迹交叉的地方全变橙色了。东港这一带今晚归我。<span style="color:#DCF26A;font-weight:700"> #自由圈地 #夜跑 #城南</span></div>
+
+<a href="Reels.dc.html" aria-label="播放轨迹回放" style="position:relative;display:block;height:220px;border-radius:24px;overflow:hidden;background:#15151A;flex-shrink:0">
+<svg width="358" height="220" viewBox="0 0 358 220" style="position:absolute;left:0;top:0" aria-hidden="true">
+<path d="M-10 140 C 70 116 160 170 250 144 S 340 120 370 130 L370 164 C 320 156 280 186 230 184 S 70 162 -10 172 Z" fill="#162330"></path>
+<g stroke="#212128" stroke-width="5" fill="none"><path d="M-10 52 L370 36"></path><path d="M110 -10 L128 230"></path><path d="M250 -10 L234 230"></path></g>
+<path d="M76 140 L130 80 L184 116 L140 160 Z M240 140 L300 92 L324 160 Z" fill="#FF9F5A" fill-opacity="0.35" stroke="#FF9F5A" stroke-width="2" stroke-linejoin="round"></path>
+<path d="M44 172 C 66 70 150 46 194 104 S 282 184 324 92 S 356 46 324 172 S 130 214 66 140" fill="none" stroke="#FF9F5A" stroke-width="4" stroke-linecap="round"></path>
+</svg>
+<span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:28px;background:rgba(244,244,245,.9);color:#121212;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>
+<span style="position:absolute;right:12px;top:12px;height:28px;padding:0 10px;border-radius:14px;background:rgba(14,14,16,.88);font-size:11px;color:#F4F4F5;display:flex;align-items:center">轨迹回放 · 3D</span>
+</a>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px">
+<div style="background:#1B1B20;border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">10.4</span><span style="font-size:10px;color:#B5B5BE">km</span></div>
+<div style="background:#1B1B20;border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">57:12</span><span style="font-size:10px;color:#B5B5BE">用时</span></div>
+<div style="background:#1B1B20;border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">5′29″</span><span style="font-size:10px;color:#B5B5BE">配速</span></div>
+<div style="background:#1B1B20;border-radius:16px;padding:10px 6px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700;color:#FF9F5A">+0.61</span><span style="font-size:10px;color:#B5B5BE">圈地 km²</span></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:8px">
+<button onClick="{{like}}" aria-pressed="{{likePressed}}" aria-label="点赞" style="height:40px;padding:0 14px;border-radius:20px;border:0;background:#1B1B20;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="{{likeFill}}" stroke="{{likeStroke}}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>{{likes}}</button>
+<button onClick="{{save}}" aria-pressed="{{savePressed}}" aria-label="收藏" style="height:40px;padding:0 14px;border-radius:20px;border:0;background:#1B1B20;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="{{saveFill}}" stroke="{{saveStroke}}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>{{saves}}</button>
+<button onClick="{{openShare}}" aria-label="分享" style="height:40px;padding:0 14px;border-radius:20px;border:0;background:#1B1B20;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 3 10l7 3 3 7zM21 3 10 13"></path></svg>{{shares}}</button>
+<span style="flex-grow:1"></span>
+<a href="Run.dc.html" style="height:40px;padding:0 14px;border-radius:20px;background:#DCF26A;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center">跑同款</a>
+</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#B5B5BE">
+<span style="display:flex"><span style="width:24px;height:24px;border-radius:12px;background:#B4A3F5;border:2px solid #0E0E10"></span><span style="width:24px;height:24px;border-radius:12px;background:#6FD3E8;border:2px solid #0E0E10;margin-left:-8px"></span><span style="width:24px;height:24px;border-radius:12px;background:#F28DC0;border:2px solid #0E0E10;margin-left:-8px"></span></span>
+{{likedBy}}
+</div>
+
+<div style="height:1px;background:#232329"></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:16px;font-weight:900">评论 {{count}}</span>
+<div style="display:flex;gap:2px;padding:3px;border-radius:18px;background:#1B1B20">
+<button onClick="{{sortHot}}" aria-pressed="{{pHot}}" style="height:30px;padding:0 12px;border:0;border-radius:15px;font-size:12px;cursor:pointer;{{sHot}}">最热</button>
+<button onClick="{{sortNew}}" aria-pressed="{{pNew}}" style="height:30px;padding:0 12px;border:0;border-radius:15px;font-size:12px;cursor:pointer;{{sNew}}">最新</button>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px">
+<sc-for list="{{comments}}" as="c" hint-placeholder-count="4">
+<div style="display:flex;gap:10px">
+<span style="width:36px;height:36px;border-radius:18px;background:{{c.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0">{{c.ini}}</span>
+<div style="display:flex;flex-direction:column;gap:6px;flex-grow:1;min-width:0">
+<div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:700;color:#C9C9D1">{{c.name}}</span><sc-if value="{{c.isAuthor}}" hint-placeholder-val="{{ false }}"><span style="height:18px;padding:0 6px;border-radius:9px;background:#FF9F5A;color:#121212;font-size:10px;font-weight:700;display:flex;align-items:center">作者</span></sc-if></div>
+<div style="font-size:14px;line-height:1.6">{{c.text}}</div>
+<div style="display:flex;align-items:center;gap:14px;font-size:12px;color:#B5B5BE"><span>{{c.time}}</span><button onClick="{{c.reply}}" style="border:0;background:transparent;color:#B5B5BE;font-size:12px;cursor:pointer;padding:6px 0">回复</button></div>
+<sc-for list="{{c.replies}}" as="r" hint-placeholder-count="1">
+<div style="display:flex;gap:8px;background:#16161B;border-radius:14px;padding:10px">
+<span style="width:26px;height:26px;border-radius:13px;background:{{r.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0">{{r.ini}}</span>
+<div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:12px;font-weight:700;color:#C9C9D1">{{r.name}}<span style="color:#FF9F5A">{{r.tag}}</span></span><span style="font-size:13px;line-height:1.5">{{r.text}}</span><span style="font-size:11px;color:#8A8A94">{{r.time}}</span></div>
+</div>
+</sc-for>
+</div>
+<button onClick="{{c.like}}" aria-pressed="{{c.pressed}}" aria-label="赞这条评论" style="border:0;background:transparent;color:#B5B5BE;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;flex-shrink:0;height:44px"><svg width="16" height="16" viewBox="0 0 24 24" fill="{{c.fill}}" stroke="{{c.stroke}}" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg><span style="font-size:11px">{{c.likes}}</span></button>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="flex-shrink:0;border-top:1px solid #232329;background:#0E0E10;padding:10px 16px 26px;display:flex;flex-direction:column;gap:8px">
+<sc-if value="{{replying}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#B5B5BE"><span>回复 @{{replyName}}</span><button onClick="{{cancelReply}}" style="border:0;background:transparent;color:#DCF26A;font-size:12px;cursor:pointer;padding:4px">取消</button></div>
+</sc-if>
+<div style="display:flex;gap:6px">
+<sc-for list="{{quick}}" as="q" hint-placeholder-count="4"><button onClick="{{q.use}}" style="height:30px;padding:0 12px;border-radius:15px;border:1px solid #3A3A42;background:transparent;color:#F4F4F5;font-size:12px;cursor:pointer;white-space:nowrap">{{q.t}}</button></sc-for>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<input aria-label="写评论" value="{{draft}}" onChange="{{onDraft}}" onKeyDown="{{onKey}}" placeholder="{{ph}}" style="flex-grow:1;min-width:0;height:46px;border-radius:23px;border:1px solid #2A2A31;background:#1B1B20;color:#F4F4F5;padding:0 16px;font-size:14px;outline:none">
+<button onClick="{{send}}" style="height:46px;padding:0 18px;border-radius:23px;border:0;cursor:pointer;font-size:14px;font-weight:700;{{sendStyle}}">发送</button>
+</div>
+</div>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;left:50%;top:72px;transform:translateX(-50%);height:40px;padding:0 16px;border-radius:20px;background:#F4F4F5;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)">{{toast}}</div>
+</sc-if>
+
+<sc-if value="{{shareOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.66);display:flex;flex-direction:column;justify-content:flex-end">
+<div role="dialog" aria-label="分享" style="background:#1B1B20;border-top-left-radius:32px;border-top-right-radius:32px;padding:20px 20px 30px;display:flex;flex-direction:column;gap:16px">
+<div style="font-size:18px;font-weight:900">分享到</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 8px">
+<sc-for list="{{targets}}" as="t" hint-placeholder-count="8">
+<button onClick="{{t.go}}" style="border:0;background:transparent;color:#F4F4F5;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0">
+<span style="width:52px;height:52px;border-radius:26px;background:{{t.bg}};color:#121212;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.ic}}"></path></svg></span>
+<span style="font-size:11px">{{t.name}}</span>
+</button>
+</sc-for>
+</div>
+<button onClick="{{closeShare}}" style="height:48px;border-radius:24px;border:0;background:#2A2A31;color:#F4F4F5;font-size:15px;font-weight:700;cursor:pointer">取消</button>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      liked: false, saved: false, followed: false, shared: false, shareOpen: false, toast: '',
+      sort: 'hot', draft: '', replyTo: null, likedC: {},
+      list: [
+        { id: 'c1', ini: '鹿', name: '小鹿 · 夜跑兔', color: '#B4A3F5', text: '东门那块我明早去补一圈，别得意', time: '50 分钟前', likes: 24, order: 1, replies: [{ ini: 'K', name: 'Kai', tag: ' 作者', color: '#FF9F5A', text: '来，我等你', time: '45 分钟前' }] },
+        { id: 'c2', ini: 'M', name: 'Momo · 江湾晨跑', color: '#6FD3E8', text: '连圈 4 块怎么跑的？求路线', time: '40 分钟前', likes: 15, order: 2, replies: [{ ini: 'K', name: 'Kai', tag: ' 作者', color: '#FF9F5A', text: '东港步道绕两个 8 字，交叉点在桥下', time: '38 分钟前' }] },
+        { id: 'c3', ini: '周', name: '老周 · 城西跑团', color: '#F28DC0', text: '西岸草坪那块你们就别想了', time: '30 分钟前', likes: 9, order: 3, replies: [] },
+        { id: 'c4', ini: '珍', name: '阿珍', color: '#DCF26A', text: '配速好稳，羡慕', time: '12 分钟前', likes: 3, order: 4, replies: [] }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 1800); }
+  submit() {
+    const t = (this.state.draft || '').trim();
+    if (!t) return;
+    const me = { ini: '杰', name: '阿杰', tag: '', color: '#B4A3F5', text: t, time: '刚刚' };
+    if (this.state.replyTo) {
+      const list = this.state.list.map((c) => (c.id === this.state.replyTo ? { ...c, replies: c.replies.concat([me]) } : c));
+      this.setState({ list, draft: '', replyTo: null });
+    } else {
+      const c = { id: 'm' + Date.now(), ini: '杰', name: '阿杰 · 夜跑兔', color: '#B4A3F5', text: t, time: '刚刚', likes: 0, order: 99, replies: [] };
+      this.setState({ list: [c].concat(this.state.list), draft: '', sort: 'new' });
+    }
+    this.flash('评论已发布');
+  }
+  renderVals() {
+    const st = this.state;
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    let arr = st.list.slice();
+    if (st.sort === 'hot') arr.sort((a, b) => b.likes - a.likes); else arr.sort((a, b) => b.order - a.order);
+    const comments = arr.map((c) => {
+      const l = !!st.likedC[c.id];
+      return {
+        ...c, isAuthor: c.name === 'Kai',
+        likes: c.likes + (l ? 1 : 0), pressed: l ? 'true' : 'false',
+        fill: l ? '#FF5C7A' : 'none', stroke: l ? '#FF5C7A' : 'currentColor',
+        like: () => this.setState({ likedC: { ...this.state.likedC, [c.id]: !l } }),
+        reply: () => this.setState({ replyTo: c.id })
+      };
+    });
+    const total = st.list.reduce((n, c) => n + 1 + c.replies.length, 0) + 15;
+    const rt = st.list.find((c) => c.id === st.replyTo);
+    const T = [
+      { name: '微信好友', bg: '#DCF26A', ic: 'M4 5h16v11H9l-5 4z' },
+      { name: '朋友圈', bg: '#DCF26A', ic: 'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8z' },
+      { name: '小红书', bg: '#FF5C7A', ic: 'M5 4h14v16H5zM9 9h6M9 13h6M9 17h3' },
+      { name: '抖音', bg: '#F4F4F5', ic: 'M10 4v11a3 3 0 1 1-3-3M10 4c1 3 3 4 6 4' },
+      { name: '发给跑团', bg: '#B4A3F5', ic: 'M9 11a3 3 0 1 0 0-6 3 3 0 1 0 0 6zM3 20c1-3.5 3.4-5 6-5s5 1.5 6 5M16 5a3 3 0 0 1 0 6M18 15c1.6.6 2.6 2 3 5' },
+      { name: '转发到动态', bg: '#B4A3F5', ic: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3' },
+      { name: '生成海报', bg: '#FFC857', ic: 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4' },
+      { name: '复制链接', bg: '#2A2A31', ic: 'M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1' }
+    ];
+    const targets = T.map((t) => ({ ...t, go: () => { this.setState({ shareOpen: false, shared: true }); this.flash(t.name === '复制链接' ? '链接已复制' : (t.name === '生成海报' ? '海报已保存到相册' : '已分享到' + t.name)); } }));
+    const quick = ['加油！', '求路线', '带我一个', '周六见'].map((t) => ({ t, use: () => this.setState({ draft: t }) }));
+    return {
+      fPressed: st.followed ? 'true' : 'false', fLabel: st.followed ? '已关注' : '关注',
+      fStyle: st.followed ? 'border:0;background:#2A2A31;color:#B5B5BE' : 'border:0;background:#DCF26A;color:#121212',
+      follow: () => { this.setState({ followed: !st.followed }); this.flash(st.followed ? '已取消关注' : '已关注 Kai，他跑步时你会收到快拍'); },
+      likes: 128 + (st.liked ? 1 : 0), likePressed: st.liked ? 'true' : 'false', likeFill: st.liked ? '#FF5C7A' : 'none', likeStroke: st.liked ? '#FF5C7A' : 'currentColor',
+      like: () => this.setState({ liked: !st.liked }),
+      saves: 34 + (st.saved ? 1 : 0), savePressed: st.saved ? 'true' : 'false', saveFill: st.saved ? '#DCF26A' : 'none', saveStroke: st.saved ? '#DCF26A' : 'currentColor',
+      save: () => { this.setState({ saved: !st.saved }); this.flash(st.saved ? '已取消收藏' : '已收藏，路线可在「我的收藏」里一键开跑'); },
+      shares: 12 + (st.shared ? 1 : 0),
+      likedBy: st.liked ? '你、小鹿、Momo 等 ' + (128 + 1) + ' 人赞了' : '小鹿、Momo、老周等 128 人赞了',
+      count: total,
+      comments, quick, targets,
+      sHot: st.sort === 'hot' ? on : off, sNew: st.sort === 'new' ? on : off,
+      pHot: st.sort === 'hot' ? 'true' : 'false', pNew: st.sort === 'new' ? 'true' : 'false',
+      sortHot: () => this.setState({ sort: 'hot' }), sortNew: () => this.setState({ sort: 'new' }),
+      replying: !!rt, replyName: rt ? rt.name.split(' ')[0] : '',
+      cancelReply: () => this.setState({ replyTo: null }),
+      ph: rt ? '回复 @' + rt.name.split(' ')[0] + '…' : '说点什么，给 Kai 加个油…',
+      draft: st.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter') this.submit(); },
+      send: () => this.submit(),
+      sendStyle: (st.draft || '').trim() ? 'background:#DCF26A;color:#121212' : 'background:#2A2A31;color:#8A8A94',
+      shareOpen: st.shareOpen, openShare: () => this.setState({ shareOpen: true }), closeShare: () => this.setState({ shareOpen: false }),
+      hasToast: !!st.toast, toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

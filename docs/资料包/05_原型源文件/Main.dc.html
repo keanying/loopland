@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>领地地图</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+@keyframes pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(3);opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#121216;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+
+<div onPointerDown="{{onDown}}" onPointerMove="{{onMove}}" onPointerUp="{{onUp}}" onPointerLeave="{{onUp}}" onPointerCancel="{{onUp}}" style="position:absolute;left:0;top:0;right:0;bottom:0;overflow:hidden;touch-action:none;cursor:{{cursor}}">
+<div style="position:absolute;left:0;top:0;width:900px;height:1200px;transform-origin:0 0;transform:translate({{px}}px,{{py}}px) scale({{z}});transition:{{trans}}">
+<svg width="900" height="1200" viewBox="0 0 900 1200" style="position:absolute;left:0;top:0" aria-hidden="true">
+<rect width="900" height="1200" fill="#121216"></rect>
+<path d="M-10 640 C 120 600 260 700 400 650 S 640 590 760 640 S 880 700 910 680 L910 760 C 860 770 780 720 700 730 S 520 790 400 760 S 140 700 -10 740 Z" fill="#162330"></path>
+<rect x="405" y="276" width="74" height="40" rx="8" fill="#152019"></rect>
+<rect x="551" y="740" width="84" height="64" rx="8" fill="#152019"></rect>
+<rect x="60" y="300" width="110" height="80" rx="10" fill="#152019"></rect>
+<rect x="640" y="980" width="150" height="110" rx="12" fill="#152019"></rect>
+<rect x="250" y="40" width="120" height="60" rx="10" fill="#152019"></rect>
+<g stroke="#212128" stroke-width="7" fill="none" stroke-linecap="round">
+<path d="M-10 70 L910 40"></path><path d="M-10 330 L910 290"></path><path d="M-10 456 L910 436"></path><path d="M-10 790 L910 730"></path><path d="M-10 882 L910 870"></path><path d="M-10 1100 L910 1080"></path>
+<path d="M120 -10 L150 1210"></path><path d="M355 -10 L397 1210"></path><path d="M509 -10 L467 1210"></path><path d="M595 -10 L637 1210"></path><path d="M820 -10 L780 1210"></path>
+</g>
+<g stroke="#1A1A20" stroke-width="2.5" fill="none">
+<path d="M-10 200 L910 180"></path><path d="M-10 386 L910 370"></path><path d="M-10 540 L910 510"></path><path d="M-10 960 L910 940"></path>
+<path d="M60 -10 L80 1210"></path><path d="M295 -10 L317 1210"></path><path d="M437 -10 L427 1210"></path><path d="M700 -10 L700 1210"></path>
+</g>
+<g opacity="{{opMine}}">
+<path d="M375 510 L460 480 L505 530 L487 600 L405 612 L363 565 Z" fill="#DCF26A" fill-opacity="0.5" stroke="#DCF26A" stroke-width="{{sw.bj}}" stroke-linejoin="round"></path>
+<path d="M295 360 L373 348 L385 416 L317 430 Z" fill="#DCF26A" fill-opacity="0.5" stroke="#DCF26A" stroke-width="{{sw.lj}}" stroke-linejoin="round"></path>
+<path d="M420 980 L520 970 L530 1050 L430 1060 Z" fill="#DCF26A" fill-opacity="0.5" stroke="#DCF26A" stroke-width="{{sw.nh}}" stroke-linejoin="round"></path>
+</g>
+<g opacity="{{opClub}}">
+<path d="M470 350 L573 330 L603 408 L551 448 L485 430 Z" fill="#B4A3F5" fill-opacity="0.45" stroke="#B4A3F5" stroke-width="{{sw.yp}}" stroke-linejoin="round"></path>
+<path d="M640 140 L780 160 L800 260 L680 280 Z" fill="#B4A3F5" fill-opacity="0.45" stroke="#B4A3F5" stroke-width="{{sw.xf}}" stroke-linejoin="round"></path>
+</g>
+<g opacity="{{opRival}}">
+<path d="M269 476 L347 464 L359 530 L325 580 L267 562 Z" fill="#F28DC0" fill-opacity="0.45" stroke="#F28DC0" stroke-width="{{sw.cx}}" stroke-linejoin="round"></path>
+<path d="M60 120 L200 100 L220 210 L90 230 Z" fill="#F28DC0" fill-opacity="0.45" stroke="#F28DC0" stroke-width="{{sw.xg}}" stroke-linejoin="round"></path>
+<path d="M517 480 L615 468 L627 560 L555 582 L511 540 Z" fill="#FF9F5A" fill-opacity="0.45" stroke="#FF9F5A" stroke-width="{{sw.dg}}" stroke-linejoin="round"></path>
+<path d="M600 800 L760 790 L800 900 L700 940 L610 900 Z" fill="#6FD3E8" fill-opacity="0.45" stroke="#6FD3E8" stroke-width="{{sw.nm}}" stroke-linejoin="round"></path>
+<path d="M120 830 L240 812 L260 910 L150 940 Z" fill="#6FD3E8" fill-opacity="0.45" stroke="#6FD3E8" stroke-width="{{sw.ba}}" stroke-linejoin="round"></path>
+</g>
+</svg>
+
+<div style="position:absolute;left:440px;top:530px;width:14px;height:14px" aria-hidden="true">
+<div style="position:absolute;left:0;top:0;width:14px;height:14px;border-radius:7px;background:#DCF26A;animation:pulse 1.8s ease-out infinite"></div>
+<div style="position:absolute;left:0;top:0;width:14px;height:14px;border-radius:7px;background:#F4F4F5;border:3px solid #121216;box-sizing:border-box"></div>
+</div>
+
+<sc-for list="{{pins}}" as="p" hint-placeholder-count="10">
+<button onClick="{{p.pick}}" aria-label="{{p.aria}}" style="position:absolute;left:{{p.x}}px;top:{{p.y}}px;transform:translate(-50%,-50%);height:44px;padding:0;border:0;background:transparent;cursor:pointer;opacity:{{p.op}}">
+<span style="height:30px;padding:0 11px;border-radius:15px;border:1.5px solid {{p.color}};background:rgba(14,14,16,.9);color:#F4F4F5;font-size:11px;font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:8px;height:8px;border-radius:4px;background:{{p.color}}"></span>{{p.name}}</span>
+</button>
+</sc-for>
+<sc-for list="{{chests}}" as="c" hint-placeholder-count="3">
+<button onClick="{{c.pick}}" aria-label="{{c.aria}}" style="position:absolute;left:{{c.x}}px;top:{{c.y}}px;transform:translate(-50%,-50%);width:44px;height:44px;padding:0;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center">
+<span style="width:34px;height:34px;border-radius:11px;background:#FFC857;color:#121212;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(255,200,87,.22);animation:bob 2.2s ease-in-out infinite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h16v10H4zM4 10l2-5h12l2 5M12 10v10"></path></svg></span>
+</button>
+</sc-for>
+<sc-for list="{{venues}}" as="v" hint-placeholder-count="3">
+<button onClick="{{v.pick}}" aria-label="{{v.aria}}" style="position:absolute;left:{{v.x}}px;top:{{v.y}}px;transform:translate(-50%,-50%);height:44px;padding:0;border:0;background:transparent;cursor:pointer">
+<span style="height:32px;padding:0 10px 0 4px;border-radius:10px;background:#F4F4F5;color:#121212;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:24px;height:24px;border-radius:7px;background:{{v.color}};display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6"></path></svg></span>{{v.short}}</span>
+</button>
+</sc-for>
+<a href="Boss.dc.html" aria-label="沙发怪来袭，剩余血量 38%，去讨伐" style="position:absolute;left:430px;top:462px;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;animation:bob 2.4s ease-in-out infinite">
+<span style="padding:3px;border-radius:12px;background:#FF6A3D;display:block"><dc-import name="CardArt" art="sofa" w="{{ 48 }}" hint-size="48px,58px"></dc-import></span>
+<span style="height:22px;padding:0 8px;border-radius:11px;background:rgba(14,14,16,.92);border:1.5px solid #FF6A3D;color:#FF9F5A;font-size:10px;font-weight:900;display:flex;align-items:center;white-space:nowrap">沙发怪 · 38%</span>
+</a>
+</div>
+</div>
+
+<div style="position:absolute;left:16px;right:16px;top:18px;display:flex;align-items:center;gap:12px">
+<div style="width:46px;height:46px;border-radius:23px;background:#B4A3F5;color:#121212;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">杰</div>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<div style="font-size:18px;font-weight:700;letter-spacing:.5px">嗨，阿杰</div>
+<div style="font-size:12px;color:#B5B5BE;display:flex;align-items:center;gap:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="#FFC857" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>今日能量 320 · LV.7</div>
+</div>
+<a href="Inbox.dc.html" aria-label="消息，5 条未读" style="width:46px;height:46px;border-radius:23px;background:#1F1F25;color:#F4F4F5;position:relative;display:flex;align-items:center;justify-content:center">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"></path><path d="M10 21h4"></path></svg>
+<span style="position:absolute;right:12px;top:11px;width:8px;height:8px;border-radius:4px;background:#FF5C7A"></span>
+</a>
+</div>
+
+<div style="position:absolute;left:16px;right:16px;top:78px;display:flex;align-items:center;justify-content:space-between">
+<div style="display:flex;gap:2px;padding:4px;border-radius:26px;background:rgba(27,27,31,.94)">
+<button onClick="{{setCity}}" aria-pressed="{{pCity}}" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{chipCity}}">全城</button>
+<button onClick="{{setMine}}" aria-pressed="{{pMine}}" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{chipMine}}">我的</button>
+<button onClick="{{setClub}}" aria-pressed="{{pClub}}" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{chipClub}}">跑团</button>
+</div>
+<a href="Season.dc.html" style="height:44px;padding:0 14px;border-radius:22px;background:rgba(27,27,31,.94);color:#F4F4F5;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px"><span style="font-family:Orbitron,sans-serif;font-weight:700;color:#DCF26A">S3</span>剩 42 天</a>
+</div>
+
+<div style="position:absolute;right:16px;top:140px;display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+<a href="City.dc.html" style="height:44px;padding:0 14px;border-radius:22px;background:#DCF26A;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V9h3V5h3v3h4V5h3v4h3v12zM10 21v-5h4v5"></path></svg>建城</a>
+<a href="Games.dc.html" style="height:44px;padding:0 14px;border-radius:22px;background:#1F1F25;color:#F4F4F5;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9h4M8 7v4M15 10h.01M18 8h.01"></path><path d="M7 4h10a5 5 0 0 1 5 5v2a5 5 0 0 1-5 5h-1l-2 3h-4l-2-3H7a5 5 0 0 1-5-5V9a5 5 0 0 1 5-5z"></path></svg>玩法</a>
+<a href="AI.dc.html" aria-label="AI 助手" style="height:44px;padding:0 14px;border-radius:22px;background:#B4A3F5;color:#121212;font-family:Orbitron,sans-serif;font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"></path></svg>AI</a>
+</div>
+
+<div style="position:absolute;right:16px;top:330px;display:flex;flex-direction:column;gap:8px">
+<button onClick="{{zoomIn}}" aria-label="放大地图" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center">+</button>
+<button onClick="{{zoomOut}}" aria-label="缩小地图" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;font-size:22px;display:flex;align-items:center;justify-content:center">−</button>
+<button onClick="{{locate}}" aria-label="回到我的位置" style="width:44px;height:44px;border-radius:22px;border:0;background:#1F1F25;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg></button>
+</div>
+
+<sc-if value="{{showHint}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:16px;top:140px;height:34px;padding:0 12px;border-radius:17px;background:rgba(27,27,31,.94);font-size:12px;color:#D6D6DD;display:flex;align-items:center;gap:6px;pointer-events:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"></path></svg>拖动地图看全城</div>
+</sc-if>
+
+<sc-if value="{{noSel}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:12px;right:12px;bottom:100px;display:flex;flex-direction:column;gap:10px">
+<div style="background:#DCF26A;color:#121212;border-radius:28px;padding:18px;display:flex;gap:12px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:6px;flex-grow:1;min-width:0">
+<div style="font-size:12px;font-weight:700;color:#3D4415">今日挑战</div>
+<div style="font-size:21px;font-weight:900;letter-spacing:.5px">守住 滨江公园</div>
+<div style="font-size:12px;line-height:1.5;color:#2B300E">「城西跑团」正在靠近 · 20:00 前跑一圈即可加固</div>
+<a href="Run.dc.html" style="align-self:flex-start;margin-top:4px;height:42px;padding:0 18px;border-radius:21px;background:#121212;color:#DCF26A;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px">去守地<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+</div>
+<div style="position:relative;width:88px;height:88px;flex-shrink:0">
+<svg width="88" height="88" viewBox="0 0 88 88" role="img" aria-label="守卫值 68"><circle cx="44" cy="44" r="36" fill="none" stroke="rgba(18,18,18,.14)" stroke-width="8"></circle><circle cx="44" cy="44" r="36" fill="none" stroke="#121212" stroke-width="8" stroke-linecap="round" stroke-dasharray="154 226" transform="rotate(-90 44 44)"></circle></svg>
+<div style="position:absolute;left:0;top:0;width:88px;height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:800">68</span><span style="font-size:10px;font-weight:500">守卫值</span></div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+<div style="background:#B4A3F5;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+<div style="font-size:12px;font-weight:700">我的领地</div>
+<div style="display:flex;align-items:baseline;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">2.36</span><span style="font-size:12px;font-weight:700">km²</span></div>
+<div style="font-size:11px;color:#2A2440">本周 +0.42 km²</div>
+</div>
+<div style="background:#EBC9F7;color:#121212;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:4px">
+<div style="font-size:12px;font-weight:700">本周被抢</div>
+<div style="display:flex;align-items:baseline;gap:4px"><span style="font-family:Orbitron,sans-serif;font-size:26px;font-weight:800">3</span><span style="font-size:12px;font-weight:700">块</span></div>
+<div style="font-size:11px;color:#3A2742">已夺回 2 块</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:12px;right:12px;bottom:100px;background:#1B1B20;border:1px solid #2A2A31;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:14px;height:14px;border-radius:7px;background:{{cur.color}};flex-shrink:0"></span>
+<div style="font-size:20px;font-weight:900;flex-grow:1">{{cur.name}}</div>
+<span style="height:26px;padding:0 10px;border-radius:13px;background:#2A2A31;color:#D6D6DD;font-size:11px;display:flex;align-items:center">{{cur.tag}}</span>
+<button onClick="{{close}}" aria-label="关闭详情" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div style="font-size:12px;color:#B5B5BE">{{cur.owner}}</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<sc-for list="{{cur.stats}}" as="s" hint-placeholder-count="3">
+<div style="background:#24242A;border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:#B5B5BE">{{s.l}}</span><span style="font-size:16px;font-weight:700">{{s.v}}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:10px">
+<a href="{{cur.href}}" style="flex-grow:1;height:48px;border-radius:24px;background:#DCF26A;color:#121212;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px">{{cur.action}}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></a>
+<a href="{{cur.altHref}}" style="height:48px;padding:0 16px;border-radius:24px;border:1.5px solid #B4A3F5;color:#B4A3F5;font-size:14px;font-weight:700;display:flex;align-items:center">{{cur.alt}}</a>
+</div>
+</div>
+</sc-if>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" aria-current="page" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'city', sel: null, px: -255, py: -180, z: 1, dragging: false, hinted: false };
+    this.W = 900; this.H = 1200;
+  }
+  clamp(px, py, z) {
+    const minX = Math.min(0, 390 - this.W * z), minY = Math.min(0, 844 - this.H * z);
+    return { px: Math.max(minX, Math.min(0, px)), py: Math.max(minY, Math.min(0, py)) };
+  }
+  renderVals() {
+    const st = this.state;
+    const f = st.filter, s = st.sel;
+    const st3 = (a, b, c) => [{ l: a[0], v: a[1] }, { l: b[0], v: b[1] }, { l: c[0], v: c[1] }];
+    const terr = (name, tag, owner, color, area, held, guard, action, kind) => ({ name, tag, owner: '占领者 · ' + owner, color, kind, action, href: 'Run.dc.html', alt: kind === 'mine' ? '建设' : '问 AI', altHref: kind === 'mine' ? 'City.dc.html' : 'AI.dc.html', stats: st3(['面积 km²', area], ['已持有', held], ['守卫值', guard]) });
+    const T = {
+      bj: { ...terr('滨江公园', '我的领地', '阿杰（你）', '#DCF26A', '0.42', '12 天', '68', '去守地', 'mine'), x: 431, y: 576 },
+      lj: { ...terr('老街口', '我的领地', '阿杰（你）', '#DCF26A', '0.18', '5 天', '91', '去守地', 'mine'), x: 341, y: 390 },
+      nh: { ...terr('南湖步道', '我的领地', '阿杰（你）', '#DCF26A', '0.21', '2 天', '58', '去守地', 'mine'), x: 475, y: 1015 },
+      yp: { ...terr('云杉坡', '队友领地', '小鹿 · 夜跑兔', '#B4A3F5', '0.51', '20 天', '42', '去支援', 'club'), x: 537, y: 390 },
+      xf: { ...terr('学府林荫道', '队友领地', 'Momo · 夜跑兔', '#B4A3F5', '0.62', '8 天', '77', '去支援', 'club'), x: 720, y: 210 },
+      cx: { ...terr('西岸草坪', '对手领地', '城西跑团', '#F28DC0', '0.33', '3 天', '42', '去夺回', 'rival'), x: 313, y: 522 },
+      xg: { ...terr('城西广场', '对手领地', '城西跑团', '#F28DC0', '0.71', '15 天', '83', '去夺回', 'rival'), x: 140, y: 165 },
+      dg: { ...terr('东港步道', '对手领地', 'Kai · 独行', '#FF9F5A', '0.37', '9 天', '55', '去夺回', 'rival'), x: 567, y: 526 },
+      nm: { ...terr('南门操场', '对手领地', '江湾晨跑', '#6FD3E8', '0.66', '6 天', '61', '去夺回', 'rival'), x: 700, y: 860 },
+      ba: { ...terr('北岸码头', '对手领地', '江湾晨跑', '#6FD3E8', '0.29', '4 天', '49', '去夺回', 'rival'), x: 190, y: 872 }
+    };
+    const CH = {
+      c1: { name: '能量宝箱', tag: '今日刷新', owner: '23:59 消失 · 跑到 30 米内自动开启', color: '#FFC857', action: '跑过去开启', href: 'Run.dc.html', stats: st3(['距你', '0.6 km'], ['可能开出', '能量 ×50'], ['稀有度', '普通']), x: 300, y: 700 },
+      c2: { name: '[合作咖啡品牌] 宝箱', tag: '商户宝箱', owner: '由 [合作咖啡品牌] 滨江店投放', color: '#FFC857', action: '跑过去开启', href: 'Run.dc.html', stats: st3(['距你', '0.9 km'], ['可能开出', '美式 8 折'], ['剩余', '37 个']), x: 640, y: 660 },
+      c3: { name: '稀有宝箱', tag: '限时', owner: '1 小时后消失 · 先到先得', color: '#FFC857', action: '跑过去开启', href: 'Run.dc.html', stats: st3(['距你', '1.8 km'], ['可能开出', '极光皮肤'], ['稀有度', '稀有']), x: 220, y: 440 }
+    };
+    const VE = {
+      v1: { name: '城南全民健身中心', short: '城南健身中心', tag: '球馆据点', owner: '馆主 · 夜跑兔（你的跑团）', color: '#B4A3F5', action: '去订场', href: 'Local.dc.html', stats: st3(['本月签到', '128 次'], ['项目', '羽 · 匹克'], ['距你', '0.8 km']), x: 470, y: 900 },
+      v2: { name: '东港运动公园', short: '东港运动公园', tag: '球场据点', owner: '馆主 · 城西跑团', color: '#F28DC0', action: '去订场', href: 'Local.dc.html', stats: st3(['本月签到', '141 次'], ['项目', '篮 · 网'], ['距你', '1.6 km']), x: 780, y: 470 },
+      v3: { name: '学府路体育馆', short: '学府路体育馆', tag: '无人据点', owner: '暂无馆主 · 先签到先得', color: '#D6D6DD', action: '去订场', href: 'Local.dc.html', stats: st3(['本月签到', '0 次'], ['项目', '羽 · 游泳'], ['距你', '2.9 km']), x: 150, y: 640 }
+    };
+    const ALL = { ...T, ...CH, ...VE };
+    Object.keys(ALL).forEach((k) => { if (!ALL[k].alt) ALL[k] = { ...ALL[k], alt: '问 AI', altHref: 'AI.dc.html' }; });
+    const dim = 0.12;
+    const opClub = f === 'mine' ? dim : 1;
+    const opRival = f === 'city' ? 1 : dim;
+    const opOf = (k) => (k === 'mine' ? 1 : (k === 'club' ? opClub : opRival));
+    const pick = (id) => () => { if (this.moved) return; this.setState({ sel: this.state.sel === id ? null : id }); };
+    const sw = {};
+    Object.keys(T).forEach((k) => { sw[k] = s === k ? 4 : 2; });
+    const pins = Object.keys(T).map((k) => ({ ...T[k], aria: T[k].name + '，' + T[k].tag, op: opOf(T[k].kind), pick: pick(k) }));
+    const chests = Object.keys(CH).map((k) => ({ ...CH[k], aria: CH[k].name, pick: pick(k) }));
+    const venues = Object.keys(VE).map((k) => ({ ...VE[k], aria: VE[k].name + '，' + VE[k].tag, pick: pick(k) }));
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const zoomTo = (nz) => {
+      const z0 = this.state.z;
+      const cx = 195, cy = 360;
+      const wx = (cx - this.state.px) / z0, wy = (cy - this.state.py) / z0;
+      const c = this.clamp(cx - wx * nz, cy - wy * nz, nz);
+      this.setState({ z: nz, px: c.px, py: c.py });
+    };
+    return {
+      px: st.px, py: st.py, z: st.z,
+      trans: st.dragging ? 'none' : 'transform .25s ease-out',
+      cursor: st.dragging ? 'grabbing' : 'grab',
+      showHint: !st.hinted,
+      onDown: (e) => { this.drag = { x: e.clientX, y: e.clientY, px: this.state.px, py: this.state.py }; this.moved = false; },
+      onMove: (e) => {
+        if (!this.drag) return;
+        const dx = e.clientX - this.drag.x, dy = e.clientY - this.drag.y;
+        if (!this.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+        this.moved = true;
+        const c = this.clamp(this.drag.px + dx, this.drag.py + dy, this.state.z);
+        this.setState({ px: c.px, py: c.py, dragging: true, hinted: true });
+      },
+      onUp: () => { if (this.drag) { this.drag = null; this.setState({ dragging: false }); setTimeout(() => { this.moved = false; }, 0); } },
+      zoomIn: () => zoomTo(Math.min(1.6, +(this.state.z + 0.2).toFixed(2))),
+      zoomOut: () => zoomTo(Math.max(0.5, +(this.state.z - 0.2).toFixed(2))),
+      locate: () => this.setState({ px: -255, py: -180, z: 1 }),
+      opMine: 1, opClub, opRival, sw,
+      pins, chests, venues,
+      chipCity: f === 'city' ? on : off, chipMine: f === 'mine' ? on : off, chipClub: f === 'club' ? on : off,
+      pCity: f === 'city' ? 'true' : 'false', pMine: f === 'mine' ? 'true' : 'false', pClub: f === 'club' ? 'true' : 'false',
+      setCity: () => this.setState({ filter: 'city' }),
+      setMine: () => this.setState({ filter: 'mine' }),
+      setClub: () => this.setState({ filter: 'club' }),
+      hasSel: !!s, noSel: !s,
+      cur: s ? ALL[s] : ALL.bj,
+      close: () => this.setState({ sel: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

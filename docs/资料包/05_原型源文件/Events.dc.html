@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>赛事中心</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Club.dc.html" aria-label="返回社区" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px">
+<h1 style="margin:0;font-size:24px;font-weight:900;letter-spacing:1px">赛事中心</h1>
+<div style="font-size:12px;color:#B5B5BE">城区联赛 · 线上赛 · 线下赛</div>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:26px;background:#1B1B20">
+<button onClick="{{tLeague}}" aria-pressed="{{pLeague}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sLeague}}">城区联赛</button>
+<button onClick="{{tOnline}}" aria-pressed="{{pOnline}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sOnline}}">线上赛</button>
+<button onClick="{{tOffline}}" aria-pressed="{{pOffline}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sOffline}}">线下赛</button>
+</div>
+
+<sc-if value="{{isLeague}}" hint-placeholder-val="{{ true }}">
+<div style="background:#DCF26A;color:#121212;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:700;color:#3D4415">城区争霸联赛 · 第 3 轮</span><span style="font-size:12px;font-weight:700">剩 3 天</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:96px"><span style="width:52px;height:52px;border-radius:26px;background:#121212;color:#DCF26A;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900">南</span><span style="font-size:13px;font-weight:700">城南（你）</span></div>
+<div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:Orbitron,sans-serif;font-size:36px;font-weight:800">{{scoreA}}</span><span style="font-size:16px;font-weight:700">:</span><span style="font-family:Orbitron,sans-serif;font-size:36px;font-weight:800">{{scoreB}}</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:96px"><span style="width:52px;height:52px;border-radius:26px;background:#F28DC0;color:#121212;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900">西</span><span style="font-size:13px;font-weight:700">城西</span></div>
+</div>
+<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:3px"><div style="width:{{pctA}}%;background:#121212;border-radius:5px;transition:width .4s"></div><div style="width:{{pctB}}%;background:#F28DC0;border-radius:5px;transition:width .4s"></div></div>
+<div style="font-size:12px;color:#2B300E;line-height:1.5">比分 = 本周两区居民的运动能量总和（万）。跑步、球类、跟练都算。你已贡献 <b>{{myContrib}}</b> 能量。</div>
+<div style="display:flex;gap:8px">
+<button onClick="{{boost}}" style="flex-grow:1;height:46px;border-radius:23px;border:0;background:#121212;color:#DCF26A;font-size:14px;font-weight:700;cursor:pointer">{{boostLabel}}</button>
+<a href="Sports.dc.html" style="height:46px;padding:0 16px;border-radius:23px;border:1.5px solid #121212;color:#121212;font-size:14px;font-weight:700;display:flex;align-items:center">去运动</a>
+</div>
+</div>
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:14px;display:flex;align-items:center;gap:12px">
+<span style="width:40px;height:40px;border-radius:20px;background:#FFC857;color:#121212;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h16v10H4zM4 10l2-5h12l2 5M12 10v10"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">主场福利 · 城南 18 家商户 8 折</span><span style="font-size:12px;color:#B5B5BE">比赛周内出示城区徽章即可，赢了再加一周</span></span>
+</div>
+<div style="font-size:13px;color:#B5B5BE">积分榜</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{table}}" as="r" hint-placeholder-count="6">
+<div style="height:52px;border-radius:18px;padding:0 14px;display:flex;align-items:center;gap:12px;{{r.box}}">
+<span style="width:20px;font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;color:#B5B5BE">{{r.rank}}</span>
+<span style="width:30px;height:30px;border-radius:15px;background:{{r.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900">{{r.ini}}</span>
+<span style="font-size:14px;font-weight:700;flex-grow:1">{{r.name}}</span>
+<span style="font-size:12px;color:#B5B5BE">{{r.wl}}</span>
+<span style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700;width:30px;text-align:right">{{r.pts}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isOnline}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{online}}" as="e" hint-placeholder-count="4">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:14px;display:flex;gap:12px;align-items:center">
+<svg width="64" height="64" viewBox="0 0 84 84" aria-hidden="true" style="flex-shrink:0"><circle cx="42" cy="42" r="38" fill="{{e.color}}"></circle><circle cx="42" cy="42" r="28" fill="#121212"></circle><text x="42" y="49" text-anchor="middle" font-family="Orbitron, sans-serif" font-size="18" font-weight="800" fill="{{e.color}}">{{e.badge}}</text></svg>
+<div style="display:flex;flex-direction:column;gap:4px;flex-grow:1;min-width:0">
+<span style="font-size:15px;font-weight:700">{{e.name}}</span>
+<span style="font-size:12px;color:#B5B5BE">{{e.meta}}</span>
+<span style="font-size:11px;color:{{e.color}}">{{e.count}}</span>
+</div>
+<button onClick="{{e.join}}" style="height:40px;padding:0 14px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;{{e.btn}}">{{e.label}}</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{isOffline}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{offline}}" as="e" hint-placeholder-count="4">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;overflow:hidden">
+<div style="height:72px;background:{{e.color}};color:#121212;padding:12px 16px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between">
+<span style="font-size:11px;font-weight:700">{{e.type}}</span>
+<span style="font-size:18px;font-weight:900">{{e.name}}</span>
+</div>
+<div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+<span style="font-size:12px;color:#C9C9D1;line-height:1.6">{{e.desc}}</span>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:12px;color:#B5B5BE">{{e.meta}}</span>
+<button onClick="{{e.join}}" style="height:40px;padding:0 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;{{e.btn}}">{{e.label}}</button>
+</div>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" aria-current="page" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'league', boosted: false, reg: {} };
+  }
+  renderVals() {
+    const st = this.state;
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const a = st.boosted ? 4.8 : 4.6;
+    const b = 4.7;
+    const pctA = Math.round((a / (a + b)) * 100);
+    const reg = (id) => !!st.reg[id];
+    const regBtn = (id, label) => ({
+      label: reg(id) ? '已报名' : label,
+      btn: reg(id) ? 'border:1.5px solid #DCF26A;background:transparent;color:#DCF26A' : 'border:0;background:#DCF26A;color:#121212',
+      join: () => this.setState({ reg: { ...this.state.reg, [id]: !this.state.reg[id] } })
+    });
+    const table = [
+      { rank: 1, ini: '江', name: '江湾', wl: '2胜0负', pts: 6, color: '#6FD3E8' },
+      { rank: 2, ini: '西', name: '城西', wl: '1胜1平', pts: 4, color: '#F28DC0' },
+      { rank: 3, ini: '南', name: '城南（你）', wl: '1胜1平', pts: 4, color: '#DCF26A', me: true },
+      { rank: 4, ini: '北', name: '北岸', wl: '1胜1负', pts: 3, color: '#FF9F5A' },
+      { rank: 5, ini: '学', name: '学府', wl: '0胜1平1负', pts: 1, color: '#B4A3F5' },
+      { rank: 6, ini: '港', name: '东港', wl: '0胜2负', pts: 0, color: '#FFC857' }
+    ].map((r) => ({ ...r, box: r.me ? 'background:#1E2213;border:1.5px solid #DCF26A' : 'background:#1B1B20;border:1px solid #232329' }));
+    const online = [
+      { id: 'o1', name: '冬至夜跑 · 5 km', meta: '12.21 当晚 · 自由圈地即算', count: '已报名 3.2 万人', color: '#F28DC0', badge: '冬至' },
+      { id: 'o2', name: '跨年线上跑 · 20.27 km', meta: '12.31 – 1.01 · 可分段完成', count: '已报名 5.6 万人', color: '#DCF26A', badge: '2027' },
+      { id: 'o3', name: '21 天跳绳挑战', meta: '每天 500 个 · AI 计数', count: '已报名 1.8 万人', color: '#B4A3F5', badge: '21' },
+      { id: 'o4', name: '匹克球打卡月', meta: '12 月签到球馆 8 次', count: '已报名 6,412 人', color: '#6FD3E8', badge: 'PK' }
+    ].map((e) => ({ ...e, ...regBtn(e.id, '报名 ¥39') }));
+    const offline = [
+      { id: 'f1', type: '城市定向赛 · 徒步 / 跑步', name: '城南古巷寻宝', desc: '一张任务卡串起 12 个老街点位，3–5 人组队，不比速度比打卡。完赛得城区徽章。', meta: '12.06 周六 · 剩 86 个名额', color: '#6FD3E8' },
+      { id: 'f2', type: '越野跑', name: '城郊山径越野挑战', desc: '18 km / 35 km 两个组别，赛道打卡点同步到 App 的山野图层。', meta: '12.13 周六 · 报名中', color: '#DCF26A' },
+      { id: 'f3', type: '匹克球', name: '城区匹克球公开赛', desc: '新手组、进阶组、混双组。合作球馆承办，报名即送体验课一节。', meta: '12.20 周六 · 剩 24 对', color: '#F28DC0' },
+      { id: 'f4', type: '混合健身赛', name: '冬季体能混合赛', desc: '8 段 1 km 跑步，每段之间穿插一个功能训练动作。可选单人、双人或四人接力。', meta: '1.10 周六 · 预报名', color: '#FF9F5A' }
+    ].map((e) => ({ ...e, ...regBtn(e.id, '报名') }));
+    return {
+      isLeague: st.tab === 'league', isOnline: st.tab === 'online', isOffline: st.tab === 'offline',
+      sLeague: st.tab === 'league' ? on : off, sOnline: st.tab === 'online' ? on : off, sOffline: st.tab === 'offline' ? on : off,
+      pLeague: st.tab === 'league' ? 'true' : 'false', pOnline: st.tab === 'online' ? 'true' : 'false', pOffline: st.tab === 'offline' ? 'true' : 'false',
+      tLeague: () => this.setState({ tab: 'league' }), tOnline: () => this.setState({ tab: 'online' }), tOffline: () => this.setState({ tab: 'offline' }),
+      scoreA: a.toFixed(1), scoreB: b.toFixed(1), pctA, pctB: 100 - pctA,
+      myContrib: st.boosted ? '620' : '420',
+      boost: () => this.setState({ boosted: true }),
+      boostLabel: st.boosted ? '已投入 200 能量 · 城南反超！' : '投入 200 能量助攻',
+      table, online, offline
+    };
+  }
+}
+</script>
+</body>
+</html>

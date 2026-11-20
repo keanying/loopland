@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>管理端 · 会员套餐与订单</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E9EB}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+input{font-family:inherit}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+.adm-side :focus-visible{outline-color:#FFFFFF}
+.adm-side a:hover{background:#26262A}
+.adm-side a[aria-current="page"]:hover{background:#FFFFFF}
+.adm-btn:hover{background:#2E2E33 !important}
+.adm-row:hover td{background:#F7F7F8}
+.num{font-family:Lexend,'Noto Sans SC',sans-serif}
+.cfg-in{width:80px;height:38px;border-radius:12px;border:1.5px solid #E2E2E6;padding:0 10px;font-size:14px;text-align:right;outline:none;font-family:Lexend,'Noto Sans SC',sans-serif;box-sizing:border-box;background:#FFFFFF}
+.cfg-in:focus{border-color:#141414}
+@media (max-width:760px){
+.adm-side{flex:1 1 100% !important;flex-direction:row !important;overflow-x:auto;justify-content:flex-start !important;padding:10px !important}
+.adm-side .adm-sp{display:none}
+}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#E9E9EB;padding:24px;box-sizing:border-box;font-family:'Noto Sans SC',system-ui,sans-serif;color:#141414">
+<div style="max-width:1400px;margin:0 auto;background:#FFFFFF;border-radius:32px;padding:20px;display:flex;flex-wrap:wrap;gap:24px;box-sizing:border-box">
+
+<nav class="adm-side" aria-label="管理端导航" style="flex:0 0 84px;background:#141414;border-radius:26px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-sizing:border-box">
+<div role="img" aria-label="圈圈 Loopland 运营后台" style="width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="14 14 72 72" aria-hidden="true"><circle cx="62" cy="50" r="21" fill="#DCF26A"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#141414" stroke-width="15"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5" stroke="#141414" stroke-width="2.5"></circle></svg></div>
+<div class="adm-sp" style="height:18px"></div>
+<a href="AdminHome.dc.html" aria-label="总览" title="总览" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></a>
+<a href="AdminUsers.dc.html" aria-label="用户管理" title="用户管理" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg></a>
+<a href="AdminPlans.dc.html" aria-label="会员套餐与订单" title="会员套餐与订单" aria-current="page" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;background:#FFFFFF;color:#141414;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"></path><path d="M5 19h14"></path></svg></a>
+<a href="AdminMap.dc.html" aria-label="地图与领地" title="地图与领地" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"></path></svg></a>
+<a href="AdminReview.dc.html" aria-label="内容审核" title="内容审核" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2 2 4-4"></path></svg></a>
+<a href="AdminRisk.dc.html" aria-label="风控防作弊" title="风控防作弊" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M12 8v5M12 16v.5"></path></svg></a>
+<a href="AdminMerchant.dc.html" aria-label="商户与活动" title="商户与活动" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5"></path></svg></a>
+<a href="AdminConfig.dc.html" aria-label="玩法配置" title="玩法配置" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></a>
+<div class="adm-sp" style="flex-grow:1"></div>
+<a href="AdminHome.dc.html" aria-label="退出登录" title="退出登录" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#8E8E95;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg></a>
+</nav>
+
+<main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+<div style="flex:1 1 220px;min-width:0">
+<h1 style="margin:0;font-size:28px;font-weight:900">会员套餐与订单</h1>
+<div style="font-size:13px;color:#6B6B72;margin-top:2px">会员只提供体验类权益，不提升抢地、攻击等对抗能力</div>
+</div>
+<div role="tablist" aria-label="板块" style="display:flex;background:#F2F2F4;border-radius:24px;padding:4px;gap:2px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height:40px;padding:0 18px;border:0;border-radius:20px;font-size:14px;cursor:pointer;{{t.st}}">{{t.label}}</button>
+</sc-for>
+</div>
+</header>
+
+<section aria-label="会员收入" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:4px">
+<div class="num" style="font-size:28px;font-weight:700;letter-spacing:-.5px">{{k.v}}</div>
+<div style="font-size:13px;color:#4A4A50">{{k.label}}</div>
+<div style="font-size:12px;color:#6B6B72">{{k.sub}}</div>
+</div>
+</sc-for>
+</section>
+
+<sc-if value="{{isPlans}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+<section aria-labelledby="p-h" style="flex:3 1 560px;min-width:0;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><h2 id="p-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">套餐</h2><span style="font-size:12px;color:#6B6B72">改价对新订单生效，已订阅用户按原价续费</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px">
+<sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+<article style="border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px;{{p.box}}">
+<div style="display:flex;align-items:center;gap:8px">
+<h3 style="margin:0;font-size:16px;font-weight:900;flex-grow:1">{{p.name}}</h3>
+<sc-if value="{{p.rec}}" hint-placeholder-val="{{ false }}"><span style="height:24px;padding:0 10px;border-radius:12px;background:#141414;color:#FFFFFF;font-size:11px;font-weight:700;display:inline-flex;align-items:center">推荐</span></sc-if>
+</div>
+<div style="font-size:12px;color:#6B6B72">{{p.desc}}</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap">
+<label style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#6B6B72">售价 ¥<input class="cfg-in" type="number" min="1" aria-label="{{p.a1}}" value="{{p.price}}" onChange="{{p.setPrice}}"></label>
+<label style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#6B6B72">首期 ¥<input class="cfg-in" type="number" min="0" aria-label="{{p.a2}}" value="{{p.first}}" onChange="{{p.setFirst}}"></label>
+<div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#6B6B72">在订<span class="num" style="height:38px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#141414">{{p.subs}}</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;border-top:1px solid #E2E2E6;padding-top:10px">
+<span id="{{p.lid}}" style="font-size:13px;flex-grow:1">上架</span>
+<button role="switch" aria-checked="{{p.on}}" aria-labelledby="{{p.lid}}" onClick="{{p.toggle}}" style="width:52px;height:30px;border-radius:15px;border:0;cursor:pointer;position:relative;padding:0;{{p.track}}"><span aria-hidden="true" style="position:absolute;top:4px;width:22px;height:22px;border-radius:11px;background:#FFFFFF;transition:left .2s;left:{{p.knob}}px"></span></button>
+<button onClick="{{p.setRec}}" aria-pressed="{{p.rec}}" style="height:34px;padding:0 12px;border-radius:17px;border:1.5px solid #D4D4D8;background:#FFFFFF;font-size:12px;cursor:pointer">{{p.recLabel}}</button>
+</div>
+</article>
+</sc-for>
+</div>
+<div style="background:#F2F2F4;border-radius:20px;padding:14px 16px;font-size:12px;color:#4A4A50;line-height:1.7">
+<b style="color:#141414">自动续费规则</b><br>开通页显著标明续费价格和周期；每次扣费前 5 天通过短信和 App 提醒；「我的 → 会员」里可以一键关闭，关闭后到期不再扣费。未成年人账号不展示付费入口。
+</div>
+</section>
+
+<aside aria-label="App 内开通页预览" style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px;align-items:center">
+<div style="font-size:13px;color:#4A4A50;align-self:flex-start">App 开通页实时预览</div>
+<div style="width:300px;max-width:100%;background:#0E0E10;color:#F4F4F5;border-radius:36px;padding:22px 18px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;border:6px solid #1F1F25">
+<div style="font-size:20px;font-weight:900">圈地会员</div>
+<div style="font-size:12px;color:#B5B5BE">手绘 / 3D 地图 · 高级数据 · AI 教练不限次</div>
+<sc-for list="{{preview}}" as="v" hint-placeholder-count="4">
+<div style="border-radius:20px;padding:12px 14px;display:flex;align-items:center;gap:10px;{{v.st}}">
+<div style="flex-grow:1;min-width:0"><div style="font-size:14px;font-weight:700">{{v.name}}</div><div style="font-size:11px;opacity:.75">{{v.note}}</div></div>
+<div style="text-align:right"><div class="num" style="font-size:18px;font-weight:700">¥{{v.show}}</div><sc-if value="{{v.hasOrig}}" hint-placeholder-val="{{ false }}"><div class="num" style="font-size:11px;opacity:.6;text-decoration:line-through">¥{{v.price}}</div></sc-if></div>
+</div>
+</sc-for>
+<div style="height:46px;border-radius:23px;background:#DCF26A;color:#121212;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:15px">立即开通</div>
+<div style="font-size:10px;color:#8A8A94;text-align:center;line-height:1.5">{{previewNote}}</div>
+</div>
+</aside>
+</div>
+</sc-if>
+
+<sc-if value="{{isPerks}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="k-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><h2 id="k-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">权益矩阵</h2><span style="font-size:12px;color:#6B6B72">点格子开关权益</span></div>
+<div style="overflow-x:auto">
+<table style="width:100%;min-width:680px;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">权益</th>
+<sc-for list="{{cols}}" as="c" hint-placeholder-count="5"><th scope="col" style="text-align:center;padding:10px;color:#141414;font-weight:700;border-bottom:1px solid #ECECEF">{{c.name}}</th></sc-for>
+</tr></thead>
+<tbody>
+<sc-for list="{{matrix}}" as="r" hint-placeholder-count="7">
+<tr class="adm-row">
+<th scope="row" style="text-align:left;padding:8px 10px;border-bottom:1px solid #F4F4F6;font-weight:400"><div style="font-weight:700">{{r.name}}</div><div style="font-size:11px;color:#6B6B72">{{r.note}}</div></th>
+<sc-for list="{{r.cells}}" as="x" hint-placeholder-count="5">
+<td style="padding:8px 10px;border-bottom:1px solid #F4F4F6;text-align:center">
+<button role="checkbox" aria-checked="{{x.on}}" aria-label="{{x.aria}}" onClick="{{x.toggle}}" disabled="{{x.locked}}" style="width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;{{x.st}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{x.icon}}"></path></svg></button>
+</td>
+</sc-for>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div style="display:flex;align-items:center;gap:10px;background:#F2F2F4;border-radius:16px;padding:12px 14px;font-size:12px;color:#4A4A50"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>带锁的行影响对抗公平，所有套餐都不能开启。</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isOrders}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="o-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px">
+<h2 id="o-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">订单</h2>
+<div role="tablist" aria-label="订单状态" style="display:flex;gap:4px;background:#F2F2F4;border-radius:22px;padding:4px">
+<sc-for list="{{ofilters}}" as="f" hint-placeholder-count="4">
+<button role="tab" aria-selected="{{f.on}}" onClick="{{f.pick}}" style="height:34px;padding:0 12px;border:0;border-radius:17px;font-size:13px;cursor:pointer;{{f.st}}">{{f.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="overflow-x:auto">
+<table style="width:100%;min-width:760px;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">订单号</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">用户</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">套餐</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">金额</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">支付渠道</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">时间</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">状态</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">操作</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{orders}}" as="o" hint-placeholder-count="8">
+<tr class="adm-row">
+<td class="num" style="padding:8px;border-bottom:1px solid #F4F4F6;font-size:12px">{{o.no}}</td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6;font-weight:700">{{o.user}}</td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6">{{o.plan}}</td>
+<td class="num" style="padding:8px;border-bottom:1px solid #F4F4F6;text-align:right;font-weight:600">¥{{o.amt}}</td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6">{{o.ch}}</td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6;color:#4A4A50">{{o.time}}</td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6"><span style="height:24px;padding:0 9px;border-radius:12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;{{o.stSt}}">{{o.stLabel}}</span></td>
+<td style="padding:8px;border-bottom:1px solid #F4F4F6;text-align:right">
+<sc-if value="{{o.canRefund}}" hint-placeholder-val="{{ true }}"><button onClick="{{o.refund}}" aria-label="{{o.aria}}" style="height:34px;padding:0 14px;border-radius:17px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;{{o.btn}}">{{o.btnLabel}}</button></sc-if>
+<sc-if value="{{o.canRetry}}" hint-placeholder-val="{{ false }}"><button onClick="{{o.retry}}" style="height:34px;padding:0 14px;border-radius:17px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid #D4D4D8;background:#FFFFFF;white-space:nowrap">提醒用户</button></sc-if>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<div aria-live="polite" style="font-size:13px;min-height:18px;margin-top:8px">{{toast}}</div>
+</section>
+</sc-if>
+
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1150}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'plans', rec: 'year', ofilter: 'all', toast: '', confirm: null,
+      plans: {
+        month: { name: '连续包月', desc: '每月自动续费，可随时关闭', price: 15, first: 6, on: true, subs: 8240 },
+        once: { name: '月卡', desc: '单月购买，不自动续费', price: 18, first: 18, on: true, subs: 1910 },
+        quarter: { name: '季卡', desc: '3 个月', price: 45, first: 45, on: true, subs: 2630 },
+        year: { name: '年卡', desc: '12 个月，折合 ¥14/月', price: 168, first: 148, on: true, subs: 4870 },
+        club: { name: '跑团版', desc: '团长购买，5 人共享，1 年', price: 298, first: 298, on: false, subs: 960 }
+      },
+      perks: {
+        map: { month: 1, once: 1, quarter: 1, year: 1, club: 1 },
+        data: { month: 1, once: 1, quarter: 1, year: 1, club: 1 },
+        ai: { month: 1, once: 1, quarter: 1, year: 1, club: 1 },
+        skin: { month: 0, once: 0, quarter: 1, year: 1, club: 1 },
+        replay: { month: 1, once: 1, quarter: 1, year: 1, club: 1 },
+        clubtool: { month: 0, once: 0, quarter: 0, year: 0, club: 1 },
+        guard: { month: 0, once: 0, quarter: 0, year: 0, club: 0 },
+        energy: { month: 0, once: 0, quarter: 0, year: 0, club: 0 }
+      },
+      orders: [
+        { no: 'QD20261120-0931', user: '小鹿', plan: '年卡', amt: 148, ch: '微信支付', time: '今天 09:31', st: 'paid' },
+        { no: 'QD20261120-0912', user: '晨跑王', plan: '连续包月', amt: 15, ch: '支付宝', time: '今天 09:12', st: 'renew_fail' },
+        { no: 'QD20261120-0855', user: '小葵', plan: '连续包月（首月）', amt: 6, ch: 'Apple', time: '今天 08:55', st: 'paid' },
+        { no: 'QD20261120-0820', user: '江湾骑士团长', plan: '跑团版', amt: 298, ch: '微信支付', time: '今天 08:20', st: 'paid' },
+        { no: 'QD20261119-2241', user: '阿强', plan: '季卡', amt: 45, ch: '支付宝', time: '昨天 22:41', st: 'refund_req' },
+        { no: 'QD20261119-2105', user: '跑跑7721', plan: '月卡', amt: 18, ch: '微信支付', time: '昨天 21:05', st: 'refunded' },
+        { no: 'QD20261119-1930', user: '江边慢跑', plan: '年卡', amt: 168, ch: 'Apple', time: '昨天 19:30', st: 'paid' }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  say(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
+  renderVals() {
+    const st = this.state;
+    const keys = Object.keys(st.plans);
+    const setPlan = (k, p) => this.setState({ plans: { ...st.plans, [k]: { ...st.plans[k], ...p } } });
+    const num = (e) => { const v = Number(e.target.value); return isNaN(v) ? 0 : v; };
+    const plans = keys.map((k) => {
+      const p = st.plans[k], rec = st.rec === k;
+      return {
+        ...p, rec, lid: 'sw-' + k,
+        a1: p.name + ' 售价', a2: p.name + ' 首期价格',
+        subs: p.subs.toLocaleString('en-US'),
+        box: rec ? 'border:2px solid #141414;background:#FFFFFF' : (p.on ? 'border:1.5px solid #ECECEF;background:#FFFFFF' : 'border:1.5px dashed #D4D4D8;background:#F7F7F8'),
+        track: p.on ? 'background:#141414' : 'background:#D4D4D8', knob: p.on ? 26 : 4,
+        recLabel: rec ? '已设为推荐' : '设为推荐',
+        setPrice: (e) => setPlan(k, { price: num(e) }),
+        setFirst: (e) => setPlan(k, { first: num(e) }),
+        toggle: () => { setPlan(k, { on: !p.on }); if (p.on && rec) this.setState({ rec: keys.find((x) => x !== k && st.plans[x].on) || k }); },
+        setRec: () => { if (!p.on) setPlan(k, { on: true }); this.setState({ rec: k }); }
+      };
+    });
+    const preview = keys.filter((k) => st.plans[k].on).map((k) => {
+      const p = st.plans[k], rec = st.rec === k, disc = p.first < p.price;
+      return {
+        name: p.name + (rec ? ' · 推荐' : ''), price: p.price, show: disc ? p.first : p.price, hasOrig: disc,
+        note: disc ? '首期 ¥' + p.first + '，之后 ¥' + p.price + (k === 'month' ? '/月' : '') : p.desc,
+        st: rec ? 'background:#262236;border:1.5px solid #B4A3F5' : 'background:#1B1B20;border:1.5px solid #2A2A31'
+      };
+    });
+    const m = st.plans.month;
+    const previewNote = m.on ? '连续包月首月 ¥' + m.first + '，次月起 ¥' + m.price + '/月自动续费，扣费前 5 天提醒，可随时在「我的」中关闭' : '开通即同意《会员服务协议》';
+    const COLS = keys.map((k) => ({ key: k, name: st.plans[k].name }));
+    const PK = [
+      ['map', '手绘 / 3D 地图风格', '体验类'], ['data', '高级运动数据分析', '配速区间、心率负荷、周报'], ['ai', 'AI 教练不限次', '免费用户每周 3 次'], ['skin', '专属领地皮肤', '只改外观'], ['replay', '高清轨迹回放导出', '1080p 竖屏视频'], ['clubtool', '跑团管理工具', '排班、成员数据、活动报名'],
+      ['guard', '抢地守卫加成', '影响公平，禁止'], ['energy', '额外能量', '影响公平，禁止']
+    ];
+    const lock = 'M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3';
+    const matrix = PK.map(([id, name, note]) => {
+      const locked = id === 'guard' || id === 'energy';
+      return {
+        name, note,
+        cells: COLS.map((c) => {
+          const on = !!st.perks[id][c.key];
+          return {
+            on, locked, aria: c.name + ' ' + name,
+            icon: locked ? lock : (on ? 'M5 12l5 5 9-10' : 'M8 12h8'),
+            st: locked ? 'border:1.5px dashed #D4D4D8;background:#F7F7F8;color:#B5B5BB;cursor:not-allowed' : (on ? 'border:0;background:#141414;color:#FFFFFF;cursor:pointer' : 'border:1.5px solid #E2E2E6;background:#FFFFFF;color:#B5B5BB;cursor:pointer'),
+            toggle: () => { if (locked) return; this.setState({ perks: { ...st.perks, [id]: { ...st.perks[id], [c.key]: on ? 0 : 1 } } }); }
+          };
+        })
+      };
+    });
+    const OST = { paid: ['已支付', 'background:#E4F3D6;color:#2F6B1F'], renew_fail: ['续费失败', 'background:#FFF0C2;color:#7A5200'], refund_req: ['申请退款', 'background:#FFE2DC;color:#A8261B'], refunded: ['已退款', 'background:#EDEDF0;color:#4A4A50'] };
+    const OF = [['all', '全部'], ['paid', '已支付'], ['refund_req', '退款申请'], ['renew_fail', '续费失败']];
+    const ofilters = OF.map(([id, label]) => ({ label, on: st.ofilter === id, st: st.ofilter === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ ofilter: id, confirm: null }) }));
+    const orders = st.orders.filter((o) => st.ofilter === 'all' || o.st === st.ofilter).map((o) => {
+      const conf = st.confirm === o.no;
+      const can = o.st === 'paid' || o.st === 'refund_req';
+      return {
+        ...o, stLabel: OST[o.st][0], stSt: OST[o.st][1], canRefund: can, canRetry: o.st === 'renew_fail',
+        btnLabel: conf ? '确认退 ¥' + o.amt : (o.st === 'refund_req' ? '同意退款' : '退款'),
+        btn: conf ? 'border:0;background:#A8261B;color:#FFFFFF' : (o.st === 'refund_req' ? 'border:0;background:#141414;color:#FFFFFF' : 'border:1.5px solid #D4D4D8;background:#FFFFFF;color:#141414'),
+        aria: (conf ? '确认退款 ' : '退款 ') + o.no,
+        refund: () => {
+          if (!conf) { this.setState({ confirm: o.no }); return; }
+          this.setState({ confirm: null, orders: st.orders.map((x) => x.no === o.no ? { ...x, st: 'refunded' } : x) });
+          this.say('已退款 ¥' + o.amt + ' 给 ' + o.user + '，原路退回 ' + o.ch + '，会员权益同步收回');
+        },
+        retry: () => this.say('已提醒 ' + o.user + '：续费失败，3 天内可重新支付，期间权益保留')
+      };
+    });
+    const TABS = [['plans', '套餐'], ['perks', '权益'], ['orders', '订单']];
+    const tabs = TABS.map(([id, label]) => ({ label, on: st.tab === id, st: st.tab === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ tab: id }) }));
+    const refunded = st.orders.filter((o) => o.st === 'refunded').length;
+    const kpis = [
+      { v: '¥28.6万', label: '本月会员收入', sub: '较上月 +12%' },
+      { v: '1.86万', label: '在订会员', sub: '付费率 6.0%' },
+      { v: '81%', label: '自动续费成功率', sub: '失败多因余额不足' },
+      { v: (refunded / st.orders.length * 100).toFixed(1) + '%', label: '今日退款率', sub: '按今日订单数计' }
+    ];
+    return {
+      tabs, kpis, isPlans: st.tab === 'plans', isPerks: st.tab === 'perks', isOrders: st.tab === 'orders',
+      plans, preview, previewNote, cols: COLS, matrix, ofilters, orders, toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

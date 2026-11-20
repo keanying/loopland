@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>消息通知</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Main.dc.html" aria-label="返回地图" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<h1 style="margin:0;font-size:24px;font-weight:900">消息</h1>
+<div style="font-size:12px;color:#B5B5BE">{{unreadText}}</div>
+</div>
+<button onClick="{{readAll}}" style="height:40px;padding:0 14px;border-radius:20px;border:0;background:#1F1F25;color:#F4F4F5;font-size:12px;cursor:pointer">全部已读</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="4">
+<button onClick="{{c.pick}}" aria-pressed="{{c.pressed}}" style="border-radius:20px;padding:12px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;color:#F4F4F5;{{c.box}}">
+<span style="width:40px;height:40px;border-radius:20px;background:{{c.color}};color:#121212;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.ic}}"></path></svg></span>
+<span style="font-size:12px;font-weight:700">{{c.name}}</span>
+<sc-if value="{{c.hasN}}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:10px;top:8px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#FF5C7A;color:#121212;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;box-sizing:border-box">{{c.n}}</span></sc-if>
+</button>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px;color:#B5B5BE">私信</div>
+<div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none">
+<sc-for list="{{dms}}" as="d" hint-placeholder-count="3">
+<div style="flex-shrink:0;width:200px;background:#1B1B20;border:1px solid #232329;border-radius:20px;padding:12px;display:flex;align-items:center;gap:10px">
+<span style="width:40px;height:40px;border-radius:20px;background:{{d.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;flex-shrink:0">{{d.ini}}</span>
+<span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:13px;font-weight:700">{{d.name}}</span><span style="font-size:11px;color:#B5B5BE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{d.last}}</span></span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;color:#B5B5BE">{{listTitle}}</span><sc-if value="{{filtered}}" hint-placeholder-val="{{ false }}"><button onClick="{{showAll}}" style="border:0;background:transparent;color:#DCF26A;font-size:12px;cursor:pointer;padding:6px 0">看全部</button></sc-if></div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{items}}" as="n" hint-placeholder-count="6">
+<div style="border-radius:20px;padding:12px;display:flex;align-items:center;gap:12px;{{n.box}}">
+<span style="position:relative;flex-shrink:0">
+<span style="width:44px;height:44px;border-radius:22px;background:{{n.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900">{{n.ini}}</span>
+<span style="position:absolute;right:-3px;bottom:-3px;width:20px;height:20px;border-radius:10px;background:{{n.badge}};border:2px solid #0E0E10;display:flex;align-items:center;justify-content:center;color:#121212"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="{{n.bic}}"></path></svg></span>
+</span>
+<span style="display:flex;flex-direction:column;gap:3px;flex-grow:1;min-width:0">
+<span style="font-size:13px;line-height:1.5"><b>{{n.who}}</b> {{n.what}}</span>
+<sc-if value="{{n.hasQuote}}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#C9C9D1;background:#24242A;border-radius:10px;padding:6px 8px;line-height:1.5">{{n.quote}}</span></sc-if>
+<span style="font-size:11px;color:#8A8A94">{{n.time}}</span>
+</span>
+<sc-if value="{{n.isFollow}}" hint-placeholder-val="{{ false }}"><button onClick="{{n.back}}" aria-pressed="{{n.bPressed}}" style="height:34px;padding:0 14px;border-radius:17px;border:0;cursor:pointer;font-size:12px;font-weight:700;flex-shrink:0;{{n.bStyle}}">{{n.bLabel}}</button></sc-if>
+<sc-if value="{{n.hasLink}}" hint-placeholder-val="{{ false }}"><a href="{{n.href}}" style="height:34px;padding:0 12px;border-radius:17px;background:{{n.linkBg}};color:#121212;font-size:12px;font-weight:700;display:flex;align-items:center;flex-shrink:0">{{n.link}}</a></sc-if>
+<sc-if value="{{n.unread}}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:4px;background:#FF5C7A;flex-shrink:0" aria-label="未读"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { cat: 'all', read: {}, back: {} };
+  }
+  renderVals() {
+    const st = this.state;
+    const HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
+    const BUBBLE = 'M4 5h16v11H9l-5 4z';
+    const PLUS = 'M12 5v14M5 12h14';
+    const FLAG = 'M5 21V4h11l-2 4 2 4H5';
+    const BOOK = 'M6 3h12v18l-6-4-6 4z';
+    const BOLT = 'M13 2 4 14h7l-1 8 9-12h-7z';
+    const N = [
+      { id: 'n1', cat: 'like', ini: 'K', color: '#FF9F5A', who: 'Kai', what: '赞了你的动态', quote: '夜袭滨江！31 分钟连圈 3 块…', time: '5 分钟前', badge: '#FF5C7A', bic: HEART, href: 'Post.dc.html', link: '查看', linkBg: '#F4F4F5' },
+      { id: 'n2', cat: 'comment', ini: '鹿', color: '#B4A3F5', who: '小鹿', what: '评论了你的动态', quote: '周六一起把西岸草坪拿回来', time: '12 分钟前', badge: '#B4A3F5', bic: BUBBLE, href: 'Post.dc.html', link: '回复', linkBg: '#B4A3F5' },
+      { id: 'n3', cat: 'follow', ini: '珍', color: '#DCF26A', who: '阿珍', what: '关注了你 · 匹克球搭子', time: '30 分钟前', badge: '#DCF26A', bic: PLUS },
+      { id: 'n4', cat: 'territory', ini: '!', color: '#F28DC0', who: '领地警报', what: '西岸草坪 被「城西跑团」夺走 0.12 km²', time: '1 小时前', badge: '#FF9F5A', bic: FLAG, href: 'Run.dc.html', link: '去夺回', linkBg: '#DCF26A' },
+      { id: 'n5', cat: 'like', ini: 'M', color: '#6FD3E8', who: 'Momo', what: '收藏了你的路线', quote: '滨江夜跑 5.2 km · 可圈 0.42 km²', time: '1 小时前', badge: '#DCF26A', bic: BOOK, href: 'Post.dc.html', link: '查看', linkBg: '#F4F4F5' },
+      { id: 'n6', cat: 'territory', ini: '鹿', color: '#B4A3F5', who: '小鹿', what: '在你跑步时给你加油了 3 次', time: '昨天 21:14', badge: '#FFC857', bic: BOLT },
+      { id: 'n7', cat: 'follow', ini: '周', color: '#F28DC0', who: '老周 · 城西跑团', what: '关注了你', time: '昨天', badge: '#DCF26A', bic: PLUS },
+      { id: 'n8', cat: 'comment', ini: 'K', color: '#FF9F5A', who: 'Kai', what: '在评论中提到了你', quote: '@阿杰 东港桥下那个交叉点你也可以试试', time: '昨天', badge: '#B4A3F5', bic: BUBBLE, href: 'Post.dc.html', link: '回复', linkBg: '#B4A3F5' }
+    ];
+    const isRead = (n) => !!st.read[n.id] || st.read.all;
+    const C = [
+      { id: 'like', name: '赞和收藏', color: '#FF5C7A', ic: HEART },
+      { id: 'comment', name: '评论', color: '#B4A3F5', ic: BUBBLE },
+      { id: 'follow', name: '新关注', color: '#DCF26A', ic: 'M9 11a3 3 0 1 0 0-6 3 3 0 1 0 0 6zM3 20c1-3.5 3.4-5 6-5s5 1.5 6 5M18 8v6M15 11h6' },
+      { id: 'territory', name: '领地', color: '#FFC857', ic: FLAG }
+    ];
+    const cats = C.map((c) => {
+      const n = N.filter((x) => x.cat === c.id && !isRead(x)).length;
+      const sel = st.cat === c.id;
+      return { ...c, n, hasN: n > 0, pressed: sel ? 'true' : 'false', box: sel ? 'border:1.5px solid ' + c.color + ';background:#1E1E24' : 'border:1.5px solid #232329;background:#1B1B20', pick: () => { const r = { ...this.state.read }; N.filter((x) => x.cat === c.id).forEach((x) => { r[x.id] = true; }); this.setState({ cat: sel ? 'all' : c.id, read: r }); } };
+    });
+    const items = N.filter((n) => st.cat === 'all' || n.cat === st.cat).map((n) => {
+      const ur = !isRead(n);
+      const b = !!st.back[n.id];
+      return {
+        ...n, unread: ur, hasQuote: !!n.quote, isFollow: n.cat === 'follow', hasLink: !!n.href,
+        box: ur ? 'background:#1B1B20;border:1px solid #2A2A31' : 'background:transparent;border:1px solid #1B1B20',
+        bPressed: b ? 'true' : 'false', bLabel: b ? '互相关注' : '回关',
+        bStyle: b ? 'background:#2A2A31;color:#B5B5BE' : 'background:#DCF26A;color:#121212',
+        back: () => this.setState({ back: { ...this.state.back, [n.id]: !b }, read: { ...this.state.read, [n.id]: true } })
+      };
+    });
+    const unread = N.filter((n) => !isRead(n)).length;
+    return {
+      cats, items,
+      dms: [
+        { ini: '兔', name: '夜跑兔 · 群聊', color: '#B4A3F5', last: '小鹿：周六 06:50 东门集合' },
+        { ini: 'K', name: 'Kai', color: '#FF9F5A', last: '桥下那条线你跑过吗' },
+        { ini: '珍', name: '阿珍', color: '#DCF26A', last: '今晚匹克球来不来' }
+      ],
+      unreadText: unread ? unread + ' 条未读' : '没有未读消息',
+      readAll: () => this.setState({ read: { all: true } }),
+      filtered: st.cat !== 'all',
+      showAll: () => this.setState({ cat: 'all' }),
+      listTitle: st.cat === 'all' ? '全部通知' : C.find((c) => c.id === st.cat).name
+    };
+  }
+}
+</script>
+</body>
+</html>

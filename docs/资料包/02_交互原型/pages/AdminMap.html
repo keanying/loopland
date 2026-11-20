@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理端 · 地图与领地</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E9EB}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+input{font-family:inherit}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+.adm-side :focus-visible{outline-color:#FFFFFF}
+.adm-side a:hover{background:#26262A}
+.adm-side a[aria-current="page"]:hover{background:#FFFFFF}
+.adm-btn:hover{background:#2E2E33 !important}
+.adm-row:hover td{background:#F7F7F8}
+.num{font-family:Lexend,'Noto Sans SC',sans-serif}
+@media (max-width:760px){
+.adm-side{flex:1 1 100% !important;flex-direction:row !important;overflow-x:auto;justify-content:flex-start !important;padding:10px !important}
+.adm-side .adm-sp{display:none}
+}
+</style>
+
+
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="min-height:100vh;background:#E9E9EB;padding:24px;box-sizing:border-box;font-family:'Noto Sans SC',system-ui,sans-serif;color:#141414">
+<div style="max-width:1400px;margin:0 auto;background:#FFFFFF;border-radius:32px;padding:20px;display:flex;flex-wrap:wrap;gap:24px;box-sizing:border-box">
+
+<nav class="adm-side" aria-label="管理端导航" style="flex:0 0 84px;background:#141414;border-radius:26px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-sizing:border-box">
+<div role="img" aria-label="圈圈 Loopland 运营后台" style="width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="14 14 72 72" aria-hidden="true"><circle cx="62" cy="50" r="21" fill="#DCF26A"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#141414" stroke-width="15"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5" stroke="#141414" stroke-width="2.5"></circle></svg></div>
+<div class="adm-sp" style="height:18px"></div>
+<a href="AdminHome.html" aria-label="总览" title="总览" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></a>
+<a href="AdminUsers.html" aria-label="用户管理" title="用户管理" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg></a>
+<a href="AdminPlans.html" aria-label="会员套餐与订单" title="会员套餐与订单" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"></path><path d="M5 19h14"></path></svg></a>
+<a href="AdminMap.html" aria-label="地图与领地" title="地图与领地" aria-current="page" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;background:#FFFFFF;color:#141414;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"></path></svg></a>
+<a href="AdminReview.html" aria-label="内容审核" title="内容审核" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2 2 4-4"></path></svg></a>
+<a href="AdminRisk.html" aria-label="风控防作弊" title="风控防作弊" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M12 8v5M12 16v.5"></path></svg></a>
+<a href="AdminMerchant.html" aria-label="商户与活动" title="商户与活动" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5"></path></svg></a>
+<a href="AdminConfig.html" aria-label="玩法配置" title="玩法配置" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></a>
+<div class="adm-sp" style="flex-grow:1"></div>
+<a href="AdminHome.html" aria-label="退出登录" title="退出登录" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#8E8E95;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg></a>
+</nav>
+
+<main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+<div style="flex:1 1 220px;min-width:0">
+<h1 style="margin:0;font-size:28px;font-weight:900">地图与领地</h1>
+<div style="font-size:13px;color:#6B6B72;margin-top:2px">上海 · 浦东滨江片区 · 领地 {{terrCount}} 块 · 每 30 秒刷新</div>
+</div>
+<div role="group" aria-label="城市" style="display:flex;gap:6px">
+<template data-sc="for" list="{{cities}}" as="c" hint-placeholder-count="3">
+<button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="height:40px;padding:0 16px;border-radius:20px;font-size:13px;cursor:pointer;{{c.st}}">{{c.label}}</button>
+</template>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div aria-hidden="true" style="width:46px;height:46px;border-radius:23px;background:#EDEDF0;border:1.5px solid #141414;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:700">林</div>
+<div style="font-size:13px;line-height:1.3"><div style="font-weight:700">小林</div><div style="color:#6B6B72">运营 · 华东区</div></div>
+</div>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px">
+
+<section aria-label="领地地图" style="flex:3 1 560px;min-width:0;background:#F2F2F4;border-radius:28px;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<div role="radiogroup" aria-label="地图风格" style="display:flex;background:#FFFFFF;border-radius:22px;padding:4px;gap:2px">
+<template data-sc="for" list="{{styles}}" as="s" hint-placeholder-count="4">
+<button role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="height:36px;padding:0 14px;border:0;border-radius:18px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;{{s.st}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.icon}}"></path></svg>{{s.label}}</button>
+</template>
+</div>
+<div style="flex-grow:1"></div>
+<div role="group" aria-label="图层" style="display:flex;flex-wrap:wrap;gap:6px">
+<template data-sc="for" list="{{layers}}" as="l" hint-placeholder-count="5">
+<button onClick="{{l.pick}}" aria-pressed="{{l.on}}" style="height:36px;padding:0 12px;border-radius:18px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;{{l.st}}"><span aria-hidden="true" style="width:10px;height:10px;border-radius:3px;background:{{l.color}};border:1.5px solid #141414"></span>{{l.label}}</button>
+</template>
+</div>
+</div>
+
+<div style="position:relative;height:500px;border-radius:22px;overflow:hidden;background:{{mapBg}};perspective:1400px">
+<div style="position:absolute;inset:0;transform:{{tilt}};transform-origin:50% 60%;transition:transform .5s ease">
+<svg width="100%" height="100%" viewBox="0 0 900 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position:absolute;inset:0;display:block">
+<defs>
+<filter id="wob"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="4"></feTurbulence><feDisplacementMap in="SourceGraphic" scale="7"></feDisplacementMap></filter>
+<pattern id="h-rabbit" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#F6F1E7"></rect><line x1="0" y1="0" x2="0" y2="9" stroke="#8C76E8" stroke-width="3.5"></line></pattern>
+<pattern id="h-wind" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="9" height="9" fill="#F6F1E7"></rect><line x1="0" y1="0" x2="0" y2="9" stroke="#8FA61E" stroke-width="3.5"></line></pattern>
+<pattern id="h-knight" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#F6F1E7"></rect><line x1="0" y1="0" x2="0" y2="9" stroke="#E07A2E" stroke-width="3.5"></line></pattern>
+<pattern id="h-none" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="#F6F1E7"></rect><circle cx="4.5" cy="4.5" r="1.2" fill="#9A8F7C"></circle></pattern>
+<radialGradient id="heat"><stop offset="0" stop-color="#FF5A3D" stop-opacity=".75"></stop><stop offset=".5" stop-color="#FFB23D" stop-opacity=".35"></stop><stop offset="1" stop-color="#FFB23D" stop-opacity="0"></stop></radialGradient>
+</defs>
+<g filter="{{wob}}">
+<rect x="40" y="30" width="200" height="60" rx="10" fill="{{park}}"></rect>
+<rect x="560" y="420" width="220" height="60" rx="10" fill="{{park}}"></rect>
+<path d="M-20 228 C 160 262, 300 205, 450 232 S 720 262, 920 230" fill="none" stroke="{{water}}" stroke-width="26" stroke-linecap="round"></path>
+<g fill="none" stroke="{{road}}" stroke-width="{{roadW}}" stroke-linecap="round" stroke-dasharray="{{roadDash}}">
+<path d="M0 50 H900 M0 440 H900 M300 0 V500 M480 0 V500 M680 0 V500 M90 0 L60 500 M0 300 C 300 290 600 320 900 300"></path>
+</g>
+<template data-sc="if" value="{{is3d}}" hint-placeholder-val="{{ false }}">
+<template data-sc="for" list="{{terrs}}" as="t" hint-placeholder-count="8">
+<polygon points="{{t.pts}}" transform="translate(0,12)" fill="{{t.side}}" stroke="none"></polygon>
+</template>
+</template>
+<template data-sc="for" list="{{terrs}}" as="t" hint-placeholder-count="8">
+<polygon points="{{t.pts}}" fill="{{t.fill}}" fill-opacity="{{t.op}}" stroke="{{t.stroke}}" stroke-width="{{t.sw}}" stroke-linejoin="round" stroke-dasharray="{{t.dash}}"></polygon>
+</template>
+</g>
+<template data-sc="if" value="{{showHeat}}" hint-placeholder-val="{{ false }}">
+<circle cx="200" cy="140" r="90" fill="url(#heat)"></circle><circle cx="580" cy="320" r="110" fill="url(#heat)"></circle><circle cx="760" cy="150" r="70" fill="url(#heat)"></circle><circle cx="380" cy="300" r="60" fill="url(#heat)"></circle>
+</template>
+</svg>
+
+<template data-sc="if" value="{{showTerr}}" hint-placeholder-val="{{ true }}">
+<template data-sc="for" list="{{terrs}}" as="t" hint-placeholder-count="8">
+<button onClick="{{t.pick}}" aria-label="{{t.aria}}" aria-pressed="{{t.sel}}" style="position:absolute;left:{{t.cx}}%;top:{{t.cy}}%;transform:translate(-50%,-50%);height:32px;padding:0 12px;border-radius:16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;{{t.pill}}"><span aria-hidden="true" style="width:8px;height:8px;border-radius:4px;background:{{t.dot}};border:1.5px solid #141414"></span>{{t.name}}<template data-sc="if" value="{{t.frozen}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M3 7l18 10M21 7L3 17"></path></svg></template></button>
+</template>
+</template>
+<template data-sc="if" value="{{showChest}}" hint-placeholder-val="{{ true }}">
+<template data-sc="for" list="{{chests}}" as="m" hint-placeholder-count="2">
+<div role="img" aria-label="{{m.aria}}" style="position:absolute;left:{{m.x}}%;top:{{m.y}}%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:12px;background:#FFC857;border:2px solid #141414;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18v10H3zM3 10l2-5h14l2 5M12 10v4"></path></svg></div>
+</template>
+</template>
+<template data-sc="if" value="{{showBoss}}" hint-placeholder-val="{{ true }}">
+<template data-sc="for" list="{{bosses}}" as="m" hint-placeholder-count="1">
+<div role="img" aria-label="{{m.aria}}" style="position:absolute;left:{{m.x}}%;top:{{m.y}}%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;height:36px;padding:0 12px 0 4px;border-radius:18px;background:#141414;color:#FFFFFF;font-size:12px;font-weight:700;border:2px solid #FF6A3D"><span aria-hidden="true" style="width:28px;height:28px;border-radius:14px;background:#FF6A3D;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 18V9a7 7 0 0 1 14 0v9l-2.5-2-2.5 2-2-2-2 2-2.5-2z"></path><circle cx="9.5" cy="10" r="1"></circle><circle cx="14.5" cy="10" r="1"></circle></svg></span>{{m.name}}</div>
+</template>
+</template>
+<template data-sc="if" value="{{showVenue}}" hint-placeholder-val="{{ true }}">
+<div role="img" aria-label="据点：体育中心篮球馆，馆主 夜跑兔" style="position:absolute;left:85%;top:22%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:18px;background:#FFFFFF;border:2px solid #141414;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V8l8-5 8 5v13M9 21v-6h6v6"></path></svg></div>
+</template>
+</div>
+
+<div style="position:absolute;left:14px;bottom:14px;display:flex;flex-wrap:wrap;gap:10px;background:rgba(255,255,255,.92);border-radius:16px;padding:8px 12px;font-size:12px">
+<template data-sc="for" list="{{legend}}" as="g" hint-placeholder-count="4"><span style="display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:12px;height:12px;border-radius:3px;background:{{g.c}};border:1.5px solid #141414"></span>{{g.n}}</span></template>
+</div>
+<div aria-live="polite" style="position:absolute;right:14px;top:14px;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+<template data-sc="if" value="{{hasToast}}" hint-placeholder-val="{{ false }}"><div style="background:#141414;color:#FFFFFF;border-radius:16px;padding:10px 14px;font-size:13px;max-width:280px">{{toast}}</div></template>
+</div>
+</div>
+</section>
+
+<div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<section aria-labelledby="det-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px">
+<div aria-hidden="true" style="width:44px;height:44px;border-radius:14px;background:{{cur.dot}};border:2px solid #141414;flex-shrink:0"></div>
+<div style="flex-grow:1;min-width:0">
+<h2 id="det-h" style="margin:0;font-size:18px;font-weight:900">{{cur.name}}</h2>
+<div style="font-size:12px;color:#6B6B72">归属：{{cur.club}} · 领地 ID {{cur.id}}</div>
+</div>
+<span style="height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;flex-shrink:0;{{cur.statusSt}}">{{cur.status}}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<div style="background:#F2F2F4;border-radius:16px;padding:10px 12px"><div class="num" style="font-size:20px;font-weight:700">{{cur.area}}</div><div style="font-size:11px;color:#6B6B72">面积 km²</div></div>
+<div style="background:#F2F2F4;border-radius:16px;padding:10px 12px"><div class="num" style="font-size:20px;font-weight:700">{{cur.flips}}</div><div style="font-size:11px;color:#6B6B72">今日易手</div></div>
+<div style="background:#F2F2F4;border-radius:16px;padding:10px 12px"><div class="num" style="font-size:20px;font-weight:700">{{cur.builds}}</div><div style="font-size:11px;color:#6B6B72">建筑</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex-grow:1"><div style="font-size:14px;font-weight:700">守卫值</div><div style="font-size:12px;color:#6B6B72">越高越难被抢，0 – 2000</div></div>
+<button onClick="{{guardDown}}" aria-label="守卫值减 50" style="width:40px;height:40px;border-radius:20px;border:1.5px solid #E2E2E6;background:#FFFFFF;font-size:18px;cursor:pointer">−</button>
+<output class="num" aria-live="polite" style="min-width:56px;text-align:center;font-size:18px;font-weight:700">{{cur.guard}}</output>
+<button onClick="{{guardUp}}" aria-label="守卫值加 50" style="width:40px;height:40px;border-radius:20px;border:1.5px solid #E2E2E6;background:#FFFFFF;font-size:18px;cursor:pointer">+</button>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex-grow:1"><div id="frz-l" style="font-size:14px;font-weight:700">冻结领地</div><div style="font-size:12px;color:#6B6B72">冻结后不可被抢、不可建设</div></div>
+<button role="switch" aria-checked="{{cur.frozen}}" aria-labelledby="frz-l" onClick="{{toggleFreeze}}" style="width:56px;height:32px;border-radius:16px;border:0;cursor:pointer;position:relative;padding:0;{{frzTrack}}"><span aria-hidden="true" style="position:absolute;top:4px;width:24px;height:24px;border-radius:12px;background:#FFFFFF;transition:left .2s;left:{{frzKnob}}px"></span></button>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button onClick="{{dropChest}}" class="adm-btn" style="height:42px;padding:0 16px;border-radius:21px;border:0;background:#141414;color:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer">投放宝箱</button>
+<button onClick="{{summonBoss}}" style="height:42px;padding:0 16px;border-radius:21px;border:1.5px solid #141414;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer">召唤怪兽</button>
+<button onClick="{{resetOwner}}" style="height:42px;padding:0 16px;border-radius:21px;border:1.5px solid #E2E2E6;background:#FFFFFF;color:#A8261B;font-size:13px;font-weight:700;cursor:pointer">重置为无主</button>
+</div>
+</section>
+
+<section aria-labelledby="pub-h" style="background:#F2F2F4;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<h2 id="pub-h" style="margin:0;font-size:16px;font-weight:900">下发地图风格</h2>
+<div style="font-size:13px;color:#4A4A50">当前预览：<b>{{styleName}}</b>，选择生效范围后发布到 App。</div>
+<div role="radiogroup" aria-label="生效范围" style="display:flex;flex-wrap:wrap;gap:6px">
+<template data-sc="for" list="{{scopes}}" as="s" hint-placeholder-count="3">
+<button role="radio" aria-checked="{{s.on}}" onClick="{{s.pick}}" style="height:36px;padding:0 14px;border-radius:18px;font-size:13px;cursor:pointer;{{s.st}}">{{s.label}}</button>
+</template>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<button onClick="{{publish}}" class="adm-btn" style="height:44px;padding:0 20px;border-radius:22px;border:0;background:#141414;color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer">发布到 App</button>
+<span aria-live="polite" style="font-size:12px;color:#4A4A50">{{pubNote}}</span>
+</div>
+</section>
+
+</div>
+</div>
+
+<section aria-labelledby="list-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px">
+<h2 id="list-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">领地列表</h2>
+<div role="tablist" aria-label="筛选领地" style="display:flex;gap:6px;background:#F2F2F4;border-radius:22px;padding:4px">
+<template data-sc="for" list="{{filters}}" as="f" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{f.on}}" onClick="{{f.pick}}" style="height:34px;padding:0 14px;border:0;border-radius:17px;font-size:13px;cursor:pointer;{{f.st}}">{{f.label}}</button>
+</template>
+</div>
+</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">领地</th>
+<th scope="col" style="text-align:left;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">归属</th>
+<th scope="col" style="text-align:right;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">面积 km²</th>
+<th scope="col" style="text-align:right;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">守卫</th>
+<th scope="col" style="text-align:left;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">状态</th>
+<th scope="col" style="text-align:right;padding:8px 10px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">操作</th>
+</tr></thead>
+<tbody>
+<template data-sc="for" list="{{rows}}" as="r" hint-placeholder-count="6">
+<tr class="adm-row">
+<td style="padding:6px 10px;border-bottom:1px solid #F4F4F6;font-weight:700">{{r.name}}</td>
+<td style="padding:6px 10px;border-bottom:1px solid #F4F4F6"><span style="display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:10px;height:10px;border-radius:5px;background:{{r.dot}};border:1.5px solid #141414"></span>{{r.club}}</span></td>
+<td class="num" style="padding:6px 10px;border-bottom:1px solid #F4F4F6;text-align:right">{{r.area}}</td>
+<td class="num" style="padding:6px 10px;border-bottom:1px solid #F4F4F6;text-align:right">{{r.guard}}</td>
+<td style="padding:6px 10px;border-bottom:1px solid #F4F4F6"><span style="height:24px;padding:0 9px;border-radius:12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;{{r.statusSt}}">{{r.status}}</span></td>
+<td style="padding:6px 10px;border-bottom:1px solid #F4F4F6;text-align:right"><button onClick="{{r.pick}}" aria-label="{{r.aria}}" style="height:34px;padding:0 14px;border-radius:17px;border:1.5px solid #E2E2E6;background:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer">{{r.act}}</button></td>
+</tr>
+</template>
+</tbody>
+</table>
+</section>
+
+</main>
+</div>
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const T = [
+      ['t1', '滨江公园', 'rabbit', '120,90 260,70 300,170 210,220 110,180', 0.62, 1200, 3, 4],
+      ['t2', '世纪广场', 'wind', '320,60 470,80 450,190 330,180', 0.48, 800, 5, 2],
+      ['t3', '老城厢', 'knight', '500,90 640,70 690,170 560,220 490,180', 0.71, 950, 1, 5],
+      ['t4', '体育中心', 'rabbit', '700,80 820,100 830,210 720,220', 0.44, 1600, 0, 6],
+      ['t5', '南湖绿道', 'wind', '100,260 240,240 280,360 160,400 90,340', 0.66, 650, 7, 1],
+      ['t6', '大学城', 'none', '300,250 440,230 470,340 340,380', 0.52, 0, 2, 0],
+      ['t7', '东站', 'rabbit', '500,260 650,250 660,370 520,380', 0.58, 300, 9, 1],
+      ['t8', '港口', 'knight', '690,270 830,260 840,400 700,420', 0.69, 1100, 4, 3]
+    ];
+    const terr = {};
+    T.forEach(([id, name, club, pts, area, guard, flips, builds]) => { terr[id] = { id, name, club, pts, area, guard, flips, builds, frozen: id === 't7' }; });
+    this.state = { style: 'hand', layers: { terr: true, chest: true, boss: true, venue: true, heat: false }, sel: 't1', terr, order: T.map((t) => t[0]), chests: [[380, 140], [600, 320]], bosses: [{ x: 230, y: 320, name: '沙发怪' }], scope: 'city', city: 'sh', filter: 'all', toast: '', pub: '线上版本：标准 · v11' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  say(msg) { clearTimeout(this.tt); this.setState({ toast: msg }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
+  patch(id, p) { this.setState({ terr: { ...this.state.terr, [id]: { ...this.state.terr[id], ...p } } }); }
+  renderVals() {
+    const st = this.state;
+    const CLUB = {
+      rabbit: { n: '夜跑兔', c: '#B4A3F5', side: '#7F6BD0' },
+      wind: { n: '晨风跑团', c: '#DCF26A', side: '#A9BF3C' },
+      knight: { n: '江湾骑士', c: '#FF9F5A', side: '#D06F2C' },
+      none: { n: '无主', c: '#D4D4D8', side: '#A1A1A8' }
+    };
+    const S = st.style;
+    const hand = S === 'hand', dark = S === 'dark', is3d = S === '3d';
+    const PAL = {
+      std: { bg: '#F7F7F4', park: '#DDEFD0', water: '#CFE6F2', road: '#FFFFFF', rw: 10 },
+      dark: { bg: '#17171B', park: '#1F2A1F', water: '#1D2935', road: '#2A2A31', rw: 10 },
+      hand: { bg: '#F6F1E7', park: '#E3EBCB', water: '#CFDDE2', road: '#B9AC93', rw: 3 },
+      '3d': { bg: '#EEF0F3', park: '#D6EBC6', water: '#C4DEEE', road: '#FFFFFF', rw: 10 }
+    }[S];
+    const toCenter = (pts) => {
+      const a = pts.split(' ').map((p) => p.split(',').map(Number));
+      return [a.reduce((s, p) => s + p[0], 0) / a.length, a.reduce((s, p) => s + p[1], 0) / a.length];
+    };
+    const STATUS = (t) => t.frozen ? ['已冻结', 'background:#E3EEFF;color:#1F4E9E'] : t.club === 'none' ? ['无主', 'background:#EDEDF0;color:#4A4A50'] : t.flips >= 5 ? ['争夺中', 'background:#FFE2DC;color:#A8261B'] : ['正常', 'background:#E4F3D6;color:#2F6B1F'];
+    const terrs = st.order.map((id) => {
+      const t = st.terr[id], k = CLUB[t.club], sel = st.sel === id;
+      const [cx, cy] = toCenter(t.pts);
+      return {
+        ...t, cx: cx / 9, cy: cy / 5, sel,
+        fill: hand ? 'url(#h-' + t.club + ')' : k.c,
+        op: hand ? 1 : (dark ? 0.55 : 0.6),
+        side: k.side,
+        stroke: sel ? (dark ? '#FFFFFF' : '#141414') : (hand ? '#5A4B36' : (dark ? k.c : '#141414')),
+        sw: sel ? 4 : (hand ? 2.2 : 1.5),
+        dash: t.frozen ? '8 6' : 'none',
+        dot: k.c,
+        pill: sel ? 'background:#141414;color:#FFFFFF;border:2px solid #141414' : 'background:#FFFFFF;color:#141414;border:2px solid #141414',
+        aria: '选择领地 ' + t.name + '，归属 ' + k.n,
+        pick: () => this.setState({ sel: id })
+      };
+    });
+    const cur0 = st.terr[st.sel];
+    const [sLabel, sSt] = STATUS(cur0);
+    const cur = { ...cur0, club: CLUB[cur0.club].n, dot: CLUB[cur0.club].c, status: sLabel, statusSt: sSt, area: cur0.area.toFixed(2) };
+    const STY = [
+      ['std', '标准', 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z'],
+      ['dark', '暗色', 'M20 14A8 8 0 1 1 10 4a6 6 0 0 0 10 10z'],
+      ['hand', '手绘', 'M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3'],
+      ['3d', '3D', 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5']
+    ];
+    const styles = STY.map(([id, label, icon]) => ({ label, icon, on: S === id, st: S === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ style: id }) }));
+    const LY = [['terr', '领地', '#B4A3F5'], ['chest', '宝箱', '#FFC857'], ['boss', '怪兽', '#FF6A3D'], ['venue', '据点', '#FFFFFF'], ['heat', '热力', '#FFB23D']];
+    const layers = LY.map(([id, label, color]) => ({ label, color, on: st.layers[id], st: st.layers[id] ? 'border:1.5px solid #141414;background:#FFFFFF;color:#141414;font-weight:700' : 'border:1.5px dashed #B5B5BB;background:transparent;color:#6B6B72', pick: () => this.setState({ layers: { ...st.layers, [id]: !st.layers[id] } }) }));
+    const SC = [['all', '全国'], ['city', '仅上海'], ['event', 'S3 冬季赛季活动']];
+    const scopes = SC.map(([id, label]) => ({ label, on: st.scope === id, st: st.scope === id ? 'border:1.5px solid #141414;background:#141414;color:#FFFFFF;font-weight:700' : 'border:1.5px solid #E2E2E6;background:#FFFFFF;color:#141414', pick: () => this.setState({ scope: id }) }));
+    const CT = [['sh', '上海'], ['hz', '杭州'], ['bj', '北京']];
+    const cities = CT.map(([id, label]) => ({ label, on: st.city === id, st: st.city === id ? 'border:1.5px solid #141414;background:#141414;color:#FFFFFF;font-weight:700' : 'border:1.5px solid #E2E2E6;background:#FFFFFF;color:#141414', pick: () => this.setState({ city: id }) }));
+    const FL = [['all', '全部'], ['hot', '争夺中'], ['frozen', '已冻结']];
+    const filters = FL.map(([id, label]) => ({ label, on: st.filter === id, st: st.filter === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ filter: id }) }));
+    const rows = st.order.map((id) => st.terr[id]).filter((t) => {
+      const s = STATUS(t)[0];
+      return st.filter === 'all' || (st.filter === 'hot' && s === '争夺中') || (st.filter === 'frozen' && s === '已冻结');
+    }).map((t) => {
+      const [s, ss] = STATUS(t);
+      return { name: t.name, club: CLUB[t.club].n, dot: CLUB[t.club].c, area: t.area.toFixed(2), guard: t.guard, status: s, statusSt: ss, act: st.sel === t.id ? '已选中' : '定位', aria: '在地图上定位 ' + t.name, pick: () => this.setState({ sel: t.id }) };
+    });
+    const SN = { std: '标准', dark: '暗色', hand: '手绘', '3d': '3D' };
+    const scopeName = { all: '全国', city: '上海', event: 'S3 冬季赛季活动' };
+    const [ccx, ccy] = toCenter(cur0.pts);
+    return {
+      terrCount: st.order.length,
+      cities, styles, layers, scopes, filters, rows, terrs, cur,
+      styleName: SN[S],
+      mapBg: PAL.bg, park: PAL.park, water: PAL.water, road: PAL.road, roadW: PAL.rw,
+      roadDash: hand ? '14 6 3 6' : 'none',
+      wob: hand ? 'url(#wob)' : 'none',
+      is3d,
+      tilt: is3d ? 'rotateX(46deg) scale(.92) translateY(-30px)' : 'none',
+      showTerr: st.layers.terr, showChest: st.layers.chest, showBoss: st.layers.boss, showVenue: st.layers.venue, showHeat: st.layers.heat,
+      chests: st.chests.map(([x, y], i) => ({ x: x / 9, y: y / 5, aria: '宝箱 ' + (i + 1) })),
+      bosses: st.bosses.map((b) => ({ x: b.x / 9, y: b.y / 5, name: b.name, aria: '怪兽 ' + b.name })),
+      legend: [['夜跑兔', '#B4A3F5'], ['晨风跑团', '#DCF26A'], ['江湾骑士', '#FF9F5A'], ['无主', '#D4D4D8']].map(([n, c]) => ({ n, c })),
+      hasToast: !!st.toast, toast: st.toast,
+      frzTrack: cur0.frozen ? 'background:#141414' : 'background:#D4D4D8',
+      frzKnob: cur0.frozen ? 28 : 4,
+      guardUp: () => this.patch(st.sel, { guard: Math.min(2000, cur0.guard + 50) }),
+      guardDown: () => this.patch(st.sel, { guard: Math.max(0, cur0.guard - 50) }),
+      toggleFreeze: () => { this.patch(st.sel, { frozen: !cur0.frozen }); this.say((cur0.frozen ? '已解冻 ' : '已冻结 ') + cur0.name); },
+      dropChest: () => { this.setState({ chests: [...st.chests, [ccx + 30, ccy - 20]] }); this.say('已在 ' + cur0.name + ' 投放 1 个宝箱，App 端 1 分钟内可见'); },
+      summonBoss: () => { this.setState({ bosses: [...st.bosses, { x: ccx, y: ccy + 26, name: '雾霾怪' }] }); this.say('雾霾怪 将在 ' + cur0.name + ' 出没 6 小时'); },
+      resetOwner: () => { this.patch(st.sel, { club: 'none', guard: 0, builds: 0 }); this.say(cur0.name + ' 已重置为无主，原归属方会收到通知'); },
+      pubNote: st.pub,
+      publish: () => { const v = 12 + Math.floor(Math.random() * 3); this.setState({ pub: '已发布：' + SN[S] + ' · ' + scopeName[st.scope] + ' · v' + v }); this.say('地图风格「' + SN[S] + '」已下发到' + scopeName[st.scope]); }
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

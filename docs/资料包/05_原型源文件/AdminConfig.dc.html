@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>管理端 · 玩法配置</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E9EB}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+input{font-family:inherit}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+.adm-side :focus-visible{outline-color:#FFFFFF}
+.adm-side a:hover{background:#26262A}
+.adm-side a[aria-current="page"]:hover{background:#FFFFFF}
+.adm-btn:hover:not(:disabled){background:#2E2E33 !important}
+.adm-row:hover td{background:#F7F7F8}
+.num{font-family:Lexend,'Noto Sans SC',sans-serif}
+.cfg-in{width:84px;height:38px;border-radius:12px;border:1.5px solid #E2E2E6;padding:0 10px;font-size:14px;text-align:right;outline:none;font-family:Lexend,'Noto Sans SC',sans-serif;box-sizing:border-box}
+.cfg-in:focus{border-color:#141414}
+@media (max-width:760px){
+.adm-side{flex:1 1 100% !important;flex-direction:row !important;overflow-x:auto;justify-content:flex-start !important;padding:10px !important}
+.adm-side .adm-sp{display:none}
+}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#E9E9EB;padding:24px;box-sizing:border-box;font-family:'Noto Sans SC',system-ui,sans-serif;color:#141414">
+<div style="max-width:1400px;margin:0 auto;background:#FFFFFF;border-radius:32px;padding:20px;display:flex;flex-wrap:wrap;gap:24px;box-sizing:border-box">
+
+<nav class="adm-side" aria-label="管理端导航" style="flex:0 0 84px;background:#141414;border-radius:26px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-sizing:border-box">
+<div role="img" aria-label="圈圈 Loopland 运营后台" style="width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="14 14 72 72" aria-hidden="true"><circle cx="62" cy="50" r="21" fill="#DCF26A"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#141414" stroke-width="15"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5" stroke="#141414" stroke-width="2.5"></circle></svg></div>
+<div class="adm-sp" style="height:18px"></div>
+<a href="AdminHome.dc.html" aria-label="总览" title="总览" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></a>
+<a href="AdminUsers.dc.html" aria-label="用户管理" title="用户管理" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg></a>
+<a href="AdminPlans.dc.html" aria-label="会员套餐与订单" title="会员套餐与订单" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"></path><path d="M5 19h14"></path></svg></a>
+<a href="AdminMap.dc.html" aria-label="地图与领地" title="地图与领地" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"></path></svg></a>
+<a href="AdminReview.dc.html" aria-label="内容审核" title="内容审核" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2 2 4-4"></path></svg></a>
+<a href="AdminRisk.dc.html" aria-label="风控防作弊" title="风控防作弊" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M12 8v5M12 16v.5"></path></svg></a>
+<a href="AdminMerchant.dc.html" aria-label="商户与活动" title="商户与活动" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5"></path></svg></a>
+<a href="AdminConfig.dc.html" aria-label="玩法配置" title="玩法配置" aria-current="page" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;background:#FFFFFF;color:#141414;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></a>
+<div class="adm-sp" style="flex-grow:1"></div>
+<a href="AdminHome.dc.html" aria-label="退出登录" title="退出登录" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#8E8E95;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg></a>
+</nav>
+
+<main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+<div style="flex:1 1 220px;min-width:0">
+<h1 style="margin:0;font-size:28px;font-weight:900">玩法配置</h1>
+<div style="font-size:13px;color:#6B6B72;margin-top:2px">线上版本 {{ver}} · 改动先灰度再全量，可一键回滚</div>
+</div>
+<div role="tablist" aria-label="配置类别" style="display:flex;flex-wrap:wrap;background:#F2F2F4;border-radius:24px;padding:4px;gap:2px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<button role="tab" aria-selected="{{t.on}}" onClick="{{t.pick}}" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:14px;cursor:pointer;{{t.st}}">{{t.label}}</button>
+</sc-for>
+</div>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+
+<div style="flex:3 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<sc-if value="{{isBuild}}" hint-placeholder-val="{{ true }}">
+<section aria-labelledby="b-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><h2 id="b-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">建筑</h2><span style="font-size:12px;color:#6B6B72">每块领地 6 个建造位</span></div>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">建筑</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">建造能量</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">守卫 +</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">每日产能量</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">解锁</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{builds}}" as="r" hint-placeholder-count="6">
+<tr class="adm-row">
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6"><div style="display:flex;align-items:center;gap:10px"><dc-import name="CardArt" art="{{r.art}}" w="{{ 40 }}" locked="{{ false }}" hint-size="40px,48px"></dc-import><div><div style="font-weight:700">{{r.name}}</div><div style="font-size:11px;color:#6B6B72">{{r.note}}</div></div></div></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;text-align:right"><input class="cfg-in" type="number" min="0" aria-label="{{r.a1}}" value="{{r.cost}}" onChange="{{r.setCost}}" style="{{r.d1}}"></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;text-align:right"><input class="cfg-in" type="number" min="0" aria-label="{{r.a2}}" value="{{r.guard}}" onChange="{{r.setGuard}}" style="{{r.d2}}"></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;text-align:right"><input class="cfg-in" type="number" min="0" aria-label="{{r.a3}}" value="{{r.yield}}" onChange="{{r.setYield}}" style="{{r.d3}}"></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;color:#4A4A50">{{r.unlock}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+<sc-if value="{{isRole}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="r-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><h2 id="r-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">角色招募</h2><span style="font-size:12px;color:#6B6B72">运动类型决定招募哪个角色</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">
+<sc-for list="{{roles}}" as="r" hint-placeholder-count="8">
+<div style="background:#F2F2F4;border-radius:20px;padding:12px;display:flex;gap:12px;align-items:center">
+<dc-import name="CardArt" art="{{r.art}}" w="{{ 56 }}" locked="{{ false }}" hint-size="56px,67px"></dc-import>
+<div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">{{r.name}}</span><span style="font-size:11px;color:#6B6B72">{{r.sport}}</span></div>
+<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#4A4A50">招募需
+<input class="cfg-in" type="number" min="1" aria-label="{{r.aria}}" value="{{r.need}}" onChange="{{r.setNeed}}" style="width:70px;height:34px;{{r.d}}">{{r.unit}}</label>
+<div style="font-size:11px;color:#4A4A50">{{r.buff}}</div>
+</div>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isDrop}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="d-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px"><h2 id="d-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">怪兽掉落表</h2>
+<div role="radiogroup" aria-label="选择怪兽" style="display:flex;gap:6px">
+<sc-for list="{{bossTabs}}" as="b" hint-placeholder-count="4">
+<button role="radio" aria-checked="{{b.on}}" onClick="{{b.pick}}" style="height:52px;padding:0 12px 0 4px;border-radius:26px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:13px;{{b.st}}"><dc-import name="CardArt" art="{{b.art}}" w="{{ 36 }}" locked="{{ false }}" hint-size="36px,43px"></dc-import>{{b.name}}</button>
+</sc-for>
+</div>
+</div>
+<table style="width:100%;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">掉落物</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">类型</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">概率 %</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF;width:30%">占比</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{drops}}" as="r" hint-placeholder-count="5">
+<tr class="adm-row">
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6"><div style="display:flex;align-items:center;gap:10px"><dc-import name="CardArt" art="{{r.art}}" w="{{ 40 }}" locked="{{ false }}" hint-size="40px,48px"></dc-import><b>{{r.name}}</b></div></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;color:#4A4A50">{{r.type}}</td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6;text-align:right"><input class="cfg-in" type="number" min="0" max="100" step="0.5" aria-label="{{r.aria}}" value="{{r.p}}" onChange="{{r.setP}}" style="{{r.d}}"></td>
+<td style="padding:6px 8px;border-bottom:1px solid #F4F4F6"><div aria-hidden="true" style="height:8px;border-radius:4px;background:#ECECEF;overflow:hidden"><div style="height:100%;background:#141414;border-radius:4px;width:{{r.w}}%"></div></div></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div role="status" style="display:flex;align-items:center;gap:10px;border-radius:16px;padding:12px 14px;font-size:13px;{{sumSt}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sumIcon}}"></path></svg><span>合计 <b class="num">{{sum}}%</b> · {{sumNote}}</span></div>
+<div style="font-size:12px;color:#4A4A50;background:#F2F2F4;border-radius:14px;padding:10px 12px;line-height:1.6">按规定，随机掉落的概率会在 App 的怪兽页面原样公示，改动后自动同步。掉落只能通过运动获得，不提供付费抽取。</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isEnergy}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="e-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><h2 id="e-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">能量换算</h2><span style="font-size:12px;color:#6B6B72">所有运动统一折算成能量，用来建城、攻打怪兽</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">
+<sc-for list="{{energy}}" as="e" hint-placeholder-count="8">
+<label style="background:#F2F2F4;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:10px;font-size:13px">
+<span aria-hidden="true" style="width:36px;height:36px;border-radius:12px;background:#FFFFFF;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{e.icon}}"></path></svg></span>
+<span style="flex:1 1 auto;min-width:0"><b>{{e.name}}</b><span style="display:block;font-size:11px;color:#6B6B72">每 {{e.per}}</span></span>
+<input class="cfg-in" type="number" min="0" aria-label="{{e.aria}}" value="{{e.v}}" onChange="{{e.set}}" style="width:70px;{{e.d}}">
+</label>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:#F2F2F4;border-radius:18px;padding:12px 14px">
+<label style="display:flex;align-items:center;gap:8px;font-size:13px">每人每日能量上限 <input class="cfg-in" type="number" min="100" aria-label="每人每日能量上限" value="{{cap}}" onChange="{{setCap}}" style="{{capD}}"></label>
+<span style="font-size:12px;color:#4A4A50;flex:1 1 260px">示例：跑 5 km = <b class="num">{{ex1}}</b> 能量，可建 <b>{{ex2}}</b></span>
+</div>
+</section>
+</sc-if>
+
+</div>
+
+<aside aria-labelledby="ch-h" style="flex:1 1 300px;min-width:0;background:#F2F2F4;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px">
+<h2 id="ch-h" style="margin:0;font-size:16px;font-weight:900;flex-grow:1">未发布改动</h2>
+<span class="num" style="min-width:28px;height:28px;padding:0 8px;border-radius:14px;background:#141414;color:#FFFFFF;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box">{{changeCount}}</span>
+</div>
+<sc-if value="{{noChange}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 0;text-align:center">
+<svg width="96" height="70" viewBox="0 0 96 70" fill="none" stroke="#141414" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 56h68M22 56V28l26-16 26 16v28"></path><path d="M40 56V40h16v16"></path><path d="M36 30l8 8 16-16"></path></svg>
+<div style="font-size:13px;color:#4A4A50">没有改动，改一下左侧数值试试</div>
+</div>
+</sc-if>
+<ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{changes}}" as="c" hint-placeholder-count="3">
+<li style="background:#FFFFFF;border-radius:14px;padding:10px 12px;font-size:12px;display:flex;align-items:center;gap:8px"><span style="flex:1 1 auto;min-width:0">{{c.label}}</span><span class="num" style="color:#6B6B72;text-decoration:line-through">{{c.from}}</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#141414" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg><b class="num">{{c.to}}</b></li>
+</sc-for>
+</ul>
+<div role="radiogroup" aria-label="发布范围" style="display:flex;gap:6px">
+<sc-for list="{{rollout}}" as="r" hint-placeholder-count="2">
+<button role="radio" aria-checked="{{r.on}}" onClick="{{r.pick}}" style="flex:1 1 0;height:40px;border-radius:20px;font-size:13px;cursor:pointer;{{r.st}}">{{r.label}}</button>
+</sc-for>
+</div>
+<button onClick="{{publish}}" disabled="{{cantPublish}}" class="adm-btn" style="height:48px;border-radius:24px;border:0;font-size:15px;font-weight:700;{{pubSt}}">{{pubLabel}}</button>
+<button onClick="{{discard}}" disabled="{{noChange}}" style="height:40px;border-radius:20px;border:1.5px solid #D4D4D8;background:#FFFFFF;font-size:13px;cursor:pointer">撤销全部改动</button>
+<div aria-live="polite" style="font-size:12px;color:#4A4A50;min-height:16px">{{note}}</div>
+<div style="border-top:1px solid #E2E2E6;padding-top:12px;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:13px;font-weight:700">发布记录</div>
+<sc-for list="{{history}}" as="h" hint-placeholder-count="3"><div style="font-size:12px;color:#4A4A50;display:flex;gap:8px"><span class="num" style="font-weight:600;color:#141414">{{h.v}}</span><span style="flex:1 1 auto">{{h.t}}</span><span>{{h.who}}</span></div></sc-for>
+</div>
+</aside>
+
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.base = {
+      build: { campfire: [80, 50, 10], tent: [120, 80, 15], well: [150, 60, 25], mill: [200, 40, 40], house: [180, 100, 20], forge: [260, 150, 30], tower: [320, 300, 10], chapel: [400, 200, 50] },
+      role: { archer: 30, knight: 80, smith: 300, monk: 300, scout: 20, banner: 5, alchemist: 3000, farmer: 15 },
+      drop: {
+        sofa: { banner: 35, knight: 20, tent: 10, firetail: 5, energy: 30 },
+        bat: { scout: 30, archer: 25, tower: 8, nightnewt: 4, energy: 33 },
+        smog: { monk: 25, well: 15, chapel: 6, axolotl: 4, energy: 50 },
+        sugar: { farmer: 30, mill: 15, house: 10, frog: 5, energy: 40 }
+      },
+      energy: { run: 10, bike: 4, hike: 6, swim: 3, ball: 20, gym: 5, yoga: 4, rope: 2 },
+      cap: 600
+    };
+    this.state = { tab: 'build', boss: 'sofa', cfg: JSON.parse(JSON.stringify(this.base)), rollout: 'gray', ver: 'v3.12', note: '', history: [{ v: 'v3.12', t: '11/18 冬季赛季掉落调整', who: '小林' }, { v: 'v3.11', t: '11/10 新增联名旗手卡', who: '阿梅' }, { v: 'v3.10', t: '11/01 S3 开赛数值', who: '小林' }] };
+  }
+  setPath(path, val) {
+    const cfg = JSON.parse(JSON.stringify(this.state.cfg));
+    let o = cfg;
+    for (let i = 0; i < path.length - 1; i++) o = o[path[i]];
+    o[path[path.length - 1]] = val;
+    this.setState({ cfg, note: '' });
+  }
+  renderVals() {
+    const st = this.state, cfg = st.cfg, base = this.base;
+    const num = (e) => { const v = Number(e.target.value); return isNaN(v) ? 0 : v; };
+    const dirty = (a, b) => a !== b ? 'border-color:#141414;background:#FFFDE8;font-weight:700' : '';
+    const changes = [];
+    const B = { campfire: ['营火', '基础', 'Lv.1'], tent: ['营帐', '扩充驻扎', 'Lv.1'], well: ['水井', '恢复体力', 'Lv.2'], mill: ['磨坊', '能量产出', 'Lv.2'], house: ['民居', '驻扎 +2 角色', 'Lv.3'], forge: ['铁匠铺', '角色升级', 'Lv.4'], tower: ['箭塔', '防守主力', 'Lv.5'], chapel: ['礼拜堂', '跑团加成', 'Lv.6'] };
+    const F = ['建造能量', '守卫', '每日产能量'];
+    Object.keys(base.build).forEach((k) => base.build[k].forEach((v, i) => { if (cfg.build[k][i] !== v) changes.push({ label: B[k][0] + ' · ' + F[i], from: v, to: cfg.build[k][i] }); }));
+    const builds = Object.keys(cfg.build).map((k) => {
+      const [c, g, y] = cfg.build[k], [bc, bg, by] = base.build[k];
+      return { art: k, name: B[k][0], note: B[k][1], unlock: B[k][2], cost: c, guard: g, yield: y,
+        a1: B[k][0] + ' 建造能量', a2: B[k][0] + ' 守卫加成', a3: B[k][0] + ' 每日产能量',
+        d1: dirty(c, bc), d2: dirty(g, bg), d3: dirty(y, by),
+        setCost: (e) => this.setPath(['build', k, 0], num(e)), setGuard: (e) => this.setPath(['build', k, 1], num(e)), setYield: (e) => this.setPath(['build', k, 2], num(e)) };
+    });
+    const R = { archer: ['弓箭手', '跑步', 'km', '领地守卫 +5%'], knight: ['骑士', '骑行', 'km', '攻占速度 +8%'], smith: ['铁匠', '力量训练', '分钟', '建造费用 -6%'], monk: ['修士', '瑜伽', '分钟', '每日恢复 +10 能量'], scout: ['斥候', '徒步', 'km', '地图视野 +1 格'], banner: ['旗手', '集结跑', '次', '跑团合击伤害 +10%'], alchemist: ['药剂师', '跳绳', '次', '宝箱额外掉落 +5%'], farmer: ['农夫', '健走', 'km', '磨坊产出 +12%'] };
+    Object.keys(base.role).forEach((k) => { if (cfg.role[k] !== base.role[k]) changes.push({ label: R[k][0] + ' · 招募门槛', from: base.role[k], to: cfg.role[k] }); });
+    const roles = Object.keys(cfg.role).map((k) => ({ art: k, name: R[k][0], sport: R[k][1], unit: R[k][2], buff: R[k][3], need: cfg.role[k], aria: R[k][0] + ' 招募需要 ' + R[k][1] + ' ' + R[k][2], d: dirty(cfg.role[k], base.role[k]), setNeed: (e) => this.setPath(['role', k], num(e)) }));
+    const BOSS = { sofa: '沙发怪', bat: '熬夜蝠', smog: '雾霾怪', sugar: '糖分怪' };
+    const IT = { banner: ['旗手卡', '角色'], knight: ['骑士卡', '角色'], tent: ['营帐图纸', '建筑'], firetail: ['火尾蜥蛋', '伙伴'], energy: ['能量 ×50', '资源'], scout: ['斥候卡', '角色'], archer: ['弓箭手卡', '角色'], tower: ['箭塔图纸', '建筑'], nightnewt: ['夜光蝾螈蛋', '伙伴'], monk: ['修士卡', '角色'], well: ['水井图纸', '建筑'], chapel: ['礼拜堂图纸', '建筑'], axolotl: ['六角恐龙蛋', '伙伴'], farmer: ['农夫卡', '角色'], mill: ['磨坊图纸', '建筑'], house: ['民居图纸', '建筑'], frog: ['青蛙蛋', '伙伴'] };
+    Object.keys(base.drop).forEach((b) => Object.keys(base.drop[b]).forEach((k) => { if (cfg.drop[b][k] !== base.drop[b][k]) changes.push({ label: BOSS[b] + ' · ' + IT[k][0] + ' 概率', from: base.drop[b][k] + '%', to: cfg.drop[b][k] + '%' }); }));
+    const bossTabs = Object.keys(BOSS).map((b) => ({ art: b, name: BOSS[b], on: st.boss === b, st: st.boss === b ? 'border:2px solid #141414;background:#141414;color:#FFFFFF;font-weight:700' : 'border:1.5px solid #E2E2E6;background:#FFFFFF;color:#141414', pick: () => this.setState({ boss: b }) }));
+    const dt = cfg.drop[st.boss];
+    const drops = Object.keys(dt).map((k) => ({ art: k === 'energy' ? 'campfire' : k, name: IT[k][0], type: IT[k][1], p: dt[k], w: Math.min(100, dt[k]), aria: IT[k][0] + ' 掉落概率', d: dirty(dt[k], base.drop[st.boss][k]), setP: (e) => this.setPath(['drop', st.boss, k], num(e)) }));
+    const sums = Object.keys(cfg.drop).map((b) => Object.values(cfg.drop[b]).reduce((s, v) => s + v, 0));
+    const sum = Object.values(dt).reduce((s, v) => s + v, 0);
+    const okSum = Math.abs(sum - 100) < 0.001;
+    const allOk = sums.every((s) => Math.abs(s - 100) < 0.001);
+    const E = { run: ['跑步', 'km', 'M13 4a2 2 0 1 0 0 .1M7 21l3-6 3 2v4M10 15l1-5 4 3 3-1M8 11l3-2'], bike: ['骑行', 'km', 'M5 17a3 3 0 1 0 0 .1M19 17a3 3 0 1 0 0 .1M5 17l4-8h6l4 8M9 9l3 8'], hike: ['徒步', 'km', 'M3 20l6-10 4 6 2-3 6 7z'], swim: ['游泳', '100 m', 'M2 18c2 0 2-1.5 4-1.5S8 18 10 18s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M8 13l4-6 4 3'], ball: ['球类签到', '次', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18'], gym: ['力量训练', '10 分钟', 'M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12'], yoga: ['瑜伽', '10 分钟', 'M12 5a2 2 0 1 0 0 .1M4 20h16M12 8v6l-5 4M12 14l5 4M6 11h12'], rope: ['跳绳', '100 次', 'M6 4v6M18 4v6M6 10c0 8 12 8 12 0'] };
+    Object.keys(base.energy).forEach((k) => { if (cfg.energy[k] !== base.energy[k]) changes.push({ label: E[k][0] + ' · 能量', from: base.energy[k], to: cfg.energy[k] }); });
+    if (cfg.cap !== base.cap) changes.push({ label: '每日能量上限', from: base.cap, to: cfg.cap });
+    const energy = Object.keys(cfg.energy).map((k) => ({ name: E[k][0], per: E[k][1], icon: E[k][2], v: cfg.energy[k], aria: E[k][0] + ' 每 ' + E[k][1] + ' 能量', d: dirty(cfg.energy[k], base.energy[k]), set: (e) => this.setPath(['energy', k], num(e)) }));
+    const ex1 = cfg.energy.run * 5;
+    const can = Object.keys(cfg.build).filter((k) => cfg.build[k][0] <= ex1).map((k) => B[k][0]);
+    const TABS = [['build', '建筑'], ['role', '角色'], ['drop', '怪兽掉落'], ['energy', '能量换算']];
+    const tabs = TABS.map(([id, label]) => ({ label, on: st.tab === id, st: st.tab === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ tab: id }) }));
+    const rollout = [['gray', '灰度 10%'], ['full', '全量']].map(([id, label]) => ({ label, on: st.rollout === id, st: st.rollout === id ? 'border:1.5px solid #141414;background:#141414;color:#FFFFFF;font-weight:700' : 'border:1.5px solid #D4D4D8;background:#FFFFFF;color:#141414', pick: () => this.setState({ rollout: id }) }));
+    const cant = changes.length === 0 || !allOk;
+    return {
+      ver: st.ver, tabs,
+      isBuild: st.tab === 'build', isRole: st.tab === 'role', isDrop: st.tab === 'drop', isEnergy: st.tab === 'energy',
+      builds, roles, bossTabs, drops,
+      sum: +sum.toFixed(1), sumNote: okSum ? '概率合计正确，可以发布' : (sum > 100 ? '超出 ' + (sum - 100).toFixed(1) + '%，请调低' : '还差 ' + (100 - sum).toFixed(1) + '%，请补齐'),
+      sumSt: okSum ? 'background:#E4F3D6;color:#2F6B1F' : 'background:#FFE2DC;color:#A8261B',
+      sumIcon: okSum ? 'M5 12l5 5 9-10' : 'M12 3l9 16H3zM12 10v4M12 17v.5',
+      energy, cap: cfg.cap, capD: dirty(cfg.cap, base.cap), setCap: (e) => this.setPath(['cap'], num(e)),
+      ex1, ex2: can.length ? can.join('、') : '暂无建筑',
+      changes: changes.slice(0, 8), changeCount: changes.length, noChange: changes.length === 0,
+      rollout, cantPublish: cant,
+      pubSt: cant ? 'background:#D4D4D8;color:#6B6B72;cursor:not-allowed' : 'background:#141414;color:#FFFFFF;cursor:pointer',
+      pubLabel: !allOk ? '掉落概率合计需为 100%' : (st.rollout === 'gray' ? '发布到 10% 用户' : '发布到全部用户'),
+      note: st.note,
+      history: st.history.slice(0, 3),
+      publish: () => {
+        if (cant) return;
+        const n = Number(st.ver.split('.')[1]) + 1;
+        const v = 'v3.' + n;
+        this.base = JSON.parse(JSON.stringify(cfg));
+        this.setState({ ver: v, note: v + ' 已' + (st.rollout === 'gray' ? '灰度发布到 10% 用户，观察 24 小时后可全量' : '全量发布') + '，共 ' + changes.length + ' 项改动', history: [{ v, t: '11/20 ' + changes[0].label + (changes.length > 1 ? ' 等 ' + changes.length + ' 项' : ''), who: '小林' }, ...st.history] });
+      },
+      discard: () => this.setState({ cfg: JSON.parse(JSON.stringify(this.base)), note: '已撤销全部改动' })
+    };
+  }
+}
+</script>
+</body>
+</html>

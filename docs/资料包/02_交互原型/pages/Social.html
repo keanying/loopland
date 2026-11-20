@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>组局与动态</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+div::-webkit-scrollbar{display:none}
+</style>
+
+<style>html,body{min-height:100%}body{display:flex;justify-content:center;align-items:flex-start;padding:24px 0;box-sizing:border-box}#dc-root>div{border-radius:44px;box-shadow:0 20px 60px rgba(0,0,0,.5)}</style>
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;overflow-y:auto;padding:18px 16px 112px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="display:flex;align-items:center;gap:12px">
+<a href="Club.html" aria-label="返回跑团" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="display:flex;flex-direction:column;gap:2px;flex-grow:1">
+<h1 style="margin:0;font-size:24px;font-weight:900;letter-spacing:1px">组局 · 动态</h1>
+<div style="font-size:12px;color:#B5B5BE">找搭子一起动，签到同时加能量</div>
+</div>
+<button onClick="{{openSheet}}" style="height:44px;padding:0 14px;border-radius:22px;border:0;background:#DCF26A;color:#121212;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>发起</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border-radius:26px;background:#1B1B20">
+<button onClick="{{tGroup}}" aria-pressed="{{pGroup}}" style="height:40px;border:0;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;{{sGroup}}">组局</button>
+<a href="Feed.html" style="height:40px;border-radius:20px;font-size:13px;font-weight:500;color:#C9C9D1;display:flex;align-items:center;justify-content:center">动态</a>
+</div>
+
+<template data-sc="if" value="{{isGroup}}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+<template data-sc="for" list="{{filters}}" as="f" hint-placeholder-count="6">
+<button onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="height:36px;padding:0 14px;border-radius:18px;border:0;cursor:pointer;font-size:13px;white-space:nowrap;flex-shrink:0;{{f.st}}">{{f.name}}</button>
+</template>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<template data-sc="for" list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="height:26px;padding:0 10px;border-radius:13px;background:{{g.color}};color:#121212;font-size:12px;font-weight:700;display:flex;align-items:center">{{g.sport}}</span>
+<span style="font-size:12px;color:#B5B5BE;flex-grow:1">{{g.when}}</span>
+<span style="height:24px;padding:0 8px;border-radius:12px;background:#26223A;color:#CFC4FA;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px"><span style="font-family:Orbitron,sans-serif">AI</span> 匹配 {{g.match}}%</span>
+</div>
+<div style="font-size:16px;font-weight:700">{{g.title}}</div>
+<div style="font-size:12px;color:#B5B5BE">{{g.place}} · {{g.cost}}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<template data-sc="for" list="{{g.tags}}" as="t" hint-placeholder-count="2"><span style="height:22px;padding:0 8px;border-radius:11px;background:#2A2A31;color:#D6D6DD;font-size:11px;display:flex;align-items:center">{{t.t}}</span></template>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div style="flex-grow:1;display:flex;flex-direction:column;gap:4px">
+<div style="height:6px;border-radius:3px;background:#2A2A31;overflow:hidden"><div style="height:6px;border-radius:3px;background:{{g.color}};width:{{g.pct}}%"></div></div>
+<span style="font-size:11px;color:#B5B5BE">{{g.cur}} / {{g.max}} 人</span>
+</div>
+<button onClick="{{g.join}}" style="height:40px;padding:0 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;{{g.btn}}">{{g.label}}</button>
+</div>
+</div>
+</template>
+</div>
+</template>
+
+<template data-sc="if" value="{{isFeed}}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:10px">
+<template data-sc="for" list="{{posts}}" as="p" hint-placeholder-count="3">
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:24px;padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:38px;height:38px;border-radius:19px;background:{{p.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900">{{p.ini}}</span>
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">{{p.name}}</span><span style="font-size:11px;color:#B5B5BE">{{p.time}}</span></span>
+</div>
+<div style="font-size:13px;line-height:1.6">{{p.text}}</div>
+<div style="background:#15151A;border-radius:18px;padding:12px;display:flex;align-items:center;gap:12px">
+<svg width="72" height="56" viewBox="0 0 72 56" aria-hidden="true"><rect width="72" height="56" rx="10" fill="#121216"></rect><path d="M6 20 L60 14 M14 2 L20 54" stroke="#212128" stroke-width="3"></path><path d="{{p.shape}}" fill="{{p.color}}" fill-opacity="0.55" stroke="{{p.color}}" stroke-width="2"></path></svg>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700">{{p.card}}</span><span style="font-size:11px;color:#B5B5BE">{{p.cardSub}}</span></div>
+</div>
+<div style="display:flex;align-items:center;gap:16px">
+<button onClick="{{p.like}}" aria-pressed="{{p.pressed}}" style="height:36px;padding:0 12px;border-radius:18px;border:0;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;{{p.likeSt}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="{{p.fill}}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>加油 {{p.likes}}</button>
+<span style="font-size:12px;color:#B5B5BE">评论 {{p.comments}}</span>
+</div>
+</div>
+</template>
+</div>
+</template>
+
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(0,0,0,.55))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#1B1B20" stroke="#2C2C34" stroke-width="1"></path></svg><a href="Main.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Codex.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Club.html" aria-label="社区" aria-current="page" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#FFFFFF;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:1"></span></a><a href="Profile.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#7C7C86;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#DCF26A;opacity:0"></span></a><a href="Sports.html" aria-label="开始运动" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(#1B1B20,#1B1B20) padding-box,linear-gradient(140deg,#B4A3F5,#DCF26A) border-box;border:3px solid transparent;box-shadow:0 0 22px rgba(180,163,245,.45);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#B4A3F5" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+
+<template data-sc="if" value="{{sheet}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.66);display:flex;flex-direction:column;justify-content:flex-end">
+<div role="dialog" aria-label="发起组局" style="background:#1B1B20;border-top-left-radius:32px;border-top-right-radius:32px;padding:20px 20px 32px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:20px;font-weight:900">发起组局</span>
+<button onClick="{{closeSheet}}" aria-label="关闭" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+</div>
+<div style="font-size:12px;color:#B5B5BE">运动项目</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<template data-sc="for" list="{{newSports}}" as="s" hint-placeholder-count="5"><button onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="height:38px;padding:0 14px;border-radius:19px;border:0;cursor:pointer;font-size:13px;{{s.st}}">{{s.name}}</button></template>
+</div>
+<div style="font-size:12px;color:#B5B5BE">时间</div>
+<div style="display:flex;gap:6px">
+<template data-sc="for" list="{{newTimes}}" as="s" hint-placeholder-count="3"><button onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="height:38px;padding:0 14px;border-radius:19px;border:0;cursor:pointer;font-size:13px;{{s.st}}">{{s.name}}</button></template>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<span style="font-size:12px;color:#B5B5BE">人数上限</span>
+<div style="display:flex;align-items:center;gap:12px">
+<button onClick="{{dec}}" aria-label="减少人数" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;font-size:20px;cursor:pointer">−</button>
+<span style="font-family:Orbitron,sans-serif;font-size:20px;font-weight:700;width:28px;text-align:center">{{newMax}}</span>
+<button onClick="{{inc}}" aria-label="增加人数" style="width:40px;height:40px;border-radius:20px;border:0;background:#2A2A31;color:#F4F4F5;font-size:20px;cursor:pointer">+</button>
+</div>
+</div>
+<div style="background:#26223A;border-radius:16px;padding:10px 12px;font-size:12px;line-height:1.5;color:#E2DCFB"><span style="font-family:Orbitron,sans-serif;font-weight:800;color:#B4A3F5">AI</span> 附近有 {{aiNear}} 位{{newSportName}}搭子这个时间有空，发布后会优先推给他们。</div>
+<button onClick="{{publish}}" style="height:52px;border-radius:26px;border:0;background:#DCF26A;color:#121212;font-size:16px;font-weight:900;cursor:pointer">发布组局</button>
+</div>
+</div>
+</template>
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { tab: 'group', filter: 'all', joined: {}, liked: {}, sheet: false, nSport: 'pickle', nTime: 'tonight', nMax: 6, mine: [] };
+  }
+  renderVals() {
+    const st = this.state;
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const chipOn = 'background:#DCF26A;color:#121212';
+    const chipOff = 'background:#1F1F25;color:#C9C9D1';
+    const SP = { disc: { name: '飞盘', color: '#6FD3E8' }, badminton: { name: '羽毛球', color: '#B4A3F5' }, pickle: { name: '匹克球', color: '#F28DC0' }, run: { name: '夜跑', color: '#DCF26A' }, hike: { name: '徒步', color: '#FFC857' } };
+    const base = [
+      { id: 'g1', sp: 'disc', when: '今晚 19:30', title: '飞盘新手局 · 教学 + 小比赛', place: '滨江草坪', cost: 'AA ¥30', cur: 9, max: 14, match: 92, tags: ['新手友好', '社恐友好'] },
+      { id: 'g2', sp: 'pickle', when: '今晚 21:00', title: '匹克球双打 · 还差 2 人', place: '城南全民健身中心', cost: '场地 AA ¥20', cur: 2, max: 4, match: 88, tags: ['2.5 级左右'] },
+      { id: 'g3', sp: 'run', when: '周六 07:00', title: '夜跑兔集结跑 · 夺回西岸草坪', place: '滨江公园东门', cost: '免费', cur: 36, max: 60, match: 97, tags: ['圈地', '配速 6′'] },
+      { id: 'g4', sp: 'badminton', when: '周四 20:00', title: '羽毛球双打 · 下班局', place: '学府路体育馆', cost: 'AA ¥25', cur: 3, max: 4, match: 81, tags: ['中级'] },
+      { id: 'g5', sp: 'hike', when: '周日 08:30', title: '城郊山径徒步 12 km', place: '地铁终点站集合', cost: 'AA ¥15 · 拼车', cur: 7, max: 12, match: 74, tags: ['山野图层', '可带新人'] }
+    ];
+    const all = st.mine.concat(base);
+    const groups = all.filter((g) => st.filter === 'all' || g.sp === st.filter).map((g) => {
+      const j = !!st.joined[g.id] || g.own;
+      const cur = g.cur + (st.joined[g.id] ? 1 : 0);
+      return {
+        ...g, sport: SP[g.sp].name, color: SP[g.sp].color, cur, pct: Math.round((cur / g.max) * 100),
+        tags: g.tags.map((t) => ({ t })),
+        label: g.own ? '我发起的' : (j ? '已加入' : '加入'),
+        btn: j ? 'border:1.5px solid #DCF26A;background:transparent;color:#DCF26A' : 'border:0;background:#DCF26A;color:#121212',
+        join: () => { if (!g.own) this.setState({ joined: { ...this.state.joined, [g.id]: !this.state.joined[g.id] } }); }
+      };
+    });
+    const F = [{ id: 'all', name: '全部' }, { id: 'disc', name: '飞盘' }, { id: 'pickle', name: '匹克球' }, { id: 'badminton', name: '羽毛球' }, { id: 'run', name: '夜跑' }, { id: 'hike', name: '徒步' }];
+    const filters = F.map((f) => ({ ...f, pressed: f.id === st.filter ? 'true' : 'false', st: f.id === st.filter ? chipOn : chipOff, pick: () => this.setState({ filter: f.id }) }));
+    const P = [
+      { id: 'p1', ini: '鹿', name: '小鹿 · 夜跑兔', time: '20 分钟前', color: '#B4A3F5', text: '下班绕滨江跑了两圈，云杉坡守卫值拉回 80 了，城西别想了。', card: '云杉坡 · 守卫值 42 → 80', cardSub: '6.2 km · 2 块地加固', shape: 'M24 14 L52 10 L60 30 L46 44 L28 40 Z', likes: 36, comments: 8 },
+      { id: 'p2', ini: 'K', name: 'Kai', time: '1 小时前', color: '#FF9F5A', text: '自由圈地一次连圈 4 块，轨迹交叉的地方全变橙色了。', card: '东港一带 · +0.61 km²', cardSub: '10.4 km · 自由圈地', shape: 'M14 30 L30 12 L44 26 L58 14 L60 42 L22 46 Z', likes: 128, comments: 21 },
+      { id: 'p3', ini: 'M', name: 'Momo · 江湾晨跑', time: '昨天', color: '#6FD3E8', text: '下雨没出门，跳绳 2,000 个，能量全拿去加固南门操场。', card: '跳绳 2,000 个 · +200 能量', cardSub: 'AI 计数 · 南门操场守卫 +12', shape: 'M18 16 L54 16 L54 42 L18 42 Z', likes: 54, comments: 6 }
+    ];
+    const posts = P.map((p) => {
+      const l = !!st.liked[p.id];
+      return { ...p, likes: p.likes + (l ? 1 : 0), pressed: l ? 'true' : 'false', fill: l ? 'currentColor' : 'none', likeSt: l ? 'background:#DCF26A;color:#121212' : 'background:#2A2A31;color:#F4F4F5', like: () => this.setState({ liked: { ...this.state.liked, [p.id]: !this.state.liked[p.id] } }) };
+    });
+    const newSports = Object.keys(SP).map((k) => ({ name: SP[k].name, pressed: st.nSport === k ? 'true' : 'false', st: st.nSport === k ? chipOn : chipOff, pick: () => this.setState({ nSport: k }) }));
+    const TM = { tonight: '今晚 20:00', morning: '明早 07:00', sat: '周六 09:00' };
+    const newTimes = Object.keys(TM).map((k) => ({ name: TM[k], pressed: st.nTime === k ? 'true' : 'false', st: st.nTime === k ? chipOn : chipOff, pick: () => this.setState({ nTime: k }) }));
+    return {
+      isGroup: st.tab === 'group', isFeed: st.tab === 'feed',
+      sGroup: st.tab === 'group' ? on : off, sFeed: st.tab === 'feed' ? on : off,
+      pGroup: st.tab === 'group' ? 'true' : 'false', pFeed: st.tab === 'feed' ? 'true' : 'false',
+      tGroup: () => this.setState({ tab: 'group' }), tFeed: () => this.setState({ tab: 'feed' }),
+      filters, groups, posts, newSports, newTimes,
+      sheet: st.sheet,
+      openSheet: () => this.setState({ sheet: true }),
+      closeSheet: () => this.setState({ sheet: false }),
+      newMax: st.nMax,
+      newSportName: SP[st.nSport].name,
+      aiNear: { disc: 14, badminton: 9, pickle: 11, run: 23, hike: 6 }[st.nSport],
+      dec: () => this.setState({ nMax: Math.max(2, this.state.nMax - 1) }),
+      inc: () => this.setState({ nMax: Math.min(30, this.state.nMax + 1) }),
+      publish: () => {
+        const g = { id: 'm' + Date.now(), sp: this.state.nSport, when: TM[this.state.nTime], title: SP[this.state.nSport].name + '局 · 阿杰发起', place: '滨江公园附近', cost: 'AA', cur: 1, max: this.state.nMax, match: 100, tags: ['刚刚发布'], own: true };
+        this.setState({ mine: [g].concat(this.state.mine), sheet: false, tab: 'group', filter: 'all' });
+      }
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理端 · 风控防作弊</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E9EB}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+.adm-side :focus-visible{outline-color:#FFFFFF}
+.adm-side a:hover{background:#26262A}
+.adm-side a[aria-current="page"]:hover{background:#FFFFFF}
+.adm-btn:hover{background:#2E2E33 !important}
+.adm-q:hover{background:#F7F7F8}
+.num{font-family:Lexend,'Noto Sans SC',sans-serif}
+@media (max-width:760px){
+.adm-side{flex:1 1 100% !important;flex-direction:row !important;overflow-x:auto;justify-content:flex-start !important;padding:10px !important}
+.adm-side .adm-sp{display:none}
+}
+</style>
+
+
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="min-height:100vh;background:#E9E9EB;padding:24px;box-sizing:border-box;font-family:'Noto Sans SC',system-ui,sans-serif;color:#141414">
+<div style="max-width:1400px;margin:0 auto;background:#FFFFFF;border-radius:32px;padding:20px;display:flex;flex-wrap:wrap;gap:24px;box-sizing:border-box">
+
+<nav class="adm-side" aria-label="管理端导航" style="flex:0 0 84px;background:#141414;border-radius:26px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-sizing:border-box">
+<div role="img" aria-label="圈圈 Loopland 运营后台" style="width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="14 14 72 72" aria-hidden="true"><circle cx="62" cy="50" r="21" fill="#DCF26A"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#141414" stroke-width="15"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5" stroke="#141414" stroke-width="2.5"></circle></svg></div>
+<div class="adm-sp" style="height:18px"></div>
+<a href="AdminHome.html" aria-label="总览" title="总览" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></a>
+<a href="AdminUsers.html" aria-label="用户管理" title="用户管理" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg></a>
+<a href="AdminPlans.html" aria-label="会员套餐与订单" title="会员套餐与订单" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"></path><path d="M5 19h14"></path></svg></a>
+<a href="AdminMap.html" aria-label="地图与领地" title="地图与领地" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"></path></svg></a>
+<a href="AdminReview.html" aria-label="内容审核" title="内容审核" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2 2 4-4"></path></svg></a>
+<a href="AdminRisk.html" aria-label="风控防作弊" title="风控防作弊" aria-current="page" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;background:#FFFFFF;color:#141414;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M12 8v5M12 16v.5"></path></svg></a>
+<a href="AdminMerchant.html" aria-label="商户与活动" title="商户与活动" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5"></path></svg></a>
+<a href="AdminConfig.html" aria-label="玩法配置" title="玩法配置" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></a>
+<div class="adm-sp" style="flex-grow:1"></div>
+<a href="AdminHome.html" aria-label="退出登录" title="退出登录" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#8E8E95;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg></a>
+</nav>
+
+<main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+<div style="flex:1 1 220px;min-width:0">
+<h1 style="margin:0;font-size:28px;font-weight:900">风控防作弊</h1>
+<div style="font-size:13px;color:#6B6B72;margin-top:2px">近 24 小时 · 待人工确认 {{open}} 起 · 规则版本 R-2026.11.18</div>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div aria-hidden="true" style="width:46px;height:46px;border-radius:23px;background:#EDEDF0;border:1.5px solid #141414;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:700">林</div>
+<div style="font-size:13px;line-height:1.3"><div style="font-weight:700">小林</div><div style="color:#6B6B72">运营 · 华东区</div></div>
+</div>
+</header>
+
+<section aria-label="今日风控数据" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px"><div class="num" style="font-size:30px;font-weight:700">412</div><div style="font-size:13px;color:#4A4A50">今日触发告警</div></div>
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px"><div class="num" style="font-size:30px;font-weight:700">37</div><div style="font-size:13px;color:#4A4A50">自动拦截（确定性作弊）</div></div>
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px"><div class="num" style="font-size:30px;font-weight:700">{{rolled}}</div><div style="font-size:13px;color:#4A4A50">今日回滚领地 km²</div></div>
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px"><div class="num" style="font-size:30px;font-weight:700">0.31%</div><div style="font-size:13px;color:#4A4A50">作弊记录占比</div></div>
+</section>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+
+<section aria-labelledby="al-h" style="flex:1 1 340px;min-width:0;border:1.5px solid #ECECEF;border-radius:28px;padding:18px 14px 10px">
+<div style="display:flex;align-items:center;gap:8px;padding:0 6px 10px">
+<h2 id="al-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">告警</h2>
+<span style="font-size:12px;color:#6B6B72">按置信度排序</span>
+</div>
+<ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px">
+<template data-sc="for" list="{{alerts}}" as="a" hint-placeholder-count="5">
+<li>
+<button class="adm-q" onClick="{{a.pick}}" aria-pressed="{{a.sel}}" style="width:100%;text-align:left;display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:18px;cursor:pointer;background:#FFFFFF;{{a.box}}">
+<div aria-hidden="true" style="width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;{{a.ist}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{a.icon}}"></path></svg></div>
+<div style="flex:1 1 auto;min-width:0">
+<div style="display:flex;align-items:center;gap:6px"><span style="font-size:14px;font-weight:700">{{a.kind}}</span><span class="num" style="font-size:12px;color:#6B6B72">{{a.conf}}</span></div>
+<div style="font-size:12px;color:#4A4A50;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{a.user}} · {{a.brief}}</div>
+<div style="font-size:12px;margin-top:4px;{{a.stateSt}}">{{a.state}}</div>
+</div>
+</button>
+</li>
+</template>
+</ul>
+</section>
+
+<section aria-labelledby="ev-h" style="flex:2 1 520px;min-width:0;background:#F2F2F4;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+<div aria-hidden="true" style="width:44px;height:44px;border-radius:22px;background:#FFFFFF;border:1.5px solid #141414;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">{{cur.ini}}</div>
+<div style="flex:1 1 200px;min-width:0">
+<h2 id="ev-h" style="margin:0;font-size:17px;font-weight:900">{{cur.kind}} · {{cur.user}}</h2>
+<div style="font-size:12px;color:#6B6B72">{{cur.rec}}</div>
+</div>
+<span style="height:30px;padding:0 12px;border-radius:15px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;{{cur.stateChip}}">{{cur.state}}</span>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<div style="flex:3 1 300px;min-width:0;background:#FFFFFF;border-radius:22px;padding:14px 16px">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+<h3 style="margin:0;font-size:14px;font-weight:900;flex-grow:1">速度曲线</h3>
+<span style="font-size:12px;color:#4A4A50;display:flex;align-items:center;gap:6px"><span aria-hidden="true" style="width:18px;border-top:2px dashed #A8261B"></span>阈值 {{thr}} km/h</span>
+</div>
+<div style="position:relative;height:170px">
+<svg width="100%" height="170" viewBox="0 0 600 170" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;display:block">
+<path d="M0 140 H600" stroke="#ECECEF" stroke-width="1" vector-effect="non-scaling-stroke"></path>
+<path d="{{thrPath}}" stroke="#A8261B" stroke-width="1.5" stroke-dasharray="6 5" fill="none" vector-effect="non-scaling-stroke"></path>
+<path d="{{spdArea}}" fill="#141414" fill-opacity=".06"></path>
+<path d="{{spdLine}}" stroke="#141414" stroke-width="2" fill="none" vector-effect="non-scaling-stroke" stroke-linejoin="round"></path>
+</svg>
+<template data-sc="for" list="{{spd}}" as="p" hint-placeholder-count="12">
+<div aria-hidden="true" style="position:absolute;left:{{p.x}}%;top:{{p.y}}px;width:{{p.r}}px;height:{{p.r}}px;border-radius:50%;transform:translate(-50%,-50%);box-sizing:border-box;{{p.st}}"></div>
+<template data-sc="if" value="{{p.show}}" hint-placeholder-val="{{ false }}">
+<div class="num" aria-hidden="true" style="position:absolute;left:{{p.x}}%;top:{{p.y}}px;transform:translate(-50%,-150%);background:#141414;color:#FFFFFF;font-size:11px;font-weight:600;height:24px;padding:0 8px;border-radius:12px;display:flex;align-items:center;white-space:nowrap">{{p.tip}}</div>
+</template>
+<button onPointerEnter="{{p.enter}}" onPointerLeave="{{clearHover}}" onFocus="{{p.enter}}" onBlur="{{clearHover}}" aria-label="{{p.aria}}" style="position:absolute;left:{{p.hx}}%;width:{{p.hw}}%;top:0;bottom:20px;border:0;background:transparent;padding:0;cursor:crosshair"></button>
+</template>
+<div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;font-size:11px;color:#6B6B72"><span>0 分</span><span>{{midMin}} 分</span><span>{{endMin}} 分</span></div>
+</div>
+</div>
+<div style="flex:2 1 220px;min-width:0;background:#FFFFFF;border-radius:22px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+<h3 style="margin:0;font-size:14px;font-weight:900">轨迹</h3>
+<svg width="100%" height="150" viewBox="0 0 260 150" fill="none" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="{{cur.trackAria}}">
+<path d="M0 40 H260 M0 110 H260 M80 0 V150 M190 0 V150" stroke="#F0F0F2" stroke-width="8"></path>
+<path d="{{cur.trackA}}" stroke="#141414" stroke-width="2.5"></path>
+<path d="{{cur.trackJump}}" stroke="#A8261B" stroke-width="2.5" stroke-dasharray="5 5"></path>
+<path d="{{cur.trackB}}" stroke="#141414" stroke-width="2.5"></path>
+<circle cx="{{cur.sx}}" cy="{{cur.sy}}" r="5" fill="#FFFFFF" stroke="#141414" stroke-width="2"></circle>
+<circle cx="{{cur.ex}}" cy="{{cur.ey}}" r="5" fill="#141414"></circle>
+</svg>
+<div style="font-size:12px;color:#4A4A50">{{cur.trackNote}}</div>
+</div>
+</div>
+
+<div style="background:#FFFFFF;border-radius:22px;padding:14px 16px">
+<h3 style="margin:0 0 8px;font-size:14px;font-weight:900">证据</h3>
+<dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+<template data-sc="for" list="{{cur.ev}}" as="e" hint-placeholder-count="6">
+<div style="border-radius:14px;padding:10px 12px;{{e.st}}"><dt style="font-size:11px;color:#6B6B72">{{e.k}}</dt><dd style="margin:2px 0 0;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px"><template data-sc="if" value="{{e.bad}}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A8261B" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 3l9 16H3zM12 10v4M12 17v.5"></path></svg></template>{{e.v}}</dd></div>
+</template>
+</dl>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+<button onClick="{{rollback}}" class="adm-btn" style="height:46px;padding:0 22px;border-radius:23px;border:0;background:#141414;color:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer">作废记录并回滚领地</button>
+<button onClick="{{warn}}" style="height:46px;padding:0 20px;border-radius:23px;border:1.5px solid #141414;background:#FFFFFF;font-size:14px;font-weight:700;cursor:pointer">警告</button>
+<button onClick="{{ban}}" style="height:46px;padding:0 20px;border-radius:23px;border:1.5px solid #E2E2E6;background:#FFFFFF;color:#A8261B;font-size:14px;font-weight:700;cursor:pointer">封禁 30 天</button>
+<div style="flex-grow:1"></div>
+<button onClick="{{release}}" style="height:46px;padding:0 20px;border-radius:23px;border:1.5px solid #E2E2E6;background:#FFFFFF;font-size:14px;cursor:pointer">误报，放行</button>
+</div>
+<div aria-live="polite"><template data-sc="if" value="{{hasToast}}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;background:#141414;color:#FFFFFF;border-radius:16px;padding:10px 16px;font-size:13px">{{toast}}</div></template></div>
+</section>
+</div>
+
+<section aria-labelledby="rule-h" style="border:1.5px solid #ECECEF;border-radius:28px;padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+<h2 id="rule-h" style="margin:0;font-size:16px;font-weight:900;flex-grow:1">判定规则</h2>
+<span style="font-size:12px;color:#6B6B72">改动后对新上传的记录生效，历史记录不重算</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+<template data-sc="for" list="{{rules}}" as="r" hint-placeholder-count="4">
+<label style="background:#F2F2F4;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+<span style="display:flex;justify-content:space-between;gap:8px"><span>{{r.label}}</span><b class="num">{{r.v}} {{r.u}}</b></span>
+<input type="range" min="{{r.min}}" max="{{r.max}}" step="{{r.step}}" value="{{r.v}}" onChange="{{r.set}}" style="accent-color:#141414">
+<span style="font-size:11px;color:#6B6B72">{{r.hint}}</span>
+</label>
+</template>
+<div style="background:#F2F2F4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+<div style="flex-grow:1"><div id="dev-l" style="font-size:13px">赛事与联赛要求穿戴设备数据</div><div style="font-size:11px;color:#6B6B72;margin-top:4px">无心率/步频的记录不计入排名</div></div>
+<button role="switch" aria-checked="{{needDev}}" aria-labelledby="dev-l" onClick="{{toggleDev}}" style="width:56px;height:32px;border-radius:16px;border:0;cursor:pointer;position:relative;padding:0;flex-shrink:0;{{devTrack}}"><span aria-hidden="true" style="position:absolute;top:4px;width:24px;height:24px;border-radius:12px;background:#FFFFFF;transition:left .2s;left:{{devKnob}}px"></span></button>
+</div>
+</div>
+</section>
+
+</main>
+</div>
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      sel: 'r1', hover: -1, toast: '', rolled: 2.4, needDev: true,
+      rules: { run: 20, bike: 45, jump: 500, gap: 30 },
+      res: {},
+      list: [
+        { id: 'r1', kind: '速度异常', ini: '7', user: '跑跑7721', conf: '置信 0.94', brief: '跑步中 8 分钟均速 31 km/h', rec: '跑步 · 11/20 06:12 · 12.6 km · 圈地 6 块（3.1 km²）', sport: 'run', area: 3.1,
+          speed: [10.8, 11.2, 11.0, 10.6, 24.5, 31.2, 30.8, 29.9, 12.0, 11.4, 10.9, 11.1],
+          trackA: 'M20 120 C 40 100, 50 80, 80 70', trackJump: 'M80 70 L 180 40', trackB: 'M180 40 C 210 50, 230 80, 240 120', sx: 20, sy: 120, ex: 240, ey: 120,
+          trackNote: '红色虚线段：均速 31 km/h，沿主干道直行，疑似乘车',
+          ev: [['设备', 'iPhone 15 · App 4.2.1'], ['定位来源', 'GPS', false], ['步频', '0 步/分（车载段）', true], ['心率', '无穿戴设备', true], ['同设备账号', '1 个'], ['历史告警', '2 次', true]] },
+        { id: 'r2', kind: '模拟定位', ini: '鱼', user: '咸鱼跑者', conf: '置信 0.99', brief: '检测到虚拟定位工具', rec: '跑步 · 11/20 02:40 · 21.1 km · 圈地 9 块（5.6 km²）', sport: 'run', area: 5.6,
+          speed: [12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0, 12.0],
+          trackA: 'M20 30 H 240 V 130', trackJump: '', trackB: 'M240 130 H 20 V 30', sx: 20, sy: 30, ex: 20, ey: 30,
+          trackNote: '轨迹为直角折线，速度恒定 12.00 km/h，无自然抖动',
+          ev: [['设备', 'Android · 已 root', true], ['定位来源', '模拟位置', true], ['步频', '0 步/分', true], ['心率', '无'], ['同设备账号', '3 个', true], ['历史告警', '5 次', true]] },
+        { id: 'r3', kind: '轨迹瞬移', ini: '风', user: '晨风-阿凯', conf: '置信 0.71', brief: '2 秒内位移 1.4 km', rec: '跑步 · 11/19 19:05 · 7.8 km · 圈地 1 块（0.4 km²）', sport: 'run', area: 0.4,
+          speed: [10.2, 10.6, 10.4, 10.9, 10.7, 10.5, 10.3, 10.8, 10.6, 10.4, 10.2, 10.1],
+          trackA: 'M20 110 C 50 90, 60 60, 90 60', trackJump: 'M90 60 L 150 60', trackB: 'M150 60 C 190 60, 220 90, 240 110', sx: 20, sy: 110, ex: 240, ey: 110,
+          trackNote: '瞬移发生在高架桥下，GPS 信号丢失 2 秒，其余数据正常',
+          ev: [['设备', 'Apple Watch S9'], ['定位来源', 'GPS'], ['步频', '172 步/分'], ['心率', '148 bpm'], ['同设备账号', '1 个'], ['历史告警', '0 次']] },
+        { id: 'r4', kind: '设备数据缺失', ini: '闪', user: '闪电侠', conf: '置信 0.62', brief: '配速 3:10 但无心率与步频', rec: '跑步 · 11/19 21:30 · 10.0 km · 城区联赛', sport: 'run', area: 1.2,
+          speed: [18.6, 18.9, 19.1, 18.8, 19.0, 19.2, 18.9, 19.0, 18.7, 19.1, 19.3, 19.0],
+          trackA: 'M20 75 C 60 30, 110 30, 130 75', trackJump: '', trackB: 'M130 75 C 150 120, 200 120, 240 75', sx: 20, sy: 75, ex: 240, ey: 75,
+          trackNote: '环形路线，配速接近精英水平，需穿戴数据佐证',
+          ev: [['设备', 'iPhone 13'], ['定位来源', 'GPS'], ['步频', '缺失', true], ['心率', '缺失', true], ['同设备账号', '1 个'], ['历史告警', '0 次']] },
+        { id: 'r5', kind: '多账号同设备', ini: '团', user: '城东跑团 · 5 个账号', conf: '置信 0.88', brief: '1 台设备轮流登录互刷领地', rec: '近 7 天 · 5 账号 · 互相抢夺同一片领地 41 次', sport: 'run', area: 0.9,
+          speed: [9.8, 10.1, 10.0, 9.9, 10.2, 10.0, 9.7, 10.1, 10.3, 9.9, 10.0, 10.2],
+          trackA: 'M40 40 H 220 V 120 H 40 Z', trackJump: '', trackB: '', sx: 40, sy: 40, ex: 40, ey: 40,
+          trackNote: '5 个账号的轨迹几乎完全重合',
+          ev: [['设备', '同一设备指纹', true], ['定位来源', 'GPS'], ['步频', '正常'], ['心率', '无'], ['同设备账号', '5 个', true], ['易手次数', '41 次 / 7 天', true]] }
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  say(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
+  act(kind, msg, roll) {
+    const st = this.state;
+    const c = st.list.find((x) => x.id === st.sel);
+    const res = { ...st.res, [st.sel]: kind };
+    const nextOpen = st.list.find((x) => !res[x.id]);
+    this.setState({ res, rolled: roll ? +(st.rolled + c.area).toFixed(1) : st.rolled, sel: nextOpen ? nextOpen.id : st.sel, hover: -1 });
+    this.say(msg.replace('{u}', c.user));
+  }
+  renderVals() {
+    const st = this.state;
+    const IC = {
+      速度异常: 'M12 13l4-4M4 18a8 8 0 1 1 16 0',
+      模拟定位: 'M12 21s-6-6-6-11a6 6 0 0 1 12 0c0 5-6 11-6 11zM9 7l6 6M15 7l-6 6',
+      轨迹瞬移: 'M4 18c4 0 4-8 8-8M14 6h6v6M20 6l-8 8',
+      设备数据缺失: 'M8 3h8v4H8zM8 17h8v4H8zM6 7h12v10H6zM4 4l16 16',
+      多账号同设备: 'M7 3h10v18H7zM11 18h2M3 8v8M21 8v8'
+    };
+    const RES = { roll: ['已作废并回滚', 'background:#141414;color:#FFFFFF'], warn: ['已警告', 'background:#FFFFFF;color:#141414;border:1.5px solid #141414'], ban: ['已封禁 30 天', 'background:#FFE2DC;color:#A8261B'], ok: ['误报已放行', 'background:#E4F3D6;color:#2F6B1F'] };
+    const alerts = st.list.map((a) => {
+      const r = st.res[a.id];
+      return {
+        ...a, sel: st.sel === a.id, icon: IC[a.kind],
+        ist: r ? 'background:#ECECEF;color:#8E8E95' : 'background:#141414;color:#FFFFFF',
+        box: st.sel === a.id ? 'border:2px solid #141414' : 'border:2px solid transparent',
+        state: r ? RES[r][0] : '待确认', stateSt: r ? 'color:#6B6B72' : 'color:#141414;font-weight:700',
+        pick: () => this.setState({ sel: a.id, hover: -1 })
+      };
+    });
+    const c = st.list.find((x) => x.id === st.sel);
+    const r = st.res[c.id];
+    const thr = c.sport === 'run' ? st.rules.run : st.rules.bike;
+    const v = c.speed, n = v.length, hi = Math.max(35, ...v) * 1.05;
+    const X = (i) => 20 + (i * 560) / (n - 1);
+    const Y = (s) => 140 - (s / hi) * 125;
+    let line = '';
+    v.forEach((s, i) => { line += (i ? ' L' : 'M') + X(i).toFixed(1) + ' ' + Y(s).toFixed(1); });
+    const area = line + ' L' + X(n - 1) + ' 140 L' + X(0) + ' 140 Z';
+    const maxI = v.indexOf(Math.max(...v));
+    const spd = v.map((s, i) => {
+      const over = s > thr;
+      return {
+        x: X(i) / 6, y: Y(s), r: over ? 12 : 8,
+        st: over ? 'background:#A8261B;border:2px solid #FFFFFF;box-shadow:0 0 0 1px #A8261B' : 'background:#FFFFFF;border:2px solid #141414',
+        show: st.hover >= 0 ? st.hover === i : (i === maxI && over),
+        tip: s.toFixed(1) + ' km/h' + (over ? ' · 超阈值' : ''),
+        hx: Math.max(0, X(i) / 6 - 50 / n), hw: 100 / n,
+        aria: '第 ' + (i + 1) + ' 分钟 ' + s.toFixed(1) + ' 公里每小时' + (over ? '，超过阈值' : ''),
+        enter: () => this.setState({ hover: i })
+      };
+    });
+    const cur = {
+      ...c, state: r ? RES[r][0] : '待确认', stateChip: r ? RES[r][1] : 'background:#FFFFFF;color:#141414;border:1.5px solid #141414',
+      trackAria: '轨迹示意：' + c.trackNote,
+      ev: c.ev.map(([k, val, bad]) => ({ k, v: val, bad: !!bad, st: bad ? 'background:#FFF1EE' : 'background:#F7F7F8' }))
+    };
+    const RU = [
+      ['run', '跑步最大均速', 'km/h', 14, 30, 1, '超过即标记为疑似乘车'],
+      ['bike', '骑行最大均速', 'km/h', 30, 70, 1, '公路车冲刺可达 50+'],
+      ['jump', '瞬移距离', 'm', 100, 2000, 50, '相邻两点间超过即告警'],
+      ['gap', '信号丢失容忍', '秒', 5, 120, 5, '隧道、高架下自动放宽']
+    ];
+    const rules = RU.map(([k, label, u, min, max, step, hint]) => ({ label, u, min, max, step, hint, v: st.rules[k], set: (e) => this.setState({ rules: { ...st.rules, [k]: Number(e.target.value) } }) }));
+    return {
+      open: st.list.filter((x) => !st.res[x.id]).length,
+      rolled: st.rolled.toFixed(1),
+      alerts, cur, spd, thr,
+      spdLine: line, spdArea: area,
+      thrPath: 'M0 ' + Y(thr).toFixed(1) + ' H600',
+      midMin: Math.round(n / 2), endMin: n,
+      clearHover: () => this.setState({ hover: -1 }),
+      hasToast: !!st.toast, toast: st.toast,
+      rules,
+      needDev: st.needDev,
+      devTrack: st.needDev ? 'background:#141414' : 'background:#D4D4D8', devKnob: st.needDev ? 28 : 4,
+      toggleDev: () => this.setState({ needDev: !st.needDev }),
+      rollback: () => this.act('roll', '已作废 {u} 的记录，领地已回滚给原归属方', true),
+      warn: () => this.act('warn', '已向 {u} 发送警告，记录暂不计入排名', false),
+      ban: () => this.act('ban', '{u} 已封禁 30 天，领地已回滚，可在 App 内申诉', true),
+      release: () => this.act('ok', '已放行 {u}，样本已加入误报训练集', false)
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>

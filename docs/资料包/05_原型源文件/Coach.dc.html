@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>AI 跟练</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+
+<div style="position:absolute;left:16px;right:16px;top:18px;display:flex;align-items:center;gap:12px">
+<a href="Sports.dc.html" aria-label="返回" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<div style="font-size:20px;font-weight:900;flex-grow:1">AI 跟练</div>
+<div style="display:flex;flex-direction:column;align-items:flex-end"><span style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:800">{{kcal}}</span><span style="font-size:11px;color:#B5B5BE">千卡</span></div>
+</div>
+
+<div style="position:absolute;left:16px;top:74px;display:flex;gap:6px">
+<sc-for list="{{courses}}" as="c" hint-placeholder-count="3">
+<button onClick="{{c.pick}}" aria-pressed="{{c.pressed}}" style="height:36px;padding:0 14px;border-radius:18px;border:0;cursor:pointer;font-size:13px;font-weight:500;{{c.st}}">{{c.name}}</button>
+</sc-for>
+</div>
+
+<div style="position:absolute;left:12px;right:12px;top:120px;height:446px;border-radius:32px;background:#16161B;overflow:hidden">
+<svg width="366" height="446" viewBox="0 0 366 446" style="position:absolute;left:0;top:0" aria-hidden="true">
+<g stroke="#202027" stroke-width="1"><path d="M0 110h366M0 220h366M0 330h366M90 0v446M183 0v446M276 0v446"></path></g>
+<path d="M60 40h30M60 40v30M306 40h-30M306 40v30M60 406h30M60 406v-30M306 406h-30M306 406v-30" stroke="#B4A3F5" stroke-width="3" fill="none" stroke-linecap="round"></path>
+<g transform="translate(0 {{jumpY}})">
+<path d="{{ropePath}}" stroke="#FFC857" stroke-width="3" fill="none" stroke-linecap="round"></path>
+<g stroke="#DCF26A" stroke-width="4" stroke-linecap="round" fill="none">
+<path d="M183 150 L183 250"></path>
+<path d="M183 170 L150 215 L140 250"></path>
+<path d="M183 170 L216 215 L226 250"></path>
+<path d="M183 250 L165 310 L160 360"></path>
+<path d="M183 250 L201 310 L206 360"></path>
+</g>
+<circle cx="183" cy="128" r="20" fill="none" stroke="#DCF26A" stroke-width="4"></circle>
+<g fill="#F4F4F5">
+<circle cx="183" cy="170" r="5"></circle><circle cx="150" cy="215" r="5"></circle><circle cx="216" cy="215" r="5"></circle><circle cx="140" cy="250" r="5"></circle><circle cx="226" cy="250" r="5"></circle><circle cx="183" cy="250" r="5"></circle><circle cx="165" cy="310" r="5"></circle><circle cx="201" cy="310" r="5"></circle><circle cx="160" cy="360" r="5"></circle><circle cx="206" cy="360" r="5"></circle>
+</g>
+</g>
+</svg>
+<div style="position:absolute;left:16px;top:16px;height:30px;padding:0 12px;border-radius:15px;background:rgba(14,14,16,.85);font-size:12px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{dot}}"></span>{{camText}}</div>
+<div style="position:absolute;left:16px;top:56px;display:flex;flex-direction:column"><span style="font-family:Orbitron,sans-serif;font-size:56px;font-weight:800;line-height:1">{{count}}</span><span style="font-size:12px;color:#B5B5BE">{{unit}}</span></div>
+<div style="position:absolute;right:14px;top:16px;width:44px;padding:8px 0;border-radius:22px;background:#F4F4F5;display:flex;flex-direction:column;align-items:center;gap:6px" role="img" aria-label="已完成 {{setDone}} 组，共 5 组">
+<sc-for list="{{bars}}" as="b" hint-placeholder-count="5"><span style="width:26px;height:10px;border-radius:5px;background:{{b.c}}"></span></sc-for>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:14px;background:#26223A;border:1px solid #B4A3F5;border-radius:18px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+<span style="height:22px;padding:0 8px;border-radius:11px;background:#B4A3F5;color:#121212;font-family:Orbitron,sans-serif;font-size:11px;font-weight:800;display:flex;align-items:center;flex-shrink:0">AI</span>
+<span style="font-size:12px;line-height:1.5;color:#E2DCFB">{{tip}}</span>
+</div>
+</div>
+
+<div style="position:absolute;left:0;right:0;bottom:0;height:268px;background:#F4F4F5;color:#121212;border-top-left-radius:36px;border-top-right-radius:36px;padding:18px 24px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+<div style="width:40px;height:4px;border-radius:2px;background:#C9C9D1;align-self:center"></div>
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#55555E">已用时</span><span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700">{{elapsed}}</span></div>
+<span style="font-family:Orbitron,sans-serif;font-size:40px;font-weight:800;letter-spacing:1px">{{left}}</span>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px"><span style="font-size:12px;color:#55555E">组数</span><span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:700">{{setNow}}/5</span></div>
+</div>
+<div style="display:flex;gap:10px">
+<button onClick="{{toggle}}" style="flex-grow:1;height:50px;border-radius:25px;border:0;cursor:pointer;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px;{{mainBtn}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{mainIcon}}"></path></svg>{{mainLabel}}</button>
+<div style="height:50px;padding:0 16px;border-radius:25px;background:#121212;color:#FFC857;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"></path></svg>+{{energy}}</div>
+</div>
+</div>
+
+<nav aria-label="主导航" style="position:absolute;left:12px;bottom:12px;width:366px;height:92px;filter:drop-shadow(0 14px 22px rgba(20,20,40,.14))"><svg width="366" height="92" viewBox="0 0 366 92" aria-hidden="true" style="position:absolute;left:0;top:0;display:block"><path d="M37 18 H 112 C 138 18, 150 2, 183 2 C 216 2, 228 18, 254 18 H 329 A 37 37 0 0 1 329 92 H 37 A 37 37 0 0 1 37 18 Z" fill="#FFFFFF" stroke="#E6E6EA" stroke-width="1"></path></svg><a href="Main.dc.html" aria-label="领地" style="position:absolute;left:22px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#8A8A94;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"></path><path d="M9 4v14M15 6v14"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#8C76E8;opacity:0"></span></a><a href="Codex.dc.html" aria-label="图鉴" style="position:absolute;left:88px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#8A8A94;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h11v15H8zM5 6v15h11"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#8C76E8;opacity:0"></span></a><a href="Club.dc.html" aria-label="社区" style="position:absolute;left:230px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#8A8A94;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#8C76E8;opacity:0"></span></a><a href="Profile.dc.html" aria-label="我的" style="position:absolute;left:296px;top:31px;width:48px;height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#8A8A94;text-decoration:none"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1-4 4.2-6.5 8-6.5s7 2.5 8 6.5"></path></svg><span aria-hidden="true" style="width:5px;height:5px;border-radius:3px;background:#8C76E8;opacity:0"></span></a><a href="Sports.dc.html" aria-label="开始运动" aria-current="page" style="position:absolute;left:149px;top:6px;width:68px;height:68px;border-radius:34px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;background:linear-gradient(140deg,#B4A3F5,#7C5CF0);border:0;box-shadow:0 10px 24px rgba(124,92,240,.45),0 0 0 6px rgba(180,163,245,.18);color:#FFFFFF;text-decoration:none"><svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true" style="position:absolute;left:-10px;top:-10px;pointer-events:none"><circle cx="44" cy="44" r="41" fill="none" stroke="#8C76E8" stroke-width="2" stroke-dasharray="1.5 9" stroke-linecap="round" opacity=".75"><animateTransform attributeName="transform" type="rotate" from="0 44 44" to="360 44 44" dur="14s" repeatCount="indefinite"></animateTransform></circle></svg><svg width="56" height="56" viewBox="0 0 64 64" aria-hidden="true" style="position:relative;overflow:visible"><g stroke="#141414" stroke-linecap="round" stroke-linejoin="round"><path d="M5 30h7M3 37h8M6 44h6" stroke="#DCF26A" stroke-width="2.4"></path><g><animateTransform attributeName="transform" type="translate" values="0 0;0 -1.6;0 0" dur="0.32s" repeatCount="indefinite"></animateTransform><g><animateTransform attributeName="transform" type="rotate" values="28 27 40;-28 27 40;28 27 40" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M27 40 L24 50 L28 52" fill="none" stroke-width="3.4"></path><path d="M27 40 L24 50 L28 52" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><g><animateTransform attributeName="transform" type="rotate" values="-28 39 39;28 39 39;-28 39 39" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M39 39 L42 49 L46 49" fill="none" stroke-width="3.4"></path><path d="M39 39 L42 49 L46 49" fill="none" stroke="#E0A33A" stroke-width="1.4"></path></g><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke-width="6"></path><path d="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" fill="none" stroke="#FFC857" stroke-width="3"><animate attributeName="d" values="M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39;M22 37 C 15 37, 12 41, 7 39 C 4 38, 4 35, 7 35;M22 37 C 15 39, 12 33, 7 35 C 4 36, 4 39, 7 39" dur="0.64s" repeatCount="indefinite"></animate></path><ellipse cx="32" cy="36" rx="12" ry="7.5" transform="rotate(-14 32 36)" fill="#FFC857" stroke-width="2.2"></ellipse><circle cx="28" cy="35" r="1.8" fill="#FF6A3D" stroke="none"></circle><circle cx="34" cy="32.5" r="1.5" fill="#FF6A3D" stroke="none"></circle><g><animateTransform attributeName="transform" type="rotate" values="-30 30 41;30 30 41;-30 30 41" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M30 41 L27 51 L31 53" fill="none" stroke-width="3.6"></path><path d="M30 41 L27 51 L31 53" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><g><animateTransform attributeName="transform" type="rotate" values="30 41 38;-30 41 38;30 41 38" dur="0.64s" repeatCount="indefinite"></animateTransform><path d="M41 38 L45 47 L49 46" fill="none" stroke-width="3.6"></path><path d="M41 38 L45 47 L49 46" fill="none" stroke="#FFC857" stroke-width="1.6"></path></g><circle cx="45" cy="25" r="9" fill="#FFC857" stroke-width="2.2"></circle><circle cx="48" cy="22" r="4.2" fill="#FFFFFF" stroke-width="1.6"></circle><circle cx="49.3" cy="22" r="2" fill="#141414" stroke="none"></circle><path d="M46 30 Q 50 32.5 53.5 28.5" fill="none" stroke-width="1.8"></path><path d="M38 18 l3 -4 1 3 3 -3" fill="none" stroke="#DCF26A" stroke-width="2"></path></g></g></svg></a></nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { course: 'rope', running: false, count: 0, left: 90, set: 1, elapsed: 0, flip: false, done: false };
+  }
+  componentDidMount() {
+    this.t = setInterval(() => {
+      const s = this.state;
+      if (!s.running) return;
+      const inc = s.course === 'rope' ? 3 : 1;
+      let left = s.left - 1, set = s.set, done = false, running = true;
+      if (left <= 0) {
+        if (set >= 5) { left = 0; done = true; running = false; }
+        else { set = set + 1; left = 90; }
+      }
+      this.setState({ count: s.count + inc, left, set, elapsed: s.elapsed + 1, flip: !s.flip, done, running });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const st = this.state;
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmt = (s) => pad(Math.floor(s / 60)) + ':' + pad(s % 60);
+    const C = { rope: { name: '跳绳', unit: '个 · AI 自动计数' }, hiit: { name: 'HIIT', unit: '次动作 · AI 识别' }, pilates: { name: '普拉提', unit: '次 · AI 纠正动作' } };
+    const chipOn = 'background:#DCF26A;color:#121212';
+    const chipOff = 'background:#1F1F25;color:#C9C9D1';
+    const courses = Object.keys(C).map((k) => ({ name: C[k].name, pressed: st.course === k ? 'true' : 'false', st: st.course === k ? chipOn : chipOff, pick: () => this.setState({ course: k, running: false, count: 0, left: 90, set: 1, elapsed: 0, done: false }) }));
+    const setDone = st.done ? 5 : st.set - 1;
+    const bars = [0, 1, 2, 3, 4].map((i) => ({ c: i < setDone ? '#B4A3F5' : (i === setDone ? '#121212' : '#D6D6DD') }));
+    const tips = ['节奏很稳，保持现在的速度', '手腕放松一点，用手腕摇绳不用手臂', '落地轻一点，膝盖微屈保护关节', '还剩最后 20 秒，冲一下！'];
+    let tip = '把手机立在 2 米外，全身入镜后点开始';
+    if (st.done) tip = '5 组全部完成！能量已加固「滨江公园」守卫值 +12';
+    else if (st.running) tip = tips[Math.floor(st.elapsed / 6) % tips.length];
+    else if (st.elapsed > 0) tip = '已暂停，休息一下，准备好再继续';
+    return {
+      courses, bars, setDone, tip,
+      count: st.count.toLocaleString('en-US'),
+      unit: C[st.course].unit,
+      kcal: Math.round(st.count * 0.12 + st.elapsed * 0.08),
+      energy: Math.floor(st.count / 10),
+      elapsed: fmt(st.elapsed),
+      left: fmt(st.left),
+      setNow: st.done ? 5 : st.set,
+      jumpY: st.running && st.flip ? -10 : 0,
+      ropePath: st.running && st.flip ? 'M140 250 C 140 420 226 420 226 250' : 'M140 250 C 120 40 246 40 226 250',
+      dot: st.running ? '#DCF26A' : (st.done ? '#B4A3F5' : '#FF9F5A'),
+      camText: st.running ? C[st.course].name + ' · AI 计数中' : (st.done ? '训练完成' : '摄像头已就绪'),
+      mainLabel: st.done ? '再来一次' : (st.running ? '暂停' : (st.elapsed > 0 ? '继续' : '开始')),
+      mainIcon: st.running ? 'M7 5h4v14H7zM13 5h4v14h-4z' : 'M8 5v14l11-7z',
+      mainBtn: st.running ? 'background:#B4A3F5;color:#121212' : 'background:#121212;color:#DCF26A',
+      toggle: () => {
+        if (this.state.done) this.setState({ running: true, count: 0, left: 90, set: 1, elapsed: 0, done: false });
+        else this.setState({ running: !this.state.running });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

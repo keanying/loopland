@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>圈圈 · 登录注册</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&amp;family=Noto+Sans+SC:wght@400;500;700;900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{text-decoration:none}
+button,input{font-family:inherit}
+input::placeholder{color:#8A8A94}
+:focus-visible{outline:2px solid #DCF26A;outline-offset:3px}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif">
+
+<video ref="{{videoRef}}" src="media/login-bg.mp4" poster="media/login-poster.jpg" autoplay muted loop playsinline aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>
+<div aria-hidden="true" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,14,16,.55) 0%,rgba(14,14,16,.05) 22%,rgba(14,14,16,.1) 42%,rgba(14,14,16,.82) 62%,#0E0E10 82%)"></div>
+
+<div style="position:absolute;left:24px;right:24px;top:54px;display:flex;align-items:center;gap:10px">
+<svg width="44" height="32" viewBox="12 22 74 52" role="img" aria-label="圈圈 Loopland"><defs><mask id="spA"><rect x="0" y="0" width="100" height="100" fill="#fff"></rect><circle cx="38" cy="50" r="19" fill="none" stroke="#000" stroke-width="15"></circle></mask><mask id="spB"><rect x="0" y="0" width="100" height="100" fill="#fff"></rect><circle cx="38" cy="31" r="7.5" fill="#000"></circle></mask></defs><circle cx="62" cy="50" r="21" fill="#DCF26A" mask="url(#spA)"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8" mask="url(#spB)"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5"></circle></svg>
+<div style="display:flex;flex-direction:column;gap:3px"><span style="font-weight:900;font-size:20px;letter-spacing:2px;line-height:1">圈圈</span><span style="font-family:Lexend,sans-serif;font-weight:700;font-size:12px;letter-spacing:-.3px;color:#DCF26A;line-height:1">loopland</span></div>
+<div style="flex-grow:1"></div>
+<button onClick="{{toggleVideo}}" aria-label="{{videoLabel}}" style="width:44px;height:44px;border-radius:22px;border:1px solid rgba(255,255,255,.25);background:rgba(14,14,16,.35);color:#FFFFFF;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px)"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="{{videoIcon}}"></path></svg></button>
+</div>
+
+<sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;left:24px;right:24px;bottom:40px;display:flex;flex-direction:column;gap:12px;animation:rise .5s ease-out both">
+<h1 style="margin:0 0 4px;font-size:38px;line-height:1.2;font-weight:900;letter-spacing:1px">跑一圈，<br>就是你的地</h1>
+<p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#C9C9D0">每一次跑步都在地图上圈下领地，和跑团一起建城、打怪兽。</p>
+<sc-if value="{{showTip}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="align-self:center;background:#2A1A14;border:1px solid #FF6A3D;color:#FFB08A;border-radius:14px;padding:8px 14px;font-size:13px">请先阅读并勾选同意下方协议</div>
+</sc-if>
+<sc-if value="{{agreed}}" hint-placeholder-val="{{ false }}">
+<a href="Main.dc.html" style="height:56px;border-radius:28px;background:#DCF26A;color:#121212;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center">本机号码一键登录</a>
+<a href="Main.dc.html" style="height:56px;border-radius:28px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#FFFFFF;font-size:15px;font-weight:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)">微信登录</a>
+</sc-if>
+<sc-if value="{{notAgreed}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{needAgree}}" style="height:56px;border-radius:28px;border:0;background:#DCF26A;color:#121212;font-size:16px;font-weight:700;cursor:pointer">本机号码一键登录</button>
+<button onClick="{{needAgree}}" style="height:56px;border-radius:28px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#FFFFFF;font-size:15px;font-weight:500;cursor:pointer;backdrop-filter:blur(10px)">微信登录</button>
+</sc-if>
+<button onClick="{{goPhone}}" style="height:44px;border:0;background:transparent;color:#DCF26A;font-size:14px;font-weight:500;cursor:pointer">其他手机号登录 / 注册</button>
+<div style="display:flex;align-items:flex-start;gap:8px">
+<button role="checkbox" aria-checked="{{agreed}}" aria-label="我已阅读并同意用户协议、隐私政策和个人信息处理规则" onClick="{{toggle}}" style="width:44px;height:44px;margin:-12px -10px -12px -12px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+<span style="width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;{{boxSt}}"><sc-if value="{{agreed}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if></span>
+</button>
+<p style="margin:0;font-size:12px;line-height:1.6;color:#9A9AA4">我已阅读并同意 <span style="color:#DCF26A">《用户协议》</span><span style="color:#DCF26A">《隐私政策》</span>，并同意圈圈处理我的运动轨迹（敏感个人信息）用于圈地和排名</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isPhone}}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:16px;right:16px;bottom:24px;background:rgba(22,22,26,.78);border:1px solid rgba(255,255,255,.12);border-radius:30px;padding:22px 20px 20px;backdrop-filter:blur(18px);display:flex;flex-direction:column;gap:14px;animation:rise .4s ease-out both">
+<div style="display:flex;align-items:center;gap:8px">
+<button onClick="{{goHome}}" aria-label="返回" style="width:40px;height:40px;margin-left:-8px;border:0;border-radius:20px;background:transparent;color:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<h2 style="margin:0;font-size:20px;font-weight:900">手机号登录 / 注册</h2>
+</div>
+<p style="margin:-6px 0 0;font-size:13px;color:#9A9AA4">未注册的手机号验证后自动创建账号</p>
+<label style="display:flex;align-items:center;gap:10px;height:54px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid {{phoneBorder}};padding:0 16px">
+<span style="font-size:15px;color:#C9C9D0;padding-right:10px;border-right:1px solid rgba(255,255,255,.15)">+86</span>
+<input aria-label="手机号" inputmode="numeric" maxlength="11" placeholder="请输入手机号" value="{{phone}}" onChange="{{onPhone}}" style="flex-grow:1;min-width:0;height:100%;border:0;background:transparent;color:#FFFFFF;font-size:17px;letter-spacing:1px;outline:none">
+</label>
+<div style="display:flex;gap:10px">
+<label style="flex-grow:1;display:flex;align-items:center;height:54px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);padding:0 16px">
+<input aria-label="短信验证码" inputmode="numeric" maxlength="6" placeholder="6 位验证码" value="{{code}}" onChange="{{onCode}}" style="width:100%;height:100%;border:0;background:transparent;color:#FFFFFF;font-size:17px;letter-spacing:3px;outline:none">
+</label>
+<button onClick="{{sendCode}}" disabled="{{cantSend}}" style="width:118px;height:54px;padding:0;white-space:nowrap;flex-shrink:0;border-radius:16px;font-size:14px;font-weight:700;{{sendSt}}">{{sendLabel}}</button>
+</div>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><div role="status" style="font-size:12px;color:#DCF26A;margin-top:-4px">{{note}}</div></sc-if>
+<sc-if value="{{canLogin}}" hint-placeholder-val="{{ false }}">
+<a href="Main.dc.html" style="height:56px;border-radius:28px;background:#DCF26A;color:#121212;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center">登录</a>
+</sc-if>
+<sc-if value="{{cantLogin}}" hint-placeholder-val="{{ true }}">
+<button disabled style="height:56px;border-radius:28px;border:0;background:#2A2A31;color:#6B6B72;font-size:16px;font-weight:700;cursor:not-allowed">登录</button>
+</sc-if>
+<div style="display:flex;align-items:flex-start;gap:8px">
+<button role="checkbox" aria-checked="{{agreed}}" aria-label="我已阅读并同意用户协议、隐私政策和个人信息处理规则" onClick="{{toggle}}" style="width:44px;height:44px;margin:-12px -10px -12px -12px;border:0;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+<span style="width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;{{boxSt}}"><sc-if value="{{agreed}}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#121212" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if></span>
+</button>
+<p style="margin:0;font-size:12px;line-height:1.6;color:#9A9AA4">我已阅读并同意 <span style="color:#DCF26A">《用户协议》</span><span style="color:#DCF26A">《隐私政策》</span>，并同意圈圈处理我的运动轨迹用于圈地和排名</p>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 'home', agreed: false, tip: false, phone: '', code: '', left: 0, sent: false, paused: false };
+  }
+  componentWillUnmount() { clearTimeout(this.t); clearInterval(this.cd); }
+  renderVals() {
+    const st = this.state;
+    const phoneOk = /^1\d{10}$/.test(st.phone);
+    const canSend = phoneOk && st.agreed && st.left === 0;
+    const canLogin = phoneOk && st.sent && /^\d{6}$/.test(st.code) && st.agreed;
+    return {
+      isHome: st.step === 'home', isPhone: st.step === 'phone',
+      agreed: st.agreed, notAgreed: !st.agreed, showTip: st.tip && !st.agreed,
+      boxSt: st.agreed ? 'background:#DCF26A;border:1.5px solid #DCF26A' : 'background:rgba(14,14,16,.4);border:1.5px solid #9A9AA4',
+      toggle: () => this.setState({ agreed: !st.agreed, tip: false }),
+      needAgree: () => { this.setState({ tip: true }); clearTimeout(this.t); this.t = setTimeout(() => this.setState({ tip: false }), 2200); },
+      goPhone: () => this.setState({ step: 'phone' }),
+      goHome: () => this.setState({ step: 'home' }),
+      phone: st.phone, code: st.code,
+      phoneBorder: st.phone.length === 11 && !phoneOk ? '#FF6A3D' : 'rgba(255,255,255,.12)',
+      onPhone: (e) => this.setState({ phone: e.target.value.replace(/\D/g, '').slice(0, 11) }),
+      onCode: (e) => this.setState({ code: e.target.value.replace(/\D/g, '').slice(0, 6) }),
+      cantSend: !canSend,
+      sendSt: canSend ? 'border:0;background:#DCF26A;color:#121212;cursor:pointer' : 'border:1px solid rgba(255,255,255,.12);background:transparent;color:#6B6B72;cursor:not-allowed',
+      sendLabel: st.left > 0 ? st.left + ' 秒后重发' : (st.sent ? '重新获取' : '获取验证码'),
+      sendCode: () => {
+        if (!canSend) return;
+        this.setState({ sent: true, left: 60 });
+        clearInterval(this.cd);
+        this.cd = setInterval(() => { const l = this.state.left - 1; this.setState({ left: Math.max(0, l) }); if (l <= 0) clearInterval(this.cd); }, 1000);
+      },
+      hasNote: st.sent, note: '验证码已发送到 ' + st.phone.slice(0, 3) + ' **** ' + st.phone.slice(7) + '（原型里随便输 6 位数字）',
+      canLogin, cantLogin: !canLogin,
+      videoRef: (el) => { if (!el) return; this.video = el; el.muted = true; if (!st.paused && el.paused && el.play) { const p = el.play(); if (p && p.catch) p.catch(() => {}); } },
+      videoLabel: st.paused ? '播放背景视频' : '暂停背景视频',
+      videoIcon: st.paused ? 'M8 5v14l11-7z' : 'M7 5h4v14H7zM13 5h4v14h-4z',
+      toggleVideo: () => { const v = this.video; if (v) { if (st.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } else v.pause(); } this.setState({ paused: !st.paused }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

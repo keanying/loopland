@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>发布动态</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Orbitron:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0E0E10}
+a{color:#DCF26A;text-decoration:none}a:hover{color:#EAF8A0}
+button,textarea{font-family:inherit}
+textarea::placeholder{color:#8A8A94}
+div::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:390px;height:844px;position:relative;overflow:hidden;background:#0E0E10;color:#F4F4F5;font-family:'Noto Sans SC',system-ui,sans-serif;display:flex;flex-direction:column">
+
+<div style="padding:18px 16px 10px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+<a href="Feed.dc.html" aria-label="取消发布" style="width:44px;height:44px;border-radius:22px;background:#1F1F25;color:#F4F4F5;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+<div style="font-size:18px;font-weight:900;flex-grow:1">发布动态</div>
+<button onClick="{{publish}}" style="height:44px;padding:0 20px;border-radius:22px;border:0;cursor:pointer;font-size:14px;font-weight:900;{{pubStyle}}">发布</button>
+</div>
+
+<div style="flex-grow:1;overflow-y:auto;padding:4px 16px 30px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none">
+
+<div style="font-size:12px;color:#B5B5BE">附上运动记录</div>
+<div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex-shrink:0">
+<sc-for list="{{recs}}" as="r" hint-placeholder-count="4">
+<button onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="width:138px;flex-shrink:0;border-radius:20px;padding:12px;cursor:pointer;text-align:left;color:#F4F4F5;display:flex;flex-direction:column;gap:6px;{{r.box}}">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:5px;background:{{r.color}}"></span><span style="font-size:11px;color:#B5B5BE">{{r.when}}</span></span>
+<span style="font-size:14px;font-weight:700">{{r.title}}</span>
+<span style="font-size:12px;color:{{r.color}}">{{r.sub}}</span>
+</button>
+</sc-for>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #2A2A31;border-radius:22px;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+<label for="post-text" style="font-size:12px;color:#B5B5BE">说点什么</label>
+<textarea id="post-text" value="{{text}}" onChange="{{onText}}" placeholder="今天跑得怎么样？圈了哪块地？" maxlength="500" style="height:110px;border:0;background:transparent;color:#F4F4F5;font-size:15px;line-height:1.6;resize:none;outline:none;padding:0"></textarea>
+<div style="display:flex;align-items:center;gap:6px">
+<sc-for list="{{styles}}" as="s" hint-placeholder-count="3"><button onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="height:30px;padding:0 10px;border-radius:15px;border:0;cursor:pointer;font-size:12px;{{s.st}}">{{s.name}}</button></sc-for>
+<span style="flex-grow:1"></span>
+<span style="font-family:Orbitron,sans-serif;font-size:11px;color:#8A8A94">{{len}}/500</span>
+</div>
+<button onClick="{{aiWrite}}" style="height:40px;border-radius:20px;border:1.5px solid #B4A3F5;background:#26223A;color:#E2DCFB;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px"><span style="font-family:Orbitron,sans-serif;font-weight:800;color:#B4A3F5">AI</span>{{aiLabel}}</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+<button onClick="{{togglePoster}}" aria-pressed="{{pPoster}}" style="height:108px;border-radius:18px;cursor:pointer;padding:0;overflow:hidden;position:relative;background:#15151A;{{posterBox}}">
+<svg width="108" height="108" viewBox="0 0 108 108" style="position:absolute;left:0;top:0" aria-hidden="true"><path d="M-5 30 L115 22M36 -5 L42 115" stroke="#212128" stroke-width="4"></path><path d="M24 70 C 18 40 40 18 64 20 S 92 50 80 70 S 40 90 24 70" fill="#DCF26A" fill-opacity="0.3" stroke="#DCF26A" stroke-width="3"></path></svg>
+<span style="position:absolute;left:6px;bottom:6px;height:22px;padding:0 8px;border-radius:11px;background:rgba(14,14,16,.88);color:#F4F4F5;font-size:10px;display:flex;align-items:center">{{posterLabel}}</span>
+</button>
+<sc-for list="{{photos}}" as="ph" hint-placeholder-count="1">
+<div style="height:108px;border-radius:18px;background:#24242A;display:flex;align-items:center;justify-content:center;color:#B5B5BE;font-size:12px">{{ph.label}}</div>
+</sc-for>
+<sc-if value="{{canAdd}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{addPhoto}}" style="height:108px;border-radius:18px;border:1.5px dashed #3A3A42;background:transparent;color:#B5B5BE;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>添加照片</button>
+</sc-if>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:12px;color:#B5B5BE">话题（最多 3 个）</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<sc-for list="{{topics}}" as="t" hint-placeholder-count="6"><button onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" style="height:34px;padding:0 12px;border-radius:17px;border:0;cursor:pointer;font-size:13px;{{t.st}}">{{t.name}}</button></sc-for>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:12px;color:#B5B5BE">@ 提到跑友</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<sc-for list="{{mentions}}" as="m" hint-placeholder-count="4"><button onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="height:34px;padding:0 12px 0 4px;border-radius:17px;border:0;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;{{m.st}}"><span style="width:26px;height:26px;border-radius:13px;background:{{m.color}};color:#121212;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900">{{m.ini}}</span>{{m.name}}</button></sc-for>
+</div>
+</div>
+
+<div style="background:#1B1B20;border:1px solid #232329;border-radius:22px;padding:4px 16px;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-bottom:1px solid #26262C">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">显示位置</span><span style="font-size:12px;color:#B5B5BE">{{locText}}</span></span>
+<button onClick="{{tLoc}}" aria-pressed="{{pLoc}}" aria-label="显示位置开关" style="width:52px;height:32px;border-radius:16px;border:0;padding:3px;cursor:pointer;display:flex;{{locTrack}}"><span style="width:26px;height:26px;border-radius:13px;background:#121212"></span></button>
+</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-bottom:1px solid #26262C">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">隐藏起终点</span><span style="font-size:12px;color:#B5B5BE">轨迹首尾 200 m 不显示，保护住址</span></span>
+<button onClick="{{tHide}}" aria-pressed="{{pHide}}" aria-label="隐藏起终点开关" style="width:52px;height:32px;border-radius:16px;border:0;padding:3px;cursor:pointer;display:flex;{{hideTrack}}"><span style="width:26px;height:26px;border-radius:13px;background:#121212"></span></button>
+</div>
+<div style="display:flex;align-items:center;gap:12px;min-height:58px;border-bottom:1px solid #26262C">
+<span style="display:flex;flex-direction:column;gap:2px;flex-grow:1"><span style="font-size:14px;font-weight:700">同步到跑团</span><span style="font-size:12px;color:#B5B5BE">夜跑兔的成员会在跑团里看到</span></span>
+<button onClick="{{tSync}}" aria-pressed="{{pSync}}" aria-label="同步到跑团开关" style="width:52px;height:32px;border-radius:16px;border:0;padding:3px;cursor:pointer;display:flex;{{syncTrack}}"><span style="width:26px;height:26px;border-radius:13px;background:#121212"></span></button>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:12px 0">
+<span style="font-size:14px;font-weight:700">谁可以看</span>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:3px;border-radius:18px;background:#24242A">
+<sc-for list="{{vis}}" as="v" hint-placeholder-count="3"><button onClick="{{v.pick}}" aria-pressed="{{v.pressed}}" style="height:34px;border:0;border-radius:15px;font-size:12px;cursor:pointer;{{v.st}}">{{v.name}}</button></sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;left:50%;top:72px;transform:translateX(-50%);height:40px;padding:0 16px;border-radius:20px;background:#F4F4F5;color:#121212;font-size:13px;font-weight:700;display:flex;align-items:center;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.4)">{{toast}}</div>
+</sc-if>
+
+<sc-if value="{{published}}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-label="发布成功" style="position:absolute;left:0;top:0;right:0;bottom:0;background:#0E0E10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;box-sizing:border-box">
+<span style="width:96px;height:96px;border-radius:48px;background:#DCF26A;color:#121212;display:flex;align-items:center;justify-content:center"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>
+<div style="font-size:24px;font-weight:900">已发布</div>
+<div style="font-size:13px;color:#C9C9D1;text-align:center;line-height:1.7;white-space:pre-line">{{pubSummary}}</div>
+<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:12px">
+<a href="Feed.dc.html" style="height:52px;border-radius:26px;background:#DCF26A;color:#121212;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center">去动态看看</a>
+<button onClick="{{shareOut}}" style="height:52px;border-radius:26px;border:1.5px solid #3A3A42;background:transparent;color:#F4F4F5;font-size:15px;font-weight:700;cursor:pointer">{{shareOutLabel}}</button>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { rec: 'r1', text: '', style: 'fire', aiCount: 0, poster: true, photos: 0, topics: { t1: true }, mentions: {}, loc: true, hide: true, sync: true, vis: 'public', published: false, sharedOut: false, toast: '' };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  flash(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 1800); }
+  renderVals() {
+    const st = this.state;
+    const chipOn = 'background:#DCF26A;color:#121212';
+    const chipOff = 'background:#1F1F25;color:#C9C9D1';
+    const on = 'background:#F4F4F5;color:#121212';
+    const off = 'background:transparent;color:#C9C9D1';
+    const trackOn = 'background:#DCF26A;justify-content:flex-end';
+    const trackOff = 'background:#3A3A42;justify-content:flex-start';
+    const R = [
+      { id: 'r1', when: '今晚 · 夜跑', title: '5.2 km · 31:20', sub: '圈地 +0.18 km²', color: '#DCF26A' },
+      { id: 'r2', when: '昨天 · 晨跑', title: '8.2 km · 47:05', sub: '夺回 0.24 km²', color: '#B4A3F5' },
+      { id: 'r3', when: '周一 · 跳绳', title: '2,000 个', sub: '+200 能量', color: '#6FD3E8' },
+      { id: 'none', when: '不附带', title: '纯文字 / 照片', sub: '不显示运动数据', color: '#8A8A94' }
+    ];
+    const recs = R.map((r) => ({ ...r, pressed: st.rec === r.id ? 'true' : 'false', box: st.rec === r.id ? 'border:1.5px solid ' + r.color + ';background:#1E1E24' : 'border:1.5px solid #232329;background:#1B1B20', pick: () => this.setState({ rec: r.id }) }));
+    const SV = { fire: '燃', daily: '日常', fun: '搞笑' };
+    const W = {
+      fire: ['夜袭滨江！31 分钟连圈 3 块，从城西跑团手里抢回 0.12 km²。领地守住了，下一站西岸草坪。', '5.2 km 一口气跑完，滨江公园守卫值拉满。城西的，周六见。'],
+      daily: ['下班跑了 5.2 km，顺手把滨江公园加固了一下。晚风很舒服，配速 5′30″ 刚刚好。', '今天跑得很放松，沿江看了一路灯，顺便圈了块地。'],
+      fun: ['本来只想散个步，结果轨迹一交叉，地就是我的了。城西跑团：？', '跑着跑着迷路了，绕回来发现圈了 0.18 km²，迷路也是一种战术。']
+    };
+    const styles = Object.keys(SV).map((k) => ({ name: SV[k], pressed: st.style === k ? 'true' : 'false', st: st.style === k ? chipOn : chipOff, pick: () => this.setState({ style: k }) }));
+    const TP = { t1: '#自由圈地', t2: '#夜跑', t3: '#夜跑兔', t4: '#城南', t5: '#守地', t6: '#匹克球' };
+    const nT = Object.keys(st.topics).filter((k) => st.topics[k]).length;
+    const topics = Object.keys(TP).map((k) => {
+      const sel = !!st.topics[k];
+      return { name: TP[k], pressed: sel ? 'true' : 'false', st: sel ? chipOn : chipOff, pick: () => { if (!sel && nT >= 3) { this.flash('最多选 3 个话题'); return; } this.setState({ topics: { ...this.state.topics, [k]: !sel } }); } };
+    });
+    const MN = [{ id: 'm1', ini: '鹿', name: '小鹿', color: '#B4A3F5' }, { id: 'm2', ini: 'M', name: 'Momo', color: '#6FD3E8' }, { id: 'm3', ini: 'K', name: 'Kai', color: '#FF9F5A' }, { id: 'm4', ini: '兔', name: '夜跑兔', color: '#B4A3F5' }];
+    const mentions = MN.map((m) => { const sel = !!st.mentions[m.id]; return { ...m, pressed: sel ? 'true' : 'false', st: sel ? 'background:#F4F4F5;color:#121212' : 'background:#1F1F25;color:#C9C9D1', pick: () => this.setState({ mentions: { ...this.state.mentions, [m.id]: !sel } }) }; });
+    const VS = { public: '公开', fans: '关注我的', club: '仅跑团' };
+    const vis = Object.keys(VS).map((k) => ({ name: VS[k], pressed: st.vis === k ? 'true' : 'false', st: st.vis === k ? on : off, pick: () => this.setState({ vis: k }) }));
+    const ready = (st.text || '').trim().length > 0 || st.rec !== 'none';
+    const photos = [];
+    for (let i = 0; i < st.photos; i++) photos.push({ label: '照片 ' + (i + 1) });
+    const names = MN.filter((m) => st.mentions[m.id]).map((m) => m.name);
+    return {
+      recs, styles, topics, mentions, vis, photos,
+      text: st.text, len: (st.text || '').length,
+      onText: (e) => this.setState({ text: e.target.value }),
+      aiLabel: st.aiCount ? '换一条（' + SV[st.style] + '风格）' : 'AI 帮我写（' + SV[st.style] + '风格）',
+      aiWrite: () => { const arr = W[this.state.style]; this.setState({ text: arr[this.state.aiCount % arr.length], aiCount: this.state.aiCount + 1 }); },
+      togglePoster: () => this.setState({ poster: !st.poster }),
+      pPoster: st.poster ? 'true' : 'false',
+      posterBox: st.poster ? 'border:2px solid #DCF26A' : 'border:2px solid #2A2A31;opacity:.5',
+      posterLabel: st.poster ? '轨迹海报 · 已附上' : '轨迹海报 · 点击附上',
+      canAdd: st.photos < 1,
+      addPhoto: () => this.setState({ photos: Math.min(1, this.state.photos + 1) }),
+      locText: st.loc ? '城南 · 滨江公园（只显示到街区）' : '不显示位置',
+      locTrack: st.loc ? trackOn : trackOff, pLoc: st.loc ? 'true' : 'false', tLoc: () => this.setState({ loc: !st.loc }),
+      hideTrack: st.hide ? trackOn : trackOff, pHide: st.hide ? 'true' : 'false', tHide: () => this.setState({ hide: !st.hide }),
+      syncTrack: st.sync ? trackOn : trackOff, pSync: st.sync ? 'true' : 'false', tSync: () => this.setState({ sync: !st.sync }),
+      pubStyle: ready ? 'background:#DCF26A;color:#121212' : 'background:#2A2A31;color:#8A8A94',
+      publish: () => { if (!ready) { this.flash('写点什么或附上一条记录'); return; } this.setState({ published: true }); },
+      published: st.published,
+      pubSummary: '对' + VS[st.vis] + '可见' + (st.sync ? '，已同步到夜跑兔' : '') + (names.length ? '，已通知 ' + names.join('、') : '') + '。\n有人点赞、评论或收藏时会在「消息」里提醒你。',
+      shareOut: () => this.setState({ sharedOut: true }),
+      shareOutLabel: st.sharedOut ? '已生成海报，可分享到朋友圈' : '生成海报分享到朋友圈',
+      hasToast: !!st.toast, toast: st.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

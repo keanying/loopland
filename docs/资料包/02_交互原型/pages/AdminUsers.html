@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理端 · 用户管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&amp;family=Lexend:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E9EB}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+input{font-family:inherit}
+:focus-visible{outline:2px solid #141414;outline-offset:2px}
+.adm-side :focus-visible{outline-color:#FFFFFF}
+.adm-side a:hover{background:#26262A}
+.adm-side a[aria-current="page"]:hover{background:#FFFFFF}
+.adm-btn:hover{background:#2E2E33 !important}
+.adm-row:hover td{background:#F7F7F8}
+.num{font-family:Lexend,'Noto Sans SC',sans-serif}
+@media (max-width:760px){
+.adm-side{flex:1 1 100% !important;flex-direction:row !important;overflow-x:auto;justify-content:flex-start !important;padding:10px !important}
+.adm-side .adm-sp{display:none}
+}
+</style>
+
+
+</head>
+<body>
+<div id="dc-root"></div>
+<template id="dc-tpl">
+
+<div style="min-height:100vh;background:#E9E9EB;padding:24px;box-sizing:border-box;font-family:'Noto Sans SC',system-ui,sans-serif;color:#141414">
+<div style="max-width:1400px;margin:0 auto;background:#FFFFFF;border-radius:32px;padding:20px;display:flex;flex-wrap:wrap;gap:24px;box-sizing:border-box">
+
+<nav class="adm-side" aria-label="管理端导航" style="flex:0 0 84px;background:#141414;border-radius:26px;padding:22px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;box-sizing:border-box">
+<div role="img" aria-label="圈圈 Loopland 运营后台" style="width:48px;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="14 14 72 72" aria-hidden="true"><circle cx="62" cy="50" r="21" fill="#DCF26A"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#141414" stroke-width="15"></circle><circle cx="38" cy="50" r="19" fill="none" stroke="#FFFFFF" stroke-width="8"></circle><circle cx="38" cy="31" r="5" fill="#B4A3F5" stroke="#141414" stroke-width="2.5"></circle></svg></div>
+<div class="adm-sp" style="height:18px"></div>
+<a href="AdminHome.html" aria-label="总览" title="总览" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"></rect><rect x="14" y="3" width="7" height="7" rx="2"></rect><rect x="3" y="14" width="7" height="7" rx="2"></rect><rect x="14" y="14" width="7" height="7" rx="2"></rect></svg></a>
+<a href="AdminUsers.html" aria-label="用户管理" title="用户管理" aria-current="page" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;background:#FFFFFF;color:#141414;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M3 20c.8-3.6 3.2-5.5 6-5.5s5.2 1.9 6 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c1.9.8 3.1 2.6 3.5 5.2"></path></svg></a>
+<a href="AdminPlans.html" aria-label="会员套餐与订单" title="会员套餐与订单" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"></path><path d="M5 19h14"></path></svg></a>
+<a href="AdminMap.html" aria-label="地图与领地" title="地图与领地" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"></path></svg></a>
+<a href="AdminReview.html" aria-label="内容审核" title="内容审核" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"></path><path d="M9 13l2 2 4-4"></path></svg></a>
+<a href="AdminRisk.html" aria-label="风控防作弊" title="风控防作弊" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M12 8v5M12 16v.5"></path></svg></a>
+<a href="AdminMerchant.html" aria-label="商户与活动" title="商户与活动" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v10h16V10M3 10l2-6h14l2 6zM9 20v-5h6v5"></path></svg></a>
+<a href="AdminConfig.html" aria-label="玩法配置" title="玩法配置" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#A9A9AF;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg></a>
+<div class="adm-sp" style="flex-grow:1"></div>
+<a href="AdminHome.html" aria-label="退出登录" title="退出登录" style="width:56px;height:56px;flex-shrink:0;border-radius:18px;color:#8E8E95;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"></path></svg></a>
+</nav>
+
+<main style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+<div style="flex:1 1 220px;min-width:0">
+<h1 style="margin:0;font-size:28px;font-weight:900">用户管理</h1>
+<div style="font-size:13px;color:#6B6B72;margin-top:2px">手机号默认脱敏显示，查看完整信息会记录审计日志</div>
+</div>
+<label style="flex:0 1 340px;min-width:200px;height:46px;border-radius:23px;background:#F2F2F4;display:flex;align-items:center;gap:10px;padding:0 16px;box-sizing:border-box;color:#6B6B72">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+<input aria-label="搜索用户" value="{{q}}" onChange="{{onQ}}" placeholder="昵称、用户 ID 或手机尾号" style="flex-grow:1;min-width:0;border:0;background:transparent;font-size:14px;outline:none;color:#141414">
+</label>
+<div style="display:flex;align-items:center;gap:10px">
+<div aria-hidden="true" style="width:46px;height:46px;border-radius:23px;background:#EDEDF0;border:1.5px solid #141414;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:700">林</div>
+<div style="font-size:13px;line-height:1.3"><div style="font-weight:700">小林</div><div style="color:#6B6B72">运营 · 华东区</div></div>
+</div>
+</header>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px">
+<section aria-label="用户规模" style="flex:3 1 520px;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+<template data-sc="for" list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background:#F2F2F4;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;align-items:baseline;gap:4px"><span class="num" style="font-size:30px;font-weight:700;letter-spacing:-.5px">{{k.v}}</span><span style="font-size:13px;color:#4A4A50">{{k.u}}</span></div>
+<div style="font-size:13px;color:#4A4A50">{{k.label}}</div>
+<div style="font-size:12px;color:#6B6B72">{{k.sub}}</div>
+</div>
+</template>
+</section>
+<section aria-labelledby="src-h" style="flex:2 1 320px;min-width:0;border:1.5px solid #ECECEF;border-radius:28px;padding:16px 20px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:center"><h2 id="src-h" style="margin:0;font-size:15px;font-weight:900;flex-grow:1">近 30 天注册来源</h2><span style="font-size:12px;color:#6B6B72">共 3.9 万</span></div>
+<template data-sc="for" list="{{sources}}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:10px;font-size:12px">
+<span style="width:72px;flex-shrink:0;color:#4A4A50">{{s.n}}</span>
+<div aria-hidden="true" style="flex:1 1 auto;height:10px;border-radius:5px;background:#F2F2F4;overflow:hidden"><div style="height:100%;border-radius:0 4px 4px 0;background:#141414;width:{{s.w}}%"></div></div>
+<span class="num" style="width:40px;text-align:right;font-weight:600">{{s.p}}%</span>
+</div>
+</template>
+</section>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+
+<section aria-labelledby="ul-h" style="flex:3 1 560px;min-width:0;border:1.5px solid #ECECEF;border-radius:28px;padding:18px 18px 10px">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px">
+<h2 id="ul-h" style="margin:0;font-size:18px;font-weight:900;flex-grow:1">注册用户</h2>
+<div role="tablist" aria-label="筛选用户" style="display:flex;gap:4px;background:#F2F2F4;border-radius:22px;padding:4px">
+<template data-sc="for" list="{{filters}}" as="f" hint-placeholder-count="4">
+<button role="tab" aria-selected="{{f.on}}" onClick="{{f.pick}}" style="height:34px;padding:0 12px;border:0;border-radius:17px;font-size:13px;cursor:pointer;{{f.st}}">{{f.label}}</button>
+</template>
+</div>
+</div>
+<div style="overflow-x:auto">
+<table style="width:100%;min-width:660px;border-collapse:collapse;font-size:13px">
+<thead><tr>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">用户</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">手机号</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">城市</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">注册</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">会员</th>
+<th scope="col" style="text-align:left;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">状态</th>
+<th scope="col" style="text-align:right;padding:8px;color:#6B6B72;font-weight:500;border-bottom:1px solid #ECECEF">操作</th>
+</tr></thead>
+<tbody>
+<template data-sc="for" list="{{rows}}" as="u" hint-placeholder-count="8">
+<tr class="adm-row">
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6"><div style="display:flex;align-items:center;gap:10px"><span aria-hidden="true" style="width:34px;height:34px;border-radius:17px;background:#F2F2F4;border:1.5px solid #141414;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">{{u.ini}}</span><div><div style="font-weight:700">{{u.name}}</div><div class="num" style="font-size:11px;color:#6B6B72">ID {{u.id}}</div></div></div></td>
+<td class="num" style="padding:7px 8px;border-bottom:1px solid #F4F4F6">{{u.phoneMask}}</td>
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6">{{u.city}}</td>
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6"><div>{{u.reg}}</div><div style="font-size:11px;color:#6B6B72">{{u.src}}</div></td>
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6">{{u.planShort}}</td>
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6"><span style="height:24px;padding:0 9px;border-radius:12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;white-space:nowrap;{{u.stSt}}">{{u.stLabel}}</span></td>
+<td style="padding:7px 8px;border-bottom:1px solid #F4F4F6;text-align:right"><button onClick="{{u.pick}}" aria-pressed="{{u.sel}}" aria-label="{{u.aria}}" style="height:34px;padding:0 14px;border-radius:17px;font-size:12px;font-weight:700;cursor:pointer;{{u.btn}}">{{u.btnLabel}}</button></td>
+</tr>
+</template>
+</tbody>
+</table>
+</div>
+<template data-sc="if" value="{{noRows}}" hint-placeholder-val="{{ false }}"><div style="padding:24px;text-align:center;font-size:13px;color:#6B6B72">没有匹配的用户</div></template>
+</section>
+
+<template data-sc="if" value="{{hasCur}}" hint-placeholder-val="{{ true }}">
+<section aria-labelledby="ud-h" style="flex:2 1 340px;min-width:0;background:#F2F2F4;border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px">
+<div aria-hidden="true" style="width:56px;height:56px;border-radius:28px;background:#FFFFFF;border:2px solid #141414;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex-shrink:0">{{cur.ini}}</div>
+<div style="flex-grow:1;min-width:0">
+<h2 id="ud-h" style="margin:0;font-size:19px;font-weight:900">{{cur.name}}</h2>
+<div class="num" style="font-size:12px;color:#6B6B72">ID {{cur.id}} · {{cur.city}} · {{cur.club}}</div>
+</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span style="height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;{{cur.stSt}}">{{cur.stLabel}}</span>
+<span style="height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;background:#FFFFFF;border:1.5px solid #E2E2E6">{{cur.realName}}</span>
+<span style="height:26px;padding:0 10px;border-radius:13px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;background:#FFFFFF;border:1.5px solid #E2E2E6">{{cur.ageTag}}</span>
+</div>
+
+<div style="background:#FFFFFF;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:10px">
+<div style="flex-grow:1;min-width:0"><div style="font-size:11px;color:#6B6B72">手机号</div><div class="num" style="font-size:15px;font-weight:700">{{cur.phoneShown}}</div></div>
+<button onClick="{{reveal}}" style="height:36px;padding:0 14px;border-radius:18px;border:1.5px solid #D4D4D8;background:#FFFFFF;font-size:12px;cursor:pointer">{{revealLabel}}</button>
+</div>
+<template data-sc="if" value="{{revealed}}" hint-placeholder-val="{{ false }}"><div role="status" style="font-size:12px;color:#4A4A50;margin-top:-6px">已记录：小林 于 11/20 查看完整手机号，原因「客服回访」</div></template>
+
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
+<template data-sc="for" list="{{cur.stats}}" as="s" hint-placeholder-count="4"><div style="background:#FFFFFF;border-radius:16px;padding:10px"><div class="num" style="font-size:17px;font-weight:700">{{s.v}}</div><div style="font-size:11px;color:#6B6B72">{{s.k}}</div></div></template>
+</div>
+
+<div style="background:#FFFFFF;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px">
+<div style="display:flex;justify-content:space-between"><span style="color:#6B6B72">会员</span><b>{{cur.planLong}}</b></div>
+<div style="display:flex;justify-content:space-between"><span style="color:#6B6B72">到期</span><span class="num">{{cur.expire}}</span></div>
+<div style="display:flex;justify-content:space-between"><span style="color:#6B6B72">自动续费</span><span>{{cur.auto}}</span></div>
+<div style="display:flex;justify-content:space-between"><span style="color:#6B6B72">注册 / 最近登录</span><span>{{cur.reg}} / {{cur.last}}</span></div>
+<div style="display:flex;justify-content:space-between"><span style="color:#6B6B72">风控记录</span><span>{{cur.risk}}</span></div>
+</div>
+
+<template data-sc="if" value="{{cur.deleting}}" hint-placeholder-val="{{ false }}">
+<div style="background:#FFFFFF;border:1.5px dashed #141414;border-radius:16px;padding:12px 14px;font-size:12px;line-height:1.6">该用户已申请注销，冷静期剩 5 天。到期后自动删除轨迹与个人信息，领地转为无主，期间用户可随时撤回。</div>
+</template>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<button onClick="{{gift}}" class="adm-btn" style="height:42px;padding:0 16px;border-radius:21px;border:0;background:#141414;color:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer">赠送 7 天会员</button>
+<button onClick="{{notify}}" style="height:42px;padding:0 16px;border-radius:21px;border:1.5px solid #141414;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer">发站内通知</button>
+<button onClick="{{mute}}" style="height:42px;padding:0 16px;border-radius:21px;border:1.5px solid #E2E2E6;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer">{{muteLabel}}</button>
+<button onClick="{{ban}}" style="height:42px;padding:0 16px;border-radius:21px;border:1.5px solid #E2E2E6;background:#FFFFFF;color:#A8261B;font-size:13px;font-weight:700;cursor:pointer">{{banLabel}}</button>
+</div>
+<div aria-live="polite" style="font-size:13px;min-height:18px">{{toast}}</div>
+</section>
+</template>
+</div>
+
+</main>
+</div>
+</div>
+</template>
+<script type="text/x-dc" id="dc-script">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const U = (id, name, ini, phone, city, club, reg, src, plan, expire, auto, status, real, adult, km, terr, cards, last, risk, extra) => ({ id, name, ini, phone, city, club, reg, src, plan, expire, auto, status, real, adult, km, terr, cards, last, risk, ...(extra || {}) });
+    this.state = {
+      q: '', filter: 'all', sel: '10293', revealed: {}, toast: '',
+      users: [
+        U('10293', '小鹿', '鹿', '13812342210', '上海', '夜跑兔', '2025/12/02', '朋友邀请', 'year', '2027/03/02', true, 'ok', true, true, 1286, 14, 46, '5 分钟前', '无', { isNew: false }),
+        U('20871', '江湾骑士团长', '江', '13998761123', '上海', '江湾骑士', '2025/03/14', '应用商店', 'club', '2027/03/14', true, 'ok', true, true, 4210, 31, 72, '1 小时前', '无'),
+        U('55120', '阿强', '强', '15011118890', '杭州', '城东跑团', '2026/10/02', '跑团邀请', 'none', '—', false, 'muted', false, true, 312, 2, 9, '昨天', '内容违规 2 次'),
+        U('70455', '约跑小马', '马', '18622220917', '上海', '—', '2026/11/19', '商户联名', 'none', '—', false, 'ok', false, true, 18, 0, 3, '3 小时前', '无', { isNew: true }),
+        U('77210', '跑跑7721', '7', '17733337721', '北京', '—', '2026/09/28', '应用商店', 'month', '2026/12/01', true, 'banned', true, true, 960, 0, 21, '2 天前', '速度异常 3 次'),
+        U('33018', '晨跑王', '晨', '13655556018', '杭州', '晨风跑团', '2026/05/11', '应用商店', 'quarter', '2027/01/20', false, 'ok', true, true, 2380, 9, 38, '今天 06:40', '无'),
+        U('88302', '小葵', '葵', '13544448302', '上海', '—', '今天', '朋友邀请', 'trial', '2026/11/27', false, 'ok', false, false, 6, 0, 1, '20 分钟前', '无', { isNew: true }),
+        U('41556', '退坑的老周', '周', '13377771556', '北京', '晨风跑团', '2025/02/08', '应用商店', 'none', '—', false, 'deleting', true, true, 1520, 0, 33, '11/15', '无')
+      ]
+    };
+  }
+  componentWillUnmount() { clearTimeout(this.tt); }
+  say(m) { clearTimeout(this.tt); this.setState({ toast: m }); this.tt = setTimeout(() => this.setState({ toast: '' }), 2600); }
+  patch(id, p) { this.setState({ users: this.state.users.map((u) => u.id === id ? { ...u, ...p } : u) }); }
+  renderVals() {
+    const st = this.state;
+    const PLAN = { none: ['—', '未开通'], trial: ['体验 7 天', '新人体验 7 天'], month: ['连续包月', '连续包月 ¥15'], quarter: ['季卡', '季卡 ¥45'], year: ['年卡', '年卡 ¥168'], club: ['跑团版', '跑团年卡 ¥298 · 5 人'] };
+    const STS = { ok: ['正常', 'background:#E4F3D6;color:#2F6B1F'], muted: ['禁言中', 'background:#FFF0C2;color:#7A5200'], banned: ['已封禁', 'background:#FFE2DC;color:#A8261B'], deleting: ['注销冷静期', 'background:#EDEDF0;color:#4A4A50'] };
+    const mask = (p) => p.slice(0, 3) + '****' + p.slice(7);
+    const q = st.q.trim();
+    const F = [['all', '全部'], ['member', '会员'], ['new', '今日新注册'], ['flag', '异常']];
+    const filters = F.map(([id, label]) => ({ label, on: st.filter === id, st: st.filter === id ? 'background:#141414;color:#FFFFFF;font-weight:700' : 'background:transparent;color:#4A4A50', pick: () => this.setState({ filter: id }) }));
+    const list = st.users.filter((u) => {
+      if (st.filter === 'member' && (u.plan === 'none')) return false;
+      if (st.filter === 'new' && u.reg !== '今天') return false;
+      if (st.filter === 'flag' && u.status === 'ok') return false;
+      if (q && !(u.name.includes(q) || u.id.includes(q) || u.phone.endsWith(q))) return false;
+      return true;
+    });
+    const rows = list.map((u) => ({
+      ...u, phoneMask: mask(u.phone), planShort: PLAN[u.plan][0], stLabel: STS[u.status][0], stSt: STS[u.status][1],
+      sel: st.sel === u.id, btnLabel: st.sel === u.id ? '查看中' : '查看',
+      btn: st.sel === u.id ? 'border:1.5px solid #141414;background:#141414;color:#FFFFFF' : 'border:1.5px solid #141414;background:#FFFFFF;color:#141414',
+      aria: '查看用户 ' + u.name, pick: () => this.setState({ sel: u.id })
+    }));
+    const c = st.users.find((u) => u.id === st.sel);
+    const cur = c ? {
+      ...c, stLabel: STS[c.status][0], stSt: STS[c.status][1],
+      realName: c.real ? '已实名' : '未实名', ageTag: c.adult ? '成年' : '未成年 · 已开启保护',
+      phoneShown: st.revealed[c.id] ? c.phone : mask(c.phone),
+      planLong: PLAN[c.plan][1], auto: c.plan === 'none' ? '—' : (c.auto ? '已开启（扣费前 5 天提醒）' : '未开启'),
+      deleting: c.status === 'deleting',
+      stats: [[c.km.toLocaleString('en-US'), '累计 km'], [c.terr, '领地'], [c.cards, '图鉴'], [c.club === '—' ? '无' : '1', '跑团']].map(([v, k]) => ({ v, k }))
+    } : { stats: [] };
+    const kpis = [
+      { v: '31.2', u: '万', label: '注册用户', sub: '实名 72% · 成年 96%' },
+      { v: '1,286', u: '', label: '今日新增注册', sub: '较昨日 +8.4%' },
+      { v: '42', u: '%', label: '新用户 7 日留存', sub: '跑过 1 次以上的用户' },
+      { v: '1.86', u: '万', label: '付费会员', sub: '付费率 6.0%' }
+    ];
+    const SRC = [['应用商店', 38], ['朋友邀请', 27], ['跑团邀请', 17], ['商户联名', 11], ['赛事报名', 7]];
+    const sources = SRC.map(([n, p]) => ({ n, p, w: (p / 38) * 100 }));
+    return {
+      q: st.q, onQ: (e) => this.setState({ q: e.target.value }),
+      kpis, sources, filters, rows, noRows: rows.length === 0,
+      hasCur: !!c, cur,
+      revealed: !!(c && st.revealed[c.id]),
+      revealLabel: c && st.revealed[c.id] ? '重新脱敏' : '查看完整号码',
+      reveal: () => c && this.setState({ revealed: { ...st.revealed, [c.id]: !st.revealed[c.id] } }),
+      muteLabel: c && c.status === 'muted' ? '解除禁言' : '禁言 7 天',
+      banLabel: c && c.status === 'banned' ? '解除封禁' : '封禁账号',
+      toast: st.toast,
+      gift: () => {
+        if (!c) return;
+        this.patch(c.id, { plan: c.plan === 'none' ? 'trial' : c.plan, expire: c.plan === 'none' ? '2026/11/27' : c.expire });
+        this.say('已赠送 ' + c.name + ' 7 天会员，并发送通知');
+      },
+      notify: () => c && this.say('已向 ' + c.name + ' 发送站内通知'),
+      mute: () => { if (!c || c.status === 'banned' || c.status === 'deleting') return; const m = c.status === 'muted'; this.patch(c.id, { status: m ? 'ok' : 'muted' }); this.say(m ? '已解除禁言' : c.name + ' 已禁言 7 天，可发起申诉'); },
+      ban: () => { if (!c || c.status === 'deleting') return; const b = c.status === 'banned'; this.patch(c.id, { status: b ? 'ok' : 'banned' }); this.say(b ? '已解除封禁' : c.name + ' 已封禁，名下领地已冻结'); }
+    };
+  }
+}
+</script>
+<script src="dc-lite.js"></script>
+</body>
+</html>
