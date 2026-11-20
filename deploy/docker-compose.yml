@@ -1,0 +1,23 @@
+# Local development dependencies: PostgreSQL 16 + PostGIS and Redis 7.
+#   docker compose -f deploy/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: loopland
+      POSTGRES_PASSWORD: loopland
+      POSTGRES_DB: loopland
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../server/migrations/0001_init.up.sql:/docker-entrypoint-initdb.d/0001_init.up.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loopland"]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+volumes:
+  pgdata:

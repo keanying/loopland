@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS gameplay_configs;
+DROP TABLE IF EXISTS codex_items;
+DROP TABLE IF EXISTS territory_stationed;
+DROP TABLE IF EXISTS territory_buildings;
+DROP TABLE IF EXISTS territory_events;
+DROP TABLE IF EXISTS territories;
+DROP TABLE IF EXISTS track_points;
+DROP TABLE IF EXISTS activities;
+DROP TABLE IF EXISTS energy_ledger;
+DROP TABLE IF EXISTS crew_members;
+DROP TABLE IF EXISTS crews;
+DROP TABLE IF EXISTS users;
