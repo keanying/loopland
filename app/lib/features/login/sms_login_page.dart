@@ -24,9 +24,10 @@ class SmsLoginPage extends ConsumerWidget {
                 submitLabel: '登录 / 注册',
                 onSubmit: (phone, code) async {
                   if (!ref.read(agreedProvider)) {
-                    toast(context, '请先阅读并同意《用户协议》《隐私政策》');
-                    return;
+                    if (!await confirmAgreement(context)) return;
+                    ref.read(agreedProvider.notifier).set(true);
                   }
+                  if (!context.mounted) return;
                   try {
                     await ref.read(authProvider.notifier).login('sms', {'phone': phone, 'code': code});
                   } catch (e) {

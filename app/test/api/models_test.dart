@@ -219,7 +219,7 @@ void main() {
     expect(e.code, 'not_enough_energy');
     expect(e.message, '需要 120，当前 80');
     final b = ApiException.fromResponse(403, {
-      'error': {'code': 'account_banned', 'message': '', 'banned_until': '2026-12-20T00:00:00+08:00'}
+      'error': {'code': 'account_banned', 'message': '', 'banned_until': '2026-12-20T12:00:00Z'}
     });
     expect(b.displayMessage, contains('2026-12-20'));
     expect(ApiException.fromResponse(502, 'gateway').code, 'internal');

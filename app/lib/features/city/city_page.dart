@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -92,7 +94,7 @@ class _CityPageState extends ConsumerState<CityPage> {
     final cfg = ref.watch(configProvider).value;
     final mine = t.summary.isMine;
     final editable = mine && !t.summary.frozen;
-    final slotCount = t.slots.isNotEmpty ? t.slots.length : (cfg?.slotsPerTerritory ?? 6);
+    final slotCount = math.max(t.slots.length, cfg?.slotsPerTerritory ?? 6);
     final slots = [
       for (var i = 0; i < slotCount; i++) t.slots.firstWhere((s) => s.slot == i, orElse: () => Slot(slot: i)),
     ];

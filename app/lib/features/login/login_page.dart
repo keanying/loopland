@@ -70,14 +70,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _playing ? v.play() : v.pause();
   }
 
-  bool _checkAgreed() {
+  /// Common pattern for Chinese apps: if the box is not ticked, ask once in
+  /// a dialog (a snackbar would cover the checkbox itself).
+  Future<bool> _checkAgreed() async {
     if (ref.read(agreedProvider)) return true;
-    toast(context, '请先阅读并同意《用户协议》《隐私政策》');
-    return false;
+    final ok = await confirmAgreement(context);
+    if (ok) ref.read(agreedProvider.notifier).set(true);
+    return ok;
   }
 
   Future<void> _login(Future<Map<String, dynamic>?> Function() credential, String provider) async {
-    if (!_checkAgreed() || _busy) return;
+    if (_busy || !await _checkAgreed()) return;
     setState(() => _busy = true);
     try {
       final c = await credential();
@@ -198,6 +201,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 }
+
+Future<bool> confirmAgreement(BuildContext context) async =>
+    await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('用户协议与隐私政策'),
+        content: const Text('请阅读并同意《用户协议》《隐私政策》。圈圈会处理你的运动轨迹（敏感个人信息）用于圈地和排名。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('不同意', style: TextStyle(color: LL.text2))),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('同意')),
+        ],
+      ),
+    ) ==
+    true;
 
 class AgreementRow extends StatelessWidget {
   const AgreementRow({super.key, required this.agreed, required this.onChanged});

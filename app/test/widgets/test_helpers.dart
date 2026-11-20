@@ -50,3 +50,20 @@ Future<void> screenshot(WidgetTester t, Finder finder, String path) async {
     f.writeAsBytesSync(bytes!.buffer.asUint8List());
   });
 }
+
+/// Unmounts the tree and flushes zero-length timers (Riverpod disposal,
+/// fake HTTP futures) so the test binding sees no pending timers.
+Future<void> settle(WidgetTester t) async {
+  await t.pumpWidget(const SizedBox.shrink());
+  await t.pump(const Duration(milliseconds: 10));
+  await t.pump(const Duration(milliseconds: 10));
+}
+
+/// Lets real async work (the fake HTTP adapter's streams) complete, then
+/// rebuilds.
+Future<void> idle(WidgetTester t, [int rounds = 3]) async {
+  for (var i = 0; i < rounds; i++) {
+    await t.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 60)));
+    await t.pump(const Duration(milliseconds: 50));
+  }
+}

@@ -106,14 +106,18 @@ void main() {
   });
 
   // Client-only behaviour on top of the port.
-  test('hint target lies on the open path and shrinks as the runner returns', () {
+  test('hint ignores only the last HintWindowM metres of the path', () {
     final t = ClaimTracker();
-    final pts = track([[0, 0], [200, 0], [200, 200], [0, 200], [0, 120]]);
-    for (final p in pts) {
+    // Heading back west along y=100 after a 200x200 U: the leg just run
+    // (x=200) is outside the 40 m window, so it is the nearest crossable one.
+    for (final p in track([[0, 0], [200, 0], [200, 200], [100, 200], [100, 100]])) {
       t.add(p);
     }
     final h = t.closingHint()!;
-    expect(near(h.distanceM, 120, 0.5), isTrue, reason: '${h.distanceM}');
+    expect(near(h.distanceM, 100, 0.5), isTrue, reason: '${h.distanceM}');
     expect(t.openPath, hasLength(5));
+    // Target is a point on the open path: (100,0) or (200,100), both 100 m away.
+    final p = Projection(origin).forward(h.target);
+    expect(near(p.y, 0, 0.5) || near(p.x, 200, 0.5), isTrue, reason: '$p');
   });
 }
