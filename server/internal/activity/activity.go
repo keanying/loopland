@@ -269,9 +269,17 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 				return err
 			}
 		}
+		// Automatically voided runs are recorded as already resolved so they
+		// don't wait in the manual queue; everything else stays open.
 		for _, f := range verdict.Flags {
-			if _, err := tx.Exec(ctx, `INSERT INTO risk_alerts (activity_id, user_id, type, confidence, detail) VALUES ($1,$2,$3,$4,$5)`,
-				id, user, f.Rule, f.Confidence, f.Detail); err != nil {
+			status, resolution := "open", (*string)(nil)
+			if verdict.Verdict == anticheat.Void {
+				auto := "auto_void"
+				status, resolution = "resolved", &auto
+			}
+			if _, err := tx.Exec(ctx, `INSERT INTO risk_alerts (activity_id, user_id, type, confidence, detail, status, resolution, resolved_at)
+				VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $6='resolved' THEN now() END)`,
+				id, user, f.Rule, f.Confidence, f.Detail, status, resolution); err != nil {
 				return err
 			}
 		}

@@ -195,7 +195,10 @@ function SpeedChart({ d, threshold }: { d: FullDetail; threshold: number }) {
     tooltip: { trigger: 'axis', valueFormatter: (v) => `${v} km/h` },
     xAxis: {
       type: 'category',
-      data: d.speeds.map((p) => `${Math.round((p.t - t0) / 60000)} 分`),
+      data: d.speeds.map((p) => {
+        const sec = Math.round((p.t - t0) / 1000);
+        return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+      }),
       axisTick: { show: false },
       axisLine: { lineStyle: { color: '#d8d8dc' } },
       axisLabel: { color: '#8a8a90' },

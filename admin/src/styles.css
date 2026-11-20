@@ -126,3 +126,4 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
   .side-logo { margin: 0 8px 0 0; }
   .side-spacer { display: none; }
 }
+.ant-table .num { white-space: nowrap; }

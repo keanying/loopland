@@ -459,7 +459,7 @@ function OrdersTab() {
         rowKey="order_no"
         loading={list.isFetching}
         dataSource={list.data?.items}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1200 }}
         pagination={{
           current: page,
           pageSize: PAGE_SIZE,

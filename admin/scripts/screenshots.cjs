@@ -130,6 +130,20 @@ async function main() {
   await shot(ops.page, '11b_运营视角_后台账号403', { fullPage: false });
   await ops.ctx.close();
 
+  // ---------------- reviewer: only users + risk; no 403 toasts ----------------
+  const rv = await session('amei');
+  await login(rv.page, 'amei');
+  for (const url of ['/', '/users', '/risk']) {
+    await rv.page.goto(`${BASE}${url}`);
+    await rv.page.waitForLoadState('networkidle');
+    await rv.page.waitForTimeout(500);
+    if (await rv.page.locator('.ant-message-error').count()) problems.push(`[amei] error toast on ${url}`);
+  }
+  await shot(rv.page, '11c_审核员视角_风控', { fullPage: false });
+  const menu = await rv.page.locator('nav.side a').count();
+  if (menu !== 3) problems.push(`[amei] expected 3 menu links (总览/用户/风控), got ${menu}`);
+  await rv.ctx.close();
+
   // ---------------- narrow viewport ----------------
   const m = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   const mp = await m.newPage();

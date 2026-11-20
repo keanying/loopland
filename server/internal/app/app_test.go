@@ -368,8 +368,19 @@ func TestEndToEnd(t *testing.T) {
 		} `json:"trend"`
 	}
 	ad.must("GET", "/admin/v1/dashboard", nil, &dash)
-	if dash.Today.PendingRisk < 2 || len(dash.Trend.Days) != 30 {
+	if dash.Today.PendingRisk != 1 || // only the review run; the voided one is auto-resolved
+		len(dash.Trend.Days) != 30 {
 		t.Fatalf("dashboard: %+v", dash)
+	}
+
+	var ul struct {
+		Items []struct {
+			PhoneMasked *string `json:"phone_masked"`
+		} `json:"items"`
+	}
+	ad.must("GET", "/admin/v1/users?q=0001", nil, &ul)
+	if len(ul.Items) != 1 || ul.Items[0].PhoneMasked == nil || *ul.Items[0].PhoneMasked != "138****0001" {
+		t.Fatalf("admin user list masking: %+v", ul)
 	}
 
 	var alerts struct {

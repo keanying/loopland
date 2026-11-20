@@ -231,12 +231,16 @@ type userRow struct {
 	DeleteAfter *time.Time `json:"delete_after"`
 }
 
-func maskLast4(last4 *string) *string {
-	if last4 == nil {
+func (a *API) maskPhone(enc []byte) *string {
+	if enc == nil {
 		return nil
 	}
-	s := "1**" + "****" + *last4
-	return &s
+	p, err := a.Box.Open(enc)
+	if err != nil {
+		return nil
+	}
+	m := secure.MaskPhone(p)
+	return &m
 }
 
 func (a *API) users(w http.ResponseWriter, r *http.Request) error {
@@ -263,7 +267,7 @@ func (a *API) users(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	args = append(args, p.Size, p.Offset())
-	rows, err := a.Pool.Query(r.Context(), fmt.Sprintf(`SELECT u.id, u.nickname, u.phone_last4, u.source, u.created_at,
+	rows, err := a.Pool.Query(r.Context(), fmt.Sprintf(`SELECT u.id, u.nickname, u.phone_enc, u.source, u.created_at,
 			EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=u.id AND (m.expires_at > now() OR m.grace_until > now())),
 			CASE WHEN u.status='active' AND u.muted_until > now() THEN 'muted' ELSE u.status END, u.delete_after
 		FROM users u WHERE %s ORDER BY u.id DESC LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args)), args...)
@@ -272,9 +276,9 @@ func (a *API) users(w http.ResponseWriter, r *http.Request) error {
 	}
 	items, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (userRow, error) {
 		var u userRow
-		var last4 *string
-		err := row.Scan(&u.ID, &u.Nickname, &last4, &u.Source, &u.CreatedAt, &u.Member, &u.Status, &u.DeleteAfter)
-		u.PhoneMasked = maskLast4(last4)
+		var enc []byte
+		err := row.Scan(&u.ID, &u.Nickname, &enc, &u.Source, &u.CreatedAt, &u.Member, &u.Status, &u.DeleteAfter)
+		u.PhoneMasked = a.maskPhone(enc)
 		return u, err
 	})
 	if err != nil {
