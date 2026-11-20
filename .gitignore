@@ -35,3 +35,18 @@ go.work.sum
 
 # OS / editor
 .DS_Store
+
+# Admin console (Node)
+admin/node_modules/
+admin/dist/
+
+# Flutter app
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/**/Pods/
+app/android/.gradle/
+app/android/local.properties
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh

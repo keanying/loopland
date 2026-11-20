@@ -1,0 +1,51 @@
+name: loopland
+description: "圈圈 Loopland · 跑一圈，就是你的地"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.14.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 状态与路由
+  flutter_riverpod: 3.5.0
+  go_router: 18.1.4
+  # 网络与存储
+  dio: 5.11.1
+  flutter_secure_storage: 11.2.0
+  path_provider: 2.1.6
+  shared_preferences: 2.5.6
+  uuid: 4.6.0
+  # 定位与设备
+  geolocator: 14.1.2
+  device_info_plus: 13.3.0
+  package_info_plus: 10.2.2
+  # 地图（高德）
+  amap_map: 1.0.15
+  x_amap_base: 1.0.3
+  # 登录与支付
+  fluwx: 6.0.6
+  tobias: 6.0.0
+  in_app_purchase: 3.3.1
+  sign_in_with_apple: 8.2.0
+  # 界面
+  video_player: 2.14.1
+  flutter_svg: 2.5.0
+  material_ui: 1.11.1
+  share_plus: 13.3.1
+  url_launcher: 6.3.3
+  intl: 0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/art/
+    - assets/brand/
+    - assets/media/

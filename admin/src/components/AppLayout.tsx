@@ -1,0 +1,91 @@
+import { type ReactNode } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Tooltip } from 'antd';
+import {
+  AppstoreOutlined,
+  AuditOutlined,
+  CompassOutlined,
+  ControlOutlined,
+  CrownOutlined,
+  FileDoneOutlined,
+  LogoutOutlined,
+  SafetyOutlined,
+  ShopOutlined,
+  TeamOutlined,
+  UserSwitchOutlined,
+} from '@ant-design/icons';
+import { useAuth } from '../auth/AuthContext';
+import type { Permission } from '../auth/permissions';
+import Logo from './Logo';
+
+interface MenuItem {
+  to: string;
+  label: string;
+  icon: ReactNode;
+  v2?: boolean;
+  perm?: Permission;
+}
+
+const MENU: MenuItem[] = [
+  { to: '/', label: '总览', icon: <AppstoreOutlined /> },
+  { to: '/users', label: '用户管理', icon: <TeamOutlined />, perm: 'users.read' },
+  { to: '/plans', label: '会员套餐与订单', icon: <CrownOutlined />, perm: 'plans.read' },
+  { to: '/territories', label: '地图与领地', icon: <CompassOutlined />, perm: 'territories.read' },
+  { to: '/review', label: '内容审核（V2）', icon: <FileDoneOutlined />, v2: true },
+  { to: '/risk', label: '风控防作弊', icon: <SafetyOutlined />, perm: 'risk.read' },
+  { to: '/merchants', label: '商户与活动（V2）', icon: <ShopOutlined />, v2: true },
+  { to: '/gameplay', label: '玩法配置', icon: <ControlOutlined />, perm: 'gameplay.read' },
+  { to: '/audit', label: '审计日志', icon: <AuditOutlined />, perm: 'audit.read' },
+  { to: '/admins', label: '后台账号', icon: <UserSwitchOutlined />, perm: 'admins.manage' },
+];
+
+export default function AppLayout() {
+  const { logout, can } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <div className="shell">
+      <div className="frame">
+        <nav className="side" aria-label="管理端导航">
+          <div className="side-logo" role="img" aria-label="圈圈 Loopland 管理端">
+            <Logo />
+          </div>
+          {MENU.filter((m) => !m.perm || can(m.perm)).map((m) =>
+            m.v2 ? (
+              <Tooltip key={m.to} title={m.label + ' · 下个版本上线'} placement="right">
+                <span className="side-link disabled" aria-disabled="true" aria-label={m.label}>
+                  {m.icon}
+                  <span className="side-badge">V2</span>
+                </span>
+              </Tooltip>
+            ) : (
+              <Tooltip key={m.to} title={m.label} placement="right">
+                <NavLink to={m.to} end={m.to === '/'} aria-label={m.label} className={({ isActive }) => 'side-link' + (isActive ? ' active' : '')}>
+                  {m.icon}
+                </NavLink>
+              </Tooltip>
+            ),
+          )}
+          <div className="side-spacer" />
+          <Tooltip title="退出登录" placement="right">
+            <button
+              type="button"
+              className="side-link"
+              aria-label="退出登录"
+              style={{ border: 0, background: 'transparent', cursor: 'pointer' }}
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+            >
+              <LogoutOutlined />
+            </button>
+          </Tooltip>
+        </nav>
+        <main className="main">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
