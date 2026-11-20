@@ -32,6 +32,8 @@ void main() {
     await t.pump();
     expect(find.byIcon(Icons.check), findsOneWidget);
 
+    await t.runAsync(() => precacheImage(const AssetImage('assets/media/login-poster.jpg'), t.element(find.byType(LoginPage))));
+    await t.pump();
     await screenshot(t, find.byKey(const Key('shot')), 'screenshots/login.png');
     await settle(t);
   });

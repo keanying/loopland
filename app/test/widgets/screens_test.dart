@@ -49,7 +49,9 @@ void main() {
 
     // Tap the centre of the map: 滨江公园 (mine) lies under the initial centre.
     await t.tapAt(const Offset(195, 422 + 30));
+    await t.pump(const Duration(milliseconds: 400)); // double-tap (zoom) window
     await t.pumpAndSettle();
+    expect(find.text('滨江公园'), findsOneWidget);
     expect(find.text('去建设'), findsOneWidget);
     await settle(t);
   });

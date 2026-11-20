@@ -403,7 +403,7 @@ class TerritoryPainter extends CustomPainter {
     if (maxX - minX < 56) return;
     final tp = TextPainter(
       text: TextSpan(
-          text: t.name, style: const TextStyle(color: LL.text, fontSize: 12, fontWeight: FontWeight.w700)),
+          text: t.name, style: const TextStyle(color: LL.text, fontSize: 12, fontWeight: FontWeight.w700, fontFamilyFallback: LL.fonts)),
       textDirection: ui.TextDirection.ltr,
       maxLines: 1,
       ellipsis: '…',

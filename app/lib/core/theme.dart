@@ -21,6 +21,9 @@ class LL {
   static const yellow = Color(0xFFFFC857);
 
   static const double radius = 24;
+
+  /// CJK fallbacks for explicit TextStyles (buttons, map labels).
+  static const fonts = ['PingFang SC', 'Noto Sans SC', 'Noto Sans CJK SC', 'sans-serif'];
 }
 
 ThemeData buildTheme() {
@@ -38,7 +41,7 @@ ThemeData buildTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: LL.night,
-    fontFamilyFallback: const ['PingFang SC', 'Noto Sans SC', 'Noto Sans CJK SC', 'sans-serif'],
+    fontFamilyFallback: LL.fonts,
   );
   return base.copyWith(
     appBarTheme: const AppBarTheme(
@@ -64,7 +67,7 @@ ThemeData buildTheme() {
         disabledBackgroundColor: LL.card2,
         minimumSize: const Size(64, 52),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, fontFamilyFallback: LL.fonts),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -73,7 +76,7 @@ ThemeData buildTheme() {
         minimumSize: const Size(64, 52),
         side: const BorderSide(color: Color(0x55F4F4F5)),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, fontFamilyFallback: LL.fonts),
       ),
     ),
     textButtonTheme: TextButtonThemeData(

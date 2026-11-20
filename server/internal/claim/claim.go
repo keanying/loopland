@@ -159,26 +159,32 @@ type Hint struct {
 }
 
 // ClosingHint returns the straight-line distance from the current position
-// to the nearest point of the open path that could still be crossed, ignoring
-// the last HintWindowM metres. ok is false when there is nothing to close yet.
+// to the nearest point of the open path that would actually close a loop.
+// A point qualifies only if getting there along the path is at least
+// HintWindowM longer than the straight line: points on the leg just run (or
+// a straight stretch before it) are excluded, because running back to them
+// encloses nothing. ok is false when there is nothing to close yet.
 func (t *Tracker) ClosingHint() (Hint, bool) {
 	n := len(t.path)
 	if n < 3 {
 		return Hint{}, false
 	}
 	cur := t.path[n-1]
-	// Walk back from the end until the window is used up; segments before
-	// index `limit` are eligible.
-	walked, limit := 0.0, n-1
-	for limit > 0 && walked < t.opts.HintWindowM {
-		walked += t.path[limit].Dist(t.path[limit-1])
-		limit--
+	// suffix[i] is the path length from vertex i to the current position.
+	suffix := make([]float64, n)
+	for i := n - 2; i >= 0; i-- {
+		suffix[i] = suffix[i+1] + t.path[i].Dist(t.path[i+1])
 	}
 	best := math.Inf(1)
 	var bestPt geo.Point
-	for k := 0; k < limit; k++ {
+	for k := 0; k <= n-3; k++ {
 		p := geo.ClosestOnSegment(cur, t.path[k], t.path[k+1])
-		if d := p.Dist(cur); d < best {
+		d := p.Dist(cur)
+		along := p.Dist(t.path[k+1]) + suffix[k+1]
+		if along-d < t.opts.HintWindowM {
+			continue
+		}
+		if d < best {
 			best, bestPt = d, p
 		}
 	}

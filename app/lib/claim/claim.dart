@@ -165,19 +165,20 @@ class ClaimTracker {
     final n = _path.length;
     if (n < 3) return null;
     final cur = _path[n - 1];
-    // Walk back from the end until the window is used up; segments before
-    // index `limit` are eligible.
-    var walked = 0.0;
-    var limit = n - 1;
-    while (limit > 0 && walked < opts.hintWindowM) {
-      walked += _path[limit].dist(_path[limit - 1]);
-      limit--;
+    // suffix[i] is the path length from vertex i to the current position. A
+    // point only closes a loop if reaching it along the path is at least
+    // hintWindowM longer than the straight line; the leg just run never is.
+    final suffix = List<double>.filled(n, 0);
+    for (var i = n - 2; i >= 0; i--) {
+      suffix[i] = suffix[i + 1] + _path[i].dist(_path[i + 1]);
     }
     var best = double.infinity;
     Point? bestPt;
-    for (var k = 0; k < limit; k++) {
+    for (var k = 0; k <= n - 3; k++) {
       final p = closestOnSegment(cur, _path[k], _path[k + 1]);
       final d = p.dist(cur);
+      final along = p.dist(_path[k + 1]) + suffix[k + 1];
+      if (along - d < opts.hintWindowM) continue;
       if (d < best) {
         best = d;
         bestPt = p;

@@ -120,4 +120,13 @@ void main() {
     final p = Projection(origin).forward(h.target);
     expect(near(p.y, 0, 0.5) || near(p.x, 200, 0.5), isTrue, reason: '$p');
   });
+
+  test('hint ignores the leg just run', () {
+    // The previous corner is 150 m back along a straight leg; running there
+    // encloses nothing. The real target is the first leg, 200 m south.
+    final r = detect(track([[0, 0], [200, 0], [200, 200], [50, 200]]));
+    expect(r.hint, isNotNull);
+    expect(near(r.hint!.distanceM, 200, 0.5), isTrue, reason: '${r.hint!.distanceM}');
+    expect(detect(track([[0, 0], [100, 0], [300, 0]])).hint, isNull);
+  });
 }

@@ -156,3 +156,17 @@ func TestIncrementalMatchesBatch(t *testing.T) {
 		t.Fatalf("closed at %v", closedAt)
 	}
 }
+
+func TestHintIgnoresTheLegJustRun(t *testing.T) {
+	// East 200 m, north 200 m, then a long 150 m leg west. The previous
+	// corner (200,200) is 150 m behind on a straight line; running back to it
+	// encloses nothing. The real closing point is the first leg, 200 m south.
+	r := Detect(track([2]float64{0, 0}, [2]float64{200, 0}, [2]float64{200, 200}, [2]float64{50, 200}), Options{})
+	if r.Hint == nil || !near(r.Hint.DistanceM, 200, 0.5) {
+		t.Fatalf("hint = %+v, want ~200 m south to the first leg", r.Hint)
+	}
+	// A straight line has nothing to close.
+	if r := Detect(track([2]float64{0, 0}, [2]float64{100, 0}, [2]float64{300, 0}), Options{}); r.Hint != nil {
+		t.Fatalf("straight line hint = %+v", r.Hint)
+	}
+}
