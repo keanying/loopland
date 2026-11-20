@@ -12,18 +12,6 @@ jobs:
     defaults:
       run:
         working-directory: server
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: server/go.mod
-      - name: gofmt
-        run: test -z "$(gofmt -l .)"
-      - run: go vet ./...
-      - run: go test -race ./...
-
-  migrations:
-    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -34,11 +22,25 @@ jobs:
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U loopland" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
     env:
-      PGPASSWORD: loopland
+      LOOPLAND_TEST_REQUIRE_DB: "1"
+      LOOPLAND_TEST_DATABASE_URL: postgres://loopland:loopland@localhost:5432/postgres?sslmode=disable
+      LOOPLAND_TEST_REDIS_URL: redis://localhost:6379/15
     steps:
       - uses: actions/checkout@v4
-      - name: up
-        run: psql -h localhost -U loopland -d loopland -v ON_ERROR_STOP=1 -f server/migrations/0001_init.up.sql
-      - name: down
-        run: psql -h localhost -U loopland -d loopland -v ON_ERROR_STOP=1 -f server/migrations/0001_init.down.sql
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: gofmt
+        run: test -z "$(gofmt -l .)"
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: migrations down
+        env:
+          PGPASSWORD: loopland
+        run: |
+          psql -h localhost -U loopland -d loopland -v ON_ERROR_STOP=1 -f migrations/0001_init.up.sql
+          psql -h localhost -U loopland -d loopland -v ON_ERROR_STOP=1 -f migrations/0001_init.down.sql

@@ -120,3 +120,15 @@ func TestAttack(t *testing.T) {
 		t.Fatal("energy above guard captures")
 	}
 }
+
+func TestLevelAndStationSlots(t *testing.T) {
+	c := Default()
+	for earned, want := range map[int64]int{0: 1, 199: 1, 200: 2, 3199: 5, 3200: 6, 99999: 6} {
+		if got := c.Level(earned); got != want {
+			t.Errorf("Level(%d) = %d, want %d", earned, got, want)
+		}
+	}
+	if n := c.StationSlots([]string{"tent", "house", "campfire"}); n != 4 {
+		t.Fatalf("station slots = %d, want 4", n)
+	}
+}

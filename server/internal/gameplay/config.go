@@ -62,6 +62,9 @@ type Building struct {
 	Guard       int    `json:"guard"`
 	DailyEnergy int    `json:"daily_energy"`
 	UnlockLevel int    `json:"unlock_level"`
+	// StationSlots is how many extra characters this building lets the
+	// territory station (营帐 +1, 民居 +2).
+	StationSlots int `json:"station_slots"`
 }
 
 // BuffKind is what a stationed character improves.
@@ -104,15 +107,34 @@ type Boss struct {
 	Drops []Drop `json:"drops"`
 }
 
+// Companion is a running partner hatched from an egg (no combat bonus).
+type Companion struct {
+	Key     string  `json:"key"`
+	Name    string  `json:"name"`
+	HatchKm float64 `json:"hatch_km"`
+}
+
+// Medal is awarded for cumulative distance (里程奖牌).
+type Medal struct {
+	Key        string  `json:"key"`
+	Name       string  `json:"name"`
+	DistanceKm float64 `json:"distance_km"`
+}
+
 // Config is the whole gameplay configuration, versioned as one unit.
 type Config struct {
 	Version           string       `json:"version"`
 	SlotsPerTerritory int          `json:"slots_per_territory"`
+	BaseStationSlots  int          `json:"base_station_slots"`
 	DailyEnergyCap    int          `json:"daily_energy_cap"`
+	MinClaimAreaM2    float64      `json:"min_claim_area_m2"`
 	BossStrikeCost    int          `json:"boss_strike_cost"`
+	LevelThresholds   []int        `json:"level_thresholds"`
 	Energy            []EnergyRule `json:"energy"`
 	Buildings         []Building   `json:"buildings"`
 	Roles             []Role       `json:"roles"`
+	Companions        []Companion  `json:"companions"`
+	Medals            []Medal      `json:"medals"`
 	Bosses            []Boss       `json:"bosses"`
 }
 
@@ -121,8 +143,12 @@ func Default() Config {
 	return Config{
 		Version:           "v3.12",
 		SlotsPerTerritory: 6,
+		BaseStationSlots:  1,
 		DailyEnergyCap:    600,
+		MinClaimAreaM2:    500,
 		BossStrikeCost:    100,
+		// Cumulative energy earned from activities to reach Lv.1..Lv.6.
+		LevelThresholds: []int{0, 200, 600, 1200, 2000, 3200},
 		Energy: []EnergyRule{
 			{Sport: SportRun, Name: "跑步", Unit: UnitKm, Per: 1, Energy: 10},
 			{Sport: SportRide, Name: "骑行", Unit: UnitKm, Per: 1, Energy: 4},
@@ -138,10 +164,10 @@ func Default() Config {
 		},
 		Buildings: []Building{
 			{Key: "campfire", Name: "营火", Note: "基础", Cost: 80, Guard: 50, DailyEnergy: 10, UnlockLevel: 1},
-			{Key: "tent", Name: "营帐", Note: "扩充驻扎", Cost: 120, Guard: 80, DailyEnergy: 15, UnlockLevel: 1},
+			{Key: "tent", Name: "营帐", Note: "扩充驻扎", Cost: 120, Guard: 80, DailyEnergy: 15, UnlockLevel: 1, StationSlots: 1},
 			{Key: "well", Name: "水井", Note: "恢复体力", Cost: 150, Guard: 60, DailyEnergy: 25, UnlockLevel: 2},
 			{Key: "mill", Name: "磨坊", Note: "能量产出", Cost: 200, Guard: 40, DailyEnergy: 40, UnlockLevel: 2},
-			{Key: "house", Name: "民居", Note: "驻扎 +2 角色", Cost: 180, Guard: 100, DailyEnergy: 20, UnlockLevel: 3},
+			{Key: "house", Name: "民居", Note: "驻扎 +2 角色", Cost: 180, Guard: 100, DailyEnergy: 20, UnlockLevel: 3, StationSlots: 2},
 			{Key: "forge", Name: "铁匠铺", Note: "角色升级", Cost: 260, Guard: 150, DailyEnergy: 30, UnlockLevel: 4},
 			{Key: "tower", Name: "箭塔", Note: "防守主力", Cost: 320, Guard: 300, DailyEnergy: 10, UnlockLevel: 5},
 			{Key: "chapel", Name: "礼拜堂", Note: "跑团加成", Cost: 400, Guard: 200, DailyEnergy: 50, UnlockLevel: 6},
@@ -155,6 +181,19 @@ func Default() Config {
 			{Key: "banner", Name: "旗手", Sport: SportRally, Threshold: 5, Unit: UnitCount, Buff: BuffCrewBossDmgPct, BuffValue: 10, BuffText: "跑团合击伤害 +10%"},
 			{Key: "alchemist", Name: "药剂师", Sport: SportRope, Threshold: 3000, Unit: UnitCount, Buff: BuffChestDropPct, BuffValue: 5, BuffText: "宝箱额外掉落 +5%"},
 			{Key: "farmer", Name: "农夫", Sport: SportWalk, Threshold: 15, Unit: UnitKm, Buff: BuffMillYieldPct, BuffValue: 12, BuffText: "磨坊产出 +12%"},
+		},
+		Companions: []Companion{
+			{Key: "gecko", Name: "闪电壁虎", HatchKm: 10},
+			{Key: "axolotl", Name: "云朵螈", HatchKm: 20},
+			{Key: "frog", Name: "泡泡蛙", HatchKm: 20},
+			{Key: "spiky", Name: "尖刺蜥", HatchKm: 25},
+			{Key: "firetail", Name: "火尾蜥", HatchKm: 30},
+			{Key: "nightnewt", Name: "夜行蝾螈", HatchKm: 30},
+		},
+		Medals: []Medal{
+			{Key: "distance_100", Name: "百公里", DistanceKm: 100},
+			{Key: "distance_500", Name: "五百公里", DistanceKm: 500},
+			{Key: "distance_1000", Name: "千公里", DistanceKm: 1000},
 		},
 		Bosses: []Boss{
 			{Key: "sofa", Name: "沙发怪", Drops: []Drop{
@@ -179,6 +218,25 @@ func (c Config) Validate() error {
 	}
 	if c.BossStrikeCost <= 0 {
 		return fmt.Errorf("boss_strike_cost must be > 0")
+	}
+	if c.MinClaimAreaM2 <= 0 {
+		return fmt.Errorf("min_claim_area_m2 must be > 0")
+	}
+	if c.BaseStationSlots < 0 {
+		return fmt.Errorf("base_station_slots must be >= 0")
+	}
+	if len(c.LevelThresholds) == 0 || c.LevelThresholds[0] != 0 {
+		return fmt.Errorf("level_thresholds must start at 0")
+	}
+	for i := 1; i < len(c.LevelThresholds); i++ {
+		if c.LevelThresholds[i] <= c.LevelThresholds[i-1] {
+			return fmt.Errorf("level_thresholds must be increasing")
+		}
+	}
+	for _, cp := range c.Companions {
+		if cp.HatchKm <= 0 {
+			return fmt.Errorf("companion %s: hatch_km must be > 0", cp.Key)
+		}
 	}
 	seen := map[Sport]bool{}
 	for _, e := range c.Energy {
@@ -235,6 +293,42 @@ func (c Config) Role(key string) (Role, bool) {
 	}
 	return Role{}, false
 }
+
+// Companion looks up a companion by key.
+func (c Config) Companion(key string) (Companion, bool) {
+	for _, cp := range c.Companions {
+		if cp.Key == key {
+			return cp, true
+		}
+	}
+	return Companion{}, false
+}
+
+// Level returns the level for a cumulative earned energy.
+func (c Config) Level(earned int64) int {
+	lv := 1
+	for i, t := range c.LevelThresholds {
+		if earned >= int64(t) {
+			lv = i + 1
+		}
+	}
+	return lv
+}
+
+// StationSlots is how many characters a territory with these buildings can
+// station.
+func (c Config) StationSlots(buildings []string) int {
+	n := c.BaseStationSlots
+	for _, k := range buildings {
+		if b, ok := c.Building(k); ok {
+			n += b.StationSlots
+		}
+	}
+	return n
+}
+
+// EnergyRuleFor exposes the conversion rule of a sport.
+func (c Config) EnergyRuleFor(s Sport) (EnergyRule, bool) { return c.energyRule(s) }
 
 func (c Config) energyRule(s Sport) (EnergyRule, bool) {
 	for _, e := range c.Energy {

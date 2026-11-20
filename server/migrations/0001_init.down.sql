@@ -1,12 +1,6 @@
-DROP TABLE IF EXISTS gameplay_configs;
-DROP TABLE IF EXISTS codex_items;
-DROP TABLE IF EXISTS territory_stationed;
-DROP TABLE IF EXISTS territory_buildings;
-DROP TABLE IF EXISTS territory_events;
-DROP TABLE IF EXISTS territories;
-DROP TABLE IF EXISTS track_points;
-DROP TABLE IF EXISTS activities;
-DROP TABLE IF EXISTS energy_ledger;
-DROP TABLE IF EXISTS crew_members;
-DROP TABLE IF EXISTS crews;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS audit_logs, admin_users, settings, gameplay_configs, notifications,
+  memberships, orders, plans, risk_alerts, codex_items, territory_stationed, territory_buildings,
+  territory_events, territories, user_sport_totals, track_points, activities, energy_ledger,
+  crew_applications, crew_members, crews, user_devices, refresh_tokens, user_identities, users CASCADE;
+DROP FUNCTION IF EXISTS lp_clean(geometry);
+DROP FUNCTION IF EXISTS lp_area(geometry);

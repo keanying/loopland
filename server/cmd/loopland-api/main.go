@@ -12,46 +12,62 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/keanying/loopland/server/internal/claim"
-	"github.com/keanying/loopland/server/internal/gameplay"
-	"github.com/keanying/loopland/server/internal/httpapi"
+	"github.com/keanying/loopland/server/internal/app"
+	"github.com/keanying/loopland/server/internal/platform/config"
 )
 
 func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
-	cfg := gameplay.Default()
-	if err := cfg.Validate(); err != nil {
-		log.Error("invalid gameplay config", "err", err)
+	if err := run(log); err != nil {
+		log.Error("fatal", "err", err)
 		os.Exit(1)
 	}
+}
 
-	addr := os.Getenv("LOOPLAND_HTTP_ADDR")
-	if addr == "" {
-		addr = ":8080"
+func run(log *slog.Logger) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
 	}
-	srv := &http.Server{
-		Addr:              addr,
-		Handler:           (&httpapi.Server{Config: cfg, Claim: claim.DefaultOptions, Log: log}).Handler(),
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       30 * time.Second,
-		WriteTimeout:      30 * time.Second,
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	pool, rdb, err := app.Open(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	defer rdb.Close()
+
+	a, err := app.New(ctx, cfg, pool, rdb, log, app.Options{})
+	if err != nil {
+		return err
+	}
+	go a.Config.Watch(ctx, 30*time.Second)
+	if !cfg.JobsOff {
+		go a.Jobs.Run(ctx, time.Minute)
+	}
+
+	srv := &http.Server{
+		Addr:              cfg.HTTPAddr,
+		Handler:           a.Handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       60 * time.Second,
+		WriteTimeout:      60 * time.Second,
+	}
+	errc := make(chan error, 1)
 	go func() {
-		log.Info("listening", "addr", addr, "gameplay_version", cfg.Version)
+		log.Info("listening", "addr", cfg.HTTPAddr, "env", cfg.Env)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Error("server failed", "err", err)
-			os.Exit(1)
+			errc <- err
 		}
 	}()
-	<-ctx.Done()
-
-	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdown); err != nil {
-		log.Error("shutdown", "err", err)
+	select {
+	case err := <-errc:
+		return err
+	case <-ctx.Done():
 	}
+	shutdown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return srv.Shutdown(shutdown)
 }

@@ -1,5 +1,6 @@
-# Local development dependencies: PostgreSQL 16 + PostGIS and Redis 7.
-#   docker compose -f deploy/docker-compose.yml up -d
+# Local development: PostgreSQL 16 + PostGIS, Redis 7 and the API (dev mode).
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# The API migrates the database on start. Admin login: admin / admin-password-1
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -10,7 +11,6 @@ services:
     ports: ["5432:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../server/migrations/0001_init.up.sql:/docker-entrypoint-initdb.d/0001_init.up.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U loopland"]
       interval: 5s
@@ -18,6 +18,19 @@ services:
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+  api:
+    build: ../server
+    environment:
+      LOOPLAND_ENV: dev
+      LOOPLAND_DATABASE_URL: postgres://loopland:loopland@postgres:5432/loopland?sslmode=disable
+      LOOPLAND_REDIS_URL: redis://redis:6379/0
+      LOOPLAND_BOOTSTRAP_ADMIN: admin:admin-password-1
+    ports: ["8080:8080"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   pgdata:
