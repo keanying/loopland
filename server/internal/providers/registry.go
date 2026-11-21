@@ -486,6 +486,9 @@ func (r *Registry) Views(ctx context.Context) ([]View, error) {
 		e := eff[d.Code]
 		v := meta[d.Code]
 		v.Def, v.Enabled, v.Configured, v.Source = d, e.Enabled, e.Configured, e.Source
+		if v.Fields == nil {
+			v.Fields = []Field{}
+		}
 		v.Values = map[string]any{}
 		for _, f := range d.Fields {
 			if f.Secret {

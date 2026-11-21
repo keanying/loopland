@@ -216,6 +216,20 @@ async function main() {
   await page.locator('.ant-table-row').nth(2).locator('input.ant-input-number-input').blur();
   await page.locator('.ant-table-row').nth(0).locator('input.ant-input').fill('黑铁');
   await shot(page, '09b_玩法配置_段位校验与改动');
+
+  // 系统配置 · 第三方服务 (admin only)
+  await page.click('nav.side a[aria-label="系统配置"]');
+  await page.waitForSelector('.prov-card[data-code="amap"]');
+  await page.mouse.move(1200, 5);
+  await shot(page, '13_系统配置_第三方服务');
+  await page.locator('.prov-card[data-code="ai"] button:has-text("编辑配置")').click();
+  await page.waitForSelector('.ant-drawer-title:has-text("AI 大模型")');
+  await shot(page, '13b_系统配置_编辑AI大模型', { fullPage: false });
+  await page.click('.ant-drawer button:has-text("取消")');
+  await page.locator('.prov-card[data-code="realname"] button:has-text("测试连接")').click();
+  await page.waitForSelector('.ant-modal-title:has-text("实名核验")');
+  await shot(page, '13c_系统配置_测试实名核验', { fullPage: false });
+  await page.click('.ant-modal-footer button:has-text("取消")');
   await ctx.close();
 
   // ops: can use 玩法运营; cannot publish
@@ -223,6 +237,7 @@ async function main() {
   await ops.page.goto(`${BASE}/operations`);
   await ops.page.waitForSelector('.ant-table-row');
   await shot(ops.page, '10_运营视角_玩法运营', { fullPage: false });
+  if (await ops.page.locator('nav.side a[aria-label="系统配置"]').count()) problems.push('[xiaolin] 系统配置 menu visible to ops');
   await ops.ctx.close();
 
   // reviewer: no 玩法运营

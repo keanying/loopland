@@ -15,6 +15,7 @@ import GameplayPage from './pages/GameplayPage';
 import OperationsPage from './pages/OperationsPage';
 import AuditPage from './pages/AuditPage';
 import AdminsPage from './pages/AdminsPage';
+import ProvidersPage from './pages/ProvidersPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { admin, loading } = useAuth();
@@ -80,6 +81,15 @@ export default function App() {
           element={
             <RequirePerm perm="admins.manage">
               <AdminsPage />
+            </RequirePerm>
+          }
+        />
+        <Route path="settings" element={<Navigate to="/settings/providers" replace />} />
+        <Route
+          path="settings/providers"
+          element={
+            <RequirePerm perm="settings.providers">
+              <ProvidersPage />
             </RequirePerm>
           }
         />

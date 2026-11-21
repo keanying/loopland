@@ -10,6 +10,7 @@ import {
   FileDoneOutlined,
   LogoutOutlined,
   SafetyOutlined,
+  SettingOutlined,
   ShopOutlined,
   TeamOutlined,
   ThunderboltOutlined,
@@ -39,6 +40,7 @@ const MENU: MenuItem[] = [
   { to: '/gameplay', label: '玩法配置', icon: <ControlOutlined />, perm: 'gameplay.read' },
   { to: '/audit', label: '审计日志', icon: <AuditOutlined />, perm: 'audit.read' },
   { to: '/admins', label: '后台账号', icon: <UserSwitchOutlined />, perm: 'admins.manage' },
+  { to: '/settings/providers', label: '系统配置', icon: <SettingOutlined />, perm: 'settings.providers' },
 ];
 
 export default function AppLayout() {

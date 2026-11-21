@@ -14,7 +14,8 @@ import './styles.css';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: toastError }),
-  mutationCache: new MutationCache({ onError: toastError }),
+  // meta.inlineError: the page shows the message itself (e.g. 系统配置 drawer), so no toast.
+  mutationCache: new MutationCache({ onError: (err, _vars, _ctx, mutation) => !mutation.meta?.inlineError && toastError(err) }),
   defaultOptions: {
     queries: {
       staleTime: 15_000,

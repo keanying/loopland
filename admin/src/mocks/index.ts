@@ -23,6 +23,7 @@ import type {
   UserDetail,
 } from '../api/types';
 import * as db from './data';
+import { listProviders, saveProvider, testProvider } from './providers';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -784,6 +785,24 @@ const routes: [string, RegExp, Handler][] = [
     if (typeof body.disabled === 'boolean') a.disabled = body.disabled;
     log(adminId, 'admin.update', `admin:${a.id}`, { role: body.role, disabled: body.disabled, password: body.password ? '***' : undefined });
     return clone(a);
+  }],
+
+  // 系统配置 · 第三方服务 (docs/api/系统配置.md): admin only; the audit log gets field names, never values
+  ['GET', /^\/providers$/, ({ role }) => {
+    requireRole(role, ['admin']);
+    return listProviders();
+  }],
+  ['PUT', /^\/providers\/([\w-]+)$/, ({ m, body, role, adminId }) => {
+    requireRole(role, ['admin']);
+    const { item, changed, enabledBefore } = saveProvider(m[1], body, adminId);
+    log(adminId, 'provider.save', m[1], { enabled_before: enabledBefore, enabled: item.enabled, changed_fields: changed });
+    return item;
+  }],
+  ['POST', /^\/providers\/([\w-]+)\/test$/, async ({ m, body, role, adminId }) => {
+    requireRole(role, ['admin']);
+    const res = await testProvider(m[1], typeof body.input === 'string' ? body.input : '');
+    log(adminId, 'provider.test', m[1], { status: res.status });
+    return res;
   }],
 ];
 
