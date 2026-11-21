@@ -31,6 +31,7 @@ type Profile struct {
 	TerritoryCount    int       `json:"territory_count"`
 	TerritoryAreaM2   float64   `json:"territory_area_m2"`
 	CodexCount        int       `json:"codex_count"`
+	PostCount         int       `json:"post_count"`
 	Relation          Relation  `json:"relation"`
 	IsSelf            bool      `json:"is_self"`
 }
@@ -71,13 +72,14 @@ func (h *Handler) profile(w http.ResponseWriter, r *http.Request) error {
 			(SELECT count(*) FROM src.src_ter_loop_territory WHERE owner_user_id=u.id),
 			(SELECT COALESCE(sum(area_m2),0) FROM src.src_ter_loop_territory WHERE owner_user_id=u.id),
 			(SELECT count(*) FROM src.src_ply_loop_codex_item WHERE user_id=u.id),
+			(SELECT count(*) FROM src.src_soc_loop_post WHERE user_id=u.id AND delete_time IS NULL AND (review_status='approved' OR u.id=$2)),
 			EXISTS (SELECT 1 FROM src.src_soc_loop_follow WHERE follower_id=$2 AND followee_id=u.id),
 			EXISTS (SELECT 1 FROM src.src_soc_loop_follow WHERE follower_id=u.id AND followee_id=$2),
 			EXISTS (SELECT 1 FROM src.src_soc_loop_block WHERE user_id=$2 AND blocked_user_id=u.id),
 			EXISTS (SELECT 1 FROM src.src_soc_loop_block WHERE user_id=u.id AND blocked_user_id=$2)
 		FROM src.src_usr_loop_user u WHERE u.id=$1`, id, uid).
 		Scan(&p.Bio, &p.FollowerCount, &p.FollowingCount, &p.LikeReceivedCount, &p.TotalDistanceM, &p.TerritoryCount, &p.TerritoryAreaM2,
-			&p.CodexCount, &p.Relation.Following, &p.Relation.FollowedBy, &p.Relation.Blocked, &p.Relation.BlockedBy)
+			&p.CodexCount, &p.PostCount, &p.Relation.Following, &p.Relation.FollowedBy, &p.Relation.Blocked, &p.Relation.BlockedBy)
 	if err != nil {
 		return err
 	}

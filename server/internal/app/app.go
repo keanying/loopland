@@ -138,7 +138,6 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	(&activity.Handler{Svc: actSvc}).Routes(mux, authed)
 	(&territory.Handler{Svc: terrSvc, CrewOf: func(ctx context.Context, u int64) (*int64, error) { return crew.Of(ctx, pool, u) }}).Routes(mux, authed)
 	(&codex.Handler{Pool: pool, Config: store}).Routes(mux, authed)
-	(&crew.Handler{Pool: pool, Mod: mod}).Routes(mux, authed)
 	(&inbox.Handler{Pool: pool}).Routes(mux, authAny)
 	meJSON := func(w http.ResponseWriter, r *http.Request) error {
 		u, err := user.Load(r.Context(), pool, store, box, httpx.UserID(r.Context()))
@@ -155,6 +154,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return v.Medals, err
 	}}).Routes(mux, authed)
 	(&play.AdminHandler{Svc: playSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
+	(&crew.Handler{Pool: pool, Mod: mod, OnLeave: commSvc.LeftCrew}).Routes(mux, authed)
 	(&community.Handler{Svc: commSvc}).Routes(mux, authed, authAny)
 	(&community.AdminHandler{Svc: commSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
 	(&providers.AdminHandler{Reg: reg, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin))
@@ -163,7 +163,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		Local: media.Local{Dir: cfg.MediaDir, BaseURL: cfg.PublicBaseURL}}).Routes(mux, authed)
 	socSvc := &social.Service{Pool: pool, Redis: rdb, Config: store, Mod: mod, ShareBase: cfg.PublicBaseURL}
 	(&social.Handler{Svc: socSvc}).Routes(mux, authed)
-	(&social.AdminHandler{Svc: socSvc, Audit: admin.Audit}).Routes(mux,
+	(&social.AdminHandler{Svc: socSvc, Audit: admin.Audit, RemoveMessage: commSvc.RemoveMessage}).Routes(mux,
 		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleReviewer), adminAPI.Guard(admin.RoleAdmin))
 	mux.Handle("GET /v1/ws", hub)
 

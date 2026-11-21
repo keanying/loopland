@@ -380,3 +380,43 @@ func (s *Service) RallyBonus(ctx context.Context, tx pgx.Tx, in activity.HookInp
 	}
 	return &activity.RallyBonus{ID: id, BonusRate: rate}, nil
 }
+
+// LeftCrew runs when a member leaves or is removed from a crew: they drop
+// out of the crew's rallies that haven't ended and their group chats.
+func (s *Service) LeftCrew(ctx context.Context, tx pgx.Tx, crew, user int64) error {
+	rows, err := tx.Query(ctx, `SELECT r.id, r.conversation_id FROM src.src_soc_loop_rally r
+		JOIN src.src_soc_loop_rally_join j ON j.rally_id=r.id AND j.user_id=$2
+		WHERE r.crew_id=$1 AND r.rally_status='open'`, crew, user)
+	if err != nil {
+		return err
+	}
+	type rc struct {
+		id   int64
+		conv *int64
+	}
+	var list []rc
+	for rows.Next() {
+		var x rc
+		if err := rows.Scan(&x.id, &x.conv); err != nil {
+			rows.Close()
+			return err
+		}
+		list = append(list, x)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	var evs []realtime.Event
+	for _, x := range list {
+		if _, err := tx.Exec(ctx, `DELETE FROM src.src_soc_loop_rally_join WHERE rally_id=$1 AND user_id=$2`, x.id, user); err != nil {
+			return err
+		}
+		if x.conv != nil {
+			if err := leaveGroup(ctx, tx, *x.conv, user, &evs); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

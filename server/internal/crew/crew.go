@@ -69,6 +69,16 @@ type Handler struct {
 	// Mod scores crew names and queues name / avatar changes for review
 	// after they take effect (先生效后审核).
 	Mod *moderation.Moderator
+	// OnLeave runs in the same transaction when a member leaves or is
+	// removed (e.g. to drop them from the crew's rallies).
+	OnLeave func(ctx context.Context, tx pgx.Tx, crew, user int64) error
+}
+
+func (h *Handler) left(ctx context.Context, tx pgx.Tx, crew, user int64) error {
+	if h.OnLeave == nil {
+		return nil
+	}
+	return h.OnLeave(ctx, tx, crew, user)
 }
 
 // Routes registers the endpoints.
@@ -442,7 +452,7 @@ func (h *Handler) leave(w http.ResponseWriter, r *http.Request) error {
 		if tag.RowsAffected() == 0 {
 			return httpx.NotFound("成员")
 		}
-		return nil
+		return h.left(r.Context(), tx, id, uid)
 	})
 	if err != nil {
 		return err
@@ -473,6 +483,9 @@ func (h *Handler) kick(w http.ResponseWriter, r *http.Request) error {
 		}
 		if tag.RowsAffected() == 0 {
 			return httpx.NotFound("成员")
+		}
+		if err := h.left(r.Context(), tx, id, target); err != nil {
+			return err
 		}
 		return inbox.Notify(r.Context(), tx, target, inbox.Interaction, "已离开跑团", "你被团长移出了跑团", map[string]any{"crew_id": id})
 	})

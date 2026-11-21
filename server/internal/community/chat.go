@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -546,4 +547,25 @@ func ChatUnread(ctx context.Context, q db.Querier, user int64) (int, error) {
 			WHERE m.conversation_id=cm.conversation_id AND m.id > cm.last_read_message_id AND m.sender_id IS DISTINCT FROM $1)), 0)
 		FROM src.src_msg_loop_conv_member cm WHERE cm.user_id=$1 AND NOT cm.is_muted`, user).Scan(&n)
 	return n, err
+}
+
+// RemoveMessage takes down a reported message (管理端举报处理): its text and
+// payload are replaced by a system notice. It returns the original sender.
+func (s *Service) RemoveMessage(ctx context.Context, tx pgx.Tx, id int64) (int64, error) {
+	var sender *int64
+	err := tx.QueryRow(ctx, `SELECT sender_id FROM src.src_msg_loop_message WHERE id=$1 FOR UPDATE`, id).Scan(&sender)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, httpx.NotFound("消息")
+		}
+		return 0, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE src.src_msg_loop_message SET message_type='system', content='该消息因违反社区规范已被删除',
+		payload_json=jsonb_build_object('event','removed') WHERE id=$1`, id); err != nil {
+		return 0, err
+	}
+	if sender == nil {
+		return 0, nil
+	}
+	return *sender, nil
 }

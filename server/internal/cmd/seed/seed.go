@@ -146,14 +146,17 @@ func Main(args []string) {
 	if ord.Order.OrderNo != "" {
 		users[0].do("POST", "/v1/dev/orders/"+ord.Order.OrderNo+"/pay", nil, nil)
 	}
+	var ad *client
 	if *adminCrd != "" {
-		seedPlay()
+		ad = seedPlay()
 	}
+	seedCommunity(users, crew.ID, ad)
 	fmt.Println("seed done")
 }
 
-// seedPlay adds a season, a campaign, a route, monsters and chests (V2).
-func seedPlay() {
+// seedPlay adds a season, a campaign, a route, monsters and chests (V2)
+// and returns the logged-in admin client (nil if login failed).
+func seedPlay() *client {
 	user, pass, _ := strings.Cut(*adminCrd, ":")
 	ad := &client{}
 	var login struct {
@@ -162,7 +165,7 @@ func seedPlay() {
 	ad.do("POST", "/admin/v1/login", map[string]string{"username": user, "password": pass}, &login)
 	if login.Token == "" {
 		log.Print("admin login failed; skipping V2 seed data")
-		return
+		return nil
 	}
 	ad.token = login.Token
 	now := time.Now()
@@ -196,4 +199,118 @@ func seedPlay() {
 		p := at(xy[0], xy[1])
 		ad.do("POST", "/admin/v1/chests", map[string]any{"lat": p.Lat, "lng": p.Lng}, nil)
 	}
+	return ad
+}
+
+// seedCommunity adds V2 batch 2 data: follows, posts with runs, comments,
+// likes, a risky post for the review queue, a meetup, a crew rally, a DM
+// and (with an admin) an online race.
+func seedCommunity(users []*client, crewID int64, ad *client) {
+	myRuns := func(c *client) []int64 {
+		var res struct {
+			Items []struct {
+				ID     int64  `json:"id"`
+				Status string `json:"status"`
+			} `json:"items"`
+		}
+		c.do("GET", "/v1/activities?page=1&page_size=5", nil, &res)
+		var ids []int64
+		for _, a := range res.Items {
+			if a.Status == "settled" {
+				ids = append(ids, a.ID)
+			}
+		}
+		return ids
+	}
+	ids := make([]int64, len(users))
+	for i, u := range users {
+		var me struct {
+			ID int64 `json:"id"`
+		}
+		u.do("GET", "/v1/me", nil, &me)
+		ids[i] = me.ID
+	}
+	// Everyone follows 阿青; a few follow each other.
+	for i := 1; i < len(users); i++ {
+		users[i].do("POST", fmt.Sprintf("/v1/users/%d/follow", ids[0]), nil, nil)
+	}
+	users[0].do("POST", fmt.Sprintf("/v1/users/%d/follow", ids[1]), nil, nil)
+	users[2].do("POST", fmt.Sprintf("/v1/users/%d/follow", ids[5]), nil, nil)
+	users[0].do("PATCH", "/v1/me", map[string]any{"bio": "每天 5 公里，圈地爱好者"}, nil)
+
+	texts := []string{
+		"今晚绕人民广场圈了一大块，风有点大但很爽 🏃",
+		"城西跑团周三夜跑，配速 6 分，新人友好",
+		"晨跑打卡第 30 天，图鉴又多了一只伙伴",
+		"骑行 20 公里，外滩的夜景太好看了",
+		"抢回了被切走的那块地，守地挑战完成",
+		"滨江步道是真的适合跑步",
+	}
+	var postIDs []int64
+	for i, u := range users {
+		body := map[string]any{"content": texts[i], "visibility": "public"}
+		if runs := myRuns(u); len(runs) > 0 {
+			body["activity_id"] = runs[0]
+		}
+		var p struct {
+			ID int64 `json:"id"`
+		}
+		u.do("POST", "/v1/posts", body, &p)
+		if p.ID != 0 {
+			postIDs = append(postIDs, p.ID)
+		}
+	}
+	// Likes and a comment thread on the first post.
+	if len(postIDs) > 0 {
+		first := postIDs[0]
+		for i := 1; i < len(users); i++ {
+			users[i].do("POST", fmt.Sprintf("/v1/posts/%d/like", first), nil, nil)
+		}
+		var c struct {
+			ID int64 `json:"id"`
+		}
+		users[1].do("POST", fmt.Sprintf("/v1/posts/%d/comments", first), map[string]any{"content": "这块地好大，下次一起跑"}, &c)
+		if c.ID != 0 {
+			users[0].do("POST", fmt.Sprintf("/v1/posts/%d/comments", first), map[string]any{"content": "好呀，周三见", "parent_id": c.ID}, nil)
+			users[2].do("POST", fmt.Sprintf("/v1/comments/%d/like", c.ID), nil, nil)
+		}
+		users[3].do("POST", fmt.Sprintf("/v1/posts/%d/collect", first), nil, nil)
+	}
+	// Content for the review queue: contact details in a post and a comment.
+	users[4].do("POST", "/v1/posts", map[string]any{"content": "代跑接单，加微信 run_helper888 详聊", "visibility": "public"}, nil)
+	if len(postIDs) > 1 {
+		users[5].do("POST", fmt.Sprintf("/v1/posts/%d/comments", postIDs[1]), map[string]any{"content": "想加入的打我电话13912345678"}, nil)
+	}
+
+	// A meetup, a crew rally and a direct message.
+	proj := geo.NewProjection(origin)
+	park := proj.Inverse(geo.Point{X: 800, Y: -600})
+	start := time.Now().Add(26 * time.Hour).Truncate(time.Hour)
+	users[1].do("POST", "/v1/meetups", map[string]any{"type": "run", "title": "周末世纪公园约跑", "description": "配速 6 分左右，跑 10 公里，跑完一起吃早饭",
+		"start_time": start, "end_time": start.Add(2 * time.Hour), "place": map[string]any{"name": "人民公园 2 号门", "lat": park.Lat, "lng": park.Lng},
+		"district": "黄浦区", "capacity": 10, "requirement": "配速 5'30\"–6'30\""}, nil)
+	if crewID != 0 {
+		users[0].do("POST", fmt.Sprintf("/v1/crews/%d/rallies", crewID), map[string]any{"title": "周三夜跑", "start_time": start.Add(48 * time.Hour),
+			"place": map[string]any{"name": "人民广场", "lat": origin.Lat, "lng": origin.Lng}, "distance_goal_m": 5000}, nil)
+	}
+	var conv struct {
+		ID int64 `json:"id"`
+	}
+	users[2].do("POST", "/v1/conversations/direct", map[string]any{"user_id": ids[0]}, &conv)
+	if conv.ID != 0 {
+		users[2].do("POST", fmt.Sprintf("/v1/conversations/%d/messages", conv.ID), map[string]any{"type": "text", "content": "阿青，周三夜跑我能带朋友吗？"}, nil)
+	}
+
+	if ad == nil {
+		return
+	}
+	now := time.Now()
+	ad.do("POST", "/admin/v1/races", map[string]any{"type": "online", "title": "城市 10K 线上赛", "description": "活动期间单次跑满 10 公里即完赛",
+		"sport": "run", "distance_m": 10000, "start_time": now.Add(-24 * time.Hour), "end_time": now.AddDate(0, 0, 14),
+		"signup_end_time": now.AddDate(0, 0, 7), "capacity": 5000, "requires_wearable": false,
+		"medal": map[string]any{"name": "城市 10K 完赛奖牌"}, "published": true}, nil)
+	ad.do("POST", "/admin/v1/races", map[string]any{"type": "offline", "title": "滨江半程马拉松", "description": "线下赛，现场检录",
+		"sport": "run", "distance_m": 21097, "start_time": now.AddDate(0, 1, 0), "end_time": now.AddDate(0, 1, 0).Add(4 * time.Hour),
+		"signup_end_time": now.AddDate(0, 0, 20), "capacity": 2000,
+		"place": map[string]any{"name": "徐汇滨江", "lat": park.Lat, "lng": park.Lng}, "published": true}, nil)
 }

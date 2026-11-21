@@ -27,6 +27,7 @@ type ReplayPoint struct {
 // Replay is one item of 轨迹回放.
 type Replay struct {
 	PostID    *int64         `json:"post_id"`
+	Content   string         `json:"content"`
 	Author    UserBrief      `json:"author"`
 	Activity  ReplayActivity `json:"activity"`
 	Points    []ReplayPoint  `json:"points"`
@@ -102,7 +103,7 @@ func (h *Handler) replays(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		id := p.ID
-		rp.PostID, rp.LikeCount, rp.Liked = &id, p.LikeCount, p.Liked
+		rp.PostID, rp.Content, rp.LikeCount, rp.Liked = &id, p.Content, p.LikeCount, p.Liked
 		items = append(items, rp)
 	}
 	return httpx.OK(w, newPage(items, next))
@@ -135,7 +136,7 @@ func (h *Handler) activityReplay(w http.ResponseWriter, r *http.Request) error {
 	}
 	if len(posts) > 0 {
 		p := posts[0]
-		rp.PostID, rp.LikeCount, rp.Liked = &p.ID, p.LikeCount, p.Liked
+		rp.PostID, rp.Content, rp.LikeCount, rp.Liked = &p.ID, p.Content, p.LikeCount, p.Liked
 	}
 	return httpx.OK(w, rp)
 }
