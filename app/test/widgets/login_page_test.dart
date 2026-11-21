@@ -12,7 +12,10 @@ void main() {
     LoginPage.enableVideo = false;
     await phone(t);
     await t.pumpWidget(RepaintBoundary(key: const Key('shot'), child: wrap(const LoginPage(), overrides: fakeBackend())));
-    await t.pump();
+    // GET /v1/config/features decides which buttons appear.
+    for (var i = 0; i < 5; i++) {
+      await t.pump(const Duration(milliseconds: 20));
+    }
 
     expect(find.text('跑一圈，\n就是你的地'), findsOneWidget);
     expect(find.text('本机号码一键登录'), findsOneWidget);
@@ -35,6 +38,41 @@ void main() {
     await t.runAsync(() => precacheImage(const AssetImage('assets/media/login-poster.jpg'), t.element(find.byType(LoginPage))));
     await t.pump();
     await screenshot(t, find.byKey(const Key('shot')), 'screenshots/login.png');
+    await settle(t);
+  });
+
+  testWidgets('login page hides methods the server does not list', (t) async {
+    LoginPage.enableVideo = false;
+    await phone(t);
+    await t.pumpWidget(wrap(const LoginPage(),
+        overrides: fakeBackend(extra: {
+          '/v1/config/features': {
+            'login': ['sms'],
+            'pay': [],
+            'captcha': false,
+          },
+        })));
+    for (var i = 0; i < 5; i++) {
+      await t.pump(const Duration(milliseconds: 20));
+    }
+    expect(find.text('本机号码一键登录'), findsNothing);
+    expect(find.text('微信登录'), findsNothing);
+    expect(find.text('手机号登录 / 注册'), findsOneWidget);
+    await settle(t);
+  });
+
+  testWidgets('features request fails → SMS only', (t) async {
+    LoginPage.enableVideo = false;
+    await phone(t);
+    await t.pumpWidget(wrap(const LoginPage(),
+        overrides: fakeBackend(extra: {
+          '/v1/config/features': (500, {'error': {'code': 'internal', 'message': ''}}),
+        })));
+    for (var i = 0; i < 5; i++) {
+      await t.pump(const Duration(milliseconds: 20));
+    }
+    expect(find.text('微信登录'), findsNothing);
+    expect(find.text('手机号登录 / 注册'), findsOneWidget);
     await settle(t);
   });
 }

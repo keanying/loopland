@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../claim/gcj02.dart';
 import '../core/env.dart';
+import '../core/privacy.dart';
 
 /// One location fix, already in GCJ-02.
 class Fix {
@@ -41,9 +42,13 @@ abstract class LocationSource {
   Future<void> openSettings();
 }
 
+/// geolocator is never touched before the first-launch privacy agreement
+/// ([LaunchPrivacy.agreed]); callers additionally check the server-side
+/// location consent before starting a run.
 class GeolocatorSource implements LocationSource {
   @override
   Future<LocationPermissionResult> ensurePermission() async {
+    if (!LaunchPrivacy.agreed) return LocationPermissionResult.denied;
     if (!await Geolocator.isLocationServiceEnabled()) return LocationPermissionResult.serviceDisabled;
     var p = await Geolocator.checkPermission();
     if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
@@ -100,10 +105,13 @@ class GeolocatorSource implements LocationSource {
   }
 
   @override
-  Stream<Fix> watch() => Geolocator.getPositionStream(locationSettings: _settings()).map(_fix);
+  Stream<Fix> watch() => LaunchPrivacy.agreed
+      ? Geolocator.getPositionStream(locationSettings: _settings()).map(_fix)
+      : const Stream.empty();
 
   @override
   Future<Fix?> current() async {
+    if (!LaunchPrivacy.agreed) return null;
     try {
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) return _fix(last);

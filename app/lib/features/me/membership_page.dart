@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -35,9 +36,26 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   String? _channel;
   bool _paying = false;
   String? _status;
+  bool _restoring = false;
+
+  List<String> _channels() => ref.read(paymentServiceProvider).channels(ref.read(featuresProvider).value);
+
+  /// 恢复购买 (App Store): re-verifies the user's transactions with the server.
+  Future<void> _restore() async {
+    setState(() => _restoring = true);
+    final n = await runGuarded(context, () => ref.read(paymentServiceProvider).restoreApple());
+    if (!mounted) return;
+    setState(() => _restoring = false);
+    if (n == null) return;
+    await ref.read(authProvider.notifier).refreshUser();
+    ref.invalidate(membershipProvider);
+    if (mounted) toast(context, n > 0 ? '已恢复 $n 笔购买' : '没有可恢复的购买记录');
+  }
 
   Future<void> _buy(Plan p) async {
-    final channel = _channel ?? ref.read(paymentServiceProvider).channels().first;
+    final all = _channels();
+    if (all.isEmpty) return;
+    final channel = all.contains(_channel) ? _channel! : all.first;
     setState(() {
       _paying = true;
       _status = '正在创建订单…';
@@ -105,8 +123,8 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
-    final channels = ref.watch(paymentServiceProvider).channels();
-    _channel ??= channels.first;
+    final channels = ref.watch(paymentServiceProvider).channels(ref.watch(featuresProvider).value);
+    if (!channels.contains(_channel)) _channel = channels.firstOrNull;
     if (user?.isMinor == true) {
       return const Scaffold(
         body: SafeArea(
@@ -158,6 +176,11 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                         ),
                         const SizedBox(height: 12),
                         const Text('支付方式', style: TextStyle(color: LL.text2)),
+                        if (channels.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Text('暂无可用的支付方式，请稍后再试', style: TextStyle(color: LL.text3)),
+                          ),
                         RadioGroup<String>(
                           groupValue: _channel,
                           onChanged: (v) => setState(() => _channel = v),
@@ -175,7 +198,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                               style: TextStyle(color: LL.text3, fontSize: 12)),
                         const SizedBox(height: 16),
                         FilledButton(
-                          onPressed: _paying ? null : () => _buy(plan),
+                          onPressed: _paying || channels.isEmpty ? null : () => _buy(plan),
                           child: _paying
                               ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
                               : Text('立即开通 ${Fmt.yuan(plan.firstPriceFen ?? plan.priceFen)}'),
@@ -184,6 +207,13 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
                           Padding(
                             padding: const EdgeInsets.only(top: 10),
                             child: Text(_status!, textAlign: TextAlign.center, style: const TextStyle(color: LL.text2)),
+                          ),
+                        if (channels.contains('apple_iap'))
+                          Center(
+                            child: TextButton(
+                              onPressed: _restoring || _paying ? null : _restore,
+                              child: Text(_restoring ? '正在恢复…' : '恢复购买'),
+                            ),
                           ),
                       ],
                     ]);

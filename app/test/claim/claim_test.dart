@@ -126,7 +126,13 @@ void main() {
     // encloses nothing. The real target is the first leg, 200 m south.
     final r = detect(track([[0, 0], [200, 0], [200, 200], [50, 200]]));
     expect(r.hint, isNotNull);
-    expect(near(r.hint!.distanceM, 200, 0.5), isTrue, reason: '${r.hint!.distanceM}');
+    expect(near(r.hint!.distanceM, 157.3, 0.5), isTrue, reason: '${r.hint!.distanceM}');
     expect(detect(track([[0, 0], [100, 0], [300, 0]])).hint, isNull);
+  });
+
+  test('hint right after a corner targets the closable part of the leg', () {
+    final r = detect(track([[0, 0], [100, 0], [100, 100]]));
+    expect(r.hint, isNotNull);
+    expect(near(r.hint!.distanceM, 113.3, 0.5), isTrue, reason: '${r.hint!.distanceM}');
   });
 }

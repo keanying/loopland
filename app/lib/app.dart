@@ -3,13 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'auth/auth_controller.dart';
+import 'core/env.dart';
 import 'core/format.dart';
+import 'core/privacy.dart';
 import 'core/providers.dart';
 import 'core/theme.dart';
 import 'features/city/city_page.dart';
 import 'features/codex/codex_page.dart';
 import 'features/community/community_page.dart';
 import 'features/community/crew_pages.dart';
+import 'features/debug/env_check_page.dart';
 import 'features/inbox/inbox_page.dart';
 import 'features/login/bind_phone_page.dart';
 import 'features/login/consent_page.dart';
@@ -34,6 +37,7 @@ import 'widgets/nav_shell.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(authProvider, (_, _) => refresh.value++);
+  ref.listen(launchPrivacyProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   int? id(GoRouterState s) => int.tryParse(s.pathParameters['id'] ?? '');
@@ -44,6 +48,13 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final a = ref.read(authProvider);
       final loc = state.matchedLocation;
+      // 「环境检查」 works before login (dev builds only).
+      if (loc == '/dev/env') return Env.isDev ? null : '/splash';
+      // First launch: privacy dialog before anything (and any SDK) else.
+      final privacy = ref.read(launchPrivacyProvider);
+      if (privacy == null) return loc == '/splash' ? null : '/splash';
+      if (privacy == false) return loc == '/welcome' ? null : '/welcome';
+      if (loc == '/welcome') return '/splash';
       if (a.status == AuthStatus.unknown) return loc == '/splash' ? null : '/splash';
       final onLogin = loc.startsWith('/login');
       if (!a.loggedIn) return onLogin ? null : '/login';
@@ -54,6 +65,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashPage()),
+      GoRoute(path: '/welcome', builder: (_, _) => const LaunchPrivacyPage()),
+      GoRoute(path: '/dev/env', builder: (_, _) => const EnvCheckPage()),
       GoRoute(path: '/login', builder: (_, _) => const LoginPage(), routes: [
         GoRoute(path: 'sms', builder: (_, _) => const SmsLoginPage()),
       ]),
@@ -110,7 +123,10 @@ class _LooplandAppState extends ConsumerState<LooplandApp> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(authProvider.notifier).bootstrap());
+    Future.microtask(() async {
+      await ref.read(launchPrivacyProvider.notifier).load();
+      await ref.read(authProvider.notifier).bootstrap();
+    });
   }
 
   @override

@@ -49,3 +49,13 @@ app.*.map.json
 
 # Gradle output of the root android project
 /android/build/
+
+# 圈圈：真实密钥只放在本地（模板是 *.example）
+/config/*.json
+/android/key.properties
+/android/loopland.properties
+/android/app/*.jks
+/android/app/*.keystore
+*.jks
+*.keystore
+/ios/Flutter/Loopland.xcconfig

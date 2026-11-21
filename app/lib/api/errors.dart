@@ -14,6 +14,9 @@ const errorMessages = <String, String>{
   'internal': '服务器开小差了，请稍后再试',
   // 账号
   'invalid_code': '验证码不正确',
+  'captcha_failed': '人机验证未通过，请重新验证',
+  'captcha_unavailable': '人机验证暂不可用，请稍后再试',
+  'wechat_not_installed': '未安装微信，请安装微信后再试，或选择其他方式',
   'code_expired': '验证码已过期，请重新获取',
   'provider_error': '第三方登录失败，请稍后再试或换一种方式登录',
   'account_banned': '账号已被封禁，如有疑问请联系客服',

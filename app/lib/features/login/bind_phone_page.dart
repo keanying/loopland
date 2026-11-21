@@ -2,7 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../auth/auth_controller.dart';
-import '../../auth/social_login.dart';
+import '../../auth/one_click.dart';
+import '../../core/features.dart';
+import '../../core/sdk_config.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import 'phone_code_form.dart';
@@ -15,25 +17,19 @@ class BindPhonePage extends ConsumerStatefulWidget {
 }
 
 class _BindPhonePageState extends ConsumerState<BindPhonePage> {
-  bool _oneClick = false;
-
-  @override
-  void initState() {
-    super.initState();
-    OneClickLogin().isAvailable().then((v) {
-      if (mounted) setState(() => _oneClick = v);
-    });
-  }
-
   Future<void> _bindOneClick() async {
-    await runGuarded(context, () async {
-      final t = await OneClickLogin().getToken();
-      if (t != null) await ref.read(authProvider.notifier).bindPhone(oneclickToken: t);
-    });
+    final r = await OneClickLogin().run();
+    if (!mounted) return;
+    if (r.end == OneClickEnd.token) {
+      await runGuarded(context, () => ref.read(authProvider.notifier).bindPhone(oneclickToken: r.token));
+    } else if (r.end == OneClickEnd.unavailable) {
+      toast(context, r.message); // the SMS form below is the fallback
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final oneClick = loginOptions(ref.watch(featuresProvider).value, SdkConfig.current).oneClick;
     return Scaffold(
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.fromLTRB(20, 24, 20, 32), children: [
@@ -42,7 +38,7 @@ class _BindPhonePageState extends ConsumerState<BindPhonePage> {
           const Text('根据国家网络实名要求，使用前需要绑定手机号。手机号仅用于登录和安全验证，默认脱敏展示。',
               style: TextStyle(color: LL.text2, height: 1.6)),
           const SizedBox(height: 28),
-          if (_oneClick) ...[
+          if (oneClick) ...[
             FilledButton(onPressed: _bindOneClick, child: const Text('本机号码一键绑定')),
             const SizedBox(height: 20),
             const Center(child: Text('或使用验证码', style: TextStyle(color: LL.text3))),

@@ -178,20 +178,48 @@ func (t *Tracker) ClosingHint() (Hint, bool) {
 	best := math.Inf(1)
 	var bestPt geo.Point
 	for k := 0; k <= n-3; k++ {
-		p := geo.ClosestOnSegment(cur, t.path[k], t.path[k+1])
-		d := p.Dist(cur)
-		along := p.Dist(t.path[k+1]) + suffix[k+1]
-		if along-d < t.opts.HintWindowM {
-			continue
-		}
-		if d < best {
-			best, bestPt = d, p
+		if p, ok := closableOnSegment(cur, t.path[k], t.path[k+1], suffix[k+1], t.opts.HintWindowM); ok {
+			if d := p.Dist(cur); d < best {
+				best, bestPt = d, p
+			}
 		}
 	}
 	if math.IsInf(best, 1) {
 		return Hint{}, false
 	}
 	return Hint{DistanceM: best, Target: t.proj.Inverse(bestPt)}, true
+}
+
+// closableOnSegment finds the point of segment a→b nearest to cur that
+// would close a loop: walking along the path from there to cur must be at
+// least window longer than the straight line. tail is the path length from
+// b to cur. Moving from the nearest point towards a only increases that
+// difference, so a binary search finds the first qualifying point.
+func closableOnSegment(cur, a, b geo.Point, tail, window float64) (geo.Point, bool) {
+	at := func(u float64) geo.Point { return geo.Point{X: a.X + (b.X-a.X)*u, Y: a.Y + (b.Y-a.Y)*u} }
+	gain := func(u float64) float64 { p := at(u); return p.Dist(b) + tail - p.Dist(cur) }
+	p := geo.ClosestOnSegment(cur, a, b)
+	segLen := a.Dist(b)
+	u0 := 0.0
+	if segLen > 0 {
+		u0 = a.Dist(p) / segLen
+	}
+	if gain(u0) >= window {
+		return p, true
+	}
+	if gain(0) < window {
+		return geo.Point{}, false
+	}
+	lo, hi := 0.0, u0 // gain(lo) >= window > gain(hi)
+	for range 40 {
+		mid := (lo + hi) / 2
+		if gain(mid) >= window {
+			lo = mid
+		} else {
+			hi = mid
+		}
+	}
+	return at(lo), true
 }
 
 // Result is the outcome of running a whole track through the engine.

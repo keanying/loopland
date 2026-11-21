@@ -1,0 +1,11 @@
+// 圈圈：原生配置的默认值（已提交，不含任何密钥）。
+// 真实值写在 ios/Flutter/Loopland.xcconfig（gitignore，模板见 Loopland.xcconfig.example），
+// 它在 Debug.xcconfig / Release.xcconfig 里于本文件之后 include，覆盖这里的值。
+// 注意：xcconfig 中 // 是注释，所以这里只写域名 / scheme，不写 https:// 链接。
+
+// 微信开放平台 AppID（wx 开头）。Info.plist 的 URL Type「weixin」= 该值。
+WECHAT_APP_ID =
+// 支付宝回调 URL Scheme（Info.plist 的 URL Type「alipay」，不能含下划线）。
+ALIPAY_URL_SCHEME = loopland-alipay
+// Universal Link 域名（微信 / 支付宝 / Associated Domains：applinks:<域名>）。
+LOOPLAND_ASSOCIATED_DOMAIN = loopland.example.com

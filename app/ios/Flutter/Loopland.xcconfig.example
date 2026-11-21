@@ -1,0 +1,7 @@
+// 复制为 ios/Flutter/Loopland.xcconfig（已 gitignore）并填写。
+// xcconfig 中 // 是注释：只写域名 / scheme，不要写 https://。
+WECHAT_APP_ID = wx0000000000000000
+ALIPAY_URL_SCHEME = loopland-alipay
+LOOPLAND_ASSOCIATED_DOMAIN = loopland.example.com
+// 可选：签名团队
+// DEVELOPMENT_TEAM = ABCDE12345

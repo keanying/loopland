@@ -9,7 +9,9 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/env.dart';
 import '../../core/format.dart';
+import '../../core/privacy.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
@@ -167,6 +169,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   : const Text('7 天冷静期内可撤回', style: TextStyle(color: LL.text3, fontSize: 12)),
               onTap: () => _delete(u),
             ),
+          ]),
+          _group('协议', [
+            ListTile(title: const Text('用户协议'), trailing: const Icon(Icons.chevron_right), onTap: () => openLegal(context, privacy: false)),
+            ListTile(title: const Text('隐私政策'), trailing: const Icon(Icons.chevron_right), onTap: () => openLegal(context, privacy: true)),
+            if (Env.isDev)
+              ListTile(
+                title: const Text('环境检查'),
+                subtitle: const Text('开发环境：查看各 SDK 配置情况', style: TextStyle(color: LL.text3, fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/dev/env'),
+              ),
           ]),
           Padding(
             padding: const EdgeInsets.all(16),

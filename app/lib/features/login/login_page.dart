@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -5,8 +6,11 @@ import 'package:video_player/video_player.dart';
 
 import '../../api/errors.dart';
 import '../../auth/auth_controller.dart';
+import '../../auth/one_click.dart';
 import '../../auth/social_login.dart';
-import '../../core/env.dart';
+import '../../core/features.dart';
+import '../../core/privacy.dart';
+import '../../core/sdk_config.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
@@ -40,6 +44,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void initState() {
     super.initState();
     if (LoginPage.enableVideo) _initVideo();
+    // /v1/config/features is cached for the session; retry if it failed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) refreshFeaturesIfUnreachable(ref);
+    });
   }
 
   Future<void> _initVideo() async {
@@ -93,13 +101,23 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  /// One-click falls back to SMS whenever the environment cannot do it (no
+  /// SIM, Wi-Fi only, carrier maintenance, SDK error) — never a crash.
   Future<void> _oneClick() => _login(() async {
-        final t = await OneClickLogin().getToken();
-        if (t == null) {
-          if (mounted) context.push('/login/sms');
-          return null;
+        final r = await OneClickLogin().run();
+        switch (r.end) {
+          case OneClickEnd.token:
+            return {'token': r.token};
+          case OneClickEnd.cancelled:
+            return null;
+          case OneClickEnd.useSms:
+          case OneClickEnd.unavailable:
+            if (mounted) {
+              if (r.message.isNotEmpty) toast(context, r.message);
+              context.push('/login/sms');
+            }
+            return null;
         }
-        return {'token': t};
       }, 'oneclick');
 
   Future<void> _wechat() => _login(() async {
@@ -112,6 +130,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final agreed = ref.watch(agreedProvider);
+    final opts = loginOptions(ref.watch(featuresProvider).value, SdkConfig.current);
     final v = _video;
     return Scaffold(
       body: Stack(fit: StackFit.expand, children: [
@@ -144,6 +163,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   Text('loopland', style: TextStyle(color: LL.lime, fontWeight: FontWeight.w800, height: 1.1)),
                 ]),
                 const Spacer(),
+                if (SdkConfig.current.isDev)
+                  TextButton(onPressed: () => context.push('/dev/env'), child: const Text('环境检查')),
                 RoundIconButton(
                   icon: _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
                   onTap: _togglePlay,
@@ -158,22 +179,32 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               const Text('每一次跑步都在地图上圈下领地，和跑团一起建城、打怪兽。',
                   style: TextStyle(color: LL.text2, fontSize: 15, height: 1.6)),
               const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                    onPressed: _busy ? null : _oneClick,
-                    child: _busy ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5)) : const Text('本机号码一键登录')),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: _busy ? null : _wechat,
-                  style: OutlinedButton.styleFrom(backgroundColor: const Color(0x66222226)),
-                  child: const Text('微信登录'),
+              if (opts.oneClick) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                      onPressed: _busy ? null : _oneClick,
+                      child: _busy ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5)) : const Text('本机号码一键登录')),
                 ),
-              ),
-              if (Env.isIOS || Env.isDev) ...[
+                const SizedBox(height: 12),
+              ] else ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                      onPressed: () => context.push('/login/sms'), child: const Text('手机号登录 / 注册')),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (opts.wechat)
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _wechat,
+                    style: OutlinedButton.styleFrom(backgroundColor: const Color(0x66222226)),
+                    child: const Text('微信登录'),
+                  ),
+                ),
+              if (opts.apple) ...[
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -186,12 +217,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ],
               const SizedBox(height: 14),
-              Center(
-                child: TextButton(
-                  onPressed: () => context.push('/login/sms'),
-                  child: const Text('其他手机号登录 / 注册', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              if (opts.oneClick)
+                Center(
+                  child: TextButton(
+                    onPressed: () => context.push('/login/sms'),
+                    child: const Text('其他手机号登录 / 注册', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
                 ),
-              ),
               AgreementRow(agreed: agreed, onChanged: (v) => ref.read(agreedProvider.notifier).set(v)),
               const SizedBox(height: 12),
             ]),
@@ -216,15 +248,32 @@ Future<bool> confirmAgreement(BuildContext context) async =>
     ) ==
     true;
 
-class AgreementRow extends StatelessWidget {
+class AgreementRow extends StatefulWidget {
   const AgreementRow({super.key, required this.agreed, required this.onChanged});
   final bool agreed;
   final ValueChanged<bool> onChanged;
   @override
+  State<AgreementRow> createState() => _AgreementRowState();
+}
+
+class _AgreementRowState extends State<AgreementRow> {
+  late final _terms = TapGestureRecognizer()..onTap = () => openLegal(context, privacy: false);
+  late final _privacy = TapGestureRecognizer()..onTap = () => openLegal(context, privacy: true);
+
+  @override
+  void dispose() {
+    _terms.dispose();
+    _privacy.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final agreed = widget.agreed;
+    const link = TextStyle(color: LL.lime);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => onChanged(!agreed),
+      onTap: () => widget.onChanged(!agreed),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.only(top: 2, right: 10),
@@ -243,12 +292,13 @@ class AgreementRow extends StatelessWidget {
             ),
           ),
         ),
-        const Expanded(
+        Expanded(
           child: Text.rich(
-            TextSpan(style: TextStyle(color: LL.text3, fontSize: 13, height: 1.6), children: [
-              TextSpan(text: '我已阅读并同意 '),
-              TextSpan(text: '《用户协议》《隐私政策》', style: TextStyle(color: LL.lime)),
-              TextSpan(text: '，并同意圈圈处理我的运动轨迹（敏感个人信息）用于圈地和排名'),
+            TextSpan(style: const TextStyle(color: LL.text3, fontSize: 13, height: 1.6), children: [
+              const TextSpan(text: '我已阅读并同意 '),
+              TextSpan(text: '《用户协议》', style: link, recognizer: _terms),
+              TextSpan(text: '《隐私政策》', style: link, recognizer: _privacy),
+              const TextSpan(text: '，并同意圈圈处理我的运动轨迹（敏感个人信息）用于圈地和排名'),
             ]),
           ),
         ),

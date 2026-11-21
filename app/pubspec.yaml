@@ -55,3 +55,5 @@ flutter:
     - assets/art/
     - assets/brand/
     - assets/media/
+    # 高德控制台导出的暗色自定义样式（style.data / style_extra.data），见 README
+    - assets/map/

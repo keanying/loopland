@@ -1,0 +1,6 @@
+# 复制为 android/key.properties（已 gitignore），填入 release keystore 信息。
+# storeFile 相对于 android/ 目录，例如 keystore 放在 android/app/loopland-release.jks：
+storeFile=app/loopland-release.jks
+storePassword=
+keyAlias=loopland
+keyPassword=

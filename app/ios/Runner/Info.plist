@@ -6,8 +6,14 @@
 	<string>圈圈需要你的位置来记录运动轨迹、圈地和显示附近的领地。</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>锁屏或切到后台时，圈圈需要继续记录你的运动轨迹，避免圈地中断。</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>锁屏或切到后台时，圈圈需要继续记录你的运动轨迹，避免圈地中断。</string>
 	<key>NSMotionUsageDescription</key>
-	<string>圈圈使用运动数据（步频）辅助判断记录是否真实。</string>
+	<string>圈圈使用运动与健身数据（步数、步频）辅助判断运动记录是否真实。</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>经你同意后，圈圈读取「健康」中的心率、步数等运动数据，用于运动记录佐证和数据分析。</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>经你同意后，圈圈将你的户外运动记录写入「健康」。</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
@@ -24,20 +30,25 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>weixin</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- TODO: 替换为 wx + 微信 AppID -->
-				<string>wxYOUR_WECHAT_APPID</string>
+				<!-- 微信 AppID，来自 Flutter/Loopland.xcconfig 的 WECHAT_APP_ID -->
+				<string>$(WECHAT_APP_ID)</string>
 			</array>
 		</dict>
 		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
 			<key>CFBundleURLName</key>
 			<string>alipay</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>looplandalipay</string>
+				<!-- tobias 按 URLName=alipay 查找回调 scheme；来自 ALIPAY_URL_SCHEME -->
+				<string>$(ALIPAY_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

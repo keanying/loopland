@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../auth/captcha.dart';
 import '../../core/env.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -45,8 +46,13 @@ class _PhoneCodeFormState extends ConsumerState<PhoneCodeForm> {
       return;
     }
     setState(() => _sending = true);
-    // TODO(人机验证): pass captcha_token from the Aliyun captcha SDK.
-    final cd = await runGuarded(context, () => ref.read(apiProvider).sendSms(_phone.text.trim()));
+    // 人机验证 (Aliyun captcha 2.0) when /v1/config/features says captcha=true;
+    // its captchaVerifyParam goes to the server as captcha_token.
+    final cd = await runGuarded(context, () async {
+      final c = await captchaForSms(context, ref);
+      if (!c.proceed) return null;
+      return ref.read(apiProvider).sendSms(_phone.text.trim(), captchaToken: c.token);
+    });
     if (!mounted) return;
     setState(() => _sending = false);
     if (cd == null) return;

@@ -96,8 +96,14 @@ class TerritoryMapView extends StatelessWidget {
   /// Tests and screenshots force the fallback.
   static bool forceFallback = false;
 
+  /// AMap only with a key for this platform AND after the privacy
+  /// agreement (no SDK init before consent).
   static bool get usesAmap =>
-      !forceFallback && !kIsWeb && Env.amapKey.isNotEmpty && (Env.isAndroid || Env.isIOS);
+      !forceFallback &&
+      !kIsWeb &&
+      Env.amapKey.isNotEmpty &&
+      (Env.isAndroid || Env.isIOS) &&
+      AmapTerritoryMap.privacyAgreed;
 
   @override
   Widget build(BuildContext context) {

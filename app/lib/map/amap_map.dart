@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:amap_map/amap_map.dart' as amap;
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:x_amap_base/x_amap_base.dart' as base;
 
 import '../api/models.dart';
 import '../claim/geo.dart';
-import '../core/env.dart';
+import '../core/sdk_config.dart';
 import '../core/theme.dart';
 import 'territory_map.dart';
 
@@ -14,9 +15,10 @@ import 'territory_map.dart';
 /// conversion is needed here. Territories are drawn as SDK polygons; taps are
 /// hit-tested on our side because SDK polygons are not tappable.
 ///
-/// TODO(地图样式): load the dark custom style exported from the AMap console
-/// via `customStyleOptions` (styleData / styleExtraData asset files). Until
-/// then the SDK's built-in night map type is used.
+/// Dark custom style: export it in the AMap console (自定义地图 → 下载
+/// style.data / style_extra.data), add the files as Flutter assets and set
+/// `AMAP_STYLE_DATA` / `AMAP_STYLE_EXTRA_DATA` to their asset paths. Without
+/// them the SDK's built-in night map type is used.
 class AmapTerritoryMap extends StatefulWidget {
   const AmapTerritoryMap({
     super.key,
@@ -37,11 +39,40 @@ class AmapTerritoryMap extends StatefulWidget {
   final ValueChanged<MapBounds>? onBoundsChanged;
   final bool interactive;
 
-  /// Must be called after the user agreed to the privacy policy (the AMap SDK
-  /// shows a blank map until then — 高德合规要求).
+  /// Called only after the user accepted the in-app privacy dialog (see
+  /// SdkBootstrap). The plugin forwards it to the SDK's
+  /// `MapsInitializer.updatePrivacyShow/updatePrivacyAgree` (Android) /
+  /// `AMapServices` privacy calls (iOS) when the first map view is created,
+  /// i.e. before any map / location init. Until then [TerritoryMapView]
+  /// renders the pure-Flutter fallback map. 高德合规要求.
   static void agreePrivacy() {
+    _privacyAgreed = true;
     amap.AMapInitializer.updatePrivacyAgree(
         const base.AMapPrivacyStatement(hasContains: true, hasShow: true, hasAgree: true));
+  }
+
+  static bool _privacyAgreed = false;
+  static bool get privacyAgreed => _privacyAgreed;
+
+  static amap.CustomStyleOptions? _style;
+  static bool _styleLoaded = false;
+
+  /// Loads the custom style assets once (null when not configured / missing).
+  static Future<amap.CustomStyleOptions?> loadStyle(SdkConfig c, {AssetBundle? bundle}) async {
+    if (_styleLoaded) return _style;
+    _styleLoaded = true;
+    if (!c.amapStyleConfigured) return null;
+    final b = bundle ?? rootBundle;
+    try {
+      final data = (await b.load(c.amapStyleData)).buffer.asUint8List();
+      Uint8List? extra;
+      if (c.amapStyleExtraData.isNotEmpty) {
+        extra = (await b.load(c.amapStyleExtraData)).buffer.asUint8List();
+      }
+      return _style = amap.CustomStyleOptions(true, styleData: data, styleExtraData: extra);
+    } catch (_) {
+      return null; // asset missing → built-in night type
+    }
   }
 
   @override
@@ -56,11 +87,18 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
 
   static base.LatLng _ll(LatLng p) => base.LatLng(p.lat, p.lng);
 
+  amap.CustomStyleOptions? _style = AmapTerritoryMap._style;
+
   @override
   void initState() {
     super.initState();
     _zoom = widget.initialZoom;
     widget.controller?.attach(this);
+    if (!AmapTerritoryMap._styleLoaded) {
+      AmapTerritoryMap.loadStyle(SdkConfig.current).then((s) {
+        if (mounted && s != null) setState(() => _style = s);
+      });
+    }
   }
 
   @override
@@ -151,12 +189,13 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
   @override
   Widget build(BuildContext context) {
     amap.AMapInitializer.init(context,
-        apiKey: base.AMapApiKey(iosKey: Env.amapIosKey, androidKey: Env.amapAndroidKey));
+        apiKey: base.AMapApiKey(iosKey: SdkConfig.current.amapIosKey, androidKey: SdkConfig.current.amapAndroidKey));
     return LayoutBuilder(builder: (context, c) {
       _size = Size(c.maxWidth, c.maxHeight);
       return amap.AMapWidget(
         initialCameraPosition: amap.CameraPosition(target: _ll(widget.initialCenter), zoom: widget.initialZoom),
         mapType: amap.MapType.night,
+        customStyleOptions: _style,
         compassEnabled: false,
         scaleEnabled: false,
         rotateGesturesEnabled: false,

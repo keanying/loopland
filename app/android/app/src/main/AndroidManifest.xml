@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <!-- 网络 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -13,10 +14,19 @@
     <!-- 高德 SDK 需要 -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <!-- 阿里云号码认证：切换到蜂窝网络取号 -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE"/>
+    <!-- 合规：ali_auth 插件声明了以下权限，一键登录并不需要，移除 -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <!-- release 只允许 HTTPS（ali_auth 插件默认打开了明文流量，这里覆盖）；
+         debug 包在 src/debug/AndroidManifest.xml 里放开，方便连局域网开发后端 -->
     <application
         android:label="圈圈"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="false"
+        tools:replace="android:usesCleartextTraffic">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -39,8 +49,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- 高德 Key 也可以在这里配置；默认由 --dart-define=AMAP_ANDROID_KEY 传入 -->
-        <!-- <meta-data android:name="com.amap.api.v2.apikey" android:value="YOUR_AMAP_ANDROID_KEY"/> -->
+        <!-- 高德 Key：android/loopland.properties 或 --dart-define 中的 AMAP_ANDROID_KEY（manifestPlaceholders） -->
+        <meta-data android:name="com.amap.api.v2.apikey" android:value="${AMAP_ANDROID_KEY}"/>
+        <!-- 运动记录：geolocator 前台服务，类型 location（Android 14 起必须声明） -->
+        <service
+            android:name="com.baseflow.geolocator.GeolocatorLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            tools:replace="android:foregroundServiceType"/>
+        <!-- 微信回调：fluwx 已在其 manifest 中以 activity-alias 声明
+             <applicationId>.wxapi.WXEntryActivity / WXPayEntryActivity，无需重复声明 -->
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -55,6 +74,7 @@
     <queries>
         <!-- 微信、支付宝、高德地图（fluwx / tobias / 导航） -->
         <package android:name="com.tencent.mm"/>
+        <package android:name="hk.alipay.wallet"/>
         <package android:name="com.eg.android.AlipayGphone"/>
         <package android:name="com.autonavi.minimap"/>
         <intent>

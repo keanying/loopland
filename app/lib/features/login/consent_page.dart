@@ -4,8 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
-import '../../map/amap_map.dart';
-import '../../map/territory_map.dart';
 import '../../widgets/common.dart';
 
 /// 隐私授权：隐私政策（必选）+ 位置/行踪轨迹 + 运动健康数据，分开单独同意。
@@ -24,7 +22,6 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
     setState(() => _busy = true);
     await runGuarded(context, () async {
       await ref.read(authProvider.notifier).saveConsents(location: _location, health: _health);
-      if (TerritoryMapView.usesAmap) AmapTerritoryMap.agreePrivacy();
     });
     if (mounted) setState(() => _busy = false);
   }

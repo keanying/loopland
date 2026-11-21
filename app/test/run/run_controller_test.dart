@@ -51,10 +51,16 @@ void main() {
     ctrl.onFix(fix(100, 100, 60));
     var s = c.read(runControllerProvider);
     expect(s.loops, isEmpty);
+    // Right after the corner the nearest closable point is part-way along
+    // the first leg, not straight back down the leg just run.
+    expect(s.hint, isNotNull);
+    expect(s.hint!.distanceM, closeTo(113.3, 1));
+
+    ctrl.onFix(fix(50, 100, 90));
+    s = c.read(runControllerProvider);
     expect(s.hint, isNotNull);
     expect(s.hint!.distanceM, closeTo(100, 1)); // back to the first leg
 
-    ctrl.onFix(fix(50, 100, 90));
     ctrl.onFix(fix(50, -50, 120)); // crosses the first leg → loop
     s = c.read(runControllerProvider);
     expect(s.loops, hasLength(1));
@@ -101,8 +107,12 @@ void main() {
     }
     now = now.add(const Duration(minutes: 5));
     ctrl.pause(); // forces a snapshot
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    final snap = await store.loadInProgress();
+    // The snapshot is written asynchronously (temp file + rename).
+    RunSnapshot? snap;
+    for (var i = 0; i < 250 && snap == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      snap = await store.loadInProgress();
+    }
     expect(snap, isNotNull);
     expect(snap!.points, hasLength(5));
     expect(snap.goal.type, 'distance');

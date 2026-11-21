@@ -68,12 +68,22 @@ User sampleUser() {
   return User.fromJson(m);
 }
 
+const featuresJson = {
+  'login': ['apple', 'oneclick', 'sms', 'wechat'],
+  'pay': ['alipay_app', 'apple_iap', 'mock', 'wechat_app'],
+  'captcha': false,
+};
+
 /// Overrides that make every screen render against canned data.
 List<Override> fakeBackend({User? user, Map<String, Object?> extra = const {}}) {
   final adapter = FakeAdapter((o) {
     final p = o.path;
-    if (extra.containsKey(p)) return (200, extra[p]);
+    if (extra.containsKey(p)) {
+      final v = extra[p];
+      return v is (int, Object?) ? v : (200, v);
+    }
     if (p == '/v1/territories') return (200, {'items': sampleTerritories});
+    if (p == '/v1/config/features') return (200, featuresJson);
     if (p == '/v1/inbox') return (200, j(inboxJson));
     if (p == '/v1/codex') return (200, j(codexJson));
     if (p == '/v1/config/gameplay') return (200, j(configJson));

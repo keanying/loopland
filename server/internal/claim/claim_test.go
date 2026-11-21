@@ -160,13 +160,26 @@ func TestIncrementalMatchesBatch(t *testing.T) {
 func TestHintIgnoresTheLegJustRun(t *testing.T) {
 	// East 200 m, north 200 m, then a long 150 m leg west. The previous
 	// corner (200,200) is 150 m behind on a straight line; running back to it
-	// encloses nothing. The real closing point is the first leg, 200 m south.
+	// encloses nothing. The nearest point that does close is part-way down
+	// the second leg: u + 150 - sqrt(150² + u²) = 40 → u ≈ 47.3, so (200,
+	// 152.7), about 157.3 m away (a ~3500 m² triangle).
 	r := Detect(track([2]float64{0, 0}, [2]float64{200, 0}, [2]float64{200, 200}, [2]float64{50, 200}), Options{})
-	if r.Hint == nil || !near(r.Hint.DistanceM, 200, 0.5) {
-		t.Fatalf("hint = %+v, want ~200 m south to the first leg", r.Hint)
+	if r.Hint == nil || !near(r.Hint.DistanceM, 157.3, 0.5) {
+		t.Fatalf("hint = %+v, want ≈157.3 m", r.Hint)
 	}
 	// A straight line has nothing to close.
 	if r := Detect(track([2]float64{0, 0}, [2]float64{100, 0}, [2]float64{300, 0}), Options{}); r.Hint != nil {
 		t.Fatalf("straight line hint = %+v", r.Hint)
+	}
+}
+
+func TestHintRightAfterACorner(t *testing.T) {
+	// At the corner (100,100) the nearest point of the first leg, (100,0),
+	// is straight back down the leg just run. Further west along the first
+	// leg it does close: u + 100 - sqrt(u²+100²) = 40 → u ≈ 53.3, so the
+	// target is (46.7, 0), about 113.3 m away.
+	r := Detect(track([2]float64{0, 0}, [2]float64{100, 0}, [2]float64{100, 100}), Options{})
+	if r.Hint == nil || !near(r.Hint.DistanceM, 113.3, 0.5) {
+		t.Fatalf("hint = %+v, want ≈113.3 m", r.Hint)
 	}
 }

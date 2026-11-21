@@ -175,10 +175,9 @@ class ClaimTracker {
     var best = double.infinity;
     Point? bestPt;
     for (var k = 0; k <= n - 3; k++) {
-      final p = closestOnSegment(cur, _path[k], _path[k + 1]);
+      final p = _closableOnSegment(cur, _path[k], _path[k + 1], suffix[k + 1], opts.hintWindowM);
+      if (p == null) continue;
       final d = p.dist(cur);
-      final along = p.dist(_path[k + 1]) + suffix[k + 1];
-      if (along - d < opts.hintWindowM) continue;
       if (d < best) {
         best = d;
         bestPt = p;
@@ -187,6 +186,35 @@ class ClaimTracker {
     if (best.isInfinite) return null;
     return ClosingHint(best, _proj!.inverse(bestPt!));
   }
+}
+
+/// The point of segment a→b nearest to [cur] that would close a loop:
+/// walking the path from there to [cur] must be at least [window] longer
+/// than the straight line ([tail] is the path length from b to cur). Moving
+/// from the nearest point towards a only increases that difference, so a
+/// binary search finds the first qualifying point. Mirrors the Go version.
+Point? _closableOnSegment(Point cur, Point a, Point b, double tail, double window) {
+  Point at(double u) => Point(a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u);
+  double gain(double u) {
+    final p = at(u);
+    return p.dist(b) + tail - p.dist(cur);
+  }
+
+  final p = closestOnSegment(cur, a, b);
+  final segLen = a.dist(b);
+  final u0 = segLen > 0 ? a.dist(p) / segLen : 0.0;
+  if (gain(u0) >= window) return p;
+  if (gain(0) < window) return null;
+  var lo = 0.0, hi = u0;
+  for (var i = 0; i < 40; i++) {
+    final mid = (lo + hi) / 2;
+    if (gain(mid) >= window) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return at(lo);
 }
 
 /// The outcome of running a whole track through the engine.

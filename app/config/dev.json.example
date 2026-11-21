@@ -1,0 +1,18 @@
+{
+  "LOOPLAND_ENV": "dev",
+  "API_BASE": "http://192.168.1.10:8080",
+  "ALIYUN_AUTH_SECRET_ANDROID": "",
+  "ALIYUN_AUTH_SECRET_IOS": "",
+  "WECHAT_APP_ID": "",
+  "WECHAT_UNIVERSAL_LINK": "",
+  "ALIPAY_APP_ID": "",
+  "ALIPAY_UNIVERSAL_LINK": "",
+  "AMAP_ANDROID_KEY": "",
+  "AMAP_IOS_KEY": "",
+  "AMAP_STYLE_DATA": "",
+  "AMAP_STYLE_EXTRA_DATA": "",
+  "ALIYUN_CAPTCHA_PREFIX": "",
+  "ALIYUN_CAPTCHA_SCENE_ID": "",
+  "USER_AGREEMENT_URL": "https://loopland.example.com/legal/terms",
+  "PRIVACY_POLICY_URL": "https://loopland.example.com/legal/privacy"
+}

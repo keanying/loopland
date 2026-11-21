@@ -1,0 +1,18 @@
+{
+  "LOOPLAND_ENV": "prod",
+  "API_BASE": "https://api.loopland.example.com",
+  "ALIYUN_AUTH_SECRET_ANDROID": "<号码认证 Android 方案秘钥>",
+  "ALIYUN_AUTH_SECRET_IOS": "<号码认证 iOS 方案秘钥>",
+  "WECHAT_APP_ID": "<wx 开头的微信开放平台 AppID>",
+  "WECHAT_UNIVERSAL_LINK": "https://loopland.example.com/wechat/",
+  "ALIPAY_APP_ID": "<支付宝开放平台 APPID，可选>",
+  "ALIPAY_UNIVERSAL_LINK": "https://loopland.example.com/alipay/",
+  "AMAP_ANDROID_KEY": "<高德 Android Key>",
+  "AMAP_IOS_KEY": "<高德 iOS Key>",
+  "AMAP_STYLE_DATA": "assets/map/style.data",
+  "AMAP_STYLE_EXTRA_DATA": "assets/map/style_extra.data",
+  "ALIYUN_CAPTCHA_PREFIX": "<验证码 2.0 身份标 prefix>",
+  "ALIYUN_CAPTCHA_SCENE_ID": "<验证码 2.0 场景 ID>",
+  "USER_AGREEMENT_URL": "https://loopland.example.com/legal/terms",
+  "PRIVACY_POLICY_URL": "https://loopland.example.com/legal/privacy"
+}

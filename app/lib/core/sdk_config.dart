@@ -73,7 +73,13 @@ class SdkConfig {
   /// Parses a `config/*.json` style map. Values are trimmed; non-string values
   /// are stringified; unknown keys are ignored.
   factory SdkConfig.fromMap(Map<String, Object?> m, {String platform = 'other', bool release = false}) {
-    String s(String k) => '${m[k] ?? ''}'.trim();
+    // Unfilled template placeholders (`<...>` in config/prod.json.example)
+    // count as missing.
+    String s(String k) {
+      final v = '${m[k] ?? ''}'.trim();
+      return v.startsWith('<') && v.endsWith('>') ? '' : v;
+    }
+
     final env = s('LOOPLAND_ENV');
     return SdkConfig(
       env: env.isEmpty ? 'prod' : env,

@@ -11,19 +11,8 @@ import UIKit
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    // 一键登录（ali_auth）、微信（fluwx，含 UIScene openURL / Universal Link 回调）、
+    // 支付宝（tobias）、内购（in_app_purchase_storekit）都由插件自行注册。
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    // 运营商一键登录（阿里云号码认证）。
-    // TODO(一键登录): integrate the Aliyun 号码认证 iOS SDK (TXCommonHandler):
-    // checkEnvAvailable → isAvailable, getLoginToken → getToken.
-    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "LooplandOneClick") {
-      let channel = FlutterMethodChannel(name: "loopland/oneclick", binaryMessenger: registrar.messenger())
-      channel.setMethodCallHandler { call, result in
-        switch call.method {
-        case "isAvailable": result(false)
-        case "getToken": result(FlutterError(code: "not_implemented", message: "一键登录 SDK 未集成", details: nil))
-        default: result(FlutterMethodNotImplemented)
-        }
-      }
-    }
   }
 }
