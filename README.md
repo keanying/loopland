@@ -1,6 +1,6 @@
 # 圈圈 Loopland
 
-跑一圈，就是你的地。Run a loop. Own the land.
+圈一圈，共同运动，共同圈。Loop together, move together.
 
 用跑步和各种运动在真实城市地图上圈地、建城、收集角色，和跑团一起抢地盘。
 

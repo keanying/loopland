@@ -268,7 +268,7 @@ class PosterCard extends StatelessWidget {
         const SizedBox(height: 14),
         Row(children: [
           const Expanded(
-            child: Text('跑一圈，就是你的地\n打开圈圈查看完整动态', style: TextStyle(color: LL.text3, fontSize: 12, height: 1.5)),
+            child: Text('圈一圈，共同运动，共同圈\n打开圈圈查看完整动态', style: TextStyle(color: LL.text3, fontSize: 12, height: 1.5)),
           ),
           if (share.url.isNotEmpty)
             Flexible(

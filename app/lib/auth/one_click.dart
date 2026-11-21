@@ -206,7 +206,7 @@ class OneClickLogin {
       logoWidth: 72,
       logoHeight: 72,
       logoOffsetY: 40,
-      sloganText: '跑一圈，就是你的地',
+      sloganText: '圈一圈，共同运动，共同圈',
       sloganTextColor: text2,
       sloganOffsetY: 130,
       numberColor: text,

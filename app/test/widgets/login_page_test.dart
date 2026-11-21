@@ -17,7 +17,7 @@ void main() {
       await t.pump(const Duration(milliseconds: 20));
     }
 
-    expect(find.text('跑一圈，\n就是你的地'), findsOneWidget);
+    expect(find.text('圈一圈\n共同运动，共同圈'), findsOneWidget);
     expect(find.text('本机号码一键登录'), findsOneWidget);
     expect(find.text('微信登录'), findsOneWidget);
     expect(find.text('其他手机号登录 / 注册'), findsOneWidget);

@@ -193,7 +193,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
       case 'relay':
         return ref.watch(userProvider)?.crew == null ? '需要先加入跑团' : '团长发起';
       case 'war':
-        return '跑一圈，就是你的地';
+        return '圈一圈，共同运动，共同圈';
       default:
         return '即将开放';
     }

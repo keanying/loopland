@@ -173,8 +173,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ]),
               const Spacer(),
-              const Text('跑一圈，\n就是你的地',
-                  style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: 1)),
+              // 窄屏上第二行放不下时整体等比缩小，不折行。
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text('圈一圈\n共同运动，共同圈',
+                    style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: 1)),
+              ),
               const SizedBox(height: 12),
               const Text('每一次跑步都在地图上圈下领地，和跑团一起建城、打怪兽。',
                   style: TextStyle(color: LL.text2, fontSize: 15, height: 1.6)),
