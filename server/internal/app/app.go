@@ -26,6 +26,7 @@ import (
 	"github.com/keanying/loopland/server/internal/gameplay"
 	"github.com/keanying/loopland/server/internal/inbox"
 	"github.com/keanying/loopland/server/internal/jobs"
+	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -48,6 +49,8 @@ type App struct {
 	Redis   *redis.Client
 	// Providers holds the third-party service configuration (管理端「系统配置」).
 	Providers *providers.Registry
+	// Moderation scores text and keeps the review queue.
+	Moderation *moderation.Moderator
 }
 
 // Options allow tests to replace external services.
@@ -83,6 +86,8 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return nil, err
 	}
 	live(reg, &opt)
+	// Content moderation shared by the community modules (社区 · 内容审核).
+	mod := &moderation.Moderator{Pool: pool}
 
 	authSvc := &auth.Service{Pool: pool, Redis: rdb, Box: box, Config: store, SMS: opt.SMS, OneTap: opt.OneClick, WeChat: opt.WeChat,
 		Apple: opt.Apple, Captcha: opt.Captcha, JWTSecret: cfg.JWTSecret, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL}
@@ -152,7 +157,8 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		Hub:     hub,
 		Play:    playSvc,
 		Config:  store, Pool: pool, Redis: rdb,
-		Providers: reg,
+		Providers:  reg,
+		Moderation: mod,
 	}, nil
 }
 
