@@ -58,8 +58,8 @@ type Progress struct {
 func AfterActivity(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int64, sport gameplay.Sport, amount, distanceM float64, firstLand bool) (Progress, error) {
 	p := Progress{Recruits: []Recruit{}, Eggs: []Egg{}, Medals: []MedalRef{}}
 	var total float64
-	if err := tx.QueryRow(ctx, `INSERT INTO src.src_act_sport_total (user_id, sport, amount, distance_m) VALUES ($1,$2,$3,$4)
-		ON CONFLICT (user_id, sport) DO UPDATE SET amount=src.src_act_sport_total.amount+EXCLUDED.amount, distance_m=src.src_act_sport_total.distance_m+EXCLUDED.distance_m
+	if err := tx.QueryRow(ctx, `INSERT INTO src.src_act_loop_sport_total (user_id, sport, amount, distance_m) VALUES ($1,$2,$3,$4)
+		ON CONFLICT (user_id, sport) DO UPDATE SET amount=src.src_act_loop_sport_total.amount+EXCLUDED.amount, distance_m=src.src_act_loop_sport_total.distance_m+EXCLUDED.distance_m
 		RETURNING amount`, user, string(sport), amount, distanceM).Scan(&total); err != nil {
 		return p, err
 	}
@@ -69,13 +69,13 @@ func AfterActivity(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int
 		}
 		rec := Recruit{Role: r.Key, Name: r.Name, Progress: total, Threshold: r.Threshold, Unit: string(r.Unit)}
 		var owned bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, r.Key).Scan(&owned); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, r.Key).Scan(&owned); err != nil {
 			return p, err
 		}
 		if owned {
 			rec.Recruited = true
 		} else if total >= r.Threshold {
-			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,'role',$2) ON CONFLICT DO NOTHING`, user, r.Key); err != nil {
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item) VALUES ($1,'role',$2) ON CONFLICT DO NOTHING`, user, r.Key); err != nil {
 				return p, err
 			}
 			rec.Recruited = true
@@ -88,14 +88,14 @@ func AfterActivity(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int
 	}
 
 	if firstLand {
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) SELECT $1,'egg',$2
-			WHERE NOT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type IN ('egg','companion') AND item=$2)`, user, FirstEgg); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item) SELECT $1,'egg',$2
+			WHERE NOT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type IN ('egg','companion') AND item=$2)`, user, FirstEgg); err != nil {
 			return p, err
 		}
 	}
 
 	if km := distanceM / 1000; km > 0 && gameplay.GPSSports[sport] {
-		rows, err := tx.Query(ctx, `UPDATE src.src_ply_codex_item SET progress=progress+$2 WHERE user_id=$1 AND item_type='egg' RETURNING item, progress`, user, km)
+		rows, err := tx.Query(ctx, `UPDATE src.src_ply_loop_codex_item SET progress=progress+$2 WHERE user_id=$1 AND item_type='egg' RETURNING item, progress`, user, km)
 		if err != nil {
 			return p, err
 		}
@@ -118,10 +118,10 @@ func AfterActivity(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int
 			out := Egg{Key: c.Key, Name: c.Name, ProgressKm: e.prog, HatchKm: c.HatchKm}
 			if e.prog >= c.HatchKm {
 				out.Hatched = true
-				if _, err := tx.Exec(ctx, `DELETE FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='egg' AND item=$2`, user, c.Key); err != nil {
+				if _, err := tx.Exec(ctx, `DELETE FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='egg' AND item=$2`, user, c.Key); err != nil {
 					return p, err
 				}
-				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item, progress) VALUES ($1,'companion',$2,$3) ON CONFLICT DO NOTHING`, user, c.Key, e.prog); err != nil {
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item, progress) VALUES ($1,'companion',$2,$3) ON CONFLICT DO NOTHING`, user, c.Key, e.prog); err != nil {
 					return p, err
 				}
 				if err := inbox.Notify(ctx, tx, user, inbox.System, "伙伴孵化了", fmt.Sprintf("「%s」破壳而出！可以在图鉴里设为陪跑。", c.Name), map[string]any{"companion": c.Key}); err != nil {
@@ -154,15 +154,15 @@ const (
 
 // IncStat adds delta to a counter.
 func IncStat(ctx context.Context, q db.Querier, user int64, key string, delta float64) error {
-	_, err := q.Exec(ctx, `INSERT INTO src.src_usr_stat (user_id, stat_key, stat_value) VALUES ($1,$2,$3)
-		ON CONFLICT (user_id, stat_key) DO UPDATE SET stat_value = src.src_usr_stat.stat_value + EXCLUDED.stat_value`, user, key, delta)
+	_, err := q.Exec(ctx, `INSERT INTO src.src_usr_loop_stat (user_id, stat_key, stat_value) VALUES ($1,$2,$3)
+		ON CONFLICT (user_id, stat_key) DO UPDATE SET stat_value = src.src_usr_loop_stat.stat_value + EXCLUDED.stat_value`, user, key, delta)
 	return err
 }
 
 // MaxStat raises a counter to v if it is higher.
 func MaxStat(ctx context.Context, q db.Querier, user int64, key string, v float64) error {
-	_, err := q.Exec(ctx, `INSERT INTO src.src_usr_stat (user_id, stat_key, stat_value) VALUES ($1,$2,$3)
-		ON CONFLICT (user_id, stat_key) DO UPDATE SET stat_value = GREATEST(src.src_usr_stat.stat_value, EXCLUDED.stat_value)`, user, key, v)
+	_, err := q.Exec(ctx, `INSERT INTO src.src_usr_loop_stat (user_id, stat_key, stat_value) VALUES ($1,$2,$3)
+		ON CONFLICT (user_id, stat_key) DO UPDATE SET stat_value = GREATEST(src.src_usr_loop_stat.stat_value, EXCLUDED.stat_value)`, user, key, v)
 	return err
 }
 
@@ -170,11 +170,11 @@ func MaxStat(ctx context.Context, q db.Querier, user int64, key string, v float6
 func medalValues(ctx context.Context, q db.Querier, user int64) (map[string]float64, error) {
 	vals := map[string]float64{}
 	var dist float64
-	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0) FROM src.src_act_sport_total WHERE user_id=$1`, user).Scan(&dist); err != nil {
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0) FROM src.src_act_loop_sport_total WHERE user_id=$1`, user).Scan(&dist); err != nil {
 		return nil, err
 	}
 	vals[gameplay.MedalDistanceKm] = dist / 1000
-	rows, err := q.Query(ctx, `SELECT stat_key, stat_value FROM src.src_usr_stat WHERE user_id=$1`, user)
+	rows, err := q.Query(ctx, `SELECT stat_key, stat_value FROM src.src_usr_loop_stat WHERE user_id=$1`, user)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func AwardMedals(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int64
 		if vals[m.Type] < m.Target {
 			continue
 		}
-		tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`, user, m.Key)
+		tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`, user, m.Key)
 		if err != nil {
 			return nil, err
 		}
@@ -297,7 +297,7 @@ type item struct {
 // Load builds the codex for a user.
 func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (View, error) {
 	v := View{Progress: map[string]string{}}
-	rows, err := q.Query(ctx, `SELECT item_type, item, progress, obtain_time FROM src.src_ply_codex_item WHERE user_id=$1`, user)
+	rows, err := q.Query(ctx, `SELECT item_type, item, progress, obtain_time FROM src.src_ply_loop_codex_item WHERE user_id=$1`, user)
 	if err != nil {
 		return v, err
 	}
@@ -313,7 +313,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 		have[it.kind+":"+it.key] = it
 	}
 	totals := map[string]float64{}
-	rows, err = q.Query(ctx, `SELECT sport, amount FROM src.src_act_sport_total WHERE user_id=$1`, user)
+	rows, err = q.Query(ctx, `SELECT sport, amount FROM src.src_act_loop_sport_total WHERE user_id=$1`, user)
 	if err != nil {
 		return v, err
 	}
@@ -328,7 +328,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 	}
 	rows.Close()
 	stationed := map[string]int64{}
-	rows, err = q.Query(ctx, `SELECT role, territory_id FROM src.src_ter_station WHERE user_id=$1`, user)
+	rows, err = q.Query(ctx, `SELECT role, territory_id FROM src.src_ter_loop_station WHERE user_id=$1`, user)
 	if err != nil {
 		return v, err
 	}
@@ -344,7 +344,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 	rows.Close()
 	var earned int64
 	var escort *string
-	if err := q.QueryRow(ctx, `SELECT energy_earned_total, escort_companion_key FROM src.src_usr_user WHERE id=$1`, user).Scan(&earned, &escort); err != nil {
+	if err := q.QueryRow(ctx, `SELECT energy_earned_total, escort_companion_key FROM src.src_usr_loop_user WHERE id=$1`, user).Scan(&earned, &escort); err != nil {
 		return v, err
 	}
 	level := cfg.Level(earned)
@@ -378,7 +378,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 
 	n = 0
 	growth := map[string][2]float64{}
-	rows, err = q.Query(ctx, `SELECT companion, exp, meters FROM src.src_ply_companion_growth WHERE user_id=$1`, user)
+	rows, err = q.Query(ctx, `SELECT companion, exp, meters FROM src.src_ply_loop_companion_growth WHERE user_id=$1`, user)
 	if err != nil {
 		return v, err
 	}
@@ -440,7 +440,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 		best             *int
 	}
 	mons := map[string]mon{}
-	rows, err = q.Query(ctx, `SELECT boss_type, strikes, defeats, best_rank FROM src.src_ply_user_monster WHERE user_id=$1`, user)
+	rows, err = q.Query(ctx, `SELECT boss_type, strikes, defeats, best_rank FROM src.src_ply_loop_user_monster WHERE user_id=$1`, user)
 	if err != nil {
 		return v, err
 	}
@@ -472,7 +472,7 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 // Count is the number of collected items (for admin user detail).
 func Count(ctx context.Context, q db.Querier, user int64) (int, error) {
 	var n int
-	err := q.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type IN ('role','companion','medal')`, user).Scan(&n)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type IN ('role','companion','medal')`, user).Scan(&n)
 	return n, err
 }
 
@@ -500,8 +500,8 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) escort(w http.ResponseWriter, r *http.Request) error {
 	uid := httpx.UserID(r.Context())
 	key := r.PathValue("key")
-	tag, err := h.Pool.Exec(r.Context(), `UPDATE src.src_usr_user SET escort_companion_key=$2 WHERE id=$1
-		AND EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='companion' AND item=$2)`, uid, key)
+	tag, err := h.Pool.Exec(r.Context(), `UPDATE src.src_usr_loop_user SET escort_companion_key=$2 WHERE id=$1
+		AND EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='companion' AND item=$2)`, uid, key)
 	if err != nil {
 		return err
 	}

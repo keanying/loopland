@@ -52,8 +52,8 @@ func NewStatic(c Config) *Store {
 func (s *Store) seed(ctx context.Context) error {
 	d := Default()
 	body, _ := json.Marshal(d)
-	_, err := s.pool.Exec(ctx, `INSERT INTO src.src_sys_gameplay_config (version, config_json, rollout_pct, note)
-		SELECT $1, $2, 100, '初始数值' WHERE NOT EXISTS (SELECT 1 FROM src.src_sys_gameplay_config)`, d.Version, body)
+	_, err := s.pool.Exec(ctx, `INSERT INTO src.src_sys_loop_gameplay_config (version, config_json, rollout_pct, note)
+		SELECT $1, $2, 100, '初始数值' WHERE NOT EXISTS (SELECT 1 FROM src.src_sys_loop_gameplay_config)`, d.Version, body)
 	return err
 }
 
@@ -63,7 +63,7 @@ func (s *Store) Reload(ctx context.Context) error {
 		return nil
 	}
 	rows, err := s.pool.Query(ctx, `SELECT id, version, config_json, rollout_pct, COALESCE(note,''), published_by, publish_time
-		FROM src.src_sys_gameplay_config WHERE rollback_time IS NULL ORDER BY id DESC LIMIT 2`)
+		FROM src.src_sys_loop_gameplay_config WHERE rollback_time IS NULL ORDER BY id DESC LIMIT 2`)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (s *Store) Current() (Version, *Version) {
 // History lists published versions, newest first.
 func (s *Store) History(ctx context.Context) ([]Version, error) {
 	rows, err := s.pool.Query(ctx, `SELECT id, version, config_json, rollout_pct, COALESCE(note,''), published_by, publish_time
-		FROM src.src_sys_gameplay_config ORDER BY id DESC LIMIT 50`)
+		FROM src.src_sys_loop_gameplay_config ORDER BY id DESC LIMIT 50`)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (s *Store) Publish(ctx context.Context, body Config, note string, rolloutPc
 	cur, _ := s.Current()
 	body.Version = nextVersion(cur.Version)
 	raw, _ := json.Marshal(body)
-	if _, err := s.pool.Exec(ctx, `INSERT INTO src.src_sys_gameplay_config (version, config_json, rollout_pct, note, published_by) VALUES ($1,$2,$3,$4,$5)`,
+	if _, err := s.pool.Exec(ctx, `INSERT INTO src.src_sys_loop_gameplay_config (version, config_json, rollout_pct, note, published_by) VALUES ($1,$2,$3,$4,$5)`,
 		body.Version, raw, rolloutPct, note, adminID); err != nil {
 		return Version{}, err
 	}
@@ -153,7 +153,7 @@ func (s *Store) Rollout(ctx context.Context, pct int) error {
 		return fmt.Errorf("rollout_pct must be 1..100")
 	}
 	cur, _ := s.Current()
-	if _, err := s.pool.Exec(ctx, `UPDATE src.src_sys_gameplay_config SET rollout_pct=$1 WHERE id=$2`, pct, cur.ID); err != nil {
+	if _, err := s.pool.Exec(ctx, `UPDATE src.src_sys_loop_gameplay_config SET rollout_pct=$1 WHERE id=$2`, pct, cur.ID); err != nil {
 		return err
 	}
 	return s.Reload(ctx)
@@ -171,10 +171,10 @@ func (s *Store) Rollback(ctx context.Context) error {
 		return err
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
-	if _, err := tx.Exec(ctx, `UPDATE src.src_sys_gameplay_config SET rollback_time=now() WHERE id=$1`, cur.ID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_sys_loop_gameplay_config SET rollback_time=now() WHERE id=$1`, cur.ID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE src.src_sys_gameplay_config SET rollout_pct=100 WHERE id=$1`, prev.ID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_sys_loop_gameplay_config SET rollout_pct=100 WHERE id=$1`, prev.ID); err != nil {
 		return err
 	}
 	if err := tx.Commit(ctx); err != nil {

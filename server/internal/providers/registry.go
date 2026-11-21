@@ -76,7 +76,7 @@ func (r *Registry) rows(ctx context.Context) (map[string]row, time.Time, error) 
 	if r.Pool == nil {
 		return out, version, nil
 	}
-	rows, err := r.Pool.Query(ctx, `SELECT provider_code, is_enabled, config_json, secret_enc, update_time FROM src.src_sys_provider_config WHERE is_saved`)
+	rows, err := r.Pool.Query(ctx, `SELECT provider_code, is_enabled, config_json, secret_enc, update_time FROM src.src_sys_loop_provider_config WHERE is_saved`)
 	if err != nil {
 		return nil, version, err
 	}
@@ -218,7 +218,7 @@ func (r *Registry) Watch(ctx context.Context, every time.Duration) {
 			return
 		case <-t.C:
 			var v time.Time
-			if err := r.Pool.QueryRow(ctx, `SELECT COALESCE(max(update_time), 'epoch') FROM src.src_sys_provider_config`).Scan(&v); err != nil {
+			if err := r.Pool.QueryRow(ctx, `SELECT COALESCE(max(update_time), 'epoch') FROM src.src_sys_loop_provider_config`).Scan(&v); err != nil {
 				continue
 			}
 			r.mu.RLock()
@@ -455,7 +455,7 @@ func mask(v string) Masked {
 func (r *Registry) Views(ctx context.Context) ([]View, error) {
 	eff := r.Current().Eff
 	meta := map[string]View{}
-	rows, err := r.Pool.Query(ctx, `SELECT provider_code, is_saved, check_status, check_message, check_time, updated_by, update_time FROM src.src_sys_provider_config`)
+	rows, err := r.Pool.Query(ctx, `SELECT provider_code, is_saved, check_status, check_message, check_time, updated_by, update_time FROM src.src_sys_loop_provider_config`)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +579,7 @@ func (r *Registry) Save(ctx context.Context, code string, enabled bool, values m
 	}
 	pj, _ := json.Marshal(plain)
 	sj, _ := json.Marshal(secret)
-	_, err := r.Pool.Exec(ctx, `INSERT INTO src.src_sys_provider_config (provider_code, is_enabled, is_saved, config_json, secret_enc, updated_by, update_time)
+	_, err := r.Pool.Exec(ctx, `INSERT INTO src.src_sys_loop_provider_config (provider_code, is_enabled, is_saved, config_json, secret_enc, updated_by, update_time)
 		VALUES ($1,$2,true,$3,$4,$5,now())
 		ON CONFLICT (provider_code) DO UPDATE SET is_enabled=EXCLUDED.is_enabled, is_saved=true, config_json=EXCLUDED.config_json,
 			secret_enc=EXCLUDED.secret_enc, updated_by=EXCLUDED.updated_by, update_time=now()`, code, enabled, pj, r.Box.Seal(string(sj)), adminID)
@@ -632,7 +632,7 @@ func (r *Registry) Test(ctx context.Context, code, input string) (CheckResult, e
 			res.Message = res.Message[:500]
 		}
 	}
-	_, dbErr := r.Pool.Exec(ctx, `INSERT INTO src.src_sys_provider_config (provider_code, check_status, check_message, check_time)
+	_, dbErr := r.Pool.Exec(ctx, `INSERT INTO src.src_sys_loop_provider_config (provider_code, check_status, check_message, check_time)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (provider_code) DO UPDATE SET check_status=EXCLUDED.check_status, check_message=EXCLUDED.check_message, check_time=EXCLUDED.check_time`,
 		code, res.Status, res.Message, res.Time)

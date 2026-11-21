@@ -9,13 +9,13 @@ import (
 )
 
 // TestNamingStandard enforces docs/数据库与命名规范.md on the migrated
-// schema: every table in src is named src_<domain>_<entity>, and every table
+// schema: every table in src is named src_<domain>_loop_<entity>, and every table
 // and column carries a comment.
 func TestNamingStandard(t *testing.T) {
 	pool := testdb.New(t)
 	ctx := context.Background()
 	domains := `(usr|act|ter|ply|soc|ord|fin|mer|mkt|ris|cnt|msg|trf|sys)`
-	tableRe := regexp.MustCompile(`^src_` + domains + `_[a-z0-9_]+$`)
+	tableRe := regexp.MustCompile(`^src_` + domains + `_loop_[a-z0-9_]+$`)
 	rows, err := pool.Query(ctx, `SELECT c.relname, obj_description(c.oid, 'pg_class') IS NOT NULL
 		FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
 		WHERE n.nspname='src' AND c.relkind IN ('r','p')`)
@@ -31,7 +31,7 @@ func TestNamingStandard(t *testing.T) {
 		}
 		n++
 		if !tableRe.MatchString(name) {
-			t.Errorf("table %s does not follow src_<domain>_<entity>", name)
+			t.Errorf("table %s does not follow src_<domain>_loop_<entity>", name)
 		}
 		if !commented {
 			t.Errorf("table %s has no comment", name)

@@ -180,7 +180,7 @@ func TestPlayEndToEnd(t *testing.T) {
 	time.Sleep(200 * time.Millisecond) // let the subscription register
 
 	// --- Strikes: range, energy, cooldown.
-	e.sql(`UPDATE src.src_usr_user SET energy=1000 WHERE id IN ($1,$2)`, ares.User.ID, bres.User.ID)
+	e.sql(`UPDATE src.src_usr_loop_user SET energy=1000 WHERE id IN ($1,$2)`, ares.User.ID, bres.User.ID)
 	far := at(5000, 5000)
 	a.expectErr("POST", fmt.Sprintf("/v1/bosses/%d/strike", boss.ID), map[string]float64{"lat": far.Lat, "lng": far.Lng}, 403, "out_of_range")
 	var st struct {
@@ -221,7 +221,7 @@ func TestPlayEndToEnd(t *testing.T) {
 	}
 	a.must("POST", "/v1/crews", map[string]any{"name": "玩法测试团", "district": "黄浦区", "join_mode": "open"}, &crew)
 	b.must("POST", fmt.Sprintf("/v1/crews/%d/join", crew.ID), nil, nil)
-	e.sql(`UPDATE src.src_ply_boss_hit SET crew_id=$1 WHERE user_id=$2`, crew.ID, ares.User.ID)
+	e.sql(`UPDATE src.src_ply_loop_boss_hit SET crew_id=$1 WHERE user_id=$2`, crew.ID, ares.User.ID)
 	b.must("POST", fmt.Sprintf("/v1/bosses/%d/strike", boss.ID), map[string]float64{"lat": bc.Lat, "lng": bc.Lng}, &st)
 	if st.Damage != 44 {
 		t.Fatalf("combo strike damage = %d, want 44", st.Damage)
@@ -237,7 +237,7 @@ func TestPlayEndToEnd(t *testing.T) {
 	}
 
 	// --- Defeat: drop the HP and finish with B's strike after cooldown.
-	e.sql(`UPDATE src.src_ply_boss SET hp=10 WHERE id=$1`, boss.ID)
+	e.sql(`UPDATE src.src_ply_loop_boss SET hp=10 WHERE id=$1`, boss.ID)
 	e.app.Redis.Del(ctx, fmt.Sprintf("boss:cd:%d:%d", boss.ID, bres.User.ID))
 	b.must("POST", fmt.Sprintf("/v1/bosses/%d/strike", boss.ID), map[string]float64{"lat": bc.Lat, "lng": bc.Lng}, &st)
 	var view struct {
@@ -289,7 +289,7 @@ func TestPlayEndToEnd(t *testing.T) {
 	}
 
 	// --- Defense: B weakens A's land, A runs over it within the window.
-	e.sql(`UPDATE src.src_ter_territory SET guard=500 WHERE id=$1`, tid)
+	e.sql(`UPDATE src.src_ter_loop_territory SET guard=500 WHERE id=$1`, tid)
 	r2 := b.runAt([2]float64{200, 100}, [2]float64{500, 100}, [2]float64{500, 200}, [2]float64{250, 200}, [2]float64{250, 50})
 	if len(r2.Attacks) == 0 {
 		// same crew now: crew mates don't attack each other — leave the crew and retry
@@ -310,8 +310,8 @@ func TestPlayEndToEnd(t *testing.T) {
 		t.Fatal("defense window should be open")
 	}
 	// Hatch A's egg and make it the escort, for companion growth below.
-	e.sql(`DELETE FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='egg' AND item='gecko'`, ares.User.ID)
-	e.sql(`INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,'companion','gecko')`, ares.User.ID)
+	e.sql(`DELETE FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='egg' AND item='gecko'`, ares.User.ID)
+	e.sql(`INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item) VALUES ($1,'companion','gecko')`, ares.User.ID)
 	a.must("POST", "/v1/codex/companions/gecko/escort", nil, nil)
 	// Relay: two legs of 1 km.
 	var relay struct {
@@ -393,7 +393,7 @@ func TestPlayEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	var auto int
-	e.app.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_boss WHERE spawned_by IS NULL AND status='active'`).Scan(&auto)
+	e.app.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_loop_boss WHERE spawned_by IS NULL AND status='active'`).Scan(&auto)
 	if auto == 0 {
 		t.Fatal("auto spawn placed no monster near recent runs")
 	}

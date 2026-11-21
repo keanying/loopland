@@ -42,7 +42,7 @@ func chestBuff(ctx context.Context, q db.Querier, cfg gameplay.Config, user int6
 			continue
 		}
 		var owned bool
-		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, r.Key).Scan(&owned); err == nil && owned {
+		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, r.Key).Scan(&owned); err == nil && owned {
 			pct += r.BuffValue
 		}
 	}
@@ -51,11 +51,11 @@ func chestBuff(ctx context.Context, q db.Querier, cfg gameplay.Config, user int6
 
 func (s *Service) openChest(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, chest, user int64, activityID *int64) (int, bool, error) {
 	var lo, hi int
-	if err := tx.QueryRow(ctx, `SELECT energy_min, energy_max FROM src.src_ply_chest WHERE id=$1 FOR UPDATE`, chest).Scan(&lo, &hi); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT energy_min, energy_max FROM src.src_ply_loop_chest WHERE id=$1 FOR UPDATE`, chest).Scan(&lo, &hi); err != nil {
 		return 0, false, err
 	}
 	energy, bonus := chestReward(cfg, chest, user, lo, hi, chestBuff(ctx, tx, cfg, user))
-	tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_chest_open (chest_id, user_id, energy, is_bonus, activity_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+	tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_chest_open (chest_id, user_id, energy, is_bonus, activity_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 		chest, user, energy, bonus, activityID)
 	if err != nil {
 		return 0, false, err
@@ -72,7 +72,7 @@ func (s *Service) openChest(ctx context.Context, tx pgx.Tx, cfg gameplay.Config,
 // OpenChest opens a chest the user stands next to.
 func (s *Service) OpenChest(ctx context.Context, user, id int64, lat, lng float64) (int, bool, error) {
 	var expired bool
-	err := s.Pool.QueryRow(ctx, `SELECT expire_time <= now() OR remove_time IS NOT NULL FROM src.src_ply_chest WHERE id=$1`, id).Scan(&expired)
+	err := s.Pool.QueryRow(ctx, `SELECT expire_time <= now() OR remove_time IS NOT NULL FROM src.src_ply_loop_chest WHERE id=$1`, id).Scan(&expired)
 	if db.IsNoRows(err) {
 		return 0, false, httpx.NotFound("宝箱")
 	}
@@ -82,7 +82,7 @@ func (s *Service) OpenChest(ctx context.Context, user, id int64, lat, lng float6
 	if expired {
 		return 0, false, httpx.Conflict("chest_expired", "宝箱已经消失了")
 	}
-	ok, err := inRange(ctx, s.Pool, "src.src_ply_chest", id, lat, lng)
+	ok, err := inRange(ctx, s.Pool, "src.src_ply_loop_chest", id, lat, lng)
 	if err != nil {
 		return 0, false, err
 	}
@@ -108,10 +108,10 @@ func (s *Service) chestsOnTrack(ctx context.Context, tx pgx.Tx, in activity.Hook
 	if track == nil {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT c.id FROM src.src_ply_chest c
+	rows, err := tx.Query(ctx, `SELECT c.id FROM src.src_ply_loop_chest c
 		WHERE c.expire_time > now() AND c.remove_time IS NULL AND c.create_time <= $3
 		  AND ST_DWithin(c.center_geom::geography, ST_GeomFromText($1,4326)::geography, c.radius_m)
-		  AND NOT EXISTS (SELECT 1 FROM src.src_ply_chest_open o WHERE o.chest_id=c.id AND o.user_id=$2)
+		  AND NOT EXISTS (SELECT 1 FROM src.src_ply_loop_chest_open o WHERE o.chest_id=c.id AND o.user_id=$2)
 		ORDER BY c.id`, *track, in.UserID, time.Now())
 	if err != nil {
 		return out, err
@@ -138,7 +138,7 @@ func (s *Service) defend(ctx context.Context, tx pgx.Tx, in activity.HookInput, 
 	if track == nil {
 		return out, nil
 	}
-	rows, err := tx.Query(ctx, `SELECT t.id FROM src.src_ter_defense d JOIN src.src_ter_territory t ON t.id=d.territory_id
+	rows, err := tx.Query(ctx, `SELECT t.id FROM src.src_ter_loop_defense d JOIN src.src_ter_loop_territory t ON t.id=d.territory_id
 		WHERE t.owner_user_id=$1 AND d.deadline_time > now() AND ST_Intersects(t.area_geom, ST_GeomFromText($2,4326)) ORDER BY t.id`,
 		in.UserID, *track)
 	if err != nil {
@@ -181,7 +181,7 @@ func (s *Service) routeProgress(ctx context.Context, tx pgx.Tx, in activity.Hook
 		return out, nil
 	}
 	rows, err := tx.Query(ctx, `SELECT r.id, r.name, r.checkpoints_json, r.reward_energy, COALESCE(p.next_index, 0)
-		FROM src.src_ply_route r LEFT JOIN src.src_ply_route_progress p ON p.route_id=r.id AND p.user_id=$1
+		FROM src.src_ply_loop_route r LEFT JOIN src.src_ply_loop_route_progress p ON p.route_id=r.id AND p.user_id=$1
 		WHERE r.start_time <= now() AND r.end_time > now() AND (p.complete_time IS NULL)`, in.UserID)
 	if err != nil {
 		return out, err
@@ -222,7 +222,7 @@ func (s *Service) routeProgress(ctx context.Context, tx pgx.Tx, in activity.Hook
 			continue
 		}
 		done := next >= len(r.cps)
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_route_progress (route_id, user_id, next_index, complete_time) VALUES ($1,$2,$3, CASE WHEN $4 THEN now() END)
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_route_progress (route_id, user_id, next_index, complete_time) VALUES ($1,$2,$3, CASE WHEN $4 THEN now() END)
 			ON CONFLICT (route_id, user_id) DO UPDATE SET next_index=EXCLUDED.next_index, complete_time=EXCLUDED.complete_time`,
 			r.id, in.UserID, next, done); err != nil {
 			return out, err
@@ -283,9 +283,9 @@ func CampaignMet(typ string, r CampaignRules, sport gameplay.Sport, distanceM fl
 
 func (s *Service) campaigns(ctx context.Context, tx pgx.Tx, in activity.HookInput) ([]activity.CampaignDone, error) {
 	out := []activity.CampaignDone{}
-	rows, err := tx.Query(ctx, `SELECT c.id, c.title, c.campaign_type, c.rules_json, c.reward_energy, c.reward_medal_name FROM src.src_mkt_campaign c
+	rows, err := tx.Query(ctx, `SELECT c.id, c.title, c.campaign_type, c.rules_json, c.reward_energy, c.reward_medal_name FROM src.src_mkt_loop_campaign c
 		WHERE c.start_time <= $2 AND c.end_time > $2
-		  AND NOT EXISTS (SELECT 1 FROM src.src_mkt_campaign_done x WHERE x.campaign_id=c.id AND x.user_id=$1)`, in.UserID, in.StartedAt)
+		  AND NOT EXISTS (SELECT 1 FROM src.src_mkt_loop_campaign_done x WHERE x.campaign_id=c.id AND x.user_id=$1)`, in.UserID, in.StartedAt)
 	if err != nil {
 		return out, err
 	}
@@ -313,7 +313,7 @@ func (s *Service) campaigns(ctx context.Context, tx pgx.Tx, in activity.HookInpu
 		if !CampaignMet(c.typ, c.rules, in.Sport, in.DistanceM, in.DurationS, in.StartedAt) {
 			continue
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_mkt_campaign_done (campaign_id, user_id, activity_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_mkt_loop_campaign_done (campaign_id, user_id, activity_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
 			c.id, in.UserID, in.ActivityID); err != nil {
 			return out, err
 		}
@@ -321,7 +321,7 @@ func (s *Service) campaigns(ctx context.Context, tx pgx.Tx, in activity.HookInpu
 			return out, err
 		}
 		if c.medal != nil && *c.medal != "" {
-			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`,
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_codex_item (user_id, item_type, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`,
 				in.UserID, "campaign:"+*c.medal); err != nil {
 				return out, err
 			}
@@ -342,18 +342,18 @@ func (s *Service) companionGrowth(ctx context.Context, tx pgx.Tx, in activity.Ho
 		return nil, nil
 	}
 	var key *string
-	if err := tx.QueryRow(ctx, `SELECT escort_companion_key FROM src.src_usr_user WHERE id=$1`, in.UserID).Scan(&key); err != nil || key == nil {
+	if err := tx.QueryRow(ctx, `SELECT escort_companion_key FROM src.src_usr_loop_user WHERE id=$1`, in.UserID).Scan(&key); err != nil || key == nil {
 		return nil, err
 	}
 	var exp int
 	var meters float64
-	err := tx.QueryRow(ctx, `SELECT exp, meters FROM src.src_ply_companion_growth WHERE user_id=$1 AND companion=$2`, in.UserID, *key).Scan(&exp, &meters)
+	err := tx.QueryRow(ctx, `SELECT exp, meters FROM src.src_ply_loop_companion_growth WHERE user_id=$1 AND companion=$2`, in.UserID, *key).Scan(&exp, &meters)
 	if err != nil && !db.IsNoRows(err) {
 		return nil, err
 	}
 	gain := (int(meters+in.DistanceM)/100 - int(meters)/100) * in.Config.Pet.ExpPer100m
 	newExp := exp + gain
-	if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_companion_growth (user_id, companion, exp, meters) VALUES ($1,$2,$3,$4)
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_companion_growth (user_id, companion, exp, meters) VALUES ($1,$2,$3,$4)
 		ON CONFLICT (user_id, companion) DO UPDATE SET exp=EXCLUDED.exp, meters=EXCLUDED.meters`, in.UserID, *key, newExp, meters+in.DistanceM); err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (s *Service) Feed(ctx context.Context, user int64, key string) error {
 	cfg := s.Config.For(user)
 	return pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var hatched bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='companion' AND item=$2)`, user, key).Scan(&hatched); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='companion' AND item=$2)`, user, key).Scan(&hatched); err != nil {
 			return err
 		}
 		if !hatched {
@@ -375,8 +375,8 @@ func (s *Service) Feed(ctx context.Context, user int64, key string) error {
 		if _, err := spend(ctx, tx, user, cfg.Pet.FeedCost, "companion_feed", 0); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO src.src_ply_companion_growth (user_id, companion, exp) VALUES ($1,$2,$3)
-			ON CONFLICT (user_id, companion) DO UPDATE SET exp = src.src_ply_companion_growth.exp + EXCLUDED.exp`, user, key, cfg.Pet.FeedExp)
+		_, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_companion_growth (user_id, companion, exp) VALUES ($1,$2,$3)
+			ON CONFLICT (user_id, companion) DO UPDATE SET exp = src.src_ply_loop_companion_growth.exp + EXCLUDED.exp`, user, key, cfg.Pet.FeedExp)
 		return err
 	})
 }
@@ -416,7 +416,7 @@ func (s *Service) StartRelay(ctx context.Context, user, crew int64, legs int, le
 		return Relay{}, httpx.BadRequest("invalid_body", "接力 2–20 棒，单棒 0–50 km")
 	}
 	var leader int64
-	err := s.Pool.QueryRow(ctx, `SELECT leader_id FROM src.src_soc_crew WHERE id=$1`, crew).Scan(&leader)
+	err := s.Pool.QueryRow(ctx, `SELECT leader_id FROM src.src_soc_loop_crew WHERE id=$1`, crew).Scan(&leader)
 	if db.IsNoRows(err) {
 		return Relay{}, httpx.NotFound("跑团")
 	}
@@ -426,7 +426,7 @@ func (s *Service) StartRelay(ctx context.Context, user, crew int64, legs int, le
 	if leader != user {
 		return Relay{}, httpx.Forbidden("not_leader", "只有团长可以发起接力")
 	}
-	_, err = s.Pool.Exec(ctx, `INSERT INTO src.src_soc_relay (crew_id, legs, leg_km, started_by, expire_time) VALUES ($1,$2,$3,$4, now() + make_interval(secs => $5))`,
+	_, err = s.Pool.Exec(ctx, `INSERT INTO src.src_soc_loop_relay (crew_id, legs, leg_km, started_by, expire_time) VALUES ($1,$2,$3,$4, now() + make_interval(secs => $5))`,
 		crew, legs, legKm, user, cfg.Relay.DurationH*3600)
 	if db.IsUniqueViolation(err) {
 		return Relay{}, httpx.Conflict("relay_running", "已经有一场接力在进行中")
@@ -434,7 +434,7 @@ func (s *Service) StartRelay(ctx context.Context, user, crew int64, legs int, le
 	if err != nil {
 		return Relay{}, err
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT user_id FROM src.src_soc_crew_member WHERE crew_id=$1 AND user_id<>$2`, crew, user)
+	rows, err := s.Pool.Query(ctx, `SELECT user_id FROM src.src_soc_loop_crew_member WHERE crew_id=$1 AND user_id<>$2`, crew, user)
 	if err == nil {
 		if mates, err := pgx.CollectRows(rows, pgx.RowTo[int64]); err == nil {
 			for _, m := range mates {
@@ -452,7 +452,7 @@ func (s *Service) StartRelay(ctx context.Context, user, crew int64, legs int, le
 // CurrentRelay returns the running (or most recent) relay.
 func (s *Service) CurrentRelay(ctx context.Context, crew int64) (*Relay, error) {
 	var r Relay
-	err := s.Pool.QueryRow(ctx, `SELECT id, legs, leg_km, status, start_time, expire_time FROM src.src_soc_relay WHERE crew_id=$1
+	err := s.Pool.QueryRow(ctx, `SELECT id, legs, leg_km, status, start_time, expire_time FROM src.src_soc_loop_relay WHERE crew_id=$1
 		ORDER BY (status='running') DESC, id DESC LIMIT 1`, crew).Scan(&r.ID, &r.Legs, &r.LegKm, &r.Status, &r.StartedAt, &r.ExpiresAt)
 	if db.IsNoRows(err) {
 		return nil, nil
@@ -460,8 +460,8 @@ func (s *Service) CurrentRelay(ctx context.Context, crew int64) (*Relay, error) 
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT x.leg, u.id, u.nickname, u.avatar_url, x.activity_id, x.distance_m, x.run_time FROM src.src_soc_relay_run x
-		JOIN src.src_usr_user u ON u.id=x.user_id WHERE x.relay_id=$1 ORDER BY x.leg`, r.ID)
+	rows, err := s.Pool.Query(ctx, `SELECT x.leg, u.id, u.nickname, u.avatar_url, x.activity_id, x.distance_m, x.run_time FROM src.src_soc_loop_relay_run x
+		JOIN src.src_usr_loop_user u ON u.id=x.user_id WHERE x.relay_id=$1 ORDER BY x.leg`, r.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -482,7 +482,7 @@ func (s *Service) relayLeg(ctx context.Context, tx pgx.Tx, in activity.HookInput
 	var id int64
 	var legs int
 	var legKm float64
-	err := tx.QueryRow(ctx, `SELECT id, legs, leg_km FROM src.src_soc_relay WHERE crew_id=$1 AND status='running' AND expire_time > now() FOR UPDATE`, *in.CrewID).
+	err := tx.QueryRow(ctx, `SELECT id, legs, leg_km FROM src.src_soc_loop_relay WHERE crew_id=$1 AND status='running' AND expire_time > now() FOR UPDATE`, *in.CrewID).
 		Scan(&id, &legs, &legKm)
 	if db.IsNoRows(err) {
 		return nil, nil
@@ -495,24 +495,24 @@ func (s *Service) relayLeg(ctx context.Context, tx pgx.Tx, in activity.HookInput
 	}
 	var done int
 	var mine bool
-	if err := tx.QueryRow(ctx, `SELECT count(*), COALESCE(bool_or(user_id=$2), false) FROM src.src_soc_relay_run WHERE relay_id=$1`, id, in.UserID).Scan(&done, &mine); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT count(*), COALESCE(bool_or(user_id=$2), false) FROM src.src_soc_loop_relay_run WHERE relay_id=$1`, id, in.UserID).Scan(&done, &mine); err != nil {
 		return nil, err
 	}
 	if mine || done >= legs {
 		return nil, nil
 	}
 	leg := done + 1
-	if _, err := tx.Exec(ctx, `INSERT INTO src.src_soc_relay_run (relay_id, leg, user_id, activity_id, distance_m) VALUES ($1,$2,$3,$4,$5)`,
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_soc_loop_relay_run (relay_id, leg, user_id, activity_id, distance_m) VALUES ($1,$2,$3,$4,$5)`,
 		id, leg, in.UserID, in.ActivityID, in.DistanceM); err != nil {
 		return nil, err
 	}
 	out := &activity.RelayLeg{RelayID: id, Leg: leg, Legs: legs}
 	if leg == legs {
 		out.Completed = true
-		if _, err := tx.Exec(ctx, `UPDATE src.src_soc_relay SET status='completed', complete_time=now() WHERE id=$1`, id); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_relay SET status='completed', complete_time=now() WHERE id=$1`, id); err != nil {
 			return nil, err
 		}
-		rows, err := tx.Query(ctx, `SELECT user_id FROM src.src_soc_relay_run WHERE relay_id=$1`, id)
+		rows, err := tx.Query(ctx, `SELECT user_id FROM src.src_soc_loop_relay_run WHERE relay_id=$1`, id)
 		if err != nil {
 			return nil, err
 		}

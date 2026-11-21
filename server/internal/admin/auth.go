@@ -54,7 +54,7 @@ func (a *API) guard(allowed ...string) func(httpx.HandlerFunc) http.Handler {
 			id, _ := strconv.ParseInt(c.Subject, 10, 64)
 			var ad httpx.Admin
 			var disabled bool
-			err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, is_disabled FROM src.src_sys_admin WHERE id=$1`, id).Scan(&ad.ID, &ad.Username, &ad.Role, &disabled)
+			err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, is_disabled FROM src.src_sys_loop_admin WHERE id=$1`, id).Scan(&ad.ID, &ad.Username, &ad.Role, &disabled)
 			if db.IsNoRows(err) || disabled {
 				return httpx.ErrUnauthorized
 			}
@@ -86,7 +86,7 @@ func audit(ctx context.Context, q db.Querier, action, target string, detail map[
 		detail = map[string]any{}
 	}
 	raw, _ := json.Marshal(detail)
-	_, err := q.Exec(ctx, `INSERT INTO src.src_sys_audit_log (admin_id, action, target, detail_json) VALUES ($1,$2,$3,$4)`, ad.ID, action, target, raw)
+	_, err := q.Exec(ctx, `INSERT INTO src.src_sys_loop_audit_log (admin_id, action, target, detail_json) VALUES ($1,$2,$3,$4)`, ad.ID, action, target, raw)
 	return err
 }
 
@@ -100,8 +100,8 @@ func Bootstrap(ctx context.Context, q db.Querier, spec string) error {
 	if err != nil {
 		return err
 	}
-	_, err = q.Exec(ctx, `INSERT INTO src.src_sys_admin (username, password_hash, role) SELECT $1,$2,'admin'
-		WHERE NOT EXISTS (SELECT 1 FROM src.src_sys_admin)`, user, string(hash))
+	_, err = q.Exec(ctx, `INSERT INTO src.src_sys_loop_admin (username, password_hash, role) SELECT $1,$2,'admin'
+		WHERE NOT EXISTS (SELECT 1 FROM src.src_sys_loop_admin)`, user, string(hash))
 	return err
 }
 
@@ -122,7 +122,7 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) error {
 	var ad httpx.Admin
 	var hash string
 	var disabled bool
-	err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, password_hash, is_disabled FROM src.src_sys_admin WHERE username=$1`, req.Username).
+	err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, password_hash, is_disabled FROM src.src_sys_loop_admin WHERE username=$1`, req.Username).
 		Scan(&ad.ID, &ad.Username, &ad.Role, &hash, &disabled)
 	if err != nil && !db.IsNoRows(err) {
 		return err
@@ -151,7 +151,7 @@ type adminRow struct {
 }
 
 func (a *API) listAdmins(w http.ResponseWriter, r *http.Request) error {
-	rows, err := a.Pool.Query(r.Context(), `SELECT id, username, role, is_disabled, create_time FROM src.src_sys_admin ORDER BY id`)
+	rows, err := a.Pool.Query(r.Context(), `SELECT id, username, role, is_disabled, create_time FROM src.src_sys_loop_admin ORDER BY id`)
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (a *API) createAdmin(w http.ResponseWriter, r *http.Request) error {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	var row adminRow
 	err := pgx.BeginFunc(r.Context(), a.Pool, func(tx pgx.Tx) error {
-		err := tx.QueryRow(r.Context(), `INSERT INTO src.src_sys_admin (username, password_hash, role) VALUES ($1,$2,$3)
+		err := tx.QueryRow(r.Context(), `INSERT INTO src.src_sys_loop_admin (username, password_hash, role) VALUES ($1,$2,$3)
 			RETURNING id, username, role, is_disabled, create_time`, req.Username, string(hash), req.Role).
 			Scan(&row.ID, &row.Username, &row.Role, &row.Disabled, &row.CreatedAt)
 		if db.IsUniqueViolation(err) {
@@ -227,12 +227,12 @@ func (a *API) patchAdmin(w http.ResponseWriter, r *http.Request) error {
 			if !slices.Contains(roles, *req.Role) {
 				return httpx.BadRequest("invalid_body", "角色错误")
 			}
-			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_admin SET role=$2 WHERE id=$1`, id, *req.Role); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_loop_admin SET role=$2 WHERE id=$1`, id, *req.Role); err != nil {
 				return err
 			}
 		}
 		if req.Disabled != nil {
-			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_admin SET is_disabled=$2 WHERE id=$1`, id, *req.Disabled); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_loop_admin SET is_disabled=$2 WHERE id=$1`, id, *req.Disabled); err != nil {
 				return err
 			}
 		}
@@ -241,11 +241,11 @@ func (a *API) patchAdmin(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			hash, _ := bcrypt.GenerateFromPassword([]byte(*req.Password), bcrypt.DefaultCost)
-			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_admin SET password_hash=$2 WHERE id=$1`, id, string(hash)); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_sys_loop_admin SET password_hash=$2 WHERE id=$1`, id, string(hash)); err != nil {
 				return err
 			}
 		}
-		err := tx.QueryRow(r.Context(), `SELECT id, username, role, is_disabled, create_time FROM src.src_sys_admin WHERE id=$1`, id).
+		err := tx.QueryRow(r.Context(), `SELECT id, username, role, is_disabled, create_time FROM src.src_sys_loop_admin WHERE id=$1`, id).
 			Scan(&row.ID, &row.Username, &row.Role, &row.Disabled, &row.CreatedAt)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("后台账号")
@@ -278,11 +278,11 @@ func (a *API) auditLog(w http.ResponseWriter, r *http.Request) error {
 	p := httpx.GetPage(r)
 	adminID, _ := strconv.ParseInt(r.URL.Query().Get("admin_id"), 10, 64)
 	var total int
-	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_sys_audit_log WHERE ($1=0 OR admin_id=$1)`, adminID).Scan(&total); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_sys_loop_audit_log WHERE ($1=0 OR admin_id=$1)`, adminID).Scan(&total); err != nil {
 		return err
 	}
 	rows, err := a.Pool.Query(r.Context(), `SELECT l.id, a.id, a.username, l.action, l.target, l.detail_json, l.create_time
-		FROM src.src_sys_audit_log l JOIN src.src_sys_admin a ON a.id=l.admin_id WHERE ($1=0 OR l.admin_id=$1) ORDER BY l.id DESC LIMIT $2 OFFSET $3`,
+		FROM src.src_sys_loop_audit_log l JOIN src.src_sys_loop_admin a ON a.id=l.admin_id WHERE ($1=0 OR l.admin_id=$1) ORDER BY l.id DESC LIMIT $2 OFFSET $3`,
 		adminID, p.Size, p.Offset())
 	if err != nil {
 		return err

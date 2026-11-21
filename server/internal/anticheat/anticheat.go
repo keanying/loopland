@@ -56,7 +56,7 @@ func (r Rules) MaxKmh(s gameplay.Sport) float64 {
 // LoadRules reads the current rules.
 func LoadRules(ctx context.Context, q db.Querier) (Rules, error) {
 	var raw []byte
-	err := q.QueryRow(ctx, `SELECT setting_value FROM src.src_sys_setting WHERE setting_key='risk_rules'`).Scan(&raw)
+	err := q.QueryRow(ctx, `SELECT setting_value FROM src.src_sys_loop_setting WHERE setting_key='risk_rules'`).Scan(&raw)
 	if db.IsNoRows(err) {
 		return DefaultRules, nil
 	}
@@ -70,7 +70,7 @@ func LoadRules(ctx context.Context, q db.Querier) (Rules, error) {
 // SaveRules stores new rules (apply to new activities only).
 func SaveRules(ctx context.Context, q db.Querier, r Rules) error {
 	raw, _ := json.Marshal(r)
-	_, err := q.Exec(ctx, `INSERT INTO src.src_sys_setting (setting_key, setting_value) VALUES ('risk_rules', $1)
+	_, err := q.Exec(ctx, `INSERT INTO src.src_sys_loop_setting (setting_key, setting_value) VALUES ('risk_rules', $1)
 		ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value, update_time=now()`, raw)
 	return err
 }

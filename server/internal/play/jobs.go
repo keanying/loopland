@@ -45,7 +45,7 @@ func (s *Service) PlaceChest(ctx context.Context, lat, lng float64, emin, emax i
 		placedBy = &by
 	}
 	var id int64
-	err := s.Pool.QueryRow(ctx, `INSERT INTO src.src_ply_chest (center_geom, radius_m, energy_min, energy_max, source, placed_by, expire_time)
+	err := s.Pool.QueryRow(ctx, `INSERT INTO src.src_ply_loop_chest (center_geom, radius_m, energy_min, energy_max, source, placed_by, expire_time)
 		VALUES (ST_SetSRID(ST_MakePoint($1,$2),4326), $3, $4, $5, $6, $7, now() + make_interval(secs => $8)) RETURNING id`,
 		lng, lat, radiusM, emin, emax, source, placedBy, durationH*3600).Scan(&id)
 	return id, err
@@ -60,7 +60,7 @@ func (s *Service) Scatter(ctx context.Context, b *territory.BBox, count int, dur
 		args = append(args, b[0], b[1], b[2], b[3])
 	}
 	rows, err := s.Pool.Query(ctx, `SELECT ST_Y(p), ST_X(p) FROM (
-		  SELECT ST_LineInterpolatePoint(track_geom, random()) AS p FROM src.src_act_activity
+		  SELECT ST_LineInterpolatePoint(track_geom, random()) AS p FROM src.src_act_loop_activity
 		  WHERE status='settled' AND track_geom IS NOT NULL AND create_time > now() - interval '30 days' AND `+where+`
 		  ORDER BY random() LIMIT $1) x`, args...)
 	if err != nil {
@@ -95,7 +95,7 @@ func (s *Service) AutoSpawn(ctx context.Context, now time.Time) error {
 	}
 	cfg := s.Config.For(0)
 	var active int
-	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_boss WHERE status='active'`).Scan(&active); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_loop_boss WHERE status='active'`).Scan(&active); err != nil {
 		return err
 	}
 	if active >= cfg.Boss.AutoSpawnMax || len(cfg.Bosses) == 0 {
@@ -104,9 +104,9 @@ func (s *Service) AutoSpawn(ctx context.Context, now time.Time) error {
 	rows, err := s.Pool.Query(ctx, `
 		SELECT ST_Y(c), ST_X(c), n FROM (
 		  SELECT ST_Centroid(ST_Collect(ST_StartPoint(track_geom))) AS c, count(*) AS n
-		  FROM src.src_act_activity WHERE status='settled' AND track_geom IS NOT NULL AND create_time > now() - interval '24 hours'
+		  FROM src.src_act_loop_activity WHERE status='settled' AND track_geom IS NOT NULL AND create_time > now() - interval '24 hours'
 		  GROUP BY ST_SnapToGrid(ST_StartPoint(track_geom), 0.02)) g
-		WHERE NOT EXISTS (SELECT 1 FROM src.src_ply_boss b WHERE b.status='active' AND ST_DWithin(b.center_geom::geography, g.c::geography, 3000))
+		WHERE NOT EXISTS (SELECT 1 FROM src.src_ply_loop_boss b WHERE b.status='active' AND ST_DWithin(b.center_geom::geography, g.c::geography, 3000))
 		ORDER BY n DESC LIMIT $1`, cfg.Boss.AutoSpawnMax-active)
 	if err != nil {
 		return err
@@ -138,8 +138,8 @@ func (s *Service) DailyChests(ctx context.Context, now time.Time) error {
 	if now.In(clock.Shanghai).Hour() < 6 || Night(now) {
 		return nil
 	}
-	tag, err := s.Pool.Exec(ctx, `INSERT INTO src.src_sys_setting (setting_key, setting_value) VALUES ('chests_day', to_jsonb($1::text))
-		ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value, update_time=now() WHERE src_sys_setting.setting_value <> to_jsonb($1::text)`,
+	tag, err := s.Pool.Exec(ctx, `INSERT INTO src.src_sys_loop_setting (setting_key, setting_value) VALUES ('chests_day', to_jsonb($1::text))
+		ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value, update_time=now() WHERE src_sys_loop_setting.setting_value <> to_jsonb($1::text)`,
 		clock.Day(now).Format("2006-01-02"))
 	if err != nil || tag.RowsAffected() == 0 {
 		return err
@@ -150,7 +150,7 @@ func (s *Service) DailyChests(ctx context.Context, now time.Time) error {
 
 // ExpireRelays closes relays past their deadline.
 func (s *Service) ExpireRelays(ctx context.Context) error {
-	_, err := s.Pool.Exec(ctx, `UPDATE src.src_soc_relay SET status='expired' WHERE status='running' AND expire_time <= now()`)
+	_, err := s.Pool.Exec(ctx, `UPDATE src.src_soc_loop_relay SET status='expired' WHERE status='running' AND expire_time <= now()`)
 	return err
 }
 
@@ -164,7 +164,7 @@ func (s *Service) Jobs() map[string]func(context.Context) error {
 		"league_settle": s.SettleLeague,
 		"relay_expire":  s.ExpireRelays,
 		"defense_expire": func(ctx context.Context) error {
-			_, err := s.Pool.Exec(ctx, `DELETE FROM src.src_ter_defense WHERE deadline_time <= now()`)
+			_, err := s.Pool.Exec(ctx, `DELETE FROM src.src_ter_loop_defense WHERE deadline_time <= now()`)
 			return err
 		},
 	}

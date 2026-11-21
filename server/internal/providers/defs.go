@@ -1,6 +1,6 @@
 // Package providers manages third-party service configuration (第三方服务配置):
 // definitions shown in the admin console, encrypted storage in
-// src.src_sys_provider_config, the live client instances (rebuilt without a
+// src.src_sys_loop_provider_config, the live client instances (rebuilt without a
 // restart when an admin saves), and connection tests.
 //
 // Precedence per service: a row saved in the admin console wins; without a

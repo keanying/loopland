@@ -100,7 +100,7 @@ type Detail struct {
 const summaryCols = `t.id, COALESCE(t.name, '领地 #' || t.id), t.owner_user_id, u.nickname, u.avatar_url, t.owner_crew_id, c.name,
 	ST_AsGeoJSON(t.area_geom, 7)::text, ST_Y(ST_PointOnSurface(t.area_geom)), ST_X(ST_PointOnSurface(t.area_geom)), t.area_m2, t.guard, t.is_frozen, t.update_time`
 
-const summaryFrom = ` FROM src.src_ter_territory t LEFT JOIN src.src_usr_user u ON u.id=t.owner_user_id LEFT JOIN src.src_soc_crew c ON c.id=t.owner_crew_id `
+const summaryFrom = ` FROM src.src_ter_loop_territory t LEFT JOIN src.src_usr_loop_user u ON u.id=t.owner_user_id LEFT JOIN src.src_soc_loop_crew c ON c.id=t.owner_crew_id `
 
 func scanSummary(row pgx.Row, viewer int64, viewerCrew *int64) (Summary, error) {
 	var s Summary
@@ -188,13 +188,13 @@ func (s *Service) Get(ctx context.Context, q db.Querier, id, viewer int64, viewe
 		return d, err
 	}
 	d.Summary = sm
-	if err := q.QueryRow(ctx, `SELECT capture_time FROM src.src_ter_territory WHERE id=$1`, id).Scan(&d.CapturedAt); err != nil {
+	if err := q.QueryRow(ctx, `SELECT capture_time FROM src.src_ter_loop_territory WHERE id=$1`, id).Scan(&d.CapturedAt); err != nil {
 		return d, err
 	}
 	var dl time.Time
 	var att *int64
 	var attNick *string
-	err = q.QueryRow(ctx, `SELECT d.deadline_time, d.attacker_id, u.nickname FROM src.src_ter_defense d LEFT JOIN src.src_usr_user u ON u.id=d.attacker_id
+	err = q.QueryRow(ctx, `SELECT d.deadline_time, d.attacker_id, u.nickname FROM src.src_ter_loop_defense d LEFT JOIN src.src_usr_loop_user u ON u.id=d.attacker_id
 		WHERE d.territory_id=$1 AND d.deadline_time > now()`, id).Scan(&dl, &att, &attNick)
 	if err == nil {
 		d.Defense = &Defense{Deadline: dl, AttackedBy: ref(att, attNick)}
@@ -241,8 +241,8 @@ func (s *Service) Get(ctx context.Context, q db.Querier, id, viewer int64, viewe
 	}
 	rows, err := q.Query(ctx, `SELECT e.event_type, e.actor_user_id, ua.nickname, e.prev_owner_id, up.nickname, e.new_owner_id, un.nickname,
 			e.prev_guard, e.new_guard, e.admin_id, e.create_time
-		FROM src.src_ter_event e
-		LEFT JOIN src.src_usr_user ua ON ua.id=e.actor_user_id LEFT JOIN src.src_usr_user up ON up.id=e.prev_owner_id LEFT JOIN src.src_usr_user un ON un.id=e.new_owner_id
+		FROM src.src_ter_loop_event e
+		LEFT JOIN src.src_usr_loop_user ua ON ua.id=e.actor_user_id LEFT JOIN src.src_usr_loop_user up ON up.id=e.prev_owner_id LEFT JOIN src.src_usr_loop_user un ON un.id=e.new_owner_id
 		WHERE e.territory_id=$1 ORDER BY e.id DESC LIMIT $2`, id, limit)
 	if err != nil {
 		return d, err
@@ -275,7 +275,7 @@ type stationRow struct {
 
 func loadState(ctx context.Context, q db.Querier, id int64) (map[int]string, []stationRow, error) {
 	buildings := map[int]string{}
-	rows, err := q.Query(ctx, `SELECT slot, building FROM src.src_ter_building WHERE territory_id=$1`, id)
+	rows, err := q.Query(ctx, `SELECT slot, building FROM src.src_ter_loop_building WHERE territory_id=$1`, id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -289,7 +289,7 @@ func loadState(ctx context.Context, q db.Querier, id int64) (map[int]string, []s
 		buildings[slot] = b
 	}
 	rows.Close()
-	rows, err = q.Query(ctx, `SELECT user_id, role FROM src.src_ter_station WHERE territory_id=$1 ORDER BY role`, id)
+	rows, err = q.Query(ctx, `SELECT user_id, role FROM src.src_ter_loop_station WHERE territory_id=$1 ORDER BY role`, id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -325,7 +325,7 @@ var (
 func lockOwned(ctx context.Context, tx pgx.Tx, id, user int64) error {
 	var owner *int64
 	var frozen bool
-	err := tx.QueryRow(ctx, `SELECT owner_user_id, is_frozen FROM src.src_ter_territory WHERE id=$1 FOR UPDATE`, id).Scan(&owner, &frozen)
+	err := tx.QueryRow(ctx, `SELECT owner_user_id, is_frozen FROM src.src_ter_loop_territory WHERE id=$1 FOR UPDATE`, id).Scan(&owner, &frozen)
 	if db.IsNoRows(err) {
 		return httpx.NotFound("领地")
 	}
@@ -360,12 +360,12 @@ func (s *Service) Build(ctx context.Context, user int64, id int64, slot int, key
 			return httpx.Conflict("slot_taken", "这个建造位已经有建筑了")
 		}
 		var earned int64
-		if err := tx.QueryRow(ctx, `SELECT energy, energy_earned_total FROM src.src_usr_user WHERE id=$1 FOR UPDATE`, user).Scan(&energy, &earned); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT energy, energy_earned_total FROM src.src_usr_loop_user WHERE id=$1 FOR UPDATE`, user).Scan(&energy, &earned); err != nil {
 			return err
 		}
 		t := gameplay.Territory{Buildings: keysOf(buildings), Stationed: rolesOf(stationed)}
 		var blueprint bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='blueprint' AND item=$2)`, user, key).Scan(&blueprint); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='blueprint' AND item=$2)`, user, key).Scan(&blueprint); err != nil {
 			return err
 		}
 		cost, err := cfg.CheckBuildWith(t, key, cfg.Level(earned), energy, blueprint)
@@ -386,18 +386,18 @@ func (s *Service) Build(ctx context.Context, user int64, id int64, slot int, key
 		b, _ := cfg.Building(key)
 		guardAdd := int(math.Floor(float64(b.Guard) * (1 + guardPct(cfg, rolesOf(stationed))/100)))
 		energy -= cost
-		if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET energy=$2 WHERE id=$1`, user, energy); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET energy=$2 WHERE id=$1`, user, energy); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'build',$4)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'build',$4)`,
 			user, clock.Today(), -cost, id); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_building (territory_id, slot, building, built_by) VALUES ($1,$2,$3,$4)`, id, slot, key, user); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_loop_building (territory_id, slot, building, built_by) VALUES ($1,$2,$3,$4)`, id, slot, key, user); err != nil {
 			return err
 		}
 		var prev, next int
-		if err := tx.QueryRow(ctx, `UPDATE src.src_ter_territory SET guard=guard+$2, update_time=now() WHERE id=$1 RETURNING guard-$2, guard`, id, guardAdd).Scan(&prev, &next); err != nil {
+		if err := tx.QueryRow(ctx, `UPDATE src.src_ter_loop_territory SET guard=guard+$2, update_time=now() WHERE id=$1 RETURNING guard-$2, guard`, id, guardAdd).Scan(&prev, &next); err != nil {
 			return err
 		}
 		return event(ctx, tx, eventRow{territoryID: id, kind: "build", actor: &user, prevGuard: &prev, newGuard: &next})
@@ -437,7 +437,7 @@ func adjustGuardForRole(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, ter
 		return err
 	}
 	delta := int(math.Floor(float64(buildingGuard(cfg, keysOf(buildings))) * r.BuffValue / 100))
-	_, err = tx.Exec(ctx, `UPDATE src.src_ter_territory SET guard=GREATEST(0, guard + $2), update_time=now() WHERE id=$1`, territoryID, sign*delta)
+	_, err = tx.Exec(ctx, `UPDATE src.src_ter_loop_territory SET guard=GREATEST(0, guard + $2), update_time=now() WHERE id=$1`, territoryID, sign*delta)
 	return err
 }
 
@@ -452,14 +452,14 @@ func (s *Service) Station(ctx context.Context, user, id int64, role string) erro
 			return err
 		}
 		var owned bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, role).Scan(&owned); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_loop_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, role).Scan(&owned); err != nil {
 			return err
 		}
 		if !owned {
 			return httpx.Forbidden("role_not_owned", "还没有招募到这个角色")
 		}
 		var current *int64
-		err := tx.QueryRow(ctx, `SELECT territory_id FROM src.src_ter_station WHERE user_id=$1 AND role=$2`, user, role).Scan(&current)
+		err := tx.QueryRow(ctx, `SELECT territory_id FROM src.src_ter_loop_station WHERE user_id=$1 AND role=$2`, user, role).Scan(&current)
 		if err != nil && !db.IsNoRows(err) {
 			return err
 		}
@@ -474,14 +474,14 @@ func (s *Service) Station(ctx context.Context, user, id int64, role string) erro
 			return httpx.Conflict("no_station_slot", "驻扎位已满，建造营帐或民居可以增加驻扎位")
 		}
 		if current != nil {
-			if _, err := tx.Exec(ctx, `SELECT 1 FROM src.src_ter_territory WHERE id=$1 FOR UPDATE`, *current); err != nil {
+			if _, err := tx.Exec(ctx, `SELECT 1 FROM src.src_ter_loop_territory WHERE id=$1 FOR UPDATE`, *current); err != nil {
 				return err
 			}
 			if err := adjustGuardForRole(ctx, tx, cfg, *current, role, -1); err != nil {
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_station (user_id, role, territory_id) VALUES ($1,$2,$3)
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_loop_station (user_id, role, territory_id) VALUES ($1,$2,$3)
 			ON CONFLICT (user_id, role) DO UPDATE SET territory_id=EXCLUDED.territory_id`, user, role, id); err != nil {
 			return err
 		}
@@ -496,7 +496,7 @@ func (s *Service) Unstation(ctx context.Context, user, id int64, role string) er
 		if err := lockOwned(ctx, tx, id, user); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `DELETE FROM src.src_ter_station WHERE user_id=$1 AND role=$2 AND territory_id=$3`, user, role, id)
+		tag, err := tx.Exec(ctx, `DELETE FROM src.src_ter_loop_station WHERE user_id=$1 AND role=$2 AND territory_id=$3`, user, role, id)
 		if err != nil {
 			return err
 		}
@@ -516,14 +516,14 @@ func (s *Service) SetGuard(ctx context.Context, id int64, guard int, adminID int
 	}
 	return pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var prev int
-		err := tx.QueryRow(ctx, `SELECT guard FROM src.src_ter_territory WHERE id=$1 FOR UPDATE`, id).Scan(&prev)
+		err := tx.QueryRow(ctx, `SELECT guard FROM src.src_ter_loop_territory WHERE id=$1 FOR UPDATE`, id).Scan(&prev)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("领地")
 		}
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET guard=$2, update_time=now() WHERE id=$1`, id, guard); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ter_loop_territory SET guard=$2, update_time=now() WHERE id=$1`, id, guard); err != nil {
 			return err
 		}
 		return event(ctx, tx, eventRow{territoryID: id, kind: "admin_guard", prevGuard: &prev, newGuard: &guard, adminID: &adminID})
@@ -532,13 +532,13 @@ func (s *Service) SetGuard(ctx context.Context, id int64, guard int, adminID int
 
 // SetFrozen freezes or unfreezes a territory.
 func (s *Service) SetFrozen(ctx context.Context, q db.Querier, id int64, frozen bool, adminID *int64) error {
-	tag, err := q.Exec(ctx, `UPDATE src.src_ter_territory SET is_frozen=$2, update_time=now() WHERE id=$1 AND is_frozen<>$2`, id, frozen)
+	tag, err := q.Exec(ctx, `UPDATE src.src_ter_loop_territory SET is_frozen=$2, update_time=now() WHERE id=$1 AND is_frozen<>$2`, id, frozen)
 	if err != nil {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
 		var exists bool
-		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ter_territory WHERE id=$1)`, id).Scan(&exists); err != nil {
+		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ter_loop_territory WHERE id=$1)`, id).Scan(&exists); err != nil {
 			return err
 		}
 		if !exists {
@@ -558,7 +558,7 @@ func (s *Service) Reset(ctx context.Context, id int64, adminID int64) error {
 	return pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var owner, crew *int64
 		var guard int
-		err := tx.QueryRow(ctx, `SELECT owner_user_id, owner_crew_id, guard FROM src.src_ter_territory WHERE id=$1 FOR UPDATE`, id).Scan(&owner, &crew, &guard)
+		err := tx.QueryRow(ctx, `SELECT owner_user_id, owner_crew_id, guard FROM src.src_ter_loop_territory WHERE id=$1 FOR UPDATE`, id).Scan(&owner, &crew, &guard)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("领地")
 		}
@@ -570,13 +570,13 @@ func (s *Service) Reset(ctx context.Context, id int64, adminID int64) error {
 			return err
 		}
 		raw, _ := json.Marshal(st)
-		if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_building WHERE territory_id=$1`, id); err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_loop_building WHERE territory_id=$1`, id); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_station WHERE territory_id=$1`, id); err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_loop_station WHERE territory_id=$1`, id); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET owner_user_id=NULL, owner_crew_id=NULL, guard=0, update_time=now() WHERE id=$1`, id); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ter_loop_territory SET owner_user_id=NULL, owner_crew_id=NULL, guard=0, update_time=now() WHERE id=$1`, id); err != nil {
 			return err
 		}
 		zero := 0
@@ -615,7 +615,7 @@ func (s *Service) AdminList(ctx context.Context, status, q string, p httpx.Page)
 	case "frozen":
 		where = `t.is_frozen`
 	case "contested":
-		where = `EXISTS (SELECT 1 FROM src.src_ter_event e WHERE e.territory_id=t.id AND e.create_time >= $1 AND e.event_type IN ('capture','capture_whole','cut','weaken'))`
+		where = `EXISTS (SELECT 1 FROM src.src_ter_loop_event e WHERE e.territory_id=t.id AND e.create_time >= $1 AND e.event_type IN ('capture','capture_whole','cut','weaken'))`
 	}
 	if q != "" {
 		args = append(args, q)
@@ -629,8 +629,8 @@ func (s *Service) AdminList(ctx context.Context, status, q string, p httpx.Page)
 	limitOffset := fmt.Sprintf(` LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
 	rows, err := s.Pool.Query(ctx, `SELECT t.id, COALESCE(t.name, '领地 #' || t.id), t.owner_user_id, u.nickname, t.owner_crew_id, c.name,
 			t.area_m2, t.guard, t.is_frozen,
-			(SELECT count(*) FROM src.src_ter_event e WHERE e.territory_id=t.id AND e.create_time >= $1 AND e.event_type IN ('capture','capture_whole','cut','weaken')),
-			(SELECT count(*) FROM src.src_ter_building b WHERE b.territory_id=t.id),
+			(SELECT count(*) FROM src.src_ter_loop_event e WHERE e.territory_id=t.id AND e.create_time >= $1 AND e.event_type IN ('capture','capture_whole','cut','weaken')),
+			(SELECT count(*) FROM src.src_ter_loop_building b WHERE b.territory_id=t.id),
 			ST_Y(ST_PointOnSurface(t.area_geom)), ST_X(ST_PointOnSurface(t.area_geom)), t.update_time
 		`+summaryFrom+` WHERE `+where+` ORDER BY t.update_time DESC`+limitOffset, args...)
 	if err != nil {

@@ -213,11 +213,11 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (Result, error) {
 	if err := s.checkStatus(ctx, uid); err != nil {
 		return Result{}, err
 	}
-	if _, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_user SET last_login_time=now() WHERE id=$1`, uid); err != nil {
+	if _, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_user SET last_login_time=now() WHERE id=$1`, uid); err != nil {
 		return Result{}, err
 	}
 	if req.DeviceID != "" {
-		if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_device (device_id, user_id) VALUES ($1,$2)
+		if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_loop_device (device_id, user_id) VALUES ($1,$2)
 			ON CONFLICT (device_id, user_id) DO UPDATE SET last_seen_time=now()`, req.DeviceID, uid); err != nil {
 			return Result{}, err
 		}
@@ -230,12 +230,12 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (Result, error) {
 func (s *Service) checkStatus(ctx context.Context, uid int64) error {
 	var status string
 	var until *time.Time
-	if err := s.Pool.QueryRow(ctx, `SELECT status, ban_end_time FROM src.src_usr_user WHERE id=$1`, uid).Scan(&status, &until); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT status, ban_end_time FROM src.src_usr_loop_user WHERE id=$1`, uid).Scan(&status, &until); err != nil {
 		return err
 	}
 	if status == "banned" {
 		if until != nil && until.Before(time.Now()) {
-			_, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_user SET status='active', ban_end_time=NULL WHERE id=$1`, uid)
+			_, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_user SET status='active', ban_end_time=NULL WHERE id=$1`, uid)
 			return err
 		}
 		e := httpx.Forbidden("account_banned", "账号已被封禁")
@@ -261,17 +261,17 @@ func (s *Service) byPhone(ctx context.Context, phone, source string) (int64, boo
 	}
 	h := s.Box.Lookup(phone)
 	var id int64
-	err := s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_user WHERE phone_hash=$1`, h).Scan(&id)
+	err := s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_loop_user WHERE phone_hash=$1`, h).Scan(&id)
 	if err == nil {
 		return id, false, nil
 	}
 	if !db.IsNoRows(err) {
 		return 0, false, err
 	}
-	err = s.Pool.QueryRow(ctx, `INSERT INTO src.src_usr_user (phone_enc, phone_hash, phone_last4, nickname, source) VALUES ($1,$2,$3,$4,$5)
+	err = s.Pool.QueryRow(ctx, `INSERT INTO src.src_usr_loop_user (phone_enc, phone_hash, phone_last4, nickname, source) VALUES ($1,$2,$3,$4,$5)
 		ON CONFLICT (phone_hash) DO NOTHING RETURNING id`, s.Box.Seal(phone), h, phone[7:], randomNick(), source).Scan(&id)
 	if db.IsNoRows(err) { // concurrent first login
-		err = s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_user WHERE phone_hash=$1`, h).Scan(&id)
+		err = s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_loop_user WHERE phone_hash=$1`, h).Scan(&id)
 		return id, false, err
 	}
 	return id, true, err
@@ -279,7 +279,7 @@ func (s *Service) byPhone(ctx context.Context, phone, source string) (int64, boo
 
 func (s *Service) byIdentity(ctx context.Context, provider, uid, union, nick, avatar string) (int64, bool, error) {
 	var id int64
-	err := s.Pool.QueryRow(ctx, `SELECT user_id FROM src.src_usr_identity WHERE provider=$1 AND provider_uid=$2`, provider, uid).Scan(&id)
+	err := s.Pool.QueryRow(ctx, `SELECT user_id FROM src.src_usr_loop_identity WHERE provider=$1 AND provider_uid=$2`, provider, uid).Scan(&id)
 	if err == nil {
 		return id, false, nil
 	}
@@ -287,9 +287,9 @@ func (s *Service) byIdentity(ctx context.Context, provider, uid, union, nick, av
 		return 0, false, err
 	}
 	if union != "" {
-		err := s.Pool.QueryRow(ctx, `SELECT user_id FROM src.src_usr_identity WHERE provider=$1 AND union_id=$2`, provider, union).Scan(&id)
+		err := s.Pool.QueryRow(ctx, `SELECT user_id FROM src.src_usr_loop_identity WHERE provider=$1 AND union_id=$2`, provider, union).Scan(&id)
 		if err == nil {
-			_, err = s.Pool.Exec(ctx, `INSERT INTO src.src_usr_identity (user_id, provider, provider_uid, union_id) VALUES ($1,$2,$3,NULL) ON CONFLICT DO NOTHING`, id, provider, uid)
+			_, err = s.Pool.Exec(ctx, `INSERT INTO src.src_usr_loop_identity (user_id, provider, provider_uid, union_id) VALUES ($1,$2,$3,NULL) ON CONFLICT DO NOTHING`, id, provider, uid)
 			return id, false, err
 		}
 		if !db.IsNoRows(err) {
@@ -300,10 +300,10 @@ func (s *Service) byIdentity(ctx context.Context, provider, uid, union, nick, av
 		nick = randomNick()
 	}
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `INSERT INTO src.src_usr_user (nickname, avatar_url, source) VALUES ($1, NULLIF($2,''), $3) RETURNING id`, nick, avatar, provider).Scan(&id); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO src.src_usr_loop_user (nickname, avatar_url, source) VALUES ($1, NULLIF($2,''), $3) RETURNING id`, nick, avatar, provider).Scan(&id); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO src.src_usr_identity (user_id, provider, provider_uid, union_id) VALUES ($1,$2,$3,NULLIF($4,''))`, id, provider, uid, union)
+		_, err := tx.Exec(ctx, `INSERT INTO src.src_usr_loop_identity (user_id, provider, provider_uid, union_id) VALUES ($1,$2,$3,NULLIF($4,''))`, id, provider, uid, union)
 		return err
 	})
 	if db.IsUniqueViolation(err) {
@@ -319,14 +319,14 @@ func (s *Service) byIdentity(ctx context.Context, provider, uid, union, nick, av
 func (s *Service) BindPhone(ctx context.Context, uid int64, phone string) error {
 	h := s.Box.Lookup(phone)
 	var other int64
-	err := s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_user WHERE phone_hash=$1`, h).Scan(&other)
+	err := s.Pool.QueryRow(ctx, `SELECT id FROM src.src_usr_loop_user WHERE phone_hash=$1`, h).Scan(&other)
 	if err == nil && other != uid {
 		return httpx.Conflict("phone_taken", "这个手机号已经绑定了其他账号")
 	}
 	if err != nil && !db.IsNoRows(err) {
 		return err
 	}
-	_, err = s.Pool.Exec(ctx, `UPDATE src.src_usr_user SET phone_enc=$2, phone_hash=$3, phone_last4=$4 WHERE id=$1`, uid, s.Box.Seal(phone), h, phone[7:])
+	_, err = s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_user SET phone_enc=$2, phone_hash=$3, phone_last4=$4 WHERE id=$1`, uid, s.Box.Seal(phone), h, phone[7:])
 	if db.IsUniqueViolation(err) {
 		return httpx.Conflict("phone_taken", "这个手机号已经绑定了其他账号")
 	}
@@ -348,7 +348,7 @@ func (s *Service) issue(ctx context.Context, uid int64, family uuid.UUID, device
 		return Result{}, err
 	}
 	refresh := secure.Token(32)
-	if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_refresh_token (token_hash, family, user_id, device_id, expire_time) VALUES ($1,$2,$3,NULLIF($4,''),$5)`,
+	if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_loop_refresh_token (token_hash, family, user_id, device_id, expire_time) VALUES ($1,$2,$3,NULLIF($4,''),$5)`,
 		secure.Hash(refresh), family, uid, device, now.Add(s.RefreshTTL)); err != nil {
 		return Result{}, err
 	}
@@ -367,7 +367,7 @@ func (s *Service) Refresh(ctx context.Context, token string) (Result, error) {
 	var device *string
 	var exp time.Time
 	var used, revoked *time.Time
-	err := s.Pool.QueryRow(ctx, `SELECT user_id, family, device_id, expire_time, use_time, revoke_time FROM src.src_usr_refresh_token WHERE token_hash=$1`,
+	err := s.Pool.QueryRow(ctx, `SELECT user_id, family, device_id, expire_time, use_time, revoke_time FROM src.src_usr_loop_refresh_token WHERE token_hash=$1`,
 		secure.Hash(token)).Scan(&uid, &family, &device, &exp, &used, &revoked)
 	if db.IsNoRows(err) {
 		return Result{}, httpx.ErrUnauthorized
@@ -376,13 +376,13 @@ func (s *Service) Refresh(ctx context.Context, token string) (Result, error) {
 		return Result{}, err
 	}
 	if used != nil || revoked != nil {
-		_, _ = s.Pool.Exec(ctx, `UPDATE src.src_usr_refresh_token SET revoke_time=now() WHERE family=$1 AND revoke_time IS NULL`, family)
+		_, _ = s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_refresh_token SET revoke_time=now() WHERE family=$1 AND revoke_time IS NULL`, family)
 		return Result{}, httpx.ErrUnauthorized
 	}
 	if exp.Before(time.Now()) {
 		return Result{}, httpx.ErrUnauthorized
 	}
-	tag, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_refresh_token SET use_time=now() WHERE token_hash=$1 AND use_time IS NULL`, secure.Hash(token))
+	tag, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_refresh_token SET use_time=now() WHERE token_hash=$1 AND use_time IS NULL`, secure.Hash(token))
 	if err != nil {
 		return Result{}, err
 	}
@@ -401,14 +401,14 @@ func (s *Service) Refresh(ctx context.Context, token string) (Result, error) {
 
 // Logout revokes the token's family.
 func (s *Service) Logout(ctx context.Context, token string) error {
-	_, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_refresh_token SET revoke_time=now() WHERE revoke_time IS NULL
-		AND family=(SELECT family FROM src.src_usr_refresh_token WHERE token_hash=$1)`, secure.Hash(token))
+	_, err := s.Pool.Exec(ctx, `UPDATE src.src_usr_loop_refresh_token SET revoke_time=now() WHERE revoke_time IS NULL
+		AND family=(SELECT family FROM src.src_usr_loop_refresh_token WHERE token_hash=$1)`, secure.Hash(token))
 	return err
 }
 
 // RevokeAll signs a user out everywhere (ban, deletion).
 func RevokeAll(ctx context.Context, q db.Querier, uid int64) error {
-	_, err := q.Exec(ctx, `UPDATE src.src_usr_refresh_token SET revoke_time=now() WHERE user_id=$1 AND revoke_time IS NULL`, uid)
+	_, err := q.Exec(ctx, `UPDATE src.src_usr_loop_refresh_token SET revoke_time=now() WHERE user_id=$1 AND revoke_time IS NULL`, uid)
 	return err
 }
 
@@ -439,7 +439,7 @@ func (s *Service) Middleware(requirePhone bool) func(httpx.HandlerFunc) http.Han
 			var status string
 			var hasPhone bool
 			var bannedUntil *time.Time
-			err = s.Pool.QueryRow(r.Context(), `SELECT status, phone_hash IS NOT NULL, ban_end_time FROM src.src_usr_user WHERE id=$1`, uid).
+			err = s.Pool.QueryRow(r.Context(), `SELECT status, phone_hash IS NOT NULL, ban_end_time FROM src.src_usr_loop_user WHERE id=$1`, uid).
 				Scan(&status, &hasPhone, &bannedUntil)
 			if db.IsNoRows(err) || status == "deleted" {
 				return httpx.ErrUnauthorized

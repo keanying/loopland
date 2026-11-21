@@ -5,8 +5,8 @@
 ## 必须遵守
 
 - **数据库命名**：严格按 `docs/数据库与命名规范.md`。要点：
-  - 业务表在 `src` schema，表名 `src_<业务域>_<实体>`，业务域前缀 `usr_ act_ ter_ ply_ soc_ ord_ fin_ mer_ mkt_ ris_ cnt_ msg_ trf_ sys_`。
-  - SQL 里一律写 `src.src_xxx`（schema.表），不写裸表名。
+  - 业务表在 `src` schema，表名 `src_<业务域>_loop_<实体>`（`loop` 是项目标识，所有分层都加在业务域之后，如 `src.src_usr_loop_user`、`dws.dws_act_loop_user_sport_di`），业务域前缀 `usr_ act_ ter_ ply_ soc_ ord_ fin_ mer_ mkt_ ris_ cnt_ msg_ trf_ sys_`。
+  - SQL 里一律写 `src.src_<域>_loop_xxx`（schema.表），不写裸表名。
   - 字段关键字：时间 `_time`（timestamptz）、日期 `_date`、金额 `_amt`（单位分）、编号 `_no`、类型 `_type`、状态 `_status`、数量 `_qty`、比例 `_rate`、布尔 `is_`、距离 `_m`、面积 `_m2`、时长 `_sec`。
   - 每张表、每个字段都要有 `COMMENT`；类型/状态字段的注释要写清每个取值的含义。
   - 不用拼音。

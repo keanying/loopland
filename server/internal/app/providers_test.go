@@ -93,14 +93,14 @@ func TestProviderConfig(t *testing.T) {
 
 	// Stored encrypted; the audit log names fields only.
 	var cfgJSON, enc []byte
-	if err := e.app.Pool.QueryRow(context.Background(), `SELECT config_json, secret_enc FROM src.src_sys_provider_config WHERE provider_code='ai'`).Scan(&cfgJSON, &enc); err != nil {
+	if err := e.app.Pool.QueryRow(context.Background(), `SELECT config_json, secret_enc FROM src.src_sys_loop_provider_config WHERE provider_code='ai'`).Scan(&cfgJSON, &enc); err != nil {
 		t.Fatal(err)
 	}
 	if bytes.Contains(cfgJSON, []byte("abcdef")) || bytes.Contains(enc, []byte("abcdef")) || len(enc) == 0 {
 		t.Fatalf("secret stored in plain text: %s / %x", cfgJSON, enc)
 	}
 	var detail string
-	if err := e.app.Pool.QueryRow(context.Background(), `SELECT detail_json::text FROM src.src_sys_audit_log WHERE action='provider.save' ORDER BY id DESC LIMIT 1`).Scan(&detail); err != nil {
+	if err := e.app.Pool.QueryRow(context.Background(), `SELECT detail_json::text FROM src.src_sys_loop_audit_log WHERE action='provider.save' ORDER BY id DESC LIMIT 1`).Scan(&detail); err != nil {
 		t.Fatal(err)
 	}
 	if strings.Contains(detail, "abcdef") || !strings.Contains(detail, "api_key") {

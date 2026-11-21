@@ -283,7 +283,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 	}
 	var consents []byte
 	var status string
-	if err := s.Pool.QueryRow(ctx, `SELECT consents_json, status FROM src.src_usr_user WHERE id=$1`, user).Scan(&consents, &status); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT consents_json, status FROM src.src_usr_loop_user WHERE id=$1`, user).Scan(&consents, &status); err != nil {
 		return Result{}, err
 	}
 	var c struct {
@@ -317,11 +317,11 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 
 	sameDevice := 0
 	if u.Device.ID != "" {
-		if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_device (device_id, user_id) VALUES ($1,$2)
+		if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_usr_loop_device (device_id, user_id) VALUES ($1,$2)
 			ON CONFLICT (device_id, user_id) DO UPDATE SET last_seen_time=now()`, u.Device.ID, user); err != nil {
 			return Result{}, err
 		}
-		if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_usr_device WHERE device_id=$1 AND last_seen_time > now() - interval '30 days'`,
+		if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_usr_loop_device WHERE device_id=$1 AND last_seen_time > now() - interval '30 days'`,
 			u.Device.ID).Scan(&sameDevice); err != nil {
 			return Result{}, err
 		}
@@ -339,7 +339,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 		device, _ := json.Marshal(u.Device)
 		wearable, _ := json.Marshal(u.Wearable)
 		var id int64
-		err := tx.QueryRow(ctx, `INSERT INTO src.src_act_activity (user_id, client_id, sport, start_time, end_time, distance_m, duration_sec, amount,
+		err := tx.QueryRow(ctx, `INSERT INTO src.src_act_loop_activity (user_id, client_id, sport, start_time, end_time, distance_m, duration_sec, amount,
 				track_geom, goal_json, device_json, wearable_json)
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8, ST_GeomFromText($9, 4326), $10, $11, $12)
 			ON CONFLICT (user_id, client_id) DO NOTHING RETURNING id`,
@@ -368,7 +368,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 				}
 				rows[i] = []any{id, int32(i), time.UnixMilli(p.T), p.Lat, p.Lng, f32(p.Acc), f32(p.Spd), hr, cad, src}
 			}
-			if _, err := tx.CopyFrom(ctx, pgx.Identifier{"src", "src_act_track_point"},
+			if _, err := tx.CopyFrom(ctx, pgx.Identifier{"src", "src_act_loop_track_point"},
 				[]string{"activity_id", "seq", "record_time", "lat", "lng", "accuracy_m", "speed_mps", "heart_rate", "cadence", "source"},
 				pgx.CopyFromRows(rows)); err != nil {
 				return err
@@ -382,7 +382,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 				auto := "auto_void"
 				status, resolution = "resolved", &auto
 			}
-			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ris_alert (activity_id, user_id, alert_type, confidence, detail, status, resolution, resolve_time)
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ris_loop_alert (activity_id, user_id, alert_type, confidence, detail, status, resolution, resolve_time)
 				VALUES ($1,$2,$3,$4,$5,$6,$7, CASE WHEN $6='resolved' THEN now() END)`,
 				id, user, f.Rule, f.Confidence, f.Detail, status, resolution); err != nil {
 				return err
@@ -444,7 +444,7 @@ func f32(p *float64) *float32 {
 func (s *Service) existing(ctx context.Context, user int64, clientID string) (Result, bool, error) {
 	var id int64
 	var raw []byte
-	err := s.Pool.QueryRow(ctx, `SELECT id, result_json FROM src.src_act_activity WHERE user_id=$1 AND client_id=$2`, user, clientID).Scan(&id, &raw)
+	err := s.Pool.QueryRow(ctx, `SELECT id, result_json FROM src.src_act_loop_activity WHERE user_id=$1 AND client_id=$2`, user, clientID).Scan(&id, &raw)
 	if db.IsNoRows(err) {
 		return Result{}, false, nil
 	}
@@ -461,7 +461,7 @@ func (s *Service) existing(ctx context.Context, user int64, clientID string) (Re
 
 func setStatus(ctx context.Context, tx pgx.Tx, id int64, status string, st Settlement) error {
 	raw, _ := json.Marshal(st)
-	_, err := tx.Exec(ctx, `UPDATE src.src_act_activity SET status=$2, result_json=$3 WHERE id=$1`, id, status, raw)
+	_, err := tx.Exec(ctx, `UPDATE src.src_act_loop_activity SET status=$2, result_json=$3 WHERE id=$1`, id, status, raw)
 	return err
 }
 
@@ -471,7 +471,7 @@ func saveResult(ctx context.Context, tx pgx.Tx, id int64, st Settlement) error {
 	for _, c := range st.Claims {
 		area += c.AreaM2
 	}
-	_, err := tx.Exec(ctx, `UPDATE src.src_act_activity SET status='settled', energy_raw=$2, energy_granted=$3, claimed_area_m2=$4, result_json=$5 WHERE id=$1`,
+	_, err := tx.Exec(ctx, `UPDATE src.src_act_loop_activity SET status='settled', energy_raw=$2, energy_granted=$3, claimed_area_m2=$4, result_json=$5 WHERE id=$1`,
 		id, st.EnergyRaw, st.EnergyGranted, area, raw)
 	return err
 }
@@ -479,7 +479,7 @@ func saveResult(ctx context.Context, tx pgx.Tx, id int64, st Settlement) error {
 // EarnedToday is activity energy already granted today (counts against the cap).
 func EarnedToday(ctx context.Context, q db.Querier, user int64) (int, error) {
 	var n int
-	err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM src.src_ply_energy_ledger WHERE user_id=$1 AND ledger_date=$2 AND reason='activity'`,
+	err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM src.src_ply_loop_energy_ledger WHERE user_id=$1 AND ledger_date=$2 AND reason='activity'`,
 		user, clock.Today()).Scan(&n)
 	return n, err
 }
@@ -493,7 +493,7 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	var dist, amount float64
 	var durationS int
 	var startedAt time.Time
-	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount, duration_sec, start_time FROM src.src_act_activity WHERE id=$1`, id).
+	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount, duration_sec, start_time FROM src.src_act_loop_activity WHERE id=$1`, id).
 		Scan(&user, &sport, &dist, &amount, &durationS, &startedAt); err != nil {
 		return Settlement{}, nil, err
 	}
@@ -502,7 +502,7 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 
 	var energy int
 	var earned int64
-	if err := tx.QueryRow(ctx, `SELECT energy, energy_earned_total FROM src.src_usr_user WHERE id=$1 FOR UPDATE`, user).Scan(&energy, &earned); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT energy, energy_earned_total FROM src.src_usr_loop_user WHERE id=$1 FOR UPDATE`, user).Scan(&energy, &earned); err != nil {
 		return st, nil, err
 	}
 	raw, err := cfg.RawEnergy(gameplay.Sport(sport), amount)
@@ -518,13 +518,13 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	st.EnergyCapped = st.EnergyGranted < raw
 
 	var crew *int64
-	err = tx.QueryRow(ctx, `SELECT crew_id FROM src.src_soc_crew_member WHERE user_id=$1`, user).Scan(&crew)
+	err = tx.QueryRow(ctx, `SELECT crew_id FROM src.src_soc_loop_crew_member WHERE user_id=$1`, user).Scan(&crew)
 	if err != nil && !db.IsNoRows(err) {
 		return st, nil, err
 	}
 	var pts []geo.LatLng
 	if gameplay.GPSSports[gameplay.Sport(sport)] {
-		rows, err := tx.Query(ctx, `SELECT lat, lng FROM src.src_act_track_point WHERE activity_id=$1 ORDER BY seq`, id)
+		rows, err := tx.Query(ctx, `SELECT lat, lng FROM src.src_act_loop_track_point WHERE activity_id=$1 ORDER BY seq`, id)
 		if err != nil {
 			return st, nil, err
 		}
@@ -550,10 +550,10 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	}
 
 	if st.EnergyGranted > 0 {
-		if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET energy=energy+$2, energy_earned_total=energy_earned_total+$2 WHERE id=$1`, user, st.EnergyGranted); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET energy=energy+$2, energy_earned_total=energy_earned_total+$2 WHERE id=$1`, user, st.EnergyGranted); err != nil {
 			return st, nil, err
 		}
-		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'activity',$4)`,
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'activity',$4)`,
 			user, clock.Today(), st.EnergyGranted, id); err != nil {
 			return st, nil, err
 		}
@@ -589,7 +589,7 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 func (s *Service) SettleReviewed(ctx context.Context, tx pgx.Tx, id int64) error {
 	var status string
 	var user int64
-	if err := tx.QueryRow(ctx, `SELECT status, user_id FROM src.src_act_activity WHERE id=$1 FOR UPDATE`, id).Scan(&status, &user); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT status, user_id FROM src.src_act_loop_activity WHERE id=$1 FOR UPDATE`, id).Scan(&status, &user); err != nil {
 		return err
 	}
 	if status != "review" && status != "voided" {
@@ -617,7 +617,7 @@ func (s *Service) Void(ctx context.Context, tx pgx.Tx, id int64) error {
 	var granted int
 	var amount, dist float64
 	var sport string
-	if err := tx.QueryRow(ctx, `SELECT status, user_id, energy_granted, amount, distance_m, sport FROM src.src_act_activity WHERE id=$1 FOR UPDATE`, id).
+	if err := tx.QueryRow(ctx, `SELECT status, user_id, energy_granted, amount, distance_m, sport FROM src.src_act_loop_activity WHERE id=$1 FOR UPDATE`, id).
 		Scan(&status, &user, &granted, &amount, &dist, &sport); err != nil {
 		return err
 	}
@@ -629,20 +629,20 @@ func (s *Service) Void(ctx context.Context, tx pgx.Tx, id int64) error {
 			return err
 		}
 		if granted > 0 {
-			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET energy=GREATEST(0, energy-$2), energy_earned_total=GREATEST(0, energy_earned_total-$2) WHERE id=$1`, user, granted); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET energy=GREATEST(0, energy-$2), energy_earned_total=GREATEST(0, energy_earned_total-$2) WHERE id=$1`, user, granted); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'rollback',$4)`,
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,'rollback',$4)`,
 				user, clock.Today(), -granted, id); err != nil {
 				return err
 			}
 		}
-		if _, err := tx.Exec(ctx, `UPDATE src.src_act_sport_total SET amount=GREATEST(0, amount-$3), distance_m=GREATEST(0, distance_m-$4)
+		if _, err := tx.Exec(ctx, `UPDATE src.src_act_loop_sport_total SET amount=GREATEST(0, amount-$3), distance_m=GREATEST(0, distance_m-$4)
 			WHERE user_id=$1 AND sport=$2`, user, sport, amount, dist); err != nil {
 			return err
 		}
 	}
-	if _, err := tx.Exec(ctx, `UPDATE src.src_act_activity SET status='voided', result_json=jsonb_set(COALESCE(result_json,'{}'), '{status}', '"voided"') WHERE id=$1`, id); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_act_loop_activity SET status='voided', result_json=jsonb_set(COALESCE(result_json,'{}'), '{status}', '"voided"') WHERE id=$1`, id); err != nil {
 		return err
 	}
 	return inbox.Notify(ctx, tx, user, inbox.System, "运动记录已作废",
@@ -658,7 +658,7 @@ func loadView(ctx context.Context, q db.Querier, user, id int64, withTrack bool)
 		trackSQL = "ST_AsGeoJSON(track_geom, 6)"
 	}
 	err := q.QueryRow(ctx, `SELECT id, sport, status, start_time, end_time, distance_m, duration_sec, amount, energy_granted, claimed_area_m2, `+
-		trackSQL+`, result_json FROM src.src_act_activity WHERE id=$1 AND ($2 = 0 OR user_id=$2)`, id, user).
+		trackSQL+`, result_json FROM src.src_act_loop_activity WHERE id=$1 AND ($2 = 0 OR user_id=$2)`, id, user).
 		Scan(&v.ID, &v.Sport, &v.Status, &v.StartedAt, &v.EndedAt, &v.DistanceM, &v.DurationS, &v.Amount, &v.EnergyGranted, &v.ClaimedAreaM2, &track, &raw)
 	if db.IsNoRows(err) {
 		return v, httpx.NotFound("运动记录")
@@ -692,7 +692,7 @@ func LoadView(ctx context.Context, q db.Querier, user, id int64, withTrack bool)
 // LoadPoints returns the stored GPS points.
 func LoadPoints(ctx context.Context, q db.Querier, id int64) ([]anticheat.Point, error) {
 	rows, err := q.Query(ctx, `SELECT (extract(epoch from record_time)*1000)::bigint, lat, lng, accuracy_m, speed_mps, heart_rate, cadence, COALESCE(source,'gps')
-		FROM src.src_act_track_point WHERE activity_id=$1 ORDER BY seq`, id)
+		FROM src.src_act_loop_track_point WHERE activity_id=$1 ORDER BY seq`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +747,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	uid := httpx.UserID(r.Context())
 	p := httpx.GetPage(r)
-	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT id FROM src.src_act_activity WHERE user_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3`, uid, p.Size, p.Offset())
+	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT id FROM src.src_act_loop_activity WHERE user_id=$1 ORDER BY start_time DESC LIMIT $2 OFFSET $3`, uid, p.Size, p.Offset())
 	if err != nil {
 		return err
 	}
@@ -764,7 +764,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 		items = append(items, v)
 	}
 	var total int
-	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_act_activity WHERE user_id=$1`, uid).Scan(&total); err != nil {
+	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_act_loop_activity WHERE user_id=$1`, uid).Scan(&total); err != nil {
 		return err
 	}
 	return httpx.OK(w, httpx.NewList(items, total))
