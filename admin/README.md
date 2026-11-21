@@ -27,7 +27,7 @@ pnpm run dev:mock          # 终端 1
 pnpm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
 ```
 
-V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分；第四批「本地生活与商户」的商户 / 场馆 / 订场 / 核销结算 / 核销记录 / 核销台 / 总览待办 / 运营视角 / 窄屏商户对接在 `scripts/screenshots-v2-merchant.cjs`，`ONLY=merchant` 只跑这部分，编号从 `MERCHANT_FROM`（默认 39）起；核销台扫码用 Chromium 假摄像头播放现生成的券二维码视频，需要 ffmpeg）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
+V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分；第四批「本地生活与商户」的商户 / 场馆 / 订场 / 核销结算 / 核销记录 / 核销台 / 总览待办 / 运营视角 / 窄屏商户对接在 `scripts/screenshots-v2-merchant.cjs`，`ONLY=merchant` 只跑这部分，编号从 `MERCHANT_FROM`（默认 39）起；投放 / 联名活动 / 能量商城 / 地图补给站图层在 `scripts/screenshots-v2-perks.cjs`，`ONLY=perks` 只跑这部分（55_ 起）；核销台扫码用 Chromium 假摄像头播放现生成的券二维码视频，需要 ffmpeg）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
 
 `scripts/screenshots.cjs` 用 Playwright 依次打开所有页面（管理员、运营、审核员三种视角和窄屏），把整页 PNG 存到 `screenshots/`；浏览器控制台有 error / warning 时脚本以非 0 退出。`screenshots/real/` 是连真实后端时的截图。
 
@@ -170,6 +170,9 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 | `/merchant/settlement` | 核销结算（M-27） | 近 7 天核销 / 风控作废 / 订场柱状图（各自一张，可切表格）、结算单（按状态 / 商户），详情明细（核销、订场、风控作废）；确认、标记已付款、手动补生成（仅管理员） |
 | `/merchant/redeem` | 核销台 | 手机优先：浏览器摄像头扫券二维码（`@zxing/browser`，按需加载，需要 HTTPS 或 localhost）或手输券码 / 扫码枪回车；成功 / 失败大卡片，把约定的错误码翻成中文；今天的核销列表。假数据模式下有测试券码 |
 | `/merchant/redemptions` | 核销记录 | 按商户、日期范围；风控作废的标灰不结算 |
+| `/merchant/drops` | 投放（M-25） | 按商户 / 类型 / 状态筛选（支持 `?merchant_id=`），今日发券 / 核销与每日上限；「新建投放」四步向导：类型（补给站 / 宝箱 / 据点）→ 位置（地图点选；据点选本商户或无归属的场馆）→ 权益（标题、说明、面值、有效天数、规则，右侧实时预览 App 里的券样式，固定说明「不设付费抽取」）→ 每日上限（0 = 不限）、有效期、核销门店、结算单价与方向；暂停 / 恢复 |
+| `/merchant/campaigns` | 联名活动（M-26） | 卡片：时间、门店数、核销、拉新、商户投入、目标进度；新建 / 编辑（发布或存为草稿）；暂停 / 恢复 / 提前上线（会同步影响旗下投放）；详情抽屉：统计和旗下投放（`?id=` 直接打开） |
+| `/merchant/shop` | 能量商城 | 领地皮肤 / 头像框 / 地图标记；新建 / 编辑（颜色、图案、实时色块预览、限时、上下架）；兑换数和消耗能量统计。能量不能充值、不能转让 |
 
 `/merchants`、`/venues`、`/bookings`、`/statements`、`/redemptions` 这些短链接会带着查询参数跳到对应页面。总览待办新增「商户资质」`merchant_review`、「订场退款」`booking_refund`、「结算单」`statement_confirm`。
 

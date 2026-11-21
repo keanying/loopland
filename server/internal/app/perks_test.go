@@ -593,6 +593,13 @@ func TestPerksEndToEnd(t *testing.T) {
 	var sh dropView
 	sb := dropBody("stronghold", "据点 · 跑步驿站", [2]float64{0, 0}, 0, 100, "merchant_pays", nil)
 	sb["venue_id"], sb["center"] = vc, nil
+	// Another merchant's venue can't be used as this merchant's stronghold.
+	other := map[string]any{}
+	for k, v := range sb {
+		other[k] = v
+	}
+	other["merchant_id"] = m2
+	ad.expectErr("POST", "/admin/v1/drops", other, 400, "invalid_body")
 	ad.must("POST", "/admin/v1/drops", sb, &sh)
 	f, _ := e.member("13900000406")
 	var checkin struct {

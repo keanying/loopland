@@ -203,11 +203,18 @@ func (in *DropInput) validate(ctx context.Context, q db.Querier) error {
 			return err
 		}
 		if exists {
-			if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_mer_loop_venue WHERE id=$1)`, *in.VenueID).Scan(&ok); err != nil {
+			// A stronghold may use the merchant's own venue or a check-in-only
+			// venue with no merchant, never another merchant's.
+			var owner *int64
+			err := q.QueryRow(ctx, `SELECT merchant_id FROM src.src_mer_loop_venue WHERE id=$1`, *in.VenueID).Scan(&owner)
+			if db.IsNoRows(err) {
+				return bad("场馆不存在")
+			}
+			if err != nil {
 				return err
 			}
-			if !ok {
-				return bad("场馆不存在")
+			if owner != nil && *owner != in.MerchantID {
+				return bad("据点只能绑定本商户的场馆，或没有归属商户的签到点")
 			}
 		}
 	}
