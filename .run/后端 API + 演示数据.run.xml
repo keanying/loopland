@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="后端 API + 演示数据" type="CompoundRunConfigurationType" folderName="后端">
+    <toRun name="后端 API" type="GoApplicationRunConfiguration" />
+    <toRun name="后端 写演示数据" type="GoApplicationRunConfiguration" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,6 +1,6 @@
-// Command loopland-seed fills a dev backend with demo users, runs, land, a
+// Package seed fills a dev backend with demo users, runs, land, a
 // crew, a cheating run and an order, through the public API (so every rule
-// applies). Usage: go run ./cmd/loopland-seed -api http://localhost:8080
+// applies). Usage (API running): go run . seed -api http://localhost:8080
 package seed
 
 import (
@@ -12,6 +12,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -99,6 +100,38 @@ func loop(cx, cy, w, h, speed float64, ago time.Duration) map[string]any {
 // Main runs the command with its arguments (without the command name).
 func Main(args []string) {
 	_ = fs.Parse(args)
+	// seed writes through the API, so the backend must already be running.
+	// Wait up to 60 s, so it can start together with the API (IDE compound
+	// run configuration, scripts).
+	var err error
+	for i := 0; ; i++ {
+		var resp *http.Response
+		resp, err = http.Get(*api + "/healthz")
+		if resp != nil {
+			resp.Body.Close()
+			if resp.StatusCode != 200 {
+				err = fmt.Errorf("healthz HTTP %d", resp.StatusCode)
+			}
+		}
+		if err == nil || i >= 60 {
+			break
+		}
+		if i == 0 {
+			fmt.Printf("等待后端 %s 启动…\n", *api)
+		}
+		time.Sleep(time.Second)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, `连不上后端 %s（%v）
+
+seed 是通过后端接口写演示数据的，需要先把后端跑起来：
+  1. 启动数据库和缓存：scripts/dev.sh deps（Windows：.\scripts\dev.ps1 deps，需要 Docker Desktop）
+  2. 启动后端：在 server/ 下 go run .（GoLand：运行配置「后端 API」），看到 msg=listening 再继续
+  3. 另开一个终端：go run . seed（GoLand：运行配置「后端 写演示数据」）
+后端不在 8080 时用 -api 指定地址。
+`, *api, err)
+		os.Exit(1)
+	}
 	users := []*client{
 		login("13800000001", "夜跑的阿青"), login("13800000002", "城西老周"), login("13800000003", "晨跑小林"),
 		login("13800000004", "徐汇骑士"), login("13800000005", "外滩跑者"), login("13800000006", "滨江阿梅"),
