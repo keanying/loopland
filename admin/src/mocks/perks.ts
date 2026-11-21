@@ -239,7 +239,7 @@ export function todayRedemptionsOf(merchantId: number): number {
 export function mapSupplies(b: number[]) {
   return drops
     .filter((d) => d.type === 'supply' && dropStatus(d) === 'active')
-    .filter((d) => d.center.lng >= b[0] && d.center.lng <= b[2] && d.center.lat >= b[1] && d.center.lat <= b[3])
+    .filter((d): d is DropRow & { center: LatLng } => !!d.center && d.center.lng >= b[0] && d.center.lng <= b[2] && d.center.lat >= b[1] && d.center.lat <= b[3])
     .map((d) => ({ id: d.id, name: d.name, center: clone(d.center), radius_m: d.radius_m, perk_title: d.perk.title, claimed_today: false }));
 }
 
@@ -312,6 +312,7 @@ function dropInput(body: Record<string, unknown>, prev: DropRow | null): Omit<Dr
 
   const name = str(merged.name);
   if (!name || len(name) > 30) fail(400, 'invalid_body', '投放名称 1–30 字');
+  if (len(str(merged.store_name)) > 20) fail(400, 'invalid_body', '门店名最多 20 字');
   const daily_cap = int(merged.daily_cap);
   if (!(daily_cap >= 1 && daily_cap <= 100000)) fail(400, 'invalid_body', '每日核销上限 1–100000');
   const start = parseTime(merged.start_time, 'start_time');
@@ -331,6 +332,7 @@ function dropInput(body: Record<string, unknown>, prev: DropRow | null): Omit<Dr
     center,
     radius_m,
     venue_id,
+    store_name: str(merged.store_name) || null,
     perk: perkInput(merged.perk),
     daily_cap,
     start_time: new Date(start).toISOString(),
@@ -373,7 +375,14 @@ function campaignInput(body: Record<string, unknown>, prev: CampaignRow | null) 
       if (d.campaign_id && d.campaign_id !== prev?.id) fail(409, 'conflict', `投放「${d.name}」已属于其他联名活动`);
     }
   }
+  let draft: boolean | undefined;
+  if (body.status !== undefined) {
+    if (body.status !== 'draft' && body.status !== 'scheduled') fail(400, 'invalid_body', 'status 只能是 draft / scheduled');
+    if (prev && !prev.draft && (campaignStatus(prev) === 'running' || campaignStatus(prev) === 'paused')) fail(409, 'invalid_status', '活动已上线，不能改回草稿；暂停和恢复请用对应按钮');
+    draft = body.status === 'draft';
+  }
   return {
+    draft,
     fields: {
       merchant: { id: mer.id, name: mer.name },
       title,
@@ -545,8 +554,8 @@ export function perkRoutes(log: Log): [string, RegExp, Handler][] {
     }],
     ['POST', /^\/brand-campaigns$/, ({ body, role, adminId }) => {
       requireRole(role, OPS);
-      const { fields, dropIds } = campaignInput(body, null);
-      const row: CampaignRow = { id: ++campaignSeq, ...fields, draft: false, paused: false, stats: { issued: 0, redeemed: 0, new_users: 0 } };
+      const { fields, dropIds, draft } = campaignInput(body, null);
+      const row: CampaignRow = { id: ++campaignSeq, ...fields, draft: draft ?? false, paused: false, stats: { issued: 0, redeemed: 0, new_users: 0 } };
       campaigns.unshift(row);
       attachDrops(row.id, dropIds);
       log(adminId, 'brand_campaign.create', `brand_campaign:${row.id}`, { merchant_id: row.merchant.id, target: row.target_redemptions, investment_amt: row.merchant_investment_amt });
@@ -557,8 +566,9 @@ export function perkRoutes(log: Log): [string, RegExp, Handler][] {
       const c = campaigns.find((x) => x.id === Number(m[1]));
       if (!c) fail(404, 'not_found', '联名活动不存在');
       if (campaignStatus(c) === 'ended') fail(409, 'conflict', '活动已结束，不能修改');
-      const { fields, dropIds } = campaignInput(body, c);
+      const { fields, dropIds, draft } = campaignInput(body, c);
       Object.assign(c, fields);
+      if (draft !== undefined) c.draft = draft;
       attachDrops(c.id, dropIds);
       log(adminId, 'brand_campaign.update', `brand_campaign:${c.id}`, { fields: Object.keys(body) });
       return campaignOut(c);

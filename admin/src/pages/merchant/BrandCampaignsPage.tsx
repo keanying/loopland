@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Col, DatePicker, Drawer, Empty, Form, Input, InputNumber, Modal, Pagination, Progress, Row, Segmented, Select, Skeleton, Space, Table, Tag } from 'antd';
+import { Alert, App, Button, Col, DatePicker, Drawer, Empty, Form, Input, InputNumber, Modal, Pagination, Progress, Radio, Row, Segmented, Select, Skeleton, Space, Table, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type BrandCampaign, type BrandCampaignInput, type BrandCampaignStatus, type Drop } from '../../api/perks';
@@ -359,6 +359,7 @@ interface FormValues {
   target_redemptions: number;
   investment_yuan: number;
   drop_ids: number[];
+  status: 'draft' | 'scheduled';
 }
 
 function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null; onClose: () => void }) {
@@ -403,9 +404,12 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
       target_redemptions: v.target_redemptions,
       merchant_investment_amt: toFen(v.investment_yuan),
       drop_ids: v.drop_ids ?? [],
+      ...(canDraft ? { status: v.status } : {}),
     });
 
   const started = editing ? editing.status === 'running' || editing.status === 'paused' : false;
+  // 草稿 ↔ 发布 only before the campaign goes live
+  const canDraft = !editing || editing.status === 'draft' || editing.status === 'scheduled';
 
   // Fill the form as soon as it opens (not after the animation, so early clicks are kept).
   useEffect(() => {
@@ -422,10 +426,11 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
         target_redemptions: editing.target_redemptions,
         investment_yuan: toYuan(editing.merchant_investment_amt),
         drop_ids: editing.drop_ids,
+        status: editing.status === 'draft' ? 'draft' : 'scheduled',
       });
     } else {
       const start = dayjs().add(1, 'day').startOf('day');
-      form.setFieldsValue({ range: [start, dayjs(start.add(30, 'day').endOf('day').second(0).toDate())], store_count: 1, target_redemptions: 1000, investment_yuan: 0, drop_ids: [] });
+      form.setFieldsValue({ range: [start, dayjs(start.add(30, 'day').endOf('day').second(0).toDate())], store_count: 1, target_redemptions: 1000, investment_yuan: 0, drop_ids: [], status: 'scheduled' });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- once per open
   }, [value]);
@@ -496,6 +501,16 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
         <Form.Item name="drop_ids" label="活动下的投放" extra="可勾选这个商户未挂活动的投放；投放跟随活动状态（暂停活动 = 暂停其下所有投放）">
           <Select mode="multiple" placeholder={merchantId ? (dropOptions.length ? '选择投放' : '这个商户还没有可用的投放') : '先选商户'} disabled={!merchantId} options={dropOptions} loading={drops.isFetching} />
         </Form.Item>
+        {canDraft && (
+          <Form.Item name="status" label="发布" extra="草稿不会上线，其下投放也不发券；发布后到开始时间自动上线，也可以在列表「提前上线」" style={{ marginBottom: 0 }}>
+            <Radio.Group
+              options={[
+                { value: 'scheduled', label: '发布（到开始时间自动上线）' },
+                { value: 'draft', label: '存为草稿' },
+              ]}
+            />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );

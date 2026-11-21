@@ -86,7 +86,7 @@ export default function DropsPage() {
       title: pause ? `暂停「${d.name}」？` : `恢复「${d.name}」？`,
       content: pause
         ? '暂停后不再发券，地图上不显示；已发出的券仍可在有效期内核销。'
-        : `恢复后${d.type === 'supply' ? '补给站重新出现在地图上' : d.type === 'chest' ? '下次刷新时重新刷出宝箱' : '场馆签到重新发券'}，今日上限按 ${num(d.daily_cap)} 张继续计算。`,
+        : `恢复后${d.type === 'supply' ? '补给站重新出现在地图上' : d.type === 'chest' ? '下次刷新时重新刷出宝箱' : '场馆签到重新发券'}${d.daily_cap > 0 ? `，今日上限按 ${num(d.daily_cap)} 张继续计算` : ''}。`,
       okText: pause ? '暂停' : '恢复',
       okButtonProps: pause ? { danger: true } : undefined,
       cancelText: '取消',

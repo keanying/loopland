@@ -136,8 +136,8 @@ func (a *API) login(w http.ResponseWriter, r *http.Request) error {
 	var ad httpx.Admin
 	var hash string
 	var disabled bool
-	err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, password_hash, is_disabled FROM src.src_sys_loop_admin WHERE username=$1`, req.Username).
-		Scan(&ad.ID, &ad.Username, &ad.Role, &hash, &disabled)
+	err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, password_hash, is_disabled, merchant_id FROM src.src_sys_loop_admin WHERE username=$1`, req.Username).
+		Scan(&ad.ID, &ad.Username, &ad.Role, &hash, &disabled, &ad.MerchantID)
 	if err != nil && !db.IsNoRows(err) {
 		return err
 	}

@@ -135,6 +135,8 @@ export interface BrandCampaignInput {
   drop_ids: number[];
   target_redemptions: number;
   merchant_investment_amt: number;
+  /** Not in the contract (backend extra): create / keep as 草稿, or 发布 (scheduled, goes live by time). Only while not started. */
+  status?: 'draft' | 'scheduled';
 }
 
 // ---------- 能量商城 (E-05) ----------

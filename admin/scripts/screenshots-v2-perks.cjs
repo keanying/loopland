@@ -2,7 +2,12 @@
 // `ONLY=perks pnpm run screenshots:v2`). Names start at PERKS_FROM (default below) and carry the page name.
 // Writes (create a drop / launch a campaign / pause) are skipped with NO_WRITES=1 (real backend you care about).
 
-const FROM = Number(process.env.PERKS_FROM || 31);
+const FROM = Number(process.env.PERKS_FROM || 55);
+// Names picked in the forms (defaults match the mock data; override for a real backend's seed data).
+const STRONGHOLD_MERCHANT = process.env.PERKS_STRONGHOLD_MERCHANT || '跑野运动馆';
+const STRONGHOLD_VENUE = process.env.PERKS_STRONGHOLD_VENUE || '跑野运动馆 · 东方路';
+const MERCHANT_ID = process.env.PERKS_MERCHANT_ID || '1';
+const CAMPAIGN_MERCHANT = process.env.PERKS_CAMPAIGN_MERCHANT || '街角便利';
 
 module.exports = async function perksShots({ browser, session, shot, BASE, problems, writes }) {
   const no = (k) => String(FROM + k);
@@ -24,7 +29,7 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
   await page.goto(`${BASE}/merchant/drops`);
   await page.waitForSelector('.ant-table-row');
   await shot(page, `${no(0)}_投放_列表`);
-  await page.goto(`${BASE}/merchant/drops?merchant_id=1`);
+  await page.goto(`${BASE}/merchant/drops?merchant_id=${MERCHANT_ID}`);
   await page.waitForSelector('.ant-table-row');
   await shot(page, `${no(0)}b_投放_按商户筛选`, { fullPage: false });
 
@@ -66,10 +71,10 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
   await page.click('button:has-text("新建投放")');
   await page.waitForSelector(`${drawer} .type-card`);
   await page.click(`${drawer} .type-card:has-text("据点")`);
-  await pickOption(page, 'merchant_id', '跑野运动馆');
+  await pickOption(page, 'merchant_id', STRONGHOLD_MERCHANT);
   await page.click(`${drawer} button:has-text("下一步")`);
-  await pickOption(page, 'venue_id', '跑野运动馆 · 东方路');
-  await page.waitForSelector(`${drawer} svg title:has-text("跑野运动馆 · 东方路")`, { state: 'attached' });
+  await pickOption(page, 'venue_id', STRONGHOLD_VENUE);
+  await page.waitForSelector(`${drawer} svg title:has-text("${STRONGHOLD_VENUE}")`, { state: 'attached' });
   await shot(page, `${no(1)}f_投放_新建据点_选场馆`, { fullPage: false });
   await page.click(`${drawer} .ant-drawer-footer button:has-text("取消")`);
 
@@ -111,11 +116,11 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
   await shot(page, `${no(3)}b_联名活动_详情`, { fullPage: false });
   await page.click(`${drawer} .ant-drawer-close`);
   await page.waitForSelector(drawer, { state: 'detached' }).catch(() => undefined);
-  await page.locator('.bc-card').first().locator('button:has-text("暂停")').click();
+  await page.locator('.bc-card:has(button:has-text("暂停"))').first().locator('button:has-text("暂停")').click();
   await page.waitForSelector('.ant-modal-confirm-title');
   await shot(page, `${no(3)}c_联名活动_暂停确认`, { fullPage: false });
   await page.click('.ant-modal-confirm-btns button:has-text("取消")');
-  const launchCard = page.locator('.bc-card.scheduled').first();
+  const launchCard = page.locator('.bc-card:has(button:has-text("提前上线"))').first();
   if (await launchCard.count()) {
     await launchCard.locator('button:has-text("提前上线")').click();
     await page.waitForSelector('.ant-modal-confirm-title');
@@ -124,10 +129,10 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
       await page.click('.ant-modal-confirm-btns button:has-text("提前上线")');
       await page.waitForSelector('.ant-message-success');
     } else await page.click('.ant-modal-confirm-btns button:has-text("取消")');
-  } else problems.push('no scheduled brand campaign to launch');
+  } else problems.push('no scheduled / draft brand campaign to launch');
   await page.click('button:has-text("新建联名活动")');
   await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("新建联名活动")`);
-  await pickOption(page, 'merchant_id', '街角便利');
+  await pickOption(page, 'merchant_id', CAMPAIGN_MERCHANT);
   await page.fill(`${visibleModal} #title`, '街角便利 · 元旦夜跑补给');
   await page.fill(`${visibleModal} #description`, '元旦前后夜跑经过门店补给站，领热饮和暖宝宝');
   await page.fill(`${visibleModal} #store_count`, '25');
@@ -164,7 +169,8 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
   await page.waitForSelector('.ant-checkbox-group[aria-label="图层"]');
   await page.waitForLoadState('networkidle');
   if (await page.locator('.ant-checkbox-group[aria-label="图层"] .ant-checkbox-wrapper', { hasText: '补给站' }).count()) {
-    await page.waitForSelector('svg title:has-text("补给站")', { state: 'attached' });
+    const label = await page.locator('.ant-checkbox-group[aria-label="图层"] .ant-checkbox-wrapper', { hasText: '补给站' }).innerText();
+    if (!/补给站 0$/.test(label.trim())) await page.waitForSelector('svg title:has-text("补给站")', { state: 'attached' });
     await shot(page, `${no(5)}_地图_补给站图层`, { fullPage: false });
   } else problems.push('no 补给站 layer on the map page');
   await ctx.close();

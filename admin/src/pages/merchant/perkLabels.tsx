@@ -66,8 +66,8 @@ export const toFen = (yuan: number | null | undefined) => Math.round((yuan ?? 0)
 export const toYuan = (fen: number | null | undefined) => (fen ?? 0) / 100;
 
 /** "¥ 4.2 万" style money for big merchant investments (分 in). */
-export function yuanShort(fen: number): string {
-  const y = fen / 100;
+export function yuanShort(fen: number | null | undefined): string {
+  const y = (fen ?? 0) / 100;
   if (Math.abs(y) >= 10000) return `¥ ${(y / 10000).toLocaleString('zh-CN', { maximumFractionDigits: 2 })} 万`;
   return `¥ ${y.toLocaleString('zh-CN', { maximumFractionDigits: 2 })}`;
 }

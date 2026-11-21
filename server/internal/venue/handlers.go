@@ -186,7 +186,7 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, ops, scoped, adminOnly func(ht
 	mux.Handle("POST /admin/v1/merchants", ops(h.createMerchant))
 	mux.Handle("GET /admin/v1/merchants/{id}", scoped(h.merchant))
 	mux.Handle("PATCH /admin/v1/merchants/{id}", ops(h.patchMerchant))
-	mux.Handle("POST /admin/v1/merchants/{id}/reveal-phone", ops(h.revealPhone))
+	mux.Handle("POST /admin/v1/merchants/{id}/reveal-phone", adminOnly(h.revealPhone))
 	mux.Handle("POST /admin/v1/merchants/{id}/staff", adminOnly(h.createStaff))
 
 	mux.Handle("GET /admin/v1/venues", ops(h.venues))

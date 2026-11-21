@@ -167,7 +167,7 @@ export default function BookingsPage() {
             },
             { title: '状态', dataIndex: 'status', width: 96, render: (v: BookingStatus) => <BookingStatusTag status={v} /> },
             { title: '组局', dataIndex: 'meetup_id', width: 90, render: (v: number | null) => (v ? <Tag bordered={false} color="purple">约球 #{v}</Tag> : <span className="muted">—</span>) },
-            { title: '下单时间', dataIndex: 'created_at', width: 140, render: (v: string) => <span className="num">{dt(v)}</span> },
+            { title: '下单时间', dataIndex: 'created_at', width: 140, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm')}</span> },
             { title: '操作', key: 'op', width: 90, align: 'right', fixed: 'right', render: (_, b) => refundButton(b) || <span className="muted">—</span> },
           ]}
         />
