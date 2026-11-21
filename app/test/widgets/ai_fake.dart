@@ -128,9 +128,9 @@ J bossCard() => {
         'id': 3,
         'name': '沙发怪',
         'hp': 1900,
-        'max_hp': 5000,
+        'hp_max': 5000,
         'center': {'lat': origin.lat + 0.002, 'lng': origin.lng + 0.002},
-        'ends_at': DateTime.now().add(const Duration(hours: 3)).toIso8601String(),
+        'expires_at': DateTime.now().add(const Duration(hours: 3)).toIso8601String(),
       },
     };
 
@@ -260,7 +260,7 @@ class AiFake {
     }
     if (p == '/v1/ai/routes') {
       routesCalls++;
-      if (!enabled) return _err(503, 'ai_unavailable');
+      // Like the server: routes are rule-based and work without a model.
       return (200, {
         'items': [aiRouteJson('loop'), aiRouteJson('capture'), aiRouteJson('boss')],
         'ai_generated': true,

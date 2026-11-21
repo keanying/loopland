@@ -42,9 +42,9 @@ type BossCard struct {
 	ID     int64     `json:"id"`
 	Name   string    `json:"name"`
 	HP     int       `json:"hp"`
-	MaxHP  int       `json:"max_hp"`
+	MaxHP  int       `json:"hp_max"`
 	Center LatLng    `json:"center"`
-	EndsAt time.Time `json:"ends_at"`
+	EndsAt time.Time `json:"expires_at"`
 }
 
 // ToolFunc runs a tool: the result goes back to the model, cards to the user.
@@ -307,7 +307,7 @@ func (s *Service) nearbyBosses(ctx context.Context, user int64, pos LatLng) (any
 	var cards []Card
 	bl := []map[string]any{}
 	for _, b := range bosses {
-		bl = append(bl, map[string]any{"id": b.ID, "name": b.Name, "hp": b.HP, "max_hp": b.MaxHP, "distance_km": math.Round(b.DistanceM/100) / 10,
+		bl = append(bl, map[string]any{"id": b.ID, "name": b.Name, "hp": b.HP, "hp_max": b.MaxHP, "distance_km": math.Round(b.DistanceM/100) / 10,
 			"hours_left": math.Ceil(time.Until(b.EndsAt).Hours())})
 		if len(cards) < 2 {
 			cards = append(cards, Card{Type: "boss", Boss: &BossCard{ID: b.ID, Name: b.Name, HP: b.HP, MaxHP: b.MaxHP, Center: round(b.Center), EndsAt: b.EndsAt}})

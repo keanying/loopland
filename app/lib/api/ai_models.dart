@@ -223,9 +223,9 @@ class AIBossRef {
         id: ji(j['id']),
         name: js(j['name']),
         hp: ji(j['hp']),
-        maxHp: ji(j['max_hp'], 1),
+        maxHp: ji(j['hp_max'] ?? j['max_hp'], 1),
         center: _ll(j['center']),
-        endsAt: jdt(j['ends_at']),
+        endsAt: jdt(j['expires_at'] ?? j['ends_at']),
       );
 }
 

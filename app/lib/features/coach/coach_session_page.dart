@@ -749,7 +749,10 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
           if (done)
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: _SheetLink(label: '不领取，返回', onTap: () => context.pop()),
+              child: _SheetLink(
+                label: '不领取，返回',
+                onTap: () => context.canPop() ? context.pop() : context.go('/start'),
+              ),
             ),
         ]),
       ),

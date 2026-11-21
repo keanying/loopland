@@ -63,7 +63,7 @@
 ```json
 { "type": "route", "route": Route }
 { "type": "territory", "territory": { "id": 12, "name": "西岸草坪", "owner": { "id": 3, "nickname": "..." }, "crew": { "id": 2, "name": "城西跑团" }, "guard": 42, "center": { "lat": 31.2, "lng": 121.4 } } }
-{ "type": "boss", "boss": { "id": 5, "name": "沙发怪", "hp": 1200, "max_hp": 5000, "center": { "lat": 31.2, "lng": 121.4 }, "ends_at": "..." } }
+{ "type": "boss", "boss": { "id": 5, "name": "沙发怪", "hp": 1200, "hp_max": 5000, "center": { "lat": 31.2, "lng": 121.4 }, "expires_at": "..." } }
 ```
 
 ### GET /v1/ai/greeting?lat=&lng= → `{"text":"晚上好阿杰！今天你已经拿了 320 能量……","suggestions":["规划圈地路线","今晚去哪抢地","生成今日战报","帮我排一周计划"],"ai_generated":false}`

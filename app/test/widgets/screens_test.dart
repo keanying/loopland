@@ -139,7 +139,9 @@ void main() {
     expect(find.text('即将开放'), findsOneWidget);
     await t.tap(find.text('居家跟练'));
     await t.pump();
-    expect(find.text('开始训练'), findsOneWidget);
+    // AI 跟练 first; the old free-form timer stays as 「手动记录」.
+    expect(find.text('AI 跟练'), findsOneWidget);
+    expect(find.text('手动记录'), findsOneWidget);
     await settle(t);
   });
 }

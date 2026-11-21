@@ -24,6 +24,8 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
+    <!-- camera_android_camerax 声明了 camera.any（默认必需），改为可选 -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" tools:replace="android:required"/>
     <!-- 合规：camera 插件声明了录音权限，AI 跟练不录音（enableAudio: false），移除 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <!-- release 只允许 HTTPS（ali_auth 插件默认打开了明文流量，这里覆盖）；
@@ -56,7 +58,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- 高德 Key：config/app.yaml 的 amap.android_key → AMAP_ANDROID_KEY（--dart-define 或生成的 android/loopland.properties，见 build.gradle.kts） -->
+        <!-- 高德 Key：config/app.yaml 的 amap.android_key → AMAP_ANDROID_KEY（dart-define 或生成的 android/loopland.properties，见 build.gradle.kts） -->
         <meta-data android:name="com.amap.api.v2.apikey" android:value="${AMAP_ANDROID_KEY}"/>
         <!-- 运动记录：geolocator 前台服务，类型 location（Android 14 起必须声明） -->
         <service

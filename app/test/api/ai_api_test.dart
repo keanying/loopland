@@ -107,7 +107,7 @@ void main() {
       final evs = await aiChatEvents(Stream.fromIterable(const [
         SseEvent('delta', '{"text":"往东"}'),
         SseEvent('ping', '{}'),
-        SseEvent('card', '{"type":"boss","boss":{"id":5,"name":"沙发怪","hp":1200,"max_hp":5000}}'),
+        SseEvent('card', '{"type":"boss","boss":{"id":5,"name":"沙发怪","hp":1200,"hp_max":5000}}'),
         SseEvent('delta', 'not json'),
         SseEvent('error', '{"code":"ai_unavailable","message":"挂了"}'),
         SseEvent('delta', '{"text":"never"}'),

@@ -6,7 +6,6 @@ import '../../api/ai_models.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
 import '../../claim/geo.dart';
-import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -196,7 +195,8 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
     final out = <Widget>[];
     final chat = widget.aiRoute;
     if (chat != null) out.add(_aiTile(chat, 'chat'));
-    if (!ref.watch(aiEnabledProvider)) return out;
+    // Routes are rule-based on the server (the model only writes the
+    // reason), so they stay available when AI is turned off.
     final me = _me;
     if (me == null) {
       out.add(_locating
@@ -293,7 +293,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
               const SizedBox(height: 18),
               Row(children: [
                 const Expanded(child: Text('本次目标', style: TextStyle(color: LL.text2))),
-                if (ref.watch(aiEnabledProvider) && _me != null)
+                if (_me != null)
                   TextButton.icon(
                     style: TextButton.styleFrom(foregroundColor: LL.lavender, visualDensity: VisualDensity.compact),
                     onPressed: () => ref.invalidate(aiRoutesProvider(aiRoutesQuery(_me!, _sport, _aiKm))),

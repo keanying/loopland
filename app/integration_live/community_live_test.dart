@@ -68,8 +68,9 @@ void main() {
     expect(post.activity!.id, actId);
     expect(post.activity!.distanceM, greaterThan(1000));
     expect(post.visibility, 'public');
-    // A brand-new account posting a photo scores 20 (< 30): approved directly.
-    expect(post.reviewStatus, ReviewStatus.approved);
+    // A brand-new account posting a photo scores 20, which is the default
+    // auto-approve line (< 20 passes): it waits for review.
+    expect(post.reviewStatus, ReviewStatus.pending);
 
     // Contact info scores 50: queued for review, visible to the author only.
     final pending = await a.createPost(const NewPost(content: '一起跑步加我电话 13912345678'));

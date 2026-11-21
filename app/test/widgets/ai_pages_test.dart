@@ -466,7 +466,7 @@ void main() {
     await settle(t);
   });
 
-  testWidgets('开跑 page: AI routes loading error with retry; hidden when AI is off', (t) async {
+  testWidgets('开跑 page: AI routes loading error with retry; still shown when AI is off', (t) async {
     await phone(t, size: const Size(390, 1300));
     final ai = AiFake();
     var fail = true;
@@ -492,8 +492,9 @@ void main() {
     await t.pumpWidget(aiApp('/start/gps', aiBackend(AiFake(enabled: false))));
     await idle(t);
     expect(find.text('自由圈地 · 推荐'), findsOneWidget);
-    expect(find.text('AI 推荐闭环'), findsNothing);
-    expect(find.text('刷新 AI 路线'), findsNothing);
+    // Routes are rule-based: still offered when the model is off.
+    expect(find.text('AI 推荐闭环'), findsOneWidget);
+    expect(find.text('刷新 AI 路线'), findsOneWidget);
     await settle(t);
   });
 
