@@ -52,10 +52,14 @@ export interface Drop {
   campaign_id: number | null;
   type: DropType;
   name: string;
-  center: LatLng;
+  /** null for a 据点 whose position comes from its venue (the backend returns it that way). */
+  center: LatLng | null;
   radius_m: number;
   venue_id: number | null;
+  /** Not in the contract: the store shown on redemptions (backend extra, optional). */
+  store_name?: string | null;
   perk: Perk;
+  /** 0 = 不限 (backend). */
   daily_cap: number;
   issued_today: number;
   redeemed_today: number;
@@ -75,6 +79,7 @@ export interface DropInput {
   center: LatLng | null;
   radius_m: number;
   venue_id: number | null;
+  store_name?: string | null;
   perk: Perk;
   daily_cap: number;
   start_time: string;
@@ -174,7 +179,7 @@ const PAGE = 20;
 export const perksApi = {
   // options for the forms (owned by the 商户 / 场馆 pages)
   merchantOptions: () => http.get<Paged<MerchantOption>>(`${A}/merchants`, { page_size: 100 }),
-  venueOptions: (merchantId?: number | null) => http.get<Paged<VenueOption>>(`${A}/venues`, { merchant_id: merchantId ?? undefined, page_size: 100 }),
+  venueOptions: () => http.get<Paged<VenueOption>>(`${A}/venues`, { page_size: 100 }),
 
   drops: (p: DropFilter) => http.get<Paged<Drop>>(`${A}/drops`, { page_size: PAGE, ...p }),
   createDrop: (body: DropInput) => http.post<Drop>(`${A}/drops`, body),

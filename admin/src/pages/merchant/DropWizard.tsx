@@ -29,6 +29,7 @@ interface FormValues {
   lng?: number;
   radius_m: number;
   venue_id?: number;
+  store_name?: string;
   perk: { title: string; value_text: string; description: string; valid_days: number; rules: string };
   daily_cap: number;
   range: [Dayjs, Dayjs];
@@ -38,7 +39,7 @@ interface FormValues {
 
 const STEPS = [
   { title: '类型与商户', fields: ['type', 'merchant_id', 'campaign_id'] },
-  { title: '位置', fields: ['place', 'lat', 'lng', 'radius_m', 'venue_id'] },
+  { title: '位置', fields: ['place', 'lat', 'lng', 'radius_m', 'venue_id', 'store_name'] },
   { title: '权益', fields: [['perk', 'title'], ['perk', 'value_text'], ['perk', 'description'], ['perk', 'valid_days'], ['perk', 'rules']] },
   { title: '发放与结算', fields: ['daily_cap', 'range', 'settle_price', 'settle_direction'] },
 ] as const;
@@ -73,14 +74,16 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
   const merchants = useQuery({ queryKey: ['perk-merchants'], queryFn: perksApi.merchantOptions, enabled: open, staleTime: 60_000 });
   const campaigns = useQuery({ queryKey: ['brand-campaigns', 'options'], queryFn: () => perksApi.campaigns({ page_size: 100 }), enabled: open, staleTime: 30_000 });
   const venues = useQuery({
-    queryKey: ['perk-venues', merchantId ?? 0],
-    queryFn: () => perksApi.venueOptions(merchantId),
+    queryKey: ['perk-venues'],
+    queryFn: perksApi.venueOptions,
     enabled: open && type === 'stronghold' && !!merchantId,
     staleTime: 60_000,
   });
   const merchant = merchants.data?.items.find((m) => m.id === merchantId);
   const merchantCampaigns = (campaigns.data?.items ?? []).filter((c) => c.merchant.id === merchantId && c.status !== 'ended');
   const campaign = merchantCampaigns.find((c) => c.id === campaignId);
+  // the merchant's own venues, plus sign-in-only venues without a merchant (contract: 「merchant 为 null」)
+  const venueList = (venues.data?.items ?? []).filter((v) => !v.merchant || v.merchant.id === merchantId);
   const venue = venues.data?.items.find((v) => v.id === venueId);
 
   const point = type === 'stronghold' ? venue?.center ?? null : typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
@@ -93,7 +96,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
   const geo = useQuery({ queryKey: ['territories', 'geo', bbox.join(',')], queryFn: () => api.territoriesGeo(bbox), enabled: open && step === 1, placeholderData: (p) => p });
   // other live drops, drawn around the point for context
   const nearby = useQuery({ queryKey: ['drops', 'live', null], queryFn: () => perksApi.drops({ status: 'active', page_size: 100 }), enabled: open && step === 1, staleTime: 30_000 });
-  const others = (nearby.data?.items ?? []).filter((d) => d.id !== editing?.id);
+  const others = (nearby.data?.items ?? []).filter((d): d is Drop & { center: NonNullable<Drop['center']> } => d.id !== editing?.id && !!d.center);
 
   const save = useMutation({
     mutationFn: (body: DropInput) => {
@@ -124,8 +127,9 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
         merchant_id: editing.merchant.id,
         campaign_id: editing.campaign_id,
         place: placeOf(editing),
-        lat: editing.center.lat,
-        lng: editing.center.lng,
+        lat: editing.center?.lat,
+        lng: editing.center?.lng,
+        store_name: editing.store_name ?? '',
         radius_m: editing.radius_m,
         venue_id: editing.venue_id ?? undefined,
         perk: { ...editing.perk },
@@ -200,6 +204,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
       center: t === 'stronghold' ? null : { lat: v.lat!, lng: v.lng! },
       radius_m: t === 'stronghold' ? venue?.checkin_radius_m ?? DEFAULT_RADIUS.stronghold : v.radius_m,
       venue_id: t === 'stronghold' ? v.venue_id ?? null : null,
+      ...(v.store_name?.trim() ? { store_name: v.store_name.trim() } : editing?.store_name ? { store_name: null } : {}),
       perk: {
         title: v.perk.title.trim(),
         value_text: v.perk.value_text.trim(),
@@ -351,7 +356,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
                         }
                       />
                     }
-                    options={(venues.data?.items ?? []).map((v) => ({ value: v.id, label: v.name }))}
+                    options={venueList.map((v) => ({ value: v.id, label: v.merchant ? v.name : `${v.name}（非合作场馆）` }))}
                     optionRender={(o) => {
                       const v = venues.data?.items.find((x) => x.id === o.value);
                       return (
@@ -399,6 +404,9 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
                 </Row>
               </>
             )}
+            <Form.Item name="store_name" label="核销门店（可选）" rules={[{ max: 20, message: '最多 20 字' }]} extra="核销记录里显示的门店名，如「滨江店」">
+              <Input maxLength={20} placeholder="滨江店" allowClear style={{ maxWidth: 320 }} />
+            </Form.Item>
             <div className="drop-map race-place">
               {step === 1 && (
                 <SvgMap

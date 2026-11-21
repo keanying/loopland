@@ -16,13 +16,14 @@ import { DropTypeBadge } from './perkShared';
 import DropWizard from './DropWizard';
 
 function CapCell({ d }: { d: Drop }) {
-  const cap = Math.max(1, d.daily_cap);
-  const full = d.issued_today >= d.daily_cap;
+  // daily_cap 0 = 不限 (backend)
+  const cap = d.daily_cap > 0 ? d.daily_cap : Math.max(1, d.issued_today);
+  const full = d.daily_cap > 0 && d.issued_today >= d.daily_cap;
   return (
     <div className="cap-cell">
       <span className="num" style={{ fontSize: 13 }}>
         发 <b>{num(d.issued_today)}</b> · 核销 <b>{num(d.redeemed_today)}</b>
-        <span className="muted"> / 上限 {num(d.daily_cap)}</span>
+        <span className="muted"> / 上限 {d.daily_cap > 0 ? num(d.daily_cap) : '不限'}</span>
       </span>
       <div className={`cap-track${full ? ' full' : ''}`} role="img" aria-label={`今日发出 ${d.issued_today}，核销 ${d.redeemed_today}，上限 ${d.daily_cap}`}>
         <i className="issued" style={{ width: `${Math.min(100, (d.issued_today / cap) * 100)}%` }} />
@@ -115,7 +116,7 @@ export default function DropsPage() {
           <Tile v={num(sum((d) => d.redeemed_today))} l="今日核销" />
         </Col>
         <Col xs={12} md={6}>
-          <Tile v={num(liveItems.filter((d) => d.issued_today >= d.daily_cap).length)} l="今日已发完" warn={liveItems.some((d) => d.issued_today >= d.daily_cap)} />
+          <Tile v={num(liveItems.filter((d) => d.daily_cap > 0 && d.issued_today >= d.daily_cap).length)} l="今日已发完" warn={liveItems.some((d) => d.daily_cap > 0 && d.issued_today >= d.daily_cap)} />
         </Col>
       </Row>
       <Panel
