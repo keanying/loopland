@@ -42,3 +42,15 @@ func Owned(ctx context.Context, q db.Querier, user int64, ids []int64) ([]Image,
 	}
 	return out, nil
 }
+
+// OwnedURL finds one of the user's uploads by its url (for clients that
+// still send avatar_url instead of avatar_id).
+func OwnedURL(ctx context.Context, q db.Querier, user int64, url string) (Image, error) {
+	var im Image
+	err := q.QueryRow(ctx, `SELECT id, url, width_px, height_px FROM src.src_cnt_loop_media WHERE url=$1 AND user_id=$2 ORDER BY id DESC LIMIT 1`, url, user).
+		Scan(&im.ID, &im.URL, &im.Width, &im.Height)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return im, ErrInvalid
+	}
+	return im, err
+}

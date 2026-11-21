@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart' show RequestOptions;
+
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:loopland/api/api_client.dart';
 import 'package:loopland/api/models.dart';
@@ -76,9 +78,20 @@ const featuresJson = {
 };
 
 /// Overrides that make every screen render against canned data.
-List<Override> fakeBackend({User? user, Map<String, Object?> extra = const {}}) {
+///
+/// [handlers] are consulted first, in order; a handler returns null to pass
+/// (e.g. `communityHandler` in community_fake.dart, method-aware and stateful).
+List<Override> fakeBackend({
+  User? user,
+  Map<String, Object?> extra = const {},
+  List<(int, Object?)? Function(RequestOptions o)> handlers = const [],
+}) {
   final adapter = FakeAdapter((o) {
     final p = o.path;
+    for (final h in handlers) {
+      final r = h(o);
+      if (r != null) return r;
+    }
     if (extra.containsKey(p)) {
       final v = extra[p];
       return v is (int, Object?) ? v : (200, v);

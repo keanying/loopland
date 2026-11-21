@@ -17,6 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/keanying/loopland/server/internal/gameplay"
+	"github.com/keanying/loopland/server/internal/media"
+	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -80,6 +82,7 @@ type User struct {
 	ID               int64       `json:"id"`
 	Nickname         string      `json:"nickname"`
 	AvatarURL        *string     `json:"avatar_url"`
+	Bio              string      `json:"bio"`
 	Level            int         `json:"level"`
 	Energy           int         `json:"energy"`
 	EnergyToday      int         `json:"energy_today"`
@@ -108,10 +111,10 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	var phoneEnc []byte
 	var consents, settings []byte
 	var bannedUntil *time.Time
-	err := q.QueryRow(ctx, `SELECT id, nickname, avatar_url, energy, energy_earned_total, phone_enc, is_realname_verified, is_adult,
+	err := q.QueryRow(ctx, `SELECT id, nickname, avatar_url, COALESCE(bio, ''), energy, energy_earned_total, phone_enc, is_realname_verified, is_adult,
 			status, mute_end_time, ban_end_time, delete_time, consents_json, settings_json, create_time
 		FROM src.src_usr_loop_user WHERE id=$1 AND status <> 'deleted'`, id).
-		Scan(&u.ID, &u.Nickname, &u.AvatarURL, &u.Energy, &u.Earned, &phoneEnc, &u.RealnameVerified, &u.IsAdult,
+		Scan(&u.ID, &u.Nickname, &u.AvatarURL, &u.Bio, &u.Energy, &u.Earned, &phoneEnc, &u.RealnameVerified, &u.IsAdult,
 			&u.Status, &u.MutedUntil, &bannedUntil, &u.DeleteAfter, &consents, &settings, &u.CreatedAt)
 	if db.IsNoRows(err) {
 		return u, httpx.NotFound("用户")
@@ -256,6 +259,9 @@ type Handler struct {
 	Config   *gameplay.Store
 	Box      *secure.Box
 	Realname Realname
+	// Mod scores nickname / bio changes and queues them, with avatar
+	// changes, for review after they take effect (先生效后审核).
+	Mod *moderation.Moderator
 }
 
 // Routes registers the endpoints. authAny allows users without a phone.
@@ -285,33 +291,105 @@ var visibilities = map[string]bool{"public": true, "followers": true, "crew": tr
 
 func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
-		Nickname  *string         `json:"nickname"`
+		Nickname *string `json:"nickname"`
+		// AvatarURL is kept for older clients: "" clears the avatar, any
+		// other value must be the url of one of the user's uploads.
 		AvatarURL *string         `json:"avatar_url"`
+		AvatarID  *int64          `json:"avatar_id"`
+		Bio       *string         `json:"bio"`
 		Settings  json.RawMessage `json:"settings"`
 	}
 	if err := httpx.Decode(r, &req); err != nil {
 		return err
 	}
 	uid := httpx.UserID(r.Context())
-	err := pgx.BeginFunc(r.Context(), h.Pool, func(tx pgx.Tx) error {
+	ctx := r.Context()
+	err := pgx.BeginFunc(ctx, h.Pool, func(tx pgx.Tx) error {
+		var muted bool
+		var curNick, curBio string
+		var curAvatar *string
+		if err := tx.QueryRow(ctx, `SELECT COALESCE(mute_end_time > now(), false), nickname, COALESCE(bio, ''), avatar_url FROM src.src_usr_loop_user WHERE id=$1 FOR UPDATE`, uid).
+			Scan(&muted, &curNick, &curBio, &curAvatar); err != nil {
+			return err
+		}
+		// review queues a live change (先生效后审核).
+		review := func(target, text string, images []string) error {
+			if h.Mod == nil {
+				return nil
+			}
+			sc := moderation.Score{Reasons: []string{}}
+			if text != "" {
+				sc = h.Mod.Check(ctx, text, false)
+				if sc.Blocked {
+					return moderation.ErrBlocked
+				}
+			}
+			_, err := moderation.Submit(ctx, tx, target, uid, uid, text, images, sc)
+			return err
+		}
 		if req.Nickname != nil {
 			n := strings.TrimSpace(*req.Nickname)
 			if c := utf8.RuneCountInString(n); c < 2 || c > 16 {
 				return httpx.BadRequest("invalid_nickname", "昵称 2–16 个字")
 			}
-			var muted bool
-			if err := tx.QueryRow(r.Context(), `SELECT COALESCE(mute_end_time > now(), false) FROM src.src_usr_loop_user WHERE id=$1`, uid).Scan(&muted); err != nil {
-				return err
-			}
 			if muted {
 				return httpx.Forbidden("muted", "禁言期间不能修改昵称")
 			}
-			if _, err := tx.Exec(r.Context(), `UPDATE src.src_usr_loop_user SET nickname=$2 WHERE id=$1`, uid, n); err != nil {
+			if n != curNick {
+				if err := review(moderation.Nickname, n, nil); err != nil {
+					return err
+				}
+				if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET nickname=$2 WHERE id=$1`, uid, n); err != nil {
+					return err
+				}
+			}
+		}
+		if req.Bio != nil {
+			b := strings.TrimSpace(*req.Bio)
+			if utf8.RuneCountInString(b) > 60 {
+				return httpx.BadRequest("invalid_bio", "简介最多 60 字")
+			}
+			if b != curBio {
+				if b != "" {
+					if muted {
+						return httpx.Forbidden("muted", "禁言期间不能修改简介")
+					}
+					if err := review(moderation.Bio, b, nil); err != nil {
+						return err
+					}
+				}
+				if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET bio=NULLIF($2,'') WHERE id=$1`, uid, b); err != nil {
+					return err
+				}
+			}
+		}
+		var avatar *media.Image
+		switch {
+		case req.AvatarID != nil:
+			ims, err := media.Owned(ctx, tx, uid, []int64{*req.AvatarID})
+			if err != nil {
+				return err
+			}
+			avatar = &ims[0]
+		case req.AvatarURL != nil && *req.AvatarURL != "":
+			im, err := media.OwnedURL(ctx, tx, uid, *req.AvatarURL)
+			if err != nil {
+				return err
+			}
+			avatar = &im
+		case req.AvatarURL != nil:
+			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET avatar_url=NULL WHERE id=$1`, uid); err != nil {
 				return err
 			}
 		}
-		if req.AvatarURL != nil {
-			if _, err := tx.Exec(r.Context(), `UPDATE src.src_usr_loop_user SET avatar_url=NULLIF($2,'') WHERE id=$1`, uid, *req.AvatarURL); err != nil {
+		if avatar != nil && (curAvatar == nil || *curAvatar != avatar.URL) {
+			if muted {
+				return httpx.Forbidden("muted", "禁言期间不能修改头像")
+			}
+			if err := review(moderation.Avatar, "", []string{avatar.URL}); err != nil {
+				return err
+			}
+			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_loop_user SET avatar_url=$2 WHERE id=$1`, uid, avatar.URL); err != nil {
 				return err
 			}
 		}

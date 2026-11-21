@@ -28,7 +28,10 @@ type Config struct {
 	RefreshTTL     time.Duration
 
 	BootstrapAdmin string // "username:password"
-	PublicBaseURL  string // for payment notify URLs
+	PublicBaseURL  string // for payment notify URLs and share links
+	// MediaDir is where uploads are stored when 对象存储 OSS is not enabled
+	// (dev); relative paths in config.yaml are against the file's directory.
+	MediaDir string
 
 	Aliyun  Aliyun
 	WeChat  WeChat
@@ -184,6 +187,7 @@ func Load() (Config, error) {
 		BootstrapAdmin: get("LOOPLAND_BOOTSTRAP_ADMIN"),
 		PublicBaseURL:  strings.TrimRight(env("LOOPLAND_PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		JobsOff:        get("LOOPLAND_JOBS_OFF") == "1",
+		MediaDir:       env("LOOPLAND_MEDIA_DIR", "data/media"),
 		Aliyun: Aliyun{
 			AccessKeyID:     get("ALIYUN_ACCESS_KEY_ID"),
 			AccessKeySecret: secretEnv("ALIYUN_ACCESS_KEY_SECRET"),

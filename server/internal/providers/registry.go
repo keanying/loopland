@@ -15,6 +15,7 @@ import (
 
 	"github.com/keanying/loopland/server/internal/auth"
 	"github.com/keanying/loopland/server/internal/billing"
+	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/secure"
 	"github.com/keanying/loopland/server/internal/user"
@@ -42,7 +43,9 @@ type Snapshot struct {
 	AI       *AIConfig
 	Mailer   *Mailer
 	AMapKey  string
-	Eff      map[string]Effective
+	// Media is the enabled OSS store; nil means local disk (dev) or no uploads.
+	Media media.Store
+	Eff   map[string]Effective
 }
 
 // Registry holds the current snapshot.
@@ -124,7 +127,7 @@ func bootstrap(c config.Config) map[string]map[string]string {
 			"apiv3_key": c.WeChat.APIv3Key, "public_key": c.WeChat.PlatformPubKey, "public_key_id": c.WeChat.PlatformPubKeyID},
 		Alipay: {"app_id": c.Alipay.AppID, "private_key": c.Alipay.PrivateKey, "public_key": c.Alipay.PublicKey, "sandbox": b(c.Alipay.Sandbox)},
 		Apple:  {"bundle_id": c.Apple.BundleID, "iap_issuer_id": c.Apple.IssuerID, "iap_key_id": c.Apple.KeyID, "iap_private_key": c.Apple.PrivateKey},
-		AI:     {}, Email: {}, AMap: {},
+		AI:     {}, Email: {}, AMap: {}, OSS: {},
 	}
 }
 
@@ -341,6 +344,14 @@ func (r *Registry) build(eff map[string]Effective) Snapshot {
 	}
 	if e, ok := r.on(eff, AMap); ok {
 		s.AMapKey = e.Values["web_key"]
+	}
+	if e, ok := r.on(eff, OSS); ok {
+		v := e.Values
+		if st, err := media.NewOSS(v["region"], v["endpoint"], v["bucket"], v["public_base_url"], ali["access_key_id"], ali["access_key_secret"]); err == nil {
+			s.Media = st
+		} else {
+			logErr(OSS, err)
+		}
 	}
 
 	return s
@@ -730,6 +741,12 @@ func (r *Registry) check(ctx context.Context, code string, v, ali map[string]str
 		return m.Send(ctx, strings.TrimSpace(input), "圈圈 Loopland 邮件测试", "这是一封测试邮件，收到说明邮件配置正确。")
 	case AMap:
 		return AMapCheck(ctx, hc, v["web_key"])
+	case OSS:
+		st, err := media.NewOSS(v["region"], v["endpoint"], v["bucket"], v["public_base_url"], ali["access_key_id"], ali["access_key_secret"])
+		if err != nil {
+			return err
+		}
+		return st.Check(ctx)
 	}
 	return fmt.Errorf("这个服务没有连通测试")
 }

@@ -1,7 +1,24 @@
-// One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md).
+// One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md, v2-1-玩法.md, v2-2-社区.md).
 import { ADMIN_PREFIX } from '../config';
 import { http } from './client';
 import type {
+  AdminPost,
+  AdminReport,
+  Meetup,
+  MeetupStatus,
+  MeetupType,
+  ModerationSettings,
+  Race,
+  RaceEntry,
+  RaceInput,
+  ReportHandle,
+  ReportStatus,
+  ReportTargetType,
+  ReviewBatch,
+  ReviewStats,
+  ReviewStatus,
+  ReviewTargetType,
+  ReviewTask,
   AdminAccount,
   AdminCreate,
   AdminMe,
@@ -142,6 +159,33 @@ export const api = {
   deleteRoute: (id: number) => http.del<unknown>(`${A}/routes/${id}`),
   districts: () => http.get<Items<District>>(`${A}/districts`),
   league: (p: { district?: string; week_start?: string }) => http.get<League>(`${A}/league`, p),
+
+  // V2 第二批「社区」(docs/api/v2-2-社区.md 「管理端」)
+  reviews: (p: { status?: ReviewStatus; target_type?: ReviewTargetType | ''; page?: number; page_size?: number }) =>
+    http.get<Paged<ReviewTask>>(`${A}/reviews`, { page_size: PAGE_SIZE, ...p }),
+  reviewStats: () => http.get<ReviewStats>(`${A}/reviews/stats`),
+  approveReview: (id: number) => http.post<ReviewTask>(`${A}/reviews/${id}/approve`),
+  rejectReview: (id: number, reason: string) => http.post<ReviewTask>(`${A}/reviews/${id}/reject`, { reason }),
+  batchReview: (body: ReviewBatch) => http.post<{ done: number }>(`${A}/reviews/batch`, body),
+  reports: (p: { status?: ReportStatus; target_type?: ReportTargetType | ''; page?: number; page_size?: number }) =>
+    http.get<Paged<AdminReport>>(`${A}/reports`, { page_size: PAGE_SIZE, ...p }),
+  handleReport: (id: number, body: ReportHandle) => http.post<Record<string, never>>(`${A}/reports/${id}/handle`, body),
+  posts: (p: { q?: string; user_id?: number | null; review_status?: ReviewStatus | ''; page?: number; page_size?: number }) =>
+    http.get<Paged<AdminPost>>(`${A}/posts`, { page_size: PAGE_SIZE, ...p }),
+  deletePost: (id: number, reason: string) => http.del<Record<string, never>>(`${A}/posts/${id}`, { reason }),
+  moderationSettings: () => http.get<ModerationSettings>(`${A}/moderation/settings`),
+  saveModerationSettings: (body: ModerationSettings) => http.put<ModerationSettings>(`${A}/moderation/settings`, body),
+  meetups: (p: { status?: MeetupStatus | ''; type?: MeetupType | ''; page?: number; page_size?: number }) =>
+    http.get<Paged<Meetup>>(`${A}/meetups`, { page_size: PAGE_SIZE, ...p }),
+  cancelMeetup: (id: number, reason: string) => http.post<Meetup>(`${A}/meetups/${id}/cancel`, { reason }),
+  races: (p: { page?: number; page_size?: number }) => http.get<Paged<Race>>(`${A}/races`, { page_size: PAGE_SIZE, ...p }),
+  createRace: (body: RaceInput) => http.post<Race>(`${A}/races`, body),
+  updateRace: (id: number, body: Partial<RaceInput>) => http.patch<Race>(`${A}/races/${id}`, body),
+  cancelRace: (id: number) => http.post<Race>(`${A}/races/${id}/cancel`),
+  raceEntries: (id: number, p: { page?: number; page_size?: number }) =>
+    http.get<Paged<RaceEntry>>(`${A}/races/${id}/entries`, { page_size: PAGE_SIZE, ...p }),
+  finishRaceEntry: (id: number, userId: number, result_sec: number) =>
+    http.post<Record<string, never>>(`${A}/races/${id}/entries/${userId}/finish`, { result_sec }),
 
   // audit & admins
   audit: (p: { admin_id?: number; page?: number; page_size?: number }) =>

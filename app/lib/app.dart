@@ -12,6 +12,7 @@ import 'features/city/city_page.dart';
 import 'features/codex/codex_page.dart';
 import 'features/community/community_page.dart';
 import 'features/community/crew_pages.dart';
+import 'features/community/gathering_routes.dart';
 import 'features/debug/env_check_page.dart';
 import 'features/inbox/inbox_page.dart';
 import 'features/login/bind_phone_page.dart';
@@ -27,6 +28,7 @@ import 'features/play/boss_page.dart';
 import 'features/play/games_page.dart';
 import 'features/play/routes_pages.dart';
 import 'features/play/season_page.dart';
+import 'features/social/social_routes.dart';
 import 'features/run/home_training_page.dart';
 import 'features/run/result_page.dart';
 import 'features/run/run_page.dart';
@@ -110,6 +112,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/membership', builder: (_, _) => const MembershipPage()),
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
       GoRoute(path: '/realname', builder: (_, _) => const RealnamePage()),
+      // V2 社区 · 组局 / 集结跑 / 赛事 / 消息 / 聊天 / 邀请码（features/community/gathering_routes.dart）
+      ...gatheringRoutes(),
       GoRoute(path: '/crews/search', builder: (_, _) => const CrewSearchPage()),
       GoRoute(path: '/crews/new', builder: (_, _) => const CrewCreatePage()),
       GoRoute(path: '/crews/:id', builder: (_, s) => CrewDetailPage(crewId: id(s) ?? 0)),
@@ -122,6 +126,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/routes', builder: (_, _) => const RoutesPage()),
       GoRoute(path: '/routes/:id', builder: (_, s) => RouteDetailPage(routeId: id(s) ?? 0)),
       GoRoute(path: '/campaigns', builder: (_, _) => const CampaignsPage()),
+      // V2 社区 · 动态 / 评论 / 主页 / 回放（features/social/social_routes.dart）
+      ...socialRoutes(),
     ],
   );
 });

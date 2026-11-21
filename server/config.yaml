@@ -30,6 +30,9 @@ auth:
 jobs:
   enabled: true                  # false = LOOPLAND_JOBS_OFF=1，本实例不跑后台任务
 
+media:
+  dir: data/media                # LOOPLAND_MEDIA_DIR：没启用对象存储 OSS 时（开发环境）上传图片存这里，相对本文件所在目录
+
 features:
   disabled: []                   # LOOPLAND_DISABLE：暂不上线的功能，见 config.prod.example.yaml
 

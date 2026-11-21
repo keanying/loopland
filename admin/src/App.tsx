@@ -16,6 +16,8 @@ import OperationsPage from './pages/OperationsPage';
 import AuditPage from './pages/AuditPage';
 import AdminsPage from './pages/AdminsPage';
 import ProvidersPage from './pages/ProvidersPage';
+import ReviewPage from './pages/ReviewPage';
+import CommunityPage from './pages/CommunityPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { admin, loading } = useAuth();
@@ -66,6 +68,8 @@ export default function App() {
         <Route path="territories" element={<RequirePerm perm="territories.read"><TerritoriesPage /></RequirePerm>} />
         <Route path="map" element={<Navigate to="/territories" replace />} />
         <Route path="risk" element={<RequirePerm perm="risk.read"><RiskPage /></RequirePerm>} />
+        <Route path="review" element={<RequirePerm perm="review.read"><ReviewPage /></RequirePerm>} />
+        <Route path="community" element={<RequirePerm perm="community.read"><CommunityPage /></RequirePerm>} />
         <Route path="operations" element={<RequirePerm perm="ops.read"><OperationsPage /></RequirePerm>} />
         <Route path="gameplay" element={<RequirePerm perm="gameplay.read"><GameplayPage /></RequirePerm>} />
         <Route

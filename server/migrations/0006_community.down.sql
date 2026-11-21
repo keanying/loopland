@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS src.src_mkt_loop_race_entry;
+DROP TABLE IF EXISTS src.src_mkt_loop_race;
+DROP TABLE IF EXISTS src.src_soc_loop_rally_join;
+DROP TABLE IF EXISTS src.src_soc_loop_rally;
+DROP TABLE IF EXISTS src.src_soc_loop_meetup_join;
+DROP TABLE IF EXISTS src.src_soc_loop_meetup;
+DROP TABLE IF EXISTS src.src_msg_loop_message;
+DROP TABLE IF EXISTS src.src_msg_loop_conv_member;
+DROP TABLE IF EXISTS src.src_msg_loop_conversation;

@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS src.src_cnt_loop_report;
+DROP TABLE IF EXISTS src.src_soc_loop_crew_invite;
+DROP TABLE IF EXISTS src.src_soc_loop_comment_like;
+DROP TABLE IF EXISTS src.src_soc_loop_comment;
+DROP TABLE IF EXISTS src.src_soc_loop_post_collect;
+DROP TABLE IF EXISTS src.src_soc_loop_post_like;
+DROP TABLE IF EXISTS src.src_soc_loop_post;
+DROP TABLE IF EXISTS src.src_soc_loop_block;
+DROP TABLE IF EXISTS src.src_soc_loop_follow;
+ALTER TABLE src.src_usr_loop_user DROP COLUMN IF EXISTS bio;

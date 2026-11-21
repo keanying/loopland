@@ -115,3 +115,23 @@ func (h *Handler) read(w http.ResponseWriter, r *http.Request) error {
 	}
 	return httpx.OK(w, map[string]int{"unread": unread})
 }
+
+// UnreadByCategory counts unread notifications per category (every
+// category is present, 0 when none).
+func UnreadByCategory(ctx context.Context, q db.Querier, userID int64) (map[string]int, error) {
+	out := map[string]int{Interaction: 0, Territory: 0, Monster: 0, System: 0}
+	rows, err := q.Query(ctx, `SELECT category, count(*) FROM src.src_msg_loop_notification WHERE user_id=$1 AND read_time IS NULL GROUP BY category`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var c string
+		var n int
+		if err := rows.Scan(&c, &n); err != nil {
+			return nil, err
+		}
+		out[c] = n
+	}
+	return out, rows.Err()
+}

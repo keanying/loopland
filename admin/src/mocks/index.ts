@@ -24,6 +24,7 @@ import type {
 } from '../api/types';
 import * as db from './data';
 import { listProviders, saveProvider, testProvider } from './providers';
+import { communityRoutes, pendingReviews } from './community';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -281,11 +282,15 @@ const routes: [string, RegExp, Handler][] = [
     if (open) todos.push({ type: 'risk', title: `${open} 条风控告警待处理`, count: open, priority: 1, link: '/risk' });
     if (refunds) todos.push({ type: 'refund', title: `${refunds} 笔会员退款申请`, count: refunds, priority: 2, link: '/orders?status=refund_requested' });
     if (renew) todos.push({ type: 'renew_failed', title: `${renew} 笔自动续费失败`, count: renew, priority: 3, link: '/orders?status=renew_failed' });
+    const reviews = pendingReviews();
+    if (reviews) todos.push({ type: 'review', title: `${reviews} 条内容待审核`, count: reviews, priority: 2, link: '/review' });
     return {
       today: { active_users: db.trend.active_users[last], activities: 31620, new_territories: db.trend.new_territories[last], pending_risk: open },
       last_week: { active_users: db.trend.active_users[last - 7], activities: 30380, new_territories: db.trend.new_territories[last - 7], pending_risk: open + 2 },
       trend: db.trend,
       todos,
+      pending_reviews: reviews,
+      pending_reviews_wow: +(reviews / 22 - 1).toFixed(3),
     };
   }],
 
@@ -804,6 +809,9 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'provider.test', m[1], { status: res.status });
     return res;
   }],
+
+  // V2 第二批「社区」(docs/api/v2-2-社区.md 「管理端」)
+  ...communityRoutes(log),
 ];
 
 export async function mockFetch(method: string, url: string, body: unknown, token: string | null): Promise<unknown> {

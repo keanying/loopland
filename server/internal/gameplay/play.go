@@ -172,6 +172,10 @@ func (c *Config) Normalize() {
 	if c.Relay.LegKm == 0 {
 		c.Relay = d.Relay
 	}
+	c.normalizeCommunity()
+	if c.Rally.MinCheckins == 0 {
+		c.Rally = defaultRally()
+	}
 }
 
 func (c Config) validatePlay() error {

@@ -181,3 +181,24 @@ func TestNormalizeOldConfig(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestCommunitySettings(t *testing.T) {
+	c := Default()
+	if c.Community.DailyPostLimit != 20 || c.Community.HideEndpointsM != 200 {
+		t.Fatalf("defaults: %+v", c.Community)
+	}
+	old := Default()
+	old.Community = CommunitySettings{}
+	old.Normalize()
+	if old.Community != c.Community {
+		t.Fatalf("normalize: %+v", old.Community)
+	}
+	c.Community.DailyPostLimit = 0
+	if c.Validate() == nil {
+		t.Fatal("daily_post_limit 0 accepted")
+	}
+	c.Community = CommunitySettings{DailyPostLimit: 5, HideEndpointsM: 0}
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+}

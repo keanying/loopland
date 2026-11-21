@@ -22,10 +22,12 @@ import (
 	"github.com/keanying/loopland/server/internal/auth"
 	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/codex"
+	"github.com/keanying/loopland/server/internal/community"
 	"github.com/keanying/loopland/server/internal/crew"
 	"github.com/keanying/loopland/server/internal/gameplay"
 	"github.com/keanying/loopland/server/internal/inbox"
 	"github.com/keanying/loopland/server/internal/jobs"
+	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/db"
@@ -34,6 +36,7 @@ import (
 	"github.com/keanying/loopland/server/internal/play"
 	"github.com/keanying/loopland/server/internal/providers"
 	"github.com/keanying/loopland/server/internal/realtime"
+	"github.com/keanying/loopland/server/internal/social"
 	"github.com/keanying/loopland/server/internal/territory"
 	"github.com/keanying/loopland/server/internal/user"
 )
@@ -88,6 +91,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	live(reg, &opt)
 	// Content moderation shared by the community modules (社区 · 内容审核).
 	mod := &moderation.Moderator{Pool: pool}
+	social.Register(mod) // posts, comments, nicknames, avatars, bios, crew names / avatars
 
 	authSvc := &auth.Service{Pool: pool, Redis: rdb, Box: box, Config: store, SMS: opt.SMS, OneTap: opt.OneClick, WeChat: opt.WeChat,
 		Apple: opt.Apple, Captcha: opt.Captcha, JWTSecret: cfg.JWTSecret, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL}
@@ -97,7 +101,10 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	terrSvc := &territory.Service{Pool: pool, Config: store}
 	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse}
 	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log}
-	actSvc := &activity.Service{Pool: pool, Config: store, Hook: playSvc}
+	// 社区 part B: chat, meetups, rallies (settlement bonus), races.
+	commSvc := &community.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Mod: mod, Log: log}
+	mod.Register(moderation.Meetup, commSvc.MeetupApplier())
+	actSvc := &activity.Service{Pool: pool, Config: store, Hook: playSvc, Community: commSvc}
 	billSvc := &billing.Service{Pool: pool, Providers: opt.Payments, Apple: opt.AppleIAP, Log: log, Dev: cfg.Dev()}
 	if opt.Payments == nil {
 		billSvc.PaymentFn = reg.Payment
@@ -105,7 +112,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	if opt.AppleIAP == nil {
 		billSvc.AppleFn = reg.AppleStore
 	}
-	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname}
+	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 
 	mux := http.NewServeMux()
 	authed, authAny := authSvc.Middleware(true), authSvc.Middleware(false)
@@ -131,7 +138,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	(&activity.Handler{Svc: actSvc}).Routes(mux, authed)
 	(&territory.Handler{Svc: terrSvc, CrewOf: func(ctx context.Context, u int64) (*int64, error) { return crew.Of(ctx, pool, u) }}).Routes(mux, authed)
 	(&codex.Handler{Pool: pool, Config: store}).Routes(mux, authed)
-	(&crew.Handler{Pool: pool}).Routes(mux, authed)
+	(&crew.Handler{Pool: pool, Mod: mod}).Routes(mux, authed)
 	(&inbox.Handler{Pool: pool}).Routes(mux, authAny)
 	meJSON := func(w http.ResponseWriter, r *http.Request) error {
 		u, err := user.Load(r.Context(), pool, store, box, httpx.UserID(r.Context()))
@@ -148,18 +155,38 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return v.Medals, err
 	}}).Routes(mux, authed)
 	(&play.AdminHandler{Svc: playSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
+	(&community.Handler{Svc: commSvc}).Routes(mux, authed, authAny)
+	(&community.AdminHandler{Svc: commSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
 	(&providers.AdminHandler{Reg: reg, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin))
+	// 社区 part A: uploads, profiles, posts, comments, reports, replays, review queue.
+	(&media.Handler{Pool: pool, Remote: func() media.Store { return reg.Current().Media }, Dev: cfg.Dev(),
+		Local: media.Local{Dir: cfg.MediaDir, BaseURL: cfg.PublicBaseURL}}).Routes(mux, authed)
+	socSvc := &social.Service{Pool: pool, Redis: rdb, Config: store, Mod: mod, ShareBase: cfg.PublicBaseURL}
+	(&social.Handler{Svc: socSvc}).Routes(mux, authed)
+	(&social.AdminHandler{Svc: socSvc, Audit: admin.Audit}).Routes(mux,
+		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleReviewer), adminAPI.Guard(admin.RoleAdmin))
 	mux.Handle("GET /v1/ws", hub)
 
 	return &App{
 		Handler: withMiddleware(mux, log),
-		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: playSvc.Jobs()},
+		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs())},
 		Hub:     hub,
 		Play:    playSvc,
 		Config:  store, Pool: pool, Redis: rdb,
 		Providers:  reg,
 		Moderation: mod,
 	}, nil
+}
+
+// mergeJobs combines the periodic jobs contributed by modules.
+func mergeJobs(sets ...map[string]func(context.Context) error) map[string]func(context.Context) error {
+	out := map[string]func(context.Context) error{}
+	for _, s := range sets {
+		for k, f := range s {
+			out[k] = f
+		}
+	}
+	return out
 }
 
 // live fills services the caller did not replace (tests do) with wrappers

@@ -141,7 +141,7 @@ async function main() {
   }
   await shot(rv.page, '11c_审核员视角_风控', { fullPage: false });
   const menu = await rv.page.locator('nav.side a').count();
-  if (menu !== 3) problems.push(`[amei] expected 3 menu links (总览/用户/风控), got ${menu}`);
+  if (menu !== 4) problems.push(`[amei] expected 4 menu links (总览/用户/内容审核/风控), got ${menu}`);
   await rv.ctx.close();
 
   // ---------------- narrow viewport ----------------

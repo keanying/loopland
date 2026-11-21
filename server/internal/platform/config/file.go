@@ -43,6 +43,9 @@ type File struct {
 	Jobs struct {
 		Enabled *bool `yaml:"enabled"` // LOOPLAND_JOBS_OFF=1 when false
 	} `yaml:"jobs"`
+	Media struct {
+		Dir string `yaml:"dir"` // LOOPLAND_MEDIA_DIR: local upload storage without OSS (dev)
+	} `yaml:"media"`
 	Features struct {
 		Disabled []string `yaml:"disabled"` // LOOPLAND_DISABLE
 	} `yaml:"features"`
@@ -119,6 +122,7 @@ func (f File) env(dir string) map[string]string {
 		"LOOPLAND_DATA_KEY_FILE":         path(f.Auth.DataKeyFile),
 		"LOOPLAND_BOOTSTRAP_ADMIN":       f.Auth.BootstrapAdmin,
 		"LOOPLAND_DISABLE":               strings.Join(f.Features.Disabled, ","),
+		"LOOPLAND_MEDIA_DIR":             path(f.Media.Dir),
 		"ALIYUN_ACCESS_KEY_ID":           f.Aliyun.AccessKeyID,
 		"ALIYUN_ACCESS_KEY_SECRET":       f.Aliyun.AccessKeySecret,
 		"ALIYUN_ACCESS_KEY_SECRET_FILE":  path(f.Aliyun.AccessKeySecretFile),

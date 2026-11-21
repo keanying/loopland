@@ -760,6 +760,8 @@ class Settlement {
     this.tasks = const [],
     this.companion,
     this.relay,
+    this.rally,
+    this.races = const [],
   });
 
   /// `settled | review | voided`.
@@ -785,6 +787,10 @@ class Settlement {
   final CompanionRecord? companion;
   final RelayRecord? relay;
 
+  // V2 第二批（社区）：集结跑加成、线上赛完赛。
+  final RallyBonus? rally;
+  final List<RaceFinish> races;
+
   double get claimedAreaM2 => claims.fold(0.0, (s, c) => s + c.areaM2);
 
   factory Settlement.fromJson(Json j) => Settlement(
@@ -807,7 +813,37 @@ class Settlement {
         tasks: _l(j['tasks'], SeasonTask.fromJson),
         companion: CompanionRecord.parse(j['companion']),
         relay: RelayRecord.parse(j['relay']),
+        rally: RallyBonus.parse(j['rally']),
+        races: _l(j['races'], RaceFinish.fromJson),
       );
+}
+
+/// Settlement `rally`: this run got the 集结跑 bonus (合击伤害、能量 ×(1+rate)).
+class RallyBonus {
+  const RallyBonus({required this.rallyId, required this.bonusRate});
+  final int rallyId;
+  final double bonusRate;
+  static RallyBonus? parse(Object? v) =>
+      v is Map ? RallyBonus(rallyId: _i(v['id']), bonusRate: _d(v['bonus_rate'])) : null;
+}
+
+/// Settlement `races[]`: an online race finished by this run (medal granted).
+class RaceFinish {
+  const RaceFinish({required this.raceId, required this.title, this.resultSec = 0, this.medalName, this.medalKey});
+  final int raceId;
+  final String title;
+  final int resultSec;
+  final String? medalName, medalKey;
+  factory RaceFinish.fromJson(Json j) {
+    final m = _mn(j['medal']);
+    return RaceFinish(
+      raceId: _i(j['id']),
+      title: _s(j['title']),
+      resultSec: _i(j['result_sec']),
+      medalName: m == null ? null : _sn(m['name']),
+      medalKey: m == null ? null : _sn(m['key']),
+    );
+  }
 }
 
 /// GeoJSON LineString in [lng, lat].

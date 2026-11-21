@@ -11,6 +11,8 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../play/relay_card.dart';
 import 'community_page.dart';
+import 'crew_extras.dart';
+import 'rally_section.dart';
 
 /// 找跑团。
 class CrewSearchPage extends ConsumerStatefulWidget {
@@ -48,7 +50,10 @@ class _CrewSearchPageState extends ConsumerState<CrewSearchPage> {
         child: Column(children: [
           BackHeader(
             title: '找跑团',
-            trailing: TextButton(onPressed: () => context.push('/crews/new'), child: const Text('创建')),
+            trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+              TextButton(onPressed: () => context.push('/crews/join-code'), child: const Text('邀请码')),
+              TextButton(onPressed: () => context.push('/crews/new'), child: const Text('创建')),
+            ]),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -164,7 +169,7 @@ class _CrewCreatePageState extends ConsumerState<CrewCreatePage> {
     return Scaffold(
       body: SafeArea(
         child: ListView(children: [
-          const BackHeader(title: '创建跑团', subtitle: '名称和头像需要通过审核'),
+          const BackHeader(title: '创建跑团', subtitle: '名称先生效，随后进入审核'),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -268,8 +273,30 @@ class CrewDetailPage extends ConsumerWidget {
                     child: Text('团长需要先转让团长才能退出；只剩你一人时退出即解散。',
                         textAlign: TextAlign.center, style: TextStyle(color: LL.text3, fontSize: 12)),
                   ),
+                if (c.isLeader) ...[
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => showInviteSheet(context, c),
+                        icon: const Icon(Icons.person_add_alt_rounded),
+                        label: const Text('邀请成员'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => context.push('/crews/${c.id}/edit'),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('编辑跑团'),
+                      ),
+                    ),
+                  ]),
+                ],
                 if (c.isMember) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 20),
+                  RallySection(crew: c),
+                  const SizedBox(height: 6),
                   RelayCard(crew: c),
                 ],
                 const SizedBox(height: 20),

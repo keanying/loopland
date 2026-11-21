@@ -48,6 +48,7 @@ const (
 	AI          = "ai"
 	Email       = "email"
 	AMap        = "amap"
+	OSS         = "oss"
 )
 
 // AIVendors are OpenAI-compatible endpoints of mainland providers.
@@ -61,7 +62,7 @@ var AIVendors = map[string]string{
 
 // Defs is the catalogue, in display order.
 var Defs = []Def{
-	{Code: Aliyun, Name: "阿里云账号", Group: "账号与安全", Description: "RAM 子账号的 AccessKey，短信、验证码、一键登录、实名核验共用。授予这四个产品的权限即可。",
+	{Code: Aliyun, Name: "阿里云账号", Group: "账号与安全", Description: "RAM 子账号的 AccessKey，短信、验证码、一键登录、实名核验、对象存储 OSS 共用。授予这几个产品的权限即可（OSS 只需上传图片的 Bucket 的 PutObject）。",
 		Fields: []Field{
 			{Key: "access_key_id", Label: "AccessKey ID", Kind: "text", Required: true},
 			{Key: "access_key_secret", Label: "AccessKey Secret", Kind: "text", Secret: true, Required: true},
@@ -128,6 +129,14 @@ var Defs = []Def{
 			{Key: "password", Label: "密码", Kind: "text", Secret: true, Required: true},
 			{Key: "from_address", Label: "发件地址", Kind: "text", Required: true},
 			{Key: "from_name", Label: "发件人名称", Kind: "text", Default: "圈圈 Loopland"},
+		}},
+	{Code: OSS, Name: "对象存储 OSS", Group: "存储", Uses: Aliyun,
+		Description: "阿里云对象存储，存用户上传的图片（动态、头像、跑团头像、聊天）。Bucket 设为公共读，或用 CDN 回源访问。没启用时开发环境存本机 server/data/media/，正式环境不能上传图片。连通测试会写入一个 _loopland/check.txt。",
+		Fields: []Field{
+			{Key: "region", Label: "地域", Kind: "text", Required: true, Default: "cn-hangzhou", Help: "如 cn-hangzhou、cn-shanghai，不带 oss- 前缀"},
+			{Key: "endpoint", Label: "Endpoint（可选）", Kind: "text", Help: "留空按地域使用外网 Endpoint；同地域 ECS 可填内网 Endpoint，如 oss-cn-hangzhou-internal.aliyuncs.com"},
+			{Key: "bucket", Label: "Bucket 名称", Kind: "text", Required: true},
+			{Key: "public_base_url", Label: "访问域名（CDN）", Kind: "url", Help: "图片对外地址前缀，如 https://img.example.com；留空用 Bucket 默认域名"},
 		}},
 	{Code: AMap, Name: "高德 Web 服务", Group: "地图", Description: "服务端用的高德 Web 服务 Key（地名、逆地理编码）。App 和管理端地图的 Key 在各自的配置文件里。",
 		Fields: []Field{{Key: "web_key", Label: "Web 服务 Key", Kind: "text", Secret: true, Required: true}}},

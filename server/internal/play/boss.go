@@ -709,6 +709,9 @@ func (s *Service) bossActivity(ctx context.Context, tx pgx.Tx, in activity.HookI
 	aid := in.ActivityID
 	for _, t := range targets {
 		dmg := in.Config.BossDamageFor(in.Sport, t.amount)
+		if in.BonusRate > 0 { // 集结跑加成
+			dmg = int(math.Floor(float64(dmg) * (1 + in.BonusRate)))
+		}
 		h, evs, err := s.hit(ctx, tx, in.Config, t.id, in.UserID, in.CrewID, "activity", &aid, dmg, 0)
 		if err != nil {
 			return out, nil, err

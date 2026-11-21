@@ -56,3 +56,6 @@ dump.rdb
 
 # Per-machine backend overrides
 server/config.local.yaml
+
+# Local media uploads (dev, without OSS)
+server/data/

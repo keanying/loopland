@@ -8,6 +8,12 @@
 	<string>锁屏或切到后台时，圈圈需要继续记录你的运动轨迹，避免圈地中断。</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>锁屏或切到后台时，圈圈需要继续记录你的运动轨迹，避免圈地中断。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>发布动态、更换头像时，圈圈需要读取你选择的照片。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>拍照发布动态或更换头像时，圈圈需要使用相机。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>保存分享海报到相册。</string>
 	<key>NSMotionUsageDescription</key>
 	<string>圈圈使用运动与健身数据（步数、步频）辅助判断运动记录是否真实。</string>
 	<key>NSHealthShareUsageDescription</key>

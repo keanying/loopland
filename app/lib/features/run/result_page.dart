@@ -11,6 +11,7 @@ import '../../map/territory_map.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/monster_art.dart';
+import '../social/compose_page.dart';
 
 class ResultArgs {
   const ResultArgs({required this.result, this.localTrack = const []});
@@ -172,6 +173,17 @@ class ResultPage extends ConsumerWidget {
           ],
           if (s.status != 'voided') ..._v2Blocks(context, s, cfg?.companion.expPerLevel ?? 100),
           const SizedBox(height: 24),
+          // C-05「一键带上战报发动态」: opens the composer with this run attached.
+          // TODO(V2 batch ③): pass the AI 战报 text via ComposeArgs.text.
+          if (s.status == 'settled' && isGps && a.id > 0) ...[
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: LL.lavender),
+              onPressed: () => context.push('/posts/new', extra: ComposeArgs(activity: a)),
+              icon: const Icon(Icons.campaign_outlined),
+              label: const Text('一键带上战报发动态'),
+            ),
+            const SizedBox(height: 10),
+          ],
           FilledButton(onPressed: () => context.go('/map'), child: const Text('查看我的领地')),
           const SizedBox(height: 10),
           OutlinedButton(onPressed: () => context.go('/me'), child: const Text('完成')),
@@ -181,7 +193,8 @@ class ResultPage extends ConsumerWidget {
   }
 
   /// V2 settlement blocks: boss damage, chests, defended territories, routes,
-  /// campaigns, season tasks, companion, crew relay.
+  /// campaigns, season tasks, companion, crew relay; batch 2: rally bonus,
+  /// finished races.
   List<Widget> _v2Blocks(BuildContext context, Settlement s, int expPerLevel) {
     final bonus = s.chests.fold(0, (a, c) => a + c.energy) +
         s.campaigns.fold(0, (a, c) => a + c.rewardEnergy) +
@@ -264,6 +277,31 @@ class ResultPage extends ConsumerWidget {
           done: s.relay!.completed,
           color: LL.lavender,
         ),
+      ],
+      if (s.rally != null) ...[
+        const _Section('集结跑加成'),
+        _Row(
+          icon: Icons.groups_rounded,
+          color: LL.lavender,
+          title: '集结加成生效',
+          subtitle: '这次运动的合击伤害和能量 ×${(1 + s.rally!.bonusRate).toStringAsFixed(1)}',
+          trailing: '+${(s.rally!.bonusRate * 100).round()}%',
+        ),
+      ],
+      if (s.races.isNotEmpty) ...[
+        const _Section('赛事完赛'),
+        for (final r in s.races)
+          _Row(
+            icon: Icons.military_tech_rounded,
+            color: LL.yellow,
+            title: '${r.title} 完赛！',
+            subtitle: [
+              if (r.resultSec > 0) '成绩 ${Fmt.duration(r.resultSec)}',
+              if (r.medalName != null) '获得「${r.medalName}」',
+            ].join(' · '),
+            trailing: '奖牌',
+            onTap: () => context.push('/races/${r.raceId}'),
+          ),
       ],
       if (bonus > 0)
         Padding(

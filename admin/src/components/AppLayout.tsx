@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Tooltip } from 'antd';
 import {
   AppstoreOutlined,
@@ -8,6 +9,7 @@ import {
   ControlOutlined,
   CrownOutlined,
   FileDoneOutlined,
+  FlagOutlined,
   LogoutOutlined,
   SafetyOutlined,
   SettingOutlined,
@@ -16,6 +18,7 @@ import {
   ThunderboltOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
+import { api } from '../api/admin';
 import { useAuth } from '../auth/AuthContext';
 import type { Permission } from '../auth/permissions';
 import Logo from './Logo';
@@ -33,7 +36,9 @@ const MENU: MenuItem[] = [
   { to: '/users', label: '用户管理', icon: <TeamOutlined />, perm: 'users.read' },
   { to: '/plans', label: '会员套餐与订单', icon: <CrownOutlined />, perm: 'plans.read' },
   { to: '/territories', label: '地图与领地', icon: <CompassOutlined />, perm: 'territories.read' },
-  { to: '/review', label: '内容审核（V2）', icon: <FileDoneOutlined />, v2: true },
+  // V2 社区: 内容审核（审核队列 / 举报处理 / 动态管理 / 敏感词与审核设置）+ 组局与赛事
+  { to: '/review', label: '内容审核', icon: <FileDoneOutlined />, perm: 'review.read' },
+  { to: '/community', label: '组局与赛事', icon: <FlagOutlined />, perm: 'community.read' },
   { to: '/risk', label: '风控防作弊', icon: <SafetyOutlined />, perm: 'risk.read' },
   { to: '/merchants', label: '商户与活动（V2）', icon: <ShopOutlined />, v2: true },
   { to: '/operations', label: '玩法运营', icon: <ThunderboltOutlined />, perm: 'ops.read' },
@@ -46,6 +51,9 @@ const MENU: MenuItem[] = [
 export default function AppLayout() {
   const { logout, can } = useAuth();
   const navigate = useNavigate();
+  // Pending count on the 内容审核 icon (same query as the queue's stats header).
+  const reviewStats = useQuery({ queryKey: ['reviews', 'stats'], queryFn: api.reviewStats, enabled: can('review.read'), refetchInterval: 60_000 });
+  const pendingReviews = reviewStats.data?.pending ?? 0;
 
   return (
     <div className="shell">
@@ -63,9 +71,10 @@ export default function AppLayout() {
                 </span>
               </Tooltip>
             ) : (
-              <Tooltip key={m.to} title={m.label} placement="right">
+              <Tooltip key={m.to} title={m.to === '/review' && pendingReviews ? `${m.label} · ${pendingReviews} 条待审核` : m.label} placement="right">
                 <NavLink to={m.to} end={m.to === '/'} aria-label={m.label} className={({ isActive }) => 'side-link' + (isActive ? ' active' : '')}>
                   {m.icon}
+                  {m.to === '/review' && pendingReviews > 0 && <span className="side-count num">{pendingReviews > 99 ? '99+' : pendingReviews}</span>}
                 </NavLink>
               </Tooltip>
             ),

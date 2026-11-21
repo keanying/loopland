@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -166,7 +167,22 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 		(SELECT count(*) FROM src.src_ord_loop_order WHERE status='renew_failed' AND create_time > now() - interval '3 days')`).Scan(&risk, &refunds, &renewFailed); err != nil {
 		return err
 	}
+	// 内容审核 (M-01): pending reviews now and a week ago.
+	var pendingReviews, pendingLastWeek int
+	if err := a.Pool.QueryRow(ctx, `SELECT count(*) FILTER (WHERE review_status='pending'),
+			count(*) FILTER (WHERE create_time < now() - interval '7 days' AND (review_status='pending' OR review_time >= now() - interval '7 days'))
+		FROM src.src_cnt_loop_review_task`).Scan(&pendingReviews, &pendingLastWeek); err != nil {
+		return err
+	}
+	var pendingWoW *float64
+	if pendingLastWeek > 0 {
+		v := math.Round(float64(pendingReviews-pendingLastWeek)/float64(pendingLastWeek)*1000) / 1000
+		pendingWoW = &v
+	}
 	todos := []todo{}
+	if pendingReviews > 0 {
+		todos = append(todos, todo{"review", fmt.Sprintf("%d 条内容待审核", pendingReviews), pendingReviews, 1, "/review"})
+	}
 	if risk > 0 {
 		todos = append(todos, todo{"risk", fmt.Sprintf("%d 条风控告警待处理", risk), risk, 1, "/risk"})
 	}
@@ -176,7 +192,8 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if renewFailed > 0 {
 		todos = append(todos, todo{"renew_failed", fmt.Sprintf("%d 个续费失败订单可提醒", renewFailed), renewFailed, 3, "/plans?tab=orders&status=renew_failed"})
 	}
-	return httpx.OK(w, map[string]any{"today": t, "last_week": lw, "trend": trend, "todos": todos})
+	return httpx.OK(w, map[string]any{"today": t, "last_week": lw, "trend": trend, "todos": todos,
+		"pending_reviews": pendingReviews, "pending_reviews_wow": pendingWoW})
 }
 
 // ---------------------------------------------------------------- users

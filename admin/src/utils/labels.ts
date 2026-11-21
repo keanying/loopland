@@ -139,9 +139,21 @@ export const AUDIT_ACTION: Record<string, string> = {
   'route.delete': '删除定向路线',
   'provider.save': '修改第三方服务配置',
   'provider.test': '测试第三方服务连接',
+  'review.approve': '审核通过',
+  'review.reject': '审核拒绝',
+  'review.batch': '批量审核',
+  'report.remove': '举报处理：下架',
+  'report.dismiss': '举报处理：驳回',
+  'post.delete': '下架动态',
+  'moderation.settings': '修改敏感词与审核设置',
+  'meetup.cancel': '取消组局',
+  'race.create': '新建赛事',
+  'race.update': '修改赛事',
+  'race.cancel': '取消赛事',
+  'race.finish': '标记线下赛完赛',
 };
 
-export const TODO_TYPE: Record<string, string> = { risk: '风控', refund: '会员退款', renew_failed: '续费失败' };
+export const TODO_TYPE: Record<string, string> = { risk: '风控', refund: '会员退款', renew_failed: '续费失败', review: '内容审核' };
 
 // ---------- V2 玩法 ----------
 
@@ -205,3 +217,109 @@ export const PROVIDER_SOURCE: Record<string, { text: string; color: string; hint
   config: { text: '来源：配置文件', color: 'blue', hint: '来自 server/config.yaml 或环境变量；在这里保存后改为以管理端为准' },
   none: { text: '来源：未配置', color: 'default', hint: '管理端和配置文件里都没有配置' },
 };
+
+// ---------- V2 社区 ----------
+
+export const REVIEW_TARGET: Record<string, { text: string; color: string }> = {
+  post: { text: '动态', color: 'blue' },
+  comment: { text: '评论', color: 'cyan' },
+  nickname: { text: '昵称', color: 'purple' },
+  avatar: { text: '头像', color: 'magenta' },
+  crew_name: { text: '跑团名称', color: 'geekblue' },
+  crew_avatar: { text: '跑团头像', color: 'volcano' },
+  bio: { text: '简介', color: 'gold' },
+  meetup: { text: '组局', color: 'green' },
+};
+
+/** Tab order on the review queue. */
+export const REVIEW_TARGET_ORDER = ['post', 'comment', 'nickname', 'avatar', 'crew_name', 'crew_avatar', 'bio', 'meetup'] as const;
+
+export const REVIEW_STATUS: Record<string, { text: string; color: string }> = {
+  pending: { text: '待审核', color: 'warning' },
+  approved: { text: '已通过', color: 'success' },
+  rejected: { text: '已拒绝', color: 'error' },
+};
+
+/** What a rejection does to the object (shown in the reject dialog). */
+export const REJECT_EFFECT: Record<string, string> = {
+  post: '动态只有作者自己能看到，并带上拒绝原因',
+  comment: '评论对其他人隐藏',
+  nickname: '昵称恢复为默认的「跑者+id」',
+  avatar: '头像清空，恢复默认头像',
+  crew_name: '跑团名称恢复为默认的「跑团+id」',
+  crew_avatar: '跑团头像清空',
+  bio: '简介清空',
+  meetup: '组局不在附近列表展示',
+};
+
+/** Preset rejection reasons; the reviewer can add free text after them. */
+export const REJECT_REASONS = ['含广告或引流', '含联系方式', '色情低俗', '辱骂攻击', '涉嫌诈骗', '违法违规', '与运动无关的刷屏', '昵称或头像不合规'];
+
+export const REPORT_REASON: Record<string, string> = {
+  spam: '垃圾广告',
+  porn: '色情低俗',
+  abuse: '辱骂攻击',
+  fraud: '涉嫌诈骗',
+  illegal: '违法违规',
+  other: '其他',
+};
+
+export const REPORT_TARGET: Record<string, { text: string; color: string }> = {
+  post: { text: '动态', color: 'blue' },
+  comment: { text: '评论', color: 'cyan' },
+  user: { text: '用户', color: 'purple' },
+  crew: { text: '跑团', color: 'geekblue' },
+  message: { text: '私信 / 群聊', color: 'orange' },
+};
+
+/** What 下架 does per report target (docs/api/v2-2-社区.md). */
+export const REPORT_REMOVE_EFFECT: Record<string, string> = {
+  post: '删除这条动态',
+  comment: '删除这条评论',
+  user: '昵称、头像、简介恢复默认',
+  crew: '跑团名称、头像恢复默认',
+  message: '撤回这条消息',
+};
+
+export const REPORT_STATUS: Record<string, { text: string; color: string }> = {
+  pending: { text: '待处理', color: 'warning' },
+  handled: { text: '已下架', color: 'error' },
+  dismissed: { text: '已驳回', color: 'default' },
+};
+
+export const VISIBILITY: Record<string, string> = { public: '公开', fans: '仅粉丝', crew: '仅跑团', private: '仅自己' };
+
+export const MEETUP_TYPE: Record<string, { text: string; color: string }> = {
+  run: { text: '约跑', color: 'green' },
+  ball: { text: '约球', color: 'orange' },
+  ride: { text: '约骑', color: 'blue' },
+};
+
+export const MEETUP_STATUS: Record<string, { text: string; color: string }> = {
+  open: { text: '报名中', color: 'green' },
+  full: { text: '已满员', color: 'gold' },
+  cancelled: { text: '已取消', color: 'default' },
+  ended: { text: '已结束', color: 'default' },
+};
+
+export const RACE_TYPE: Record<string, { text: string; color: string }> = {
+  online: { text: '线上赛', color: 'purple' },
+  offline: { text: '线下赛', color: 'geekblue' },
+};
+
+export const RACE_STATUS: Record<string, { text: string; color: string }> = {
+  signup: { text: '报名中', color: 'green' },
+  upcoming: { text: '待开赛', color: 'blue' },
+  running: { text: '进行中', color: 'red' },
+  finished: { text: '已结束', color: 'default' },
+  cancelled: { text: '已取消', color: 'default' },
+};
+
+export const RACE_ENTRY_STATUS: Record<string, { text: string; color: string }> = {
+  signed: { text: '已报名', color: 'blue' },
+  finished: { text: '已完赛', color: 'success' },
+  dnf: { text: '未完赛', color: 'default' },
+};
+
+/** Sports a race can be for (subset of SPORT_LABEL that has a distance). */
+export const RACE_SPORTS = ['run', 'ride', 'hike', 'walk', 'swim'];

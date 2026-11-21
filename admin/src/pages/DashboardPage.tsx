@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Col, Empty, Row, Segmented, Skeleton, Table, Tag } from 'antd';
-import { ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, SafetyOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, SafetyOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { EChartsOption } from 'echarts';
 import { api } from '../api/admin';
@@ -13,7 +13,7 @@ import { BossBadge, HpBar } from '../components/gameplay';
 import { bossKindName, timeLeft } from '../utils/gameplay';
 import { Delta, PageHeader, Panel } from '../components/ui';
 import { bigNumber, change, dayjs } from '../utils/format';
-import { TODO_TYPE } from '../utils/labels';
+import { REVIEW_TARGET, REVIEW_TARGET_ORDER, TODO_TYPE } from '../utils/labels';
 import { BRAND } from '../theme';
 
 type Metric = 'active_users' | 'distance_km' | 'new_territories';
@@ -28,6 +28,7 @@ function todoRoute(t: DashboardTodo): string {
   const link = t.link || '';
   if (link.startsWith('/')) return link;
   if (t.type === 'risk') return '/risk';
+  if (t.type === 'review') return '/review';
   if (t.type === 'refund') return '/plans?tab=orders&status=refund_requested';
   return '/plans?tab=orders&status=renew_failed';
 }
@@ -45,6 +46,7 @@ const TODO_ICON: Record<string, ReactNode> = {
   risk: <SafetyOutlined />,
   refund: <CrownOutlined />,
   renew_failed: <CrownOutlined />,
+  review: <FileDoneOutlined />,
 };
 
 function MetricCard({ value, unit, label, now, before, invert }: { value: number; unit?: string; label: string; now: number; before: number; invert?: boolean }) {
@@ -72,6 +74,7 @@ export default function DashboardPage() {
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard });
   const bosses = useQuery({ queryKey: ['bosses', 'active', 1], queryFn: () => api.bosses({ status: 'active', page: 1 }), enabled: can('ops.read') });
   const activeBosses = bosses.data?.items ?? [];
+  const reviewStats = useQuery({ queryKey: ['reviews', 'stats'], queryFn: api.reviewStats, enabled: can('review.read') });
   const [metric, setMetric] = useState<Metric>('active_users');
   const [range, setRange] = useState<7 | 30>(7);
   const [asTable, setAsTable] = useState(false);
@@ -156,6 +159,11 @@ export default function DashboardPage() {
             </h2>
             <div style={{ fontSize: 14, color: '#3a3a40', lineHeight: 1.8, maxWidth: 520 }}>
               今天有 <b>{today.pending_risk}</b> 起风控告警待处理
+              {data.pending_reviews !== undefined && (
+                <>
+                  、<b>{data.pending_reviews}</b> 条内容待审核
+                </>
+              )}
               {todos.length > 0 && (
                 <>
                   ，共 <b>{totalTodo}</b> 项待办
@@ -281,6 +289,12 @@ export default function DashboardPage() {
           </Panel>
         </Col>
 
+        {data.pending_reviews !== undefined && (
+          <Col xs={24} xl={activeBosses.length > 0 ? 14 : 24}>
+            <ReviewCard pending={data.pending_reviews} wow={data.pending_reviews_wow ?? null} byType={reviewStats.data?.by_type} todayDone={reviewStats.data?.today_done} canReview={can('review.read')} />
+          </Col>
+        )}
+
         {activeBosses.length > 0 && (
           <Col xs={24} xl={10}>
             <Panel
@@ -317,5 +331,67 @@ export default function DashboardPage() {
         )}
       </Row>
     </>
+  );
+}
+
+/** M-01: content waiting in the review queue, week over week, by type. */
+function ReviewCard({ pending, wow, byType, todayDone, canReview }: { pending: number; wow: number | null; byType?: Partial<Record<string, number>>; todayDone?: number; canReview: boolean }) {
+  const rows = REVIEW_TARGET_ORDER.map((t) => ({ t, n: byType?.[t] ?? 0 })).filter((r) => r.n > 0);
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  return (
+    <Panel
+      title="内容审核"
+      extra={
+        canReview ? (
+          <Link to="/review" className="panel-hint">
+            去审核队列 <ArrowRightOutlined />
+          </Link>
+        ) : undefined
+      }
+    >
+      <Row gutter={[24, 16]} align="middle">
+        <Col xs={24} md={9}>
+          <div className="stat-value num" style={{ fontSize: 40 }}>
+            {pending.toLocaleString('zh-CN')}
+            <span className="stat-unit">条</span>
+          </div>
+          <div className="stat-label">待审核内容</div>
+          <div className="stat-sub">
+            <Delta ratio={wow} invert />
+          </div>
+          {todayDone !== undefined && (
+            <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+              今日已处理 {todayDone} 条
+            </div>
+          )}
+          {canReview && (
+            <Link to="/review">
+              <Button type="primary" style={{ marginTop: 14 }} disabled={!pending}>
+                开始审核 <ArrowRightOutlined />
+              </Button>
+            </Link>
+          )}
+        </Col>
+        <Col xs={24} md={15}>
+          {!canReview ? (
+            <div className="muted" style={{ fontSize: 13 }}>当前角色不参与内容审核。</div>
+          ) : rows.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={byType ? '队列已清空' : '加载中'} />
+          ) : (
+            rows.map((r) => (
+              <Link to={`/review?type=${r.t}`} key={r.t} className="bar-row" style={{ color: 'inherit' }}>
+                <span>{REVIEW_TARGET[r.t].text}</span>
+                <span className="bar-track">
+                  <span className="bar-fill" style={{ width: `${(r.n / max) * 100}%`, display: 'block' }} />
+                </span>
+                <span className="num" style={{ textAlign: 'right' }}>
+                  {r.n}
+                </span>
+              </Link>
+            ))
+          )}
+        </Col>
+      </Row>
+    </Panel>
   );
 }

@@ -56,6 +56,20 @@ const errorMessages = <String, String>{
   'relay_running': '已经有一场接力在进行中',
   'not_leader': '只有团长可以发起接力',
   'not_in_crew': '先加入一个跑团',
+  // V2 社区 · 动态 / 评论 / 主页
+  'content_blocked': '内容包含不允许发布的信息，请修改后再试',
+  'muted': '你已被禁言，暂时不能发布内容',
+  'invalid_media': '图片无效或不是你上传的，请重新选择',
+  'invalid_target': '不能对自己进行这个操作',
+  'blocked': '你们之间存在拉黑关系，无法操作',
+  // V2 社区 · 私信 / 组局 / 集结跑 / 赛事 / 跑团邀请
+  'stranger_limit': '对方还没有回复或关注你，最多先发 3 条消息',
+  'checkin_not_allowed': '现在还不能签到：需要在开始前 30 分钟到开始后 60 分钟内、离集合点 300 米以内',
+  'meetup_full': '这个局已经满员了',
+  'meetup_started': '这个局已经开始了，不能再报名',
+  'signup_closed': '报名已截止',
+  'race_full': '赛事名额已满',
+  'invalid_invite': '邀请码无效或已过期',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',

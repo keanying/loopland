@@ -151,12 +151,17 @@ type Config struct {
 	SeasonTasks []SeasonTask      `json:"season_tasks"`
 	Pet         CompanionSettings `json:"companion"`
 	Relay       RelaySettings     `json:"relay"`
+
+	Community CommunitySettings `json:"community"`
+	Rally     RallySettings     `json:"rally"`
 }
 
 // Default returns the launch numbers from the product documents.
 func Default() Config {
 	c := defaultV1()
 	defaultPlay(&c)
+	defaultCommunity(&c)
+	c.Rally = defaultRally()
 	return c
 }
 
@@ -241,6 +246,12 @@ func (c Config) Validate() error {
 		return fmt.Errorf("boss_strike_cost must be > 0")
 	}
 	if err := c.validatePlay(); err != nil {
+		return err
+	}
+	if err := c.validateCommunity(); err != nil {
+		return err
+	}
+	if err := c.Rally.validate(); err != nil {
 		return err
 	}
 	if c.MinClaimAreaM2 <= 0 {

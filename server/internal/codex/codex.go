@@ -286,6 +286,8 @@ type MedalCard struct {
 	Target     float64    `json:"target"`
 	Obtained   bool       `json:"obtained"`
 	ObtainedAt *time.Time `json:"obtained_at"`
+	// ImageURL is set for race finisher medals.
+	ImageURL *string `json:"image_url,omitempty"`
 }
 
 type item struct {
@@ -433,6 +435,25 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 			n++
 		}
 	}
+	// Race finisher medals (赛事完赛奖牌) are named on the race.
+	rows, err = q.Query(ctx, `SELECT r.medal_key, r.medal_name, r.medal_image_url, i.obtain_time
+		FROM src.src_ply_loop_codex_item i JOIN src.src_mkt_loop_race r ON r.medal_key=i.item
+		WHERE i.user_id=$1 AND i.item_type='medal' ORDER BY i.obtain_time`, user)
+	if err != nil {
+		return v, err
+	}
+	for rows.Next() {
+		c := MedalCard{Type: "race", Progress: 1, Target: 1, Obtained: true}
+		var at time.Time
+		if err := rows.Scan(&c.Key, &c.Name, &c.ImageURL, &at); err != nil {
+			rows.Close()
+			return v, err
+		}
+		c.ObtainedAt = &at
+		v.Medals = append(v.Medals, c)
+		n++
+	}
+	rows.Close()
 	v.Progress["medals"] = fmt.Sprintf("%d/%d", n, len(v.Medals))
 
 	type mon struct {

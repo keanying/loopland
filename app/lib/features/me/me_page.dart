@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../api/community_common.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
@@ -13,29 +14,13 @@ import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
 import '../run/result_page.dart';
+import '../social/my_social_card.dart';
+import '../social/social_providers.dart';
+import '../social/social_widgets.dart';
 
 /// 我的。
 class MePage extends ConsumerWidget {
   const MePage({super.key});
-
-  Future<void> _editName(BuildContext context, WidgetRef ref, User u) async {
-    final c = TextEditingController(text: u.nickname);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (d) => AlertDialog(
-        title: const Text('修改昵称'),
-        content: TextField(controller: c, autofocus: true, maxLength: 16),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(d), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('保存')),
-        ],
-      ),
-    );
-    c.dispose();
-    if (name == null || name.isEmpty || !context.mounted) return;
-    final nu = await runGuarded(context, () => ref.read(apiProvider).updateMe(nickname: name));
-    if (nu != null) ref.read(authProvider.notifier).setUser(nu);
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,10 +37,14 @@ class MePage extends ConsumerWidget {
             await ref.read(authProvider.notifier).refreshUser();
             ref.invalidate(pendingUploadsProvider);
             ref.invalidate(codexProvider);
+            ref.invalidate(myProfileProvider);
           },
           child: ListView(padding: EdgeInsets.fromLTRB(16, 12, 16, NavShell.bottomInset(context)), children: [
             Row(children: [
-              Avatar(name: u.nickname, size: 76),
+              GestureDetector(
+                onTap: () => context.push('/users/${u.id}'),
+                child: UserAvatar(user: UserBrief(id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl), size: 76),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -73,10 +62,12 @@ class MePage extends ConsumerWidget {
               ),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
-                onPressed: () => _editName(context, ref, u),
+                onPressed: () => context.push('/me/profile'),
                 child: const Text('编辑'),
               ),
             ]),
+            const SizedBox(height: 14),
+            const MySocialCard(),
             if (u.isDeleting) ...[
               const SizedBox(height: 12),
               LLCard(
@@ -157,6 +148,7 @@ class MePage extends ConsumerWidget {
               sub: u.realnameVerified ? '已认证' : '未认证',
               onTap: () => context.push('/realname'),
             ),
+            _MenuTile(icon: Icons.block_rounded, color: LL.orange, title: '黑名单', onTap: () => context.push('/me/blocks')),
             _MenuTile(icon: Icons.settings_outlined, color: LL.text2, title: '设置与隐私', onTap: () => context.push('/settings')),
             const SizedBox(height: 12),
             Row(children: const [

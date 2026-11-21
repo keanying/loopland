@@ -89,6 +89,31 @@ type Extra struct {
 	Tasks      []TaskProgress `json:"tasks"`
 	Companion  *CompanionGain `json:"companion"`
 	Relay      *RelayLeg      `json:"relay"`
+	// Rally and Races are filled by the Community step
+	// (docs/api/v2-2-社区.md).
+	Rally *RallyBonus `json:"rally"`
+	Races []RaceDone  `json:"races"`
+}
+
+// RallyBonus is the crew rally bonus applied to this activity (集结跑加成).
+type RallyBonus struct {
+	ID        int64   `json:"id"`
+	BonusRate float64 `json:"bonus_rate"`
+}
+
+// RaceMedal is a race's finisher medal.
+type RaceMedal struct {
+	Key      string  `json:"key"`
+	Name     string  `json:"name"`
+	ImageURL *string `json:"image_url"`
+}
+
+// RaceDone is an online race finished by this activity.
+type RaceDone struct {
+	ID        int64     `json:"id"`
+	Title     string    `json:"title"`
+	ResultSec int       `json:"result_sec"`
+	Medal     RaceMedal `json:"medal"`
 }
 
 // BossHit is damage dealt to a city monster.
@@ -164,10 +189,16 @@ type HookInput struct {
 	DistanceM  float64
 	DurationS  int
 	StartedAt  time.Time
-	Points     []geo.LatLng
-	EnergyRaw  int
-	Claims     []territory.ClaimRef
-	Attacks    []territory.AttackRef
+	EndedAt    time.Time
+	// Wearable is set when the upload carried wearable device data.
+	Wearable  bool
+	Points    []geo.LatLng
+	EnergyRaw int
+	Claims    []territory.ClaimRef
+	Attacks   []territory.AttackRef
+	// BonusRate (集结跑加成) multiplies the monster damage this activity
+	// deals: damage × (1 + BonusRate). Energy is already multiplied.
+	BonusRate float64
 }
 
 // Hook runs V2 gameplay inside the settlement transaction. The returned
@@ -176,8 +207,18 @@ type Hook interface {
 	AfterSettle(ctx context.Context, tx pgx.Tx, in HookInput) (Extra, func(context.Context), error)
 }
 
+// Community is the optional 社区 step of settlement.
+type Community interface {
+	// RallyBonus runs before energy is granted (in has no energy, claims or
+	// attacks yet). A non-nil result multiplies the activity's energy and
+	// monster damage by 1 + BonusRate.
+	RallyBonus(ctx context.Context, tx pgx.Tx, in HookInput) (*RallyBonus, error)
+	// FinishRaces runs after the gameplay hook and completes online races.
+	FinishRaces(ctx context.Context, tx pgx.Tx, in HookInput) ([]RaceDone, error)
+}
+
 func emptyExtra() Extra {
-	return Extra{BossDamage: []BossHit{}, Chests: []ChestOpen{}, Defended: []Defended{}, Routes: []RouteStep{}, Campaigns: []CampaignDone{}, Tasks: []TaskProgress{}}
+	return Extra{BossDamage: []BossHit{}, Chests: []ChestOpen{}, Defended: []Defended{}, Routes: []RouteStep{}, Campaigns: []CampaignDone{}, Tasks: []TaskProgress{}, Races: []RaceDone{}}
 }
 
 func emptySettlement(status string, flags []anticheat.Flag) Settlement {
@@ -216,6 +257,8 @@ type Service struct {
 	Pool   *pgxpool.Pool
 	Config *gameplay.Store
 	Hook   Hook // optional V2 gameplay
+	// Community is optional: crew rally bonus and online races.
+	Community Community
 }
 
 func badRequest(msg string) error { return httpx.BadRequest("invalid_body", msg) }
@@ -492,9 +535,12 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	var sport string
 	var dist, amount float64
 	var durationS int
-	var startedAt time.Time
-	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount, duration_sec, start_time FROM src.src_act_loop_activity WHERE id=$1`, id).
-		Scan(&user, &sport, &dist, &amount, &durationS, &startedAt); err != nil {
+	var startedAt, endedAt time.Time
+	var wearable bool
+	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount, duration_sec, start_time, end_time,
+			COALESCE(jsonb_typeof(wearable_json) = 'object', false)
+		FROM src.src_act_loop_activity WHERE id=$1`, id).
+		Scan(&user, &sport, &dist, &amount, &durationS, &startedAt, &endedAt, &wearable); err != nil {
 		return Settlement{}, nil, err
 	}
 	cfg := s.Config.For(user)
@@ -513,9 +559,20 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	if err != nil {
 		return st, nil, err
 	}
+	in := HookInput{Config: cfg, ActivityID: id, UserID: user, Sport: gameplay.Sport(sport), Amount: amount, DistanceM: dist,
+		DurationS: durationS, StartedAt: startedAt, EndedAt: endedAt, Wearable: wearable}
+	if s.Community != nil {
+		if st.Rally, err = s.Community.RallyBonus(ctx, tx, in); err != nil {
+			return st, nil, err
+		}
+	}
 	st.EnergyRaw = raw
-	st.EnergyGranted = cfg.Grant(raw, today)
-	st.EnergyCapped = st.EnergyGranted < raw
+	if st.Rally != nil {
+		in.BonusRate = st.Rally.BonusRate
+		st.EnergyRaw = int(math.Floor(float64(raw) * (1 + in.BonusRate)))
+	}
+	st.EnergyGranted = cfg.Grant(st.EnergyRaw, today)
+	st.EnergyCapped = st.EnergyGranted < st.EnergyRaw
 
 	var crew *int64
 	err = tx.QueryRow(ctx, `SELECT crew_id FROM src.src_soc_loop_crew_member WHERE user_id=$1`, user).Scan(&crew)
@@ -566,14 +623,15 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 		return st, nil, err
 	}
 	st.Recruits, st.Eggs, st.Medals = p.Recruits, p.Eggs, p.Medals
+	in.CrewID, in.Points, in.EnergyRaw, in.Claims, in.Attacks = crew, pts, raw, st.Claims, st.Attacks
 	if s.Hook != nil {
-		extra, cb, err := s.Hook.AfterSettle(ctx, tx, HookInput{Config: cfg, ActivityID: id, UserID: user, CrewID: crew,
-			Sport: gameplay.Sport(sport), Amount: amount, DistanceM: dist, DurationS: durationS, StartedAt: startedAt, Points: pts,
-			EnergyRaw: raw, Claims: st.Claims, Attacks: st.Attacks})
+		rally := st.Rally
+		extra, cb, err := s.Hook.AfterSettle(ctx, tx, in)
 		if err != nil {
 			return st, nil, err
 		}
 		st.Extra = extra
+		st.Rally, st.Races = rally, []RaceDone{}
 		after = cb
 		// The hook may have raised counters for more medals (defends, chests, …).
 		more, err := codex.AwardMedals(ctx, tx, cfg, user)
@@ -581,6 +639,11 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 			return st, nil, err
 		}
 		st.Medals = append(st.Medals, more...)
+	}
+	if s.Community != nil {
+		if st.Races, err = s.Community.FinishRaces(ctx, tx, in); err != nil {
+			return st, nil, err
+		}
 	}
 	return st, after, nil
 }

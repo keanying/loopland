@@ -48,7 +48,7 @@ export interface DashboardMetrics {
   pending_risk: number;
 }
 
-export type TodoType = 'risk' | 'refund' | 'renew_failed';
+export type TodoType = 'risk' | 'refund' | 'renew_failed' | 'review';
 
 export interface DashboardTodo {
   type: TodoType;
@@ -68,6 +68,10 @@ export interface Dashboard {
     new_territories: number[];
   };
   todos: DashboardTodo[];
+  /** V2 第二批 M-01: content waiting in the review queue. */
+  pending_reviews?: number;
+  /** Week-over-week change of pending_reviews as a ratio (0.2 = +20%); null when last week was 0. */
+  pending_reviews_wow?: number | null;
 }
 
 // ---------- users ----------
@@ -908,4 +912,221 @@ export interface ProviderSave {
   values: Record<string, string>;
   /** Fields to empty (used to delete a secret). */
   clear: string[];
+}
+
+// ---------- V2 第二批「社区」(docs/api/v2-2-社区.md 「管理端」) ----------
+
+/** UserBrief in the contract; admin endpoints may send only id + nickname. */
+export interface UserBrief {
+  id: number;
+  nickname: string;
+  avatar_url?: string | null;
+  crew?: { id: number; name: string } | null;
+}
+
+export interface AdminRef {
+  id: number;
+  username: string;
+}
+
+/** pending-待审核 approved-已通过 rejected-未通过 */
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+/** post-动态 comment-评论 nickname-昵称 avatar-头像 crew_name-跑团名称 crew_avatar-跑团头像 bio-简介 meetup-组局 */
+export type ReviewTargetType = 'post' | 'comment' | 'nickname' | 'avatar' | 'crew_name' | 'crew_avatar' | 'bio' | 'meetup';
+
+export interface ReviewTask {
+  id: number;
+  target_type: ReviewTargetType;
+  target_id: number;
+  user: UserBrief;
+  text: string | null;
+  images: string[] | null;
+  risk_score: number;
+  risk_reasons: string[] | null;
+  report_count: number;
+  status: ReviewStatus;
+  reject_reason: string | null;
+  reviewer: AdminRef | null;
+  reviewed_at: string | null;
+  created_at: string;
+}
+
+export interface ReviewStats {
+  pending: number;
+  today_done: number;
+  /** Pending tasks per target type; types with none may be missing. */
+  by_type: Partial<Record<ReviewTargetType, number>>;
+}
+
+export interface ReviewBatch {
+  ids: number[];
+  action: 'approve' | 'reject';
+  reason: string;
+}
+
+/** pending-待处理 handled-已下架 dismissed-已驳回 */
+export type ReportStatus = 'pending' | 'handled' | 'dismissed';
+export type ReportTargetType = 'post' | 'comment' | 'user' | 'crew' | 'message';
+/** spam-垃圾广告 porn-色情低俗 abuse-辱骂攻击 fraud-诈骗 illegal-违法违规 other-其他 */
+export type ReportReason = 'spam' | 'porn' | 'abuse' | 'fraud' | 'illegal' | 'other';
+
+export interface AdminReport {
+  id: number;
+  target_type: ReportTargetType;
+  target_id: number;
+  target_preview: string | null;
+  reporter: UserBrief;
+  reason: ReportReason | string;
+  detail: string | null;
+  status: ReportStatus;
+  /** Admin who handled it; an id or {id, username} depending on the server. */
+  handled_by: number | AdminRef | null;
+  handled_at: string | null;
+  created_at: string;
+  /** Reports on the same object (all reporters). */
+  report_count: number;
+}
+
+export interface ReportHandle {
+  action: 'remove' | 'dismiss';
+  mute_days: number;
+  note: string;
+}
+
+/** public-公开 fans-仅粉丝 crew-仅跑团 private-仅自己 */
+export type PostVisibility = 'public' | 'fans' | 'crew' | 'private';
+
+export interface PostImage {
+  url: string;
+  width?: number;
+  height?: number;
+}
+
+export interface PostActivity {
+  id: number;
+  sport: string;
+  distance_m: number;
+  duration_sec: number;
+  pace_sec_per_km: number | null;
+  claimed_area_m2: number;
+  start_time: string;
+  /** [lng, lat] pairs, endpoints already trimmed. */
+  track: number[][];
+}
+
+export interface AdminPost {
+  id: number;
+  author: UserBrief;
+  content: string;
+  images: PostImage[];
+  activity: PostActivity | null;
+  visibility: PostVisibility;
+  review_status: ReviewStatus;
+  reject_reason: string | null;
+  like_count: number;
+  comment_count: number;
+  collect_count: number;
+  share_count: number;
+  created_at: string;
+  /** Taken down by an admin or deleted by the author. */
+  deleted: boolean;
+}
+
+export interface ModerationSettings {
+  block_words: string[];
+  review_words: string[];
+  /** Posts / comments scoring below this go live without review (0–100). */
+  auto_approve_below: number;
+  /** Reports from this many different users send a post / comment back to review. */
+  report_auto_hide: number;
+}
+
+export interface Place {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+/** run-约跑 ball-约球 ride-约骑 */
+export type MeetupType = 'run' | 'ball' | 'ride';
+/** open-报名中 full-已满员 cancelled-已取消 ended-已结束 */
+export type MeetupStatus = 'open' | 'full' | 'cancelled' | 'ended';
+
+export interface Meetup {
+  id: number;
+  type: MeetupType;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  place: Place;
+  district: string | null;
+  capacity: number;
+  joined_count: number;
+  requirement: string | null;
+  creator: UserBrief;
+  status: MeetupStatus;
+  review_status: ReviewStatus;
+  conversation_id?: number | null;
+  created_at: string;
+}
+
+export type RaceType = 'online' | 'offline';
+/** signup-报名中 upcoming-报名截止待开赛 running-进行中 finished-已结束 cancelled-已取消 */
+export type RaceStatus = 'upcoming' | 'signup' | 'running' | 'finished' | 'cancelled';
+
+export interface RaceMedal {
+  key: string;
+  name: string;
+  image_url: string | null;
+}
+
+export interface Race {
+  id: number;
+  type: RaceType;
+  title: string;
+  cover_url: string | null;
+  description: string;
+  sport: string;
+  distance_m: number;
+  start_time: string;
+  end_time: string;
+  signup_end_time: string;
+  place: Place | null;
+  capacity: number;
+  signed_count: number;
+  requires_wearable: boolean;
+  medal: RaceMedal | null;
+  status: RaceStatus;
+  published: boolean;
+}
+
+export interface RaceInput {
+  type: RaceType;
+  title: string;
+  cover_url: string | null;
+  description: string;
+  sport: string;
+  distance_m: number;
+  start_time: string;
+  end_time: string;
+  signup_end_time: string;
+  place: Place | null;
+  capacity: number;
+  requires_wearable: boolean;
+  medal: RaceMedal | null;
+  published: boolean;
+}
+
+/** signed-已报名 finished-已完赛 dnf-未完赛 */
+export type RaceEntryStatus = 'signed' | 'finished' | 'dnf';
+
+export interface RaceEntry {
+  user: UserBrief;
+  status: RaceEntryStatus;
+  result_sec: number | null;
+  finished_at: string | null;
+  activity_id: number | null;
+  signed_at: string;
 }

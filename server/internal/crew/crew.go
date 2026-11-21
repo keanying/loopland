@@ -4,6 +4,7 @@ package crew
 
 import (
 	"context"
+	"crypto/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -13,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/keanying/loopland/server/internal/inbox"
+	"github.com/keanying/loopland/server/internal/media"
+	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -61,7 +64,12 @@ func Of(ctx context.Context, q db.Querier, user int64) (*int64, error) {
 }
 
 // Handler serves /v1/crews.
-type Handler struct{ Pool *pgxpool.Pool }
+type Handler struct {
+	Pool *pgxpool.Pool
+	// Mod scores crew names and queues name / avatar changes for review
+	// after they take effect (先生效后审核).
+	Mod *moderation.Moderator
+}
 
 // Routes registers the endpoints.
 func (h *Handler) Routes(mux *http.ServeMux, auth func(httpx.HandlerFunc) http.Handler) {
@@ -76,6 +84,9 @@ func (h *Handler) Routes(mux *http.ServeMux, auth func(httpx.HandlerFunc) http.H
 	mux.Handle("POST /v1/crews/{id}/leave", auth(h.leave))
 	mux.Handle("DELETE /v1/crews/{id}/members/{user}", auth(h.kick))
 	mux.Handle("POST /v1/crews/{id}/transfer", auth(h.transfer))
+	mux.Handle("PATCH /v1/crews/{id}", auth(h.patch))
+	mux.Handle("POST /v1/crews/{id}/invites", auth(h.invite))
+	mux.Handle("POST /v1/crews/join-by-code", auth(h.joinByCode))
 }
 
 const crewCols = `c.id, c.name, c.avatar_url, c.district, c.join_mode, u.id, u.nickname, u.avatar_url,
@@ -122,17 +133,20 @@ func (h *Handler) load(ctx context.Context, viewer, id int64) (Crew, error) {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	var req struct {
-		Name      string  `json:"name"`
-		District  string  `json:"district"`
-		JoinMode  string  `json:"join_mode"`
+		Name     string `json:"name"`
+		District string `json:"district"`
+		JoinMode string `json:"join_mode"`
+		// AvatarURL is kept for older clients: only empty or the url of
+		// one of the user's uploads.
 		AvatarURL *string `json:"avatar_url"`
+		AvatarID  *int64  `json:"avatar_id"`
 	}
 	if err := httpx.Decode(r, &req); err != nil {
 		return err
 	}
 	req.Name = strings.TrimSpace(req.Name)
-	if n := utf8.RuneCountInString(req.Name); n < 2 || n > 16 {
-		return httpx.BadRequest("invalid_name", "跑团名称 2–16 个字")
+	if err := validName(req.Name); err != nil {
+		return err
 	}
 	if strings.TrimSpace(req.District) == "" {
 		return httpx.BadRequest("invalid_body", "请选择所在城区")
@@ -151,13 +165,33 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 		} else if c != nil {
 			return httpx.Conflict("already_in_crew", "你已经在一个跑团里了")
 		}
-		err := tx.QueryRow(r.Context(), `INSERT INTO src.src_soc_loop_crew (name, district, join_mode, avatar_url, leader_id) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-			req.Name, req.District, req.JoinMode, req.AvatarURL, uid).Scan(&id)
-		if db.IsUniqueViolation(err) {
-			return httpx.Conflict("name_taken", "这个跑团名称已被使用")
-		}
+		avatar, err := ownedAvatar(r.Context(), tx, uid, req.AvatarID, req.AvatarURL)
 		if err != nil {
 			return err
+		}
+		sc, err := h.score(r.Context(), req.Name)
+		if err != nil {
+			return err
+		}
+		if taken, err := nameTaken(r.Context(), tx, req.Name, 0); err != nil {
+			return err
+		} else if taken {
+			return errNameTaken
+		}
+		if err := tx.QueryRow(r.Context(), `INSERT INTO src.src_soc_loop_crew (name, district, join_mode, avatar_url, leader_id) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+			req.Name, req.District, req.JoinMode, avatar, uid).Scan(&id); err != nil {
+			if db.IsUniqueViolation(err) {
+				return errNameTaken
+			}
+			return err
+		}
+		if _, err := moderation.Submit(r.Context(), tx, moderation.CrewName, id, uid, req.Name, nil, sc); err != nil {
+			return err
+		}
+		if avatar != nil {
+			if _, err := moderation.Submit(r.Context(), tx, moderation.CrewAvatar, id, uid, "", []string{*avatar}, moderation.Score{}); err != nil {
+				return err
+			}
 		}
 		if _, err := tx.Exec(r.Context(), `INSERT INTO src.src_soc_loop_crew_member (crew_id, user_id) VALUES ($1,$2)`, id, uid); err != nil {
 			return err
@@ -484,4 +518,221 @@ func (h *Handler) transfer(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpx.OK(w, c)
+}
+
+var errNameTaken = httpx.Conflict("name_taken", "这个跑团名称已被使用")
+
+func validName(name string) error {
+	if n := utf8.RuneCountInString(name); n < 2 || n > 16 {
+		return httpx.BadRequest("invalid_name", "跑团名称 2–16 个字")
+	}
+	return nil
+}
+
+// nameTaken checks uniqueness up front: a unique violation would abort
+// the transaction the review task is written in.
+func nameTaken(ctx context.Context, q db.Querier, name string, except int64) (bool, error) {
+	var taken bool
+	err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_soc_loop_crew WHERE name=$1 AND id<>$2)`, name, except).Scan(&taken)
+	return taken, err
+}
+
+// score checks a crew name; blocked words are refused outright.
+func (h *Handler) score(ctx context.Context, name string) (moderation.Score, error) {
+	if h.Mod == nil {
+		return moderation.Score{Reasons: []string{}}, nil
+	}
+	sc := h.Mod.Check(ctx, name, false)
+	if sc.Blocked {
+		return sc, moderation.ErrBlocked
+	}
+	return sc, nil
+}
+
+// ownedAvatar resolves avatar_id (or a legacy avatar_url) to the url of
+// one of the user's uploads; nil means no avatar.
+func ownedAvatar(ctx context.Context, q db.Querier, uid int64, id *int64, url *string) (*string, error) {
+	switch {
+	case id != nil:
+		ims, err := media.Owned(ctx, q, uid, []int64{*id})
+		if err != nil {
+			return nil, err
+		}
+		return &ims[0].URL, nil
+	case url != nil && *url != "":
+		im, err := media.OwnedURL(ctx, q, uid, *url)
+		if err != nil {
+			return nil, err
+		}
+		return &im.URL, nil
+	}
+	return nil, nil
+}
+
+func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Name     *string `json:"name"`
+		AvatarID *int64  `json:"avatar_id"`
+		District *string `json:"district"`
+		JoinMode *string `json:"join_mode"`
+	}
+	if err := httpx.Decode(r, &req); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	uid := httpx.UserID(ctx)
+	err = pgx.BeginFunc(ctx, h.Pool, func(tx pgx.Tx) error {
+		var curName string
+		var curAvatar *string
+		var leader int64
+		if err := tx.QueryRow(ctx, `SELECT name, avatar_url, leader_id FROM src.src_soc_loop_crew WHERE id=$1 FOR UPDATE`, id).Scan(&curName, &curAvatar, &leader); err != nil {
+			if db.IsNoRows(err) {
+				return httpx.NotFound("跑团")
+			}
+			return err
+		}
+		if leader != uid {
+			return httpx.Forbidden("not_leader", "只有团长可以这样做")
+		}
+		if req.Name != nil {
+			name := strings.TrimSpace(*req.Name)
+			if err := validName(name); err != nil {
+				return err
+			}
+			if name != curName {
+				sc, err := h.score(ctx, name)
+				if err != nil {
+					return err
+				}
+				if taken, err := nameTaken(ctx, tx, name, id); err != nil {
+					return err
+				} else if taken {
+					return errNameTaken
+				}
+				if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_crew SET name=$2 WHERE id=$1`, id, name); err != nil {
+					return err
+				}
+				if _, err := moderation.Submit(ctx, tx, moderation.CrewName, id, uid, name, nil, sc); err != nil {
+					return err
+				}
+			}
+		}
+		if req.AvatarID != nil {
+			url, err := ownedAvatar(ctx, tx, uid, req.AvatarID, nil)
+			if err != nil {
+				return err
+			}
+			if curAvatar == nil || *curAvatar != *url {
+				if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_crew SET avatar_url=$2 WHERE id=$1`, id, *url); err != nil {
+					return err
+				}
+				if _, err := moderation.Submit(ctx, tx, moderation.CrewAvatar, id, uid, "", []string{*url}, moderation.Score{}); err != nil {
+					return err
+				}
+			}
+		}
+		if req.District != nil {
+			d := strings.TrimSpace(*req.District)
+			if d == "" {
+				return httpx.BadRequest("invalid_body", "请选择所在城区")
+			}
+			if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_crew SET district=$2 WHERE id=$1`, id, d); err != nil {
+				return err
+			}
+		}
+		if req.JoinMode != nil {
+			if m := *req.JoinMode; m != "open" && m != "apply" && m != "invite" {
+				return httpx.BadRequest("invalid_body", "join_mode 取值错误")
+			}
+			if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_crew SET join_mode=$2 WHERE id=$1`, id, *req.JoinMode); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	c, err := h.load(ctx, uid, id)
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, c)
+}
+
+// InviteTTL is how long an invite code works.
+const InviteTTL = 7 * 24 * time.Hour
+
+// inviteAlphabet leaves out 0/O and 1/I.
+const inviteAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+func newInviteCode() string {
+	b := make([]byte, 6)
+	_, _ = rand.Read(b)
+	for i := range b {
+		b[i] = inviteAlphabet[int(b[i])%len(inviteAlphabet)]
+	}
+	return string(b)
+}
+
+func (h *Handler) invite(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	ctx := r.Context()
+	uid := httpx.UserID(ctx)
+	if err := requireLeader(ctx, h.Pool, id, uid); err != nil {
+		return err
+	}
+	exp := time.Now().Add(InviteTTL)
+	for range 5 {
+		code := newInviteCode()
+		tag, err := h.Pool.Exec(ctx, `INSERT INTO src.src_soc_loop_crew_invite (crew_id, invite_code, creator_id, expire_time) VALUES ($1,$2,$3,$4)
+			ON CONFLICT (invite_code) DO NOTHING`, id, code, uid, exp)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 1 {
+			return httpx.OK(w, map[string]any{"code": code, "expires_at": exp})
+		}
+	}
+	return httpx.Conflict("try_again", "邀请码生成失败，请重试")
+}
+
+func (h *Handler) joinByCode(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := httpx.Decode(r, &req); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	uid := httpx.UserID(ctx)
+	code := strings.ToUpper(strings.TrimSpace(req.Code))
+	var crewID int64
+	err := pgx.BeginFunc(ctx, h.Pool, func(tx pgx.Tx) error {
+		var inviteID int64
+		err := tx.QueryRow(ctx, `SELECT i.id, i.crew_id FROM src.src_soc_loop_crew_invite i JOIN src.src_soc_loop_crew c ON c.id=i.crew_id
+			WHERE i.invite_code=$1 AND i.expire_time > now() FOR UPDATE OF c`, code).Scan(&inviteID, &crewID)
+		if db.IsNoRows(err) {
+			return httpx.BadRequest("invalid_invite", "邀请码无效或已过期")
+		}
+		if err != nil {
+			return err
+		}
+		if err := addMember(ctx, tx, crewID, uid); err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `UPDATE src.src_soc_loop_crew_invite SET use_qty=use_qty+1 WHERE id=$1`, inviteID)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, map[string]any{"status": "joined", "crew_id": crewID})
 }
