@@ -54,7 +54,7 @@ func (a *API) guard(allowed ...string) func(httpx.HandlerFunc) http.Handler {
 			id, _ := strconv.ParseInt(c.Subject, 10, 64)
 			var ad httpx.Admin
 			var disabled bool
-			err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, is_disabled FROM src.src_sys_loop_admin WHERE id=$1`, id).Scan(&ad.ID, &ad.Username, &ad.Role, &disabled)
+			err := a.Pool.QueryRow(r.Context(), `SELECT id, username, role, is_disabled, merchant_id FROM src.src_sys_loop_admin WHERE id=$1`, id).Scan(&ad.ID, &ad.Username, &ad.Role, &disabled, &ad.MerchantID)
 			if db.IsNoRows(err) || disabled {
 				return httpx.ErrUnauthorized
 			}
@@ -67,6 +67,20 @@ func (a *API) guard(allowed ...string) func(httpx.HandlerFunc) http.Handler {
 			return h(w, r.WithContext(httpx.WithAdmin(r.Context(), ad)))
 		})
 	}
+}
+
+// MerchantScope returns the merchant an admin is limited to: nil for staff
+// roles that see everything, the bound merchant for role merchant (a
+// merchant account without a binding sees nothing: 403).
+func MerchantScope(ctx context.Context) (*int64, error) {
+	ad, _ := httpx.AdminFrom(ctx)
+	if ad.Role != RoleMerchant {
+		return nil, nil
+	}
+	if ad.MerchantID == nil {
+		return nil, httpx.Forbidden("no_merchant", "这个商户账号还没有绑定商户")
+	}
+	return ad.MerchantID, nil
 }
 
 // Guard exposes the role guard to other modules' admin routes.

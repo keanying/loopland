@@ -190,6 +190,9 @@ type Admin struct {
 	ID       int64  `json:"id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
+	// MerchantID is set for merchant staff (role merchant): they may only
+	// see and act on their own merchant's data.
+	MerchantID *int64 `json:"merchant_id,omitempty"`
 }
 
 // WithAdmin stores the admin principal.
