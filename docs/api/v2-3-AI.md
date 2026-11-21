@@ -38,7 +38,8 @@
   "quota": { "unlimited": false, "weekly_free": 3, "used": 1, "remaining": 2, "resets_at": "2026-11-23T16:00:00Z" }
 }
 ```
-- 周一 00:00（Asia/Shanghai）重置。会员（有效会员且权益含 `ai_coach_unlimited`）`unlimited=true`，`remaining=null`。
+- 周一 00:00（Asia/Shanghai）重置，`resets_at` 为 UTC 时间。会员（有效会员且权益含 `ai_coach_unlimited`，续费失败的 3 天宽限期内仍算）`unlimited=true`，`remaining=null`。
+- 正式环境没配 AI 时此接口仍返回 200：`enabled=false`、`model_name`/`registration_no` 为 `""`。
 - 只有「助手对话」扣次数；路线建议、战报、跟练、审核都不扣。
 
 ---
@@ -81,7 +82,9 @@
 }
 ```
 - `content` 1–500 字；`image_id` 为本人上传的图片（`purpose=chat`），没配视觉模型时 400 `ai_image_unsupported`；`context` 来自「问 AI」；`lat/lng` 可选，用于找附近的地和怪兽。
-- 免费额度用完：429 `ai_quota_exceeded`（message：「本周免费次数已用完，开通会员不限次数」）。每人每分钟最多 6 次（429 `rate_limited`）。
+- 免费额度用完：429 `ai_quota_exceeded`（message：「本周免费次数已用完，开通会员不限次数」）。每人每分钟最多 6 次（429 `rate_limited`）；上一个问题还在回答时再问也是 429 `rate_limited`。
+- 其他错误：`content` 为空或超过 500 字 400 `invalid_content`；`image_id` 不是本人上传的图片 400 `invalid_media`；`context.type` 取值错误或坐标不合法 400 `invalid_body`；`context` 指向的领地 / 怪兽不存在 404 `not_found`。
+- 带图片时由视觉模型回答（不调用工具）；`context` 和最近 `chat_history_turns` 轮对话会带给模型。
 
 **流式返回**（请求头 `Accept: text/event-stream`，推荐）：
 ```
@@ -97,7 +100,9 @@ data: {"type":"route","route":{...}}
 event: done
 data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 ```
-出错时 `event: error`，`data: {"code":"ai_unavailable","message":"..."}`，然后结束。
+出错时 `event: error`，`data: {"code":"ai_unavailable","message":"..."}`，然后结束（不扣次数、不保存）。
+- 参数、额度、频率这类**开始生成前**的错误即使请求了流式也按普通 HTTP 错误返回（状态码 + JSON 错误体）；`event: error` 只出现在流已开始之后。
+- `card` 在工具返回时立即推送；`done.message` 是最终结果，**以它为准**：输出命中拦截词时 delta 会提前停止，`done.message.content` 为「这个问题圈圈暂时回答不了」且 `cards=[]`。
 **非流式**（`Accept: application/json`）：`→ {"message": AIMessage, "user_message": AIMessage, "quota": {...}}`。
 
 **助手能做什么**（后端用工具调用拿真实数据，不编造）：
@@ -133,8 +138,10 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 ```
 - 最多 4 条，顺序：`loop`（按目标距离或近 4 周平均距离规划的闭环，起终点为当前位置）→ `capture`（最划算的一块：守卫值低、离得近）→ `defend`（我被攻击、还在 24 小时加固期的地）→ `boss`（附近正在出没的怪兽）。没有对应目标的类型不出现。
 - 路线由规则算法生成：候选目标按「收益 / 距离」打分，闭环用多边形近似保证回到起点并控制长度在目标距离 ±25%。配置了「高德 Web 服务」时 `polyline` 用高德步行 / 骑行路径规划贴合道路；没配时是航点之间的直线。
-- `reason` 由小模型写一句话；AI 不可用时用模板句，此时该条 `ai_generated=false`。结果按（用户, 约 200 m 网格, 距离）缓存 10 分钟。
-- 选中路线开跑：`POST /v1/activities` 的 `goal` 写 `{"type":"ai_route","route_id":"r_8f2c1a","route_type":"loop"}`，用于统计采纳率；圈地规则不变。
+- `reason` 由小模型写一句话；AI 不可用时用模板句，此时该条 `ai_generated=false`。结果按（用户, 约 200 m 网格, 运动类型, 距离）缓存 10 分钟。
+- 参数：`lat`/`lng` 必填，`sport` 为 `run`（默认）/ `ride` / `hike` / `walk`，`distance_km` 可选（0 到玩法配置 `ai.route_max_km`），否则 400 `invalid_body`。路线是规则算法生成的，**没配模型时也能用**（全部用模板句，顶层 `ai_generated` 为是否有任一条由模型解释）。
+- `loop` 的 `targets` 是闭环途经的守卫值低的地；高德路径规划失败的路段退回直线。
+- 选中路线开跑：`POST /v1/activities` 的 `goal` 写 `{"type":"ai_route","route_id":"r_8f2c1a","route_type":"loop"}`，用于统计采纳率；圈地规则不变。`type=ai_route` 时 `route_id` 必填、`route_type` 只能是 `loop`/`capture`/`defend`/`boss`，否则 400 `invalid_body`。
 
 ---
 
@@ -144,7 +151,7 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 ```json
 { "activity_id": 55, "text": "今晚 5.2 公里，配速 6'05\"，一口气圈下滨江两块地……", "model_name": "通义千问", "ai_generated": true, "generated_at": "...", "regenerate_left": 2 }
 ```
-- 只能给自己已结算的运动生成。第一次生成后保存，再次请求直接返回；`regenerate=1` 重新生成，每次运动最多 2 次（之后 409 `regenerate_limit`）。
+- 只能给自己已结算的运动生成（别人的或不存在 404 `not_found`，未结算 400 `invalid_activity`）。第一次生成后保存，再次请求直接返回；`regenerate=1` 重新生成，每次运动最多 2 次（之后 409 `regenerate_limit`）。模型不可用或调用失败 503 `ai_unavailable`。
 - 输入给模型的只有本次运动数据（距离、时长、配速、圈地、抢地、怪兽、宝箱、任务、伙伴、集结跑、赛事），不含轨迹坐标。
 - 战报 ≤ 120 字，口吻积极，不编造数据。
 
@@ -152,7 +159,7 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 ```json
 "ai_report": { "text": "...", "ai_generated": true }
 ```
-没带时为 `null`。战报正文不计入 500 字，也走审核。
+没带时为 `null`。战报正文不计入 500 字，也走审核。没带 `activity_id` 或该运动还没有战报：400 `invalid_ai_report`。
 
 ---
 
@@ -170,6 +177,7 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
   ]
 }
 ```
+- 不调用模型（正式环境没配 AI 也能返回）。
 - 动作库来自玩法配置新增的 `workouts` 段（管理端「玩法配置」可编辑，带默认值：跳绳入门、HIIT 燃脂、普拉提核心、力量入门各一套）。
 - `pose` 告诉 App 用哪种姿态计次规则：`jump`（跳绳 / 开合跳：髋部上下周期）、`squat`（深蹲：膝角）、`pushup`（俯卧撑：肘角）、`crunch`（卷腹）、`none`（只计时）。
 
@@ -180,6 +188,8 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 "coach": { "workout_key": "rope_basic", "camera": true, "reps_detected": 480, "reps_manual": 0, "sets_done": 5 }
 ```
 服务端按原有规则换能量（只换能量、不圈地），`coach.camera=true` 且识别次数与上报一致时不触发「居家训练手动上报」的风控复核阈值（风控里新增规则 `coach_mismatch`：上报次数比识别次数多 20% 以上进入复核）。
+- 「上报次数」：跳绳（按次计）为 `amount`；按分钟计的运动为 `reps_detected + reps_manual`。差距不到 5 次不算；`camera=false` 不检查。
+- `coach` 只能用于居家运动，数值不能为负，否则 400 `invalid_body`。
 
 ---
 
@@ -194,6 +204,7 @@ data: {"message": AIMessage, "user_message": AIMessage, "quota": {...}}
 ```
 labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics`-涉政 `abuse`-辱骂 `fraud`-诈骗 `illegal`-违法 `privacy`-隐私泄露（如轨迹暴露住址） `minor`-未成年人 `other`。
 - 最终风险分 = max(规则分, AI 分)。
+- 打分记录：自动通过、自动拒绝的内容也记一条审核任务（`status` 为 `approved` / `rejected`，`reviewer=null`），用于补打分和 `estimate`；`GET /admin/v1/reviews` 新增可选 `decision=manual|auto` 过滤已处理的任务；`/reviews/stats` 的 `today_done` 只算人工处理。
 
 ### 阈值（M-19）
 「敏感词与审核设置」新增：
@@ -201,7 +212,10 @@ labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics
 { "auto_approve_below": 20, "auto_reject_above": 90, "ai_enabled": true }
 ```
 - 风险分 < 自动放行线：直接通过；≥ 自动拦截线：直接拒绝（通知作者，可申诉 = 重新编辑发布）；之间进人工队列。默认 20 / 90（第二批的默认 30 改为 20）。
-- `GET /admin/v1/moderation/estimate?auto_approve_below=20&auto_reject_above=90` → `{"per_day_manual": 46.3, "per_day_auto_approve": 812.1, "per_day_auto_reject": 9.4, "days": 7}`：按最近 7 天的风险分分布，估算设置为这两条线时每天人工量。
+  - 动态、评论、组局被自动拒绝时照常创建，`review_status=rejected`、`reject_reason` 说明原因，并发 `review_rejected` 站内信。
+  - 昵称、头像、简介、跑团名称和头像仍是「先生效后审核」、全部进队列；达到自动拦截线时直接 400 `content_blocked`（不生效）。
+- `PUT /admin/v1/moderation/settings` 没传的字段保持原值；`auto_reject_above` 1–100 且必须大于 `auto_approve_below`，否则 400 `invalid_body`。`ai_enabled=false` 时只用规则分。
+- `GET /admin/v1/moderation/estimate?auto_approve_below=20&auto_reject_above=90` → `{"per_day_manual": 46.3, "per_day_auto_approve": 812.1, "per_day_auto_reject": 9.4, "days": 7}`：按最近 7 天的风险分分布，估算设置为这两条线时每天人工量。（角色：admin；参数不传时用当前设置；拦截线不高于放行线 400 `invalid_body`）
 
 ### ReviewTask 新增字段（M-17）
 ```json
@@ -219,7 +233,8 @@ labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics
 - `approve_masked`（打码后通过）：文本里命中的敏感词和联系方式替换为 `*`，AI 标记的违规图片从动态里移除（图片类对象恢复默认头像），然后通过。
 - `approve_hide_endpoints`（隐藏起终点后通过）：只对附了运动的动态；把这条动态的起终点隐藏半径设为 500 m 后通过。
 - `reject_mute`：拒绝并禁言 `mute_days` 天（默认 7）。
-- 返回更新后的 ReviewTask 和 `next`（下一条待审核任务或 `null`），管理端处理后自动跳到下一条。
+- 返回 `{"task": ReviewTask, "next": ReviewTask | null}`：`task` 是处理后的任务，`next` 是下一条待审核任务（按风险分倒序、时间正序；`?target_type=` 可限定类型），管理端处理后自动跳到下一条。
+- 错误：已审核过 409 `already_reviewed`；`action` 取值错误或 `mute_days` 不在 1–365 400 `invalid_body`；`approve_hide_endpoints` 用在没附运动的对象上、`approve_masked` 用在不支持的类型上 400 `not_supported`。记审计日志 `review.<action>`。
 - 原有的 `/approve`、`/reject`、`/batch` 保留。
 
 ---
@@ -234,12 +249,12 @@ labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics
   "quota": { "users_hit_limit_this_week": 120 }
 }
 ```
-（角色：admin、ops）`cost_fen` 按「AI 大模型」里填的单价估算，没填为 `null`。
+（角色：admin、ops）`cost_fen` 按「AI 大模型」里填的单价估算，没填为 `null`（开发环境模拟 AI 的调用不计费）。`days` 按 Asia/Shanghai 日期、`?days=` 1–90（默认 7），没有调用的日期也列出；`by_feature` 固定列出 5 个功能。
 
 ### GET /admin/v1/ai/calls?feature=&status=ok|failed&page= → `{"items":[{"id","feature","user":{"id","nickname"},"model","status","error","prompt_tokens","completion_tokens","latency_ms","created_at"}],"total"}`
-（只有元数据，不含对话内容）
+（只有元数据，不含对话内容；角色：admin、ops；超时的 `error` 为 `"timeout"`；`user` 没有时为 `null`）
 
-### GET /admin/v1/users/{id}/ai-messages?page= → `{"items":[AIMessage],"total"}`（角色：admin；用于投诉核查；查看记审计日志）
+### GET /admin/v1/users/{id}/ai-messages?page= → `{"items":[AIMessage],"total"}`（角色：admin；用于投诉核查；含用户已清空的消息；查看记审计日志 `ai.messages.view`）
 
 ---
 
@@ -252,6 +267,8 @@ labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics
 }
 ```
 
+玩法配置校验：`route_max_km` 0–100，`report_max_chars` 20–500，`chat_history_turns` 0–20；`workouts[].sport` 为 `rope`/`hiit`/`yoga`/`strength`，`steps[].mode` 为 `count`/`time`、`target>0`、`sets≥1`、`pose` 为上面的取值，`key` 不重复。
+
 ## 数据库（新增表）
 
 | 表 | 说明 |
@@ -260,6 +277,8 @@ labels 取值：`ad`-广告引流 `contact`-联系方式 `porn`-色情 `politics
 | `src.src_sys_loop_ai_call` | 每次模型调用的元数据（功能、用户、模型、状态、Token、耗时） |
 | `src.src_act_loop_ai_report` | 运动的 AI 战报 |
 | `src.src_cnt_loop_review_task` 增加 AI 判定字段 | `ai_score`、`ai_labels_json`、`ai_reason`、`ai_confidence_rate`、`ai_suggestion_type`、`ai_model` |
+| `src.src_cnt_loop_review_task` 还增加 | `rule_score`、`ai_flagged_images_json`、`ai_status`（补打分状态）、`ai_retry_qty`、`decision_type`（manual / auto_approve / auto_reject）、`submit_type`（submit / report） |
 | `src.src_soc_loop_post` 增加 | `ai_report_text`、`hide_endpoints_m` |
+| `src.src_act_loop_activity` 增加 | `coach_json`（跟练上报） |
 
 耗时字段用 `_ms`（毫秒），本批起加入命名规范的字段关键字。

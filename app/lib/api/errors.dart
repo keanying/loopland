@@ -77,6 +77,9 @@ const errorMessages = <String, String>{
   'ai_image_unsupported': '当前 AI 模型还不支持识别图片',
   'regenerate_limit': '这次运动的战报已经换过 2 次了',
   'stream_interrupted': '回答中断了，请重试',
+  'invalid_content': '问题不能为空，最多 500 字',
+  'invalid_activity': '这次运动还没结算完成，稍后再生成战报',
+  'invalid_ai_report': '这次运动还没有 AI 战报，先生成一篇吧',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',

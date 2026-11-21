@@ -159,23 +159,23 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       _attachment = null;
       _ctx = null;
     });
-    await _ask(content, imageId: att?.mediaId, imageBytes: att?.picked.bytes, ctx: ctx, restore: () {
-      if (!mounted) return;
-      setState(() {
-        if (preset == null) _text.text = draft;
-        _attachment ??= att;
-        _ctx ??= ctx;
-      });
-    });
+    await _ask(
+      content,
+      imageId: att?.mediaId,
+      imageBytes: att?.picked.bytes,
+      ctx: ctx,
+      restore: () {
+        if (!mounted) return;
+        setState(() {
+          if (preset == null) _text.text = draft;
+          _attachment ??= att;
+          _ctx ??= ctx;
+        });
+      },
+    );
   }
 
-  Future<void> _ask(
-    String content, {
-    int? imageId,
-    Uint8List? imageBytes,
-    AIContext? ctx,
-    required VoidCallback restore,
-  }) async {
+  Future<void> _ask(String content, {int? imageId, Uint8List? imageBytes, AIContext? ctx, required VoidCallback restore}) async {
     final userId = -(++_seq), botId = -(++_seq);
     if (imageBytes != null) _localImages[userId] = imageBytes;
     _pager.insertFirst(AIMessage(id: userId, role: 'user', content: content, createdAt: DateTime.now()));
@@ -191,8 +191,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
     AIChatResult? done;
     ApiException? failure;
     try {
-      await for (final ev in _api.chatStream(content,
-          imageId: imageId, context: ctx, lat: _me?.lat, lng: _me?.lng, cancel: _cancel)) {
+      await for (final ev in _api.chatStream(content, imageId: imageId, context: ctx, lat: _me?.lat, lng: _me?.lng, cancel: _cancel)) {
         events++;
         switch (ev) {
           case AIDelta(:final text):
@@ -229,15 +228,12 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
         if (bytes != null && user.imageUrl == null) _localImages[user.id] = bytes;
         _pager.replaceWhere((m) => m.id == userId, (_) => user);
       }
+      // done.message is authoritative: output moderation may replace the
+      // streamed text (「这个问题圈圈暂时回答不了」) and drop the cards.
       final streamed = _pager.items.where((m) => m.id == botId).firstOrNull;
       final msg = result.message;
-      _pager.replaceWhere(
-          (m) => m.id == botId,
-          (_) => msg.copyWith(
-                id: msg.id == 0 ? botId : msg.id,
-                content: msg.content.isEmpty ? streamed?.content : null,
-                cards: msg.cards.isEmpty ? streamed?.cards : null,
-              ));
+      final malformed = msg.id == 0 && msg.content.isEmpty;
+      _pager.replaceWhere((m) => m.id == botId, (_) => malformed ? (streamed ?? msg) : msg);
       if (result.quota != null) _quota = result.quota;
     } else {
       _fail(failure ?? ApiException(status: 0, code: 'stream_interrupted'), userId, botId, () {
@@ -277,7 +273,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
           _attachment = null;
         });
         _alert('暂不支持图片', e.message);
-      case 'rate_limited':
+      case 'rate_limited' || 'invalid_content':
         drop();
         toast(context, e.message);
       default:
@@ -299,10 +295,12 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       context: context,
       builder: (d) => AlertDialog(
         title: const Text('本周免费次数已用完'),
-        content: Text([
-          e?.message.isNotEmpty == true ? e!.message : '免费用户每周可以问圈圈 ${q?.weeklyFree ?? 3} 次，开通会员不限次数。',
-          if (q?.resetsAt != null) '免费次数将于 ${Fmt.dateTime(q!.resetsAt)} 重置。',
-        ].join('\n')),
+        content: Text(
+          [
+            e?.message.isNotEmpty == true ? e!.message : '免费用户每周可以问圈圈 ${q?.weeklyFree ?? 3} 次，开通会员不限次数。',
+            if (q?.resetsAt != null) '免费次数将于 ${Fmt.dateTime(q!.resetsAt)} 重置。',
+          ].join('\n'),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('知道了')),
           FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('开通会员')),
@@ -313,13 +311,13 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
   }
 
   Future<void> _alert(String title, String body) => showDialog<void>(
-        context: context,
-        builder: (d) => AlertDialog(
-          title: Text(title),
-          content: Text(body),
-          actions: [FilledButton(onPressed: () => Navigator.pop(d), child: const Text('知道了'))],
-        ),
-      );
+    context: context,
+    builder: (d) => AlertDialog(
+      title: Text(title),
+      content: Text(body),
+      actions: [FilledButton(onPressed: () => Navigator.pop(d), child: const Text('知道了'))],
+    ),
+  );
 
   // ── photo ──
 
@@ -327,18 +325,17 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
     final source = await showModalBottomSheet<String>(
       context: context,
       builder: (s) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('拍照'),
-            onTap: () => Navigator.pop(s, 'camera'),
-          ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('从相册选择'),
-            onTap: () => Navigator.pop(s, 'gallery'),
-          ),
-        ]),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('拍照'), onTap: () => Navigator.pop(s, 'camera')),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('从相册选择'),
+              onTap: () => Navigator.pop(s, 'gallery'),
+            ),
+          ],
+        ),
       ),
     );
     if (source == null || !mounted) return;
@@ -367,41 +364,55 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
   // ── menu ──
 
   Future<void> _about(AIInfo info) => showModalBottomSheet<void>(
-        context: context,
-        builder: (s) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
+    context: context,
+    builder: (s) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
                 AIBadge(size: 40),
                 SizedBox(width: 12),
                 Text('关于 AI 助手', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-              ]),
-              const SizedBox(height: 16),
-              _kv('模型名称', info.modelName.isEmpty ? '-' : info.modelName),
-              _kv('备案编号', info.registrationNo.isEmpty ? '-' : info.registrationNo),
-              _kv('图片识别', info.vision && !_visionOff ? '支持' : '不支持'),
-              _kv('本周次数', _quotaText(_quotaOf(info), long: true)),
-              const SizedBox(height: 10),
-              Text(info.disclaimer, style: const TextStyle(color: LL.text2, height: 1.5)),
-              const SizedBox(height: 6),
-              const Text(
-                '圈圈会结合你的领地、运动记录和附近的玩法给建议，训练建议仅供参考，不构成医疗意见，身体不适请及时就医。'
-                '对话内容保存 180 天用于投诉核查，你可以随时清空。',
-                style: TextStyle(color: LL.text3, fontSize: 12, height: 1.5),
-              ),
-            ]),
-          ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _kv('模型名称', info.modelName.isEmpty ? '-' : info.modelName),
+            _kv('备案编号', info.registrationNo.isEmpty ? '-' : info.registrationNo),
+            _kv('图片识别', info.vision && !_visionOff ? '支持' : '不支持'),
+            _kv('本周次数', _quotaText(_quotaOf(info), long: true)),
+            const SizedBox(height: 10),
+            Text(info.disclaimer, style: const TextStyle(color: LL.text2, height: 1.5)),
+            const SizedBox(height: 6),
+            const Text(
+              '圈圈会结合你的领地、运动记录和附近的玩法给建议，训练建议仅供参考，不构成医疗意见，身体不适请及时就医。'
+              '对话内容保存 180 天用于投诉核查，你可以随时清空。',
+              style: TextStyle(color: LL.text3, fontSize: 12, height: 1.5),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 76, child: Text(k, style: const TextStyle(color: LL.text2))),
-          Expanded(child: Text(v, style: const TextStyle(fontWeight: FontWeight.w700))),
-        ]),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(k, style: const TextStyle(color: LL.text2)),
+        ),
+        Expanded(
+          child: Text(v, style: const TextStyle(fontWeight: FontWeight.w700)),
+        ),
+      ],
+    ),
+  );
 
   String _quotaText(AIQuota? q, {bool long = false}) {
     if (q == null) return '-';
@@ -441,34 +452,33 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
   Widget build(BuildContext context) {
     final infoAsync = ref.watch(aiInfoProvider);
     final info = infoAsync.value;
-    final unavailable = (infoAsync.hasError && ApiException.from(infoAsync.error!).code == 'ai_unavailable') ||
-        (info != null && !info.enabled);
+    final unavailable =
+        (infoAsync.hasError && ApiException.from(infoAsync.error!).code == 'ai_unavailable') || (info != null && !info.enabled);
     return Scaffold(
       body: SafeArea(
-        child: Column(children: [
-          _header(info),
-          if (unavailable)
-            const Expanded(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('AI 助手暂时不可用，请稍后再试', style: TextStyle(color: LL.text2)),
+        child: Column(
+          children: [
+            _header(info),
+            if (unavailable)
+              const Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Text('AI 助手暂时不可用，请稍后再试', style: TextStyle(color: LL.text2)),
+                  ),
                 ),
+              )
+            else ...[
+              Expanded(
+                child: GestureDetector(onTap: () => _focus.unfocus(), child: _list()),
               ),
-            )
-          else ...[
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _focus.unfocus(),
-                child: _list(),
-              ),
-            ),
-            _chips(),
-            if (_ctx != null) _contextChip(_ctx!),
-            if (_attachment != null) _attachmentPreview(_attachment!),
-            _composer(info),
+              _chips(),
+              if (_ctx != null) _contextChip(_ctx!),
+              if (_attachment != null) _attachmentPreview(_attachment!),
+              _composer(info),
+            ],
           ],
-        ]),
+        ),
       ),
     );
   }
@@ -477,74 +487,105 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
     final q = _quotaOf(info);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
-          const SizedBox(width: 12),
-          const AIBadge(),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('圈圈 · AI 助手', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-              Text('懂你的领地、配速和附近的搭子', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: LL.text2, fontSize: 12)),
-            ]),
-          ),
-          if (q != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: q.exhausted ? const Color(0xFF3A1D22) : LL.card2,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Text(_quotaText(q),
-                  style: TextStyle(color: q.exhausted ? LL.red : (q.unlimited ? LL.lime : LL.text2), fontSize: 12, fontWeight: FontWeight.w700)),
-            ),
-          PopupMenuButton<String>(
-            tooltip: '更多',
-            icon: const Icon(Icons.more_vert_rounded, color: LL.text2),
-            color: LL.card2,
-            onSelected: (v) {
-              if (v == 'about' && info != null) _about(info);
-              if (v == 'clear') _clear();
-            },
-            itemBuilder: (_) => [
-              if (info != null) const PopupMenuItem(value: 'about', child: Text('关于 AI 助手')),
-              const PopupMenuItem(value: 'clear', child: Text('清空对话')),
-            ],
-          ),
-        ]),
-        // Model disclosure (生成式人工智能服务管理暂行办法).
-        if (info != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 4, top: 4),
-            child: InkWell(
-              key: const Key('ai-disclosure'),
-              onTap: () => _about(info),
-              borderRadius: BorderRadius.circular(10),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.info_outline_rounded, size: 13, color: LL.text3),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      [
-                        if (info.modelName.isNotEmpty) '模型：${info.modelName}',
-                        if (info.registrationNo.isNotEmpty) '备案号：${info.registrationNo}',
-                        '内容由 AI 生成',
-                      ].join(' · '),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
+              const SizedBox(width: 12),
+              const AIBadge(),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('圈圈 · AI 助手', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                    Text(
+                      '懂你的领地、配速和附近的搭子',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: LL.text3, fontSize: 11),
+                      style: TextStyle(color: LL.text2, fontSize: 12),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: '更多',
+                icon: const Icon(Icons.more_vert_rounded, color: LL.text2),
+                color: LL.card2,
+                onSelected: (v) {
+                  if (v == 'about' && info != null) _about(info);
+                  if (v == 'clear') _clear();
+                },
+                itemBuilder: (_) => [
+                  if (info != null) const PopupMenuItem(value: 'about', child: Text('关于 AI 助手')),
+                  const PopupMenuItem(value: 'clear', child: Text('清空对话')),
+                ],
+              ),
+            ],
+          ),
+          // Model disclosure (生成式人工智能服务管理暂行办法) + weekly quota.
+          if (info != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, top: 4, right: 8),
+              child: Row(
+                children: [
+                  Expanded(child: _disclosure(info)),
+                  if (q != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: q.exhausted ? const Color(0xFF3A1D22) : LL.card2,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Text(
+                        _quotaText(q),
+                        style: TextStyle(
+                          color: q.exhausted ? LL.red : (q.unlimited ? LL.lime : LL.text2),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-          ),
-      ]),
+        ],
+      ),
     );
   }
+
+  Widget _disclosure(AIInfo info) => Align(
+    alignment: Alignment.centerLeft,
+    child: InkWell(
+      key: const Key('ai-disclosure'),
+      onTap: () => _about(info),
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.info_outline_rounded, size: 13, color: LL.text3),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                [
+                  if (info.modelName.isNotEmpty) '模型：${info.modelName}',
+                  if (info.registrationNo.isNotEmpty) '备案号：${info.registrationNo}',
+                  '内容由 AI 生成',
+                ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: LL.text3, fontSize: 11),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 
   Widget _list() {
     final items = _pager.items;
@@ -556,10 +597,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       itemBuilder: (context, i) {
         if (i == items.length) return _top();
         final m = items[i];
-        return Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: m.isUser ? _userBubble(m) : _botBubble(m),
-        );
+        return Padding(padding: const EdgeInsets.only(top: 12), child: m.isUser ? _userBubble(m) : _botBubble(m));
       },
     );
   }
@@ -576,10 +614,15 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       );
     }
     if (p.initialLoading || (p.hasMore && p.loading)) {
-      return const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator()));
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
     if (p.hasMore) {
-      return Center(child: TextButton(onPressed: p.loadMore, child: const Text('查看更早的对话')));
+      return Center(
+        child: TextButton(onPressed: p.loadMore, child: const Text('查看更早的对话')),
+      );
     }
     final g = _greeting;
     if (g == null) return const SizedBox(height: 8);
@@ -595,10 +638,13 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: LL.border),
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(g.text, style: const TextStyle(fontSize: 15, height: 1.6)),
-            if (g.aiGenerated) const Padding(padding: EdgeInsets.only(top: 6), child: AILabel()),
-          ]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(g.text, style: const TextStyle(fontSize: 15, height: 1.6)),
+              if (g.aiGenerated) const Padding(padding: EdgeInsets.only(top: 6), child: AILabel()),
+            ],
+          ),
         ),
       ),
     );
@@ -610,35 +656,42 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       alignment: Alignment.centerRight,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          if (local != null || m.imageUrl != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  width: 160,
-                  height: 160,
-                  child: local != null
-                      ? Image.memory(local, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: LL.card2))
-                      : NetImage(url: m.imageUrl!),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (local != null || m.imageUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    width: 160,
+                    height: 160,
+                    child: local != null
+                        ? Image.memory(
+                            local,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const ColoredBox(color: LL.card2),
+                          )
+                        : NetImage(url: m.imageUrl!),
+                  ),
                 ),
               ),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: const BoxDecoration(
-              color: LL.lime,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: const BoxDecoration(
+                color: LL.lime,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(6),
+                ),
               ),
+              child: Text(m.content, style: const TextStyle(color: LL.ink, fontSize: 15, height: 1.5)),
             ),
-            child: Text(m.content, style: const TextStyle(color: LL.ink, fontSize: 15, height: 1.5)),
-          ),
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -647,61 +700,75 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
     final streaming = m.id == _streamingId;
     final failure = _failures[m.id];
     final waiting = streaming && m.content.isEmpty && m.cards.isEmpty;
-    final cards = [for (final c in m.cards) if (c.known) c];
+    final cards = [
+      for (final c in m.cards)
+        if (c.known) c,
+    ];
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.86),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (waiting)
-            const _TypingDots()
-          else if (m.content.isNotEmpty || failure == null)
-            Container(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-              decoration: const BoxDecoration(
-                color: LL.card,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                  bottomLeft: Radius.circular(6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (waiting)
+              const _TypingDots()
+            else if (m.content.isNotEmpty || failure == null)
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: const BoxDecoration(
+                  color: LL.card,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(6),
+                  ),
+                  border: Border.fromBorderSide(BorderSide(color: LL.border)),
                 ),
-                border: Border.fromBorderSide(BorderSide(color: LL.border)),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(text: m.content),
+                      if (streaming)
+                        const TextSpan(
+                          text: ' ▍',
+                          style: TextStyle(color: LL.lavender),
+                        ),
+                    ],
+                  ),
+                  style: const TextStyle(fontSize: 15, height: 1.6),
+                ),
               ),
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: m.content),
-                  if (streaming) const TextSpan(text: ' ▍', style: TextStyle(color: LL.lavender)),
-                ]),
-                style: const TextStyle(fontSize: 15, height: 1.6),
+            for (final c in cards) Padding(padding: const EdgeInsets.only(top: 8), child: _card(c)),
+            if (failure != null)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+                decoration: BoxDecoration(color: const Color(0xFF3A1D22), borderRadius: BorderRadius.circular(18)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: LL.red, size: 18),
+                    const SizedBox(width: 8),
+                    Flexible(child: Text(failure.message, style: const TextStyle(fontSize: 13))),
+                    TextButton(onPressed: _sending ? null : failure.retry, child: const Text('重试')),
+                  ],
+                ),
               ),
-            ),
-          for (final c in cards)
-            Padding(padding: const EdgeInsets.only(top: 8), child: _card(c)),
-          if (failure != null)
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
-              decoration: BoxDecoration(color: const Color(0xFF3A1D22), borderRadius: BorderRadius.circular(18)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.error_outline_rounded, color: LL.red, size: 18),
-                const SizedBox(width: 8),
-                Flexible(child: Text(failure.message, style: const TextStyle(fontSize: 13))),
-                TextButton(onPressed: _sending ? null : failure.retry, child: const Text('重试')),
-              ]),
-            ),
-          if (!waiting) const Padding(padding: EdgeInsets.only(top: 6, left: 4), child: AILabel()),
-        ]),
+            if (!waiting) const Padding(padding: EdgeInsets.only(top: 6, left: 4), child: AILabel()),
+          ],
+        ),
       ),
     );
   }
 
   Widget _card(AICard c) => switch (c.type) {
-        'route' => AIRouteCard(route: c.route!, onStart: () => openAICard(context, ref, c)),
-        'territory' => AITerritoryCard(territory: c.territory!, onTap: () => openAICard(context, ref, c)),
-        'boss' => AIBossCard(boss: c.boss!, onTap: () => openAICard(context, ref, c)),
-        _ => const SizedBox.shrink(),
-      };
+    'route' => AIRouteCard(route: c.route!, onStart: () => openAICard(context, ref, c)),
+    'territory' => AITerritoryCard(territory: c.territory!, onTap: () => openAICard(context, ref, c)),
+    'boss' => AIBossCard(boss: c.boss!, onTap: () => openAICard(context, ref, c)),
+    _ => const SizedBox.shrink(),
+  };
 
   Widget _chips() {
     final list = _greeting?.suggestions.isNotEmpty == true ? _greeting!.suggestions : _defaultSuggestions;
@@ -725,95 +792,113 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
   }
 
   Widget _contextChip(AIContext c) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: InputChip(
-            avatar: Icon(c.type == 'boss' ? Icons.whatshot_rounded : Icons.flag_outlined, size: 16, color: LL.lavender),
-            label: Text('关于${c.type == 'boss' ? '怪兽' : '领地'}「${c.name.isEmpty ? '#${c.id}' : c.name}」'),
-            onDeleted: () => setState(() => _ctx = null),
-            backgroundColor: const Color(0xFF26223A),
-            side: BorderSide.none,
-            labelStyle: const TextStyle(color: LL.lavender, fontSize: 12, fontWeight: FontWeight.w700),
-          ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: InputChip(
+        avatar: Icon(c.type == 'boss' ? Icons.whatshot_rounded : Icons.flag_outlined, size: 16, color: LL.lavender),
+        label: Text('关于${c.type == 'boss' ? '怪兽' : '领地'}「${c.name.isEmpty ? '#${c.id}' : c.name}」'),
+        onDeleted: () => setState(() => _ctx = null),
+        backgroundColor: const Color(0xFF26223A),
+        side: BorderSide.none,
+        labelStyle: const TextStyle(color: LL.lavender, fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
 
   Widget _attachmentPreview(_Attachment a) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: SizedBox(
-            width: 64,
-            height: 64,
-            child: Stack(fit: StackFit.expand, children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.memory(a.picked.bytes, fit: BoxFit.cover, errorBuilder: (_, _, _) => const ColoredBox(color: LL.card2)),
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: 64,
+        height: 64,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.memory(
+                a.picked.bytes,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const ColoredBox(color: LL.card2),
               ),
-              if (a.uploading || a.error != null)
-                Container(
-                  decoration: BoxDecoration(color: const Color(0x990E0E10), borderRadius: BorderRadius.circular(12)),
-                  alignment: Alignment.center,
-                  child: a.uploading
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.error_outline_rounded, color: LL.red),
-                ),
-              Positioned(
-                top: 2,
-                right: 2,
-                child: GestureDetector(
-                  onTap: () => setState(() => _attachment = null),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(color: Color(0xCC0E0E10), shape: BoxShape.circle),
-                    child: const Icon(Icons.close_rounded, size: 14, color: LL.text, semanticLabel: '移除图片'),
-                  ),
+            ),
+            if (a.uploading || a.error != null)
+              Container(
+                decoration: BoxDecoration(color: const Color(0x990E0E10), borderRadius: BorderRadius.circular(12)),
+                alignment: Alignment.center,
+                child: a.uploading
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.error_outline_rounded, color: LL.red),
+              ),
+            Positioned(
+              top: 2,
+              right: 2,
+              child: GestureDetector(
+                onTap: () => setState(() => _attachment = null),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(color: Color(0xCC0E0E10), shape: BoxShape.circle),
+                  child: const Icon(Icons.close_rounded, size: 14, color: LL.text, semanticLabel: '移除图片'),
                 ),
               ),
-            ]),
-          ),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _composer(AIInfo? info) {
     final vision = (info?.vision ?? false) && !_visionOff;
     final exhausted = _quotaOf(info)?.exhausted ?? false;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-      child: Row(children: [
-        if (vision) ...[
-          RoundIconButton(icon: Icons.photo_camera_outlined, size: 48, tooltip: '发图片', onTap: _sending ? null : _pickPhoto),
-          const SizedBox(width: 8),
-        ],
-        Expanded(
-          child: TextField(
-            key: const Key('ai-input'),
-            controller: _text,
-            focusNode: _focus,
-            minLines: 1,
-            maxLines: 4,
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _send(),
-            decoration: InputDecoration(
-              hintText: exhausted ? '本周免费次数已用完，开通会员不限次数' : '问问圈圈，比如：今晚去哪抢地？',
-              contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: LL.border)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: LL.border)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: LL.lavender)),
+      child: Row(
+        children: [
+          if (vision) ...[
+            RoundIconButton(icon: Icons.photo_camera_outlined, size: 48, tooltip: '发图片', onTap: _sending ? null : _pickPhoto),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: TextField(
+              key: const Key('ai-input'),
+              controller: _text,
+              focusNode: _focus,
+              minLines: 1,
+              maxLines: 4,
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _send(),
+              decoration: InputDecoration(
+                hintText: exhausted ? '本周免费次数已用完，开通会员不限次数' : '问问圈圈，比如：今晚去哪抢地？',
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: LL.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: LL.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: const BorderSide(color: LL.lavender),
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        RoundIconButton(
-          icon: _sending ? Icons.more_horiz_rounded : Icons.arrow_forward_rounded,
-          size: 48,
-          color: LL.lime,
-          fg: LL.ink,
-          tooltip: '发送',
-          onTap: _sending ? null : () => _send(),
-        ),
-      ]),
+          const SizedBox(width: 8),
+          RoundIconButton(
+            icon: _sending ? Icons.more_horiz_rounded : Icons.arrow_forward_rounded,
+            size: 48,
+            color: LL.lime,
+            fg: LL.ink,
+            tooltip: '发送',
+            onTap: _sending ? null : () => _send(),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -835,29 +920,32 @@ class _TypingDotsState extends State<_TypingDots> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) => Semantics(
-        label: 'AI 正在输入',
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: LL.card,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: LL.border),
-          ),
-          child: AnimatedBuilder(
-            animation: _c,
-            builder: (context, _) => Row(mainAxisSize: MainAxisSize.min, children: [
-              for (var i = 0; i < 3; i++)
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
-                  decoration: BoxDecoration(
-                    color: LL.lavender.withValues(alpha: 0.25 + 0.75 * (((_c.value * 3 - i) % 3) < 1 ? 1 : 0)),
-                    shape: BoxShape.circle,
-                  ),
+    label: 'AI 正在输入',
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: LL.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: LL.border),
+      ),
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                width: 8,
+                height: 8,
+                margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                decoration: BoxDecoration(
+                  color: LL.lavender.withValues(alpha: 0.25 + 0.75 * (((_c.value * 3 - i) % 3) < 1 ? 1 : 0)),
+                  shape: BoxShape.circle,
                 ),
-            ]),
-          ),
+              ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

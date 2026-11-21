@@ -159,6 +159,31 @@ void main() {
     await settle(t);
   });
 
+  testWidgets('assistant: done.message wins over streamed text (output moderation)', (t) async {
+    await phone(t);
+    final ai = AiFake()..chatMode = 'manual';
+    await t.pumpWidget(aiApp('/ai', aiBackend(ai)));
+    await idle(t);
+    await t.enterText(find.byKey(const Key('ai-input')), '随便问问');
+    await t.tap(find.byTooltip('发送'));
+    await idle(t);
+    ai.sse!.add(_sse('delta', {'text': '不该出现的话'}));
+    ai.sse!.add(_sse('card', ai.cards[0]));
+    await idle(t, 2);
+    expect(find.textContaining('不该出现的话', findRichText: true), findsOneWidget);
+    final done = ai.doneFor('x');
+    (done['message'] as Map)
+      ..['content'] = '这个问题圈圈暂时回答不了'
+      ..['cards'] = <Object>[];
+    ai.sse!.add(_sse('done', done));
+    ai.sse!.close().ignore();
+    await idle(t);
+    expect(find.textContaining('不该出现的话', findRichText: true), findsNothing);
+    expect(find.text('这个问题圈圈暂时回答不了'), findsOneWidget);
+    expect(find.text('一键开跑'), findsNothing);
+    await settle(t);
+  });
+
   testWidgets('assistant cards: territory → map focus, boss → boss page, route → run with guide', (t) async {
     await phone(t);
     final ai = AiFake();

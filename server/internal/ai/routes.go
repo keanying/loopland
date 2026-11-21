@@ -750,9 +750,8 @@ func (h *Handler) routes(w http.ResponseWriter, r *http.Request) error {
 			return httpx.BadRequest("invalid_body", fmt.Sprintf("distance_km 应在 0–%.0f 之间", maxKm))
 		}
 	}
-	if _, err := h.Svc.Backend(); err != nil {
-		return err
-	}
+	// Rule-based: works without a model too (template reasons,
+	// ai_generated=false).
 	routes, err := h.Svc.Suggest(ctx, uid, *p, sport, dk, true)
 	if err != nil {
 		return err
@@ -761,7 +760,11 @@ func (h *Handler) routes(w http.ResponseWriter, r *http.Request) error {
 		routes = []Route{}
 	}
 	sort.SliceStable(routes, func(i, j int) bool { return routeOrder[routes[i].Type] < routeOrder[routes[j].Type] })
-	return httpx.OK(w, map[string]any{"items": routes, "ai_generated": true})
+	anyAI := false
+	for _, r := range routes {
+		anyAI = anyAI || r.AIGenerated
+	}
+	return httpx.OK(w, map[string]any{"items": routes, "ai_generated": anyAI})
 }
 
 var routeOrder = map[string]int{RouteLoop: 0, RouteCapture: 1, RouteDefend: 2, RouteBoss: 3}

@@ -891,7 +891,13 @@ func TestAI(t *testing.T) {
 	e.app.AI.Dev = false
 	defer func() { e.app.AI.Dev = true }()
 	b.expectErr("POST", "/v1/ai/chat", map[string]any{"content": "在吗"}, 503, "ai_unavailable")
-	b.expectErr("GET", q, nil, 503, "ai_unavailable")
+	b.expectErr("POST", path, nil, 404, "not_found")
+	b.expectErr("POST", fmt.Sprintf("/v1/activities/%d/ai-report", bAct), nil, 503, "ai_unavailable")
+	// Routes are rule-based: template reasons without a model.
+	b.must("GET", fmt.Sprintf("/v1/ai/routes?lat=%f&lng=%f&sport=walk", origin.Lat, origin.Lng), nil, &routes)
+	if routes.AIGenerated || len(routes.Items) == 0 || routes.Items[0].AIGenerated || routes.Items[0].Reason == "" {
+		t.Fatalf("routes without a model: %+v", routes)
+	}
 	b.must("GET", "/v1/ai/info", nil, &info)
 	var feat Features
 	e.anon().must("GET", "/v1/config/features", nil, &feat)
