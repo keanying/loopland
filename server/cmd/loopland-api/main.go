@@ -63,7 +63,11 @@ func run(log *slog.Logger) error {
 	}
 	errc := make(chan error, 1)
 	go func() {
-		log.Info("listening", "addr", cfg.HTTPAddr, "env", cfg.Env)
+		src := config.Source
+		if src == "" {
+			src = "(无配置文件，仅环境变量)"
+		}
+		log.Info("listening", "addr", cfg.HTTPAddr, "env", cfg.Env, "config", src)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errc <- err
 		}

@@ -98,7 +98,7 @@ type Service struct {
 	Dev       bool
 }
 
-const planCols = `code, name, period, auto_renew, price_fen, first_price_fen, renew_price_fen, seats, recommended, apple_product_id, entitlements, on_sale, sort`
+const planCols = `code, name, period_type, is_auto_renew, price_amt, first_price_amt, renew_price_amt, seats, is_recommended, apple_product_id, entitlements, is_on_sale, sort`
 
 func scanPlan(r pgx.Row) (Plan, error) {
 	var p Plan
@@ -112,7 +112,7 @@ func scanPlan(r pgx.Row) (Plan, error) {
 
 // Plans lists plans, optionally only those on sale.
 func (s *Service) Plans(ctx context.Context, onSaleOnly bool) ([]Plan, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT `+planCols+` FROM plans WHERE ($1 = false OR on_sale) ORDER BY sort, code`, onSaleOnly)
+	rows, err := s.Pool.Query(ctx, `SELECT `+planCols+` FROM src.src_ord_plan WHERE ($1 = false OR is_on_sale) ORDER BY sort, code`, onSaleOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -121,15 +121,15 @@ func (s *Service) Plans(ctx context.Context, onSaleOnly bool) ([]Plan, error) {
 
 // Plan loads one plan.
 func (s *Service) Plan(ctx context.Context, q db.Querier, code string) (Plan, error) {
-	p, err := scanPlan(q.QueryRow(ctx, `SELECT `+planCols+` FROM plans WHERE code=$1`, code))
+	p, err := scanPlan(q.QueryRow(ctx, `SELECT `+planCols+` FROM src.src_ord_plan WHERE code=$1`, code))
 	if db.IsNoRows(err) {
 		return p, httpx.NotFound("套餐")
 	}
 	return p, err
 }
 
-const orderCols = `o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.amount_fen, o.channel, o.kind, o.status, o.trade_no,
-	o.app_account_token, o.created_at, o.paid_at, o.refunded_at`
+const orderCols = `o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.order_amt, o.channel, o.order_type, o.status, o.trade_no,
+	o.app_account_token, o.create_time, o.pay_time, o.refund_time`
 
 func scanOrder(r pgx.Row) (Order, error) {
 	var o Order
@@ -142,7 +142,7 @@ func scanOrder(r pgx.Row) (Order, error) {
 
 // GetOrder loads an order (user=0 for admin).
 func (s *Service) GetOrder(ctx context.Context, q db.Querier, no string, user int64) (Order, error) {
-	o, err := scanOrder(q.QueryRow(ctx, `SELECT `+orderCols+` FROM orders o JOIN users u ON u.id=o.user_id WHERE o.order_no=$1 AND ($2=0 OR o.user_id=$2)`, no, user))
+	o, err := scanOrder(q.QueryRow(ctx, `SELECT `+orderCols+` FROM src.src_ord_order o JOIN src.src_usr_user u ON u.id=o.user_id WHERE o.order_no=$1 AND ($2=0 OR o.user_id=$2)`, no, user))
 	if db.IsNoRows(err) {
 		return o, httpx.NotFound("订单")
 	}
@@ -165,7 +165,7 @@ func (s *Service) CreateOrder(ctx context.Context, user int64, planCode, channel
 	}
 	var verified bool
 	var adult *bool
-	if err := s.Pool.QueryRow(ctx, `SELECT realname_verified, is_adult FROM users WHERE id=$1`, user).Scan(&verified, &adult); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT is_realname_verified, is_adult FROM src.src_usr_user WHERE id=$1`, user).Scan(&verified, &adult); err != nil {
 		return Order{}, nil, err
 	}
 	if adult != nil && !*adult {
@@ -184,7 +184,7 @@ func (s *Service) CreateOrder(ctx context.Context, user int64, planCode, channel
 	amount := p.PriceFen
 	if p.FirstPriceFen != nil {
 		var bought bool
-		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM orders WHERE user_id=$1 AND plan_code=$2 AND status IN ('paid','refunded','refund_requested'))`,
+		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ord_order WHERE user_id=$1 AND plan_code=$2 AND status IN ('paid','refunded','refund_requested'))`,
 			user, p.Code).Scan(&bought); err != nil {
 			return Order{}, nil, err
 		}
@@ -197,14 +197,14 @@ func (s *Service) CreateOrder(ctx context.Context, user int64, planCode, channel
 		t := uuid.New()
 		o.AppAccountToken = &t
 	}
-	if _, err := s.Pool.Exec(ctx, `INSERT INTO orders (order_no, user_id, plan_code, plan_name, amount_fen, channel, app_account_token)
+	if _, err := s.Pool.Exec(ctx, `INSERT INTO src.src_ord_order (order_no, user_id, plan_code, plan_name, order_amt, channel, app_account_token)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)`, o.OrderNo, user, p.Code, p.Name, amount, channel, o.AppAccountToken); err != nil {
 		return Order{}, nil, err
 	}
 	params, err := prov.Create(ctx, o, p, ip)
 	if err != nil {
 		s.Log.Error("create payment", "channel", channel, "order", o.OrderNo, "err", err)
-		_, _ = s.Pool.Exec(ctx, `UPDATE orders SET status='closed' WHERE order_no=$1`, o.OrderNo)
+		_, _ = s.Pool.Exec(ctx, `UPDATE src.src_ord_order SET status='closed' WHERE order_no=$1`, o.OrderNo)
 		return Order{}, nil, httpx.E(http.StatusBadGateway, "provider_error", "支付渠道暂时不可用，请稍后再试")
 	}
 	return o, params, nil
@@ -217,7 +217,7 @@ func (s *Service) MarkPaid(ctx context.Context, p Paid, expiresAt *time.Time) er
 }
 
 func (s *Service) markPaidTx(ctx context.Context, tx pgx.Tx, p Paid, expiresAt *time.Time) error {
-	o, err := scanOrder(tx.QueryRow(ctx, `SELECT `+orderCols+` FROM orders o JOIN users u ON u.id=o.user_id WHERE o.order_no=$1 FOR UPDATE OF o`, p.OrderNo))
+	o, err := scanOrder(tx.QueryRow(ctx, `SELECT `+orderCols+` FROM src.src_ord_order o JOIN src.src_usr_user u ON u.id=o.user_id WHERE o.order_no=$1 FOR UPDATE OF o`, p.OrderNo))
 	if db.IsNoRows(err) {
 		return fmt.Errorf("notify for unknown order %s", p.OrderNo)
 	}
@@ -233,7 +233,7 @@ func (s *Service) markPaidTx(ctx context.Context, tx pgx.Tx, p Paid, expiresAt *
 	if p.PaidAt.IsZero() {
 		p.PaidAt = time.Now()
 	}
-	if _, err := tx.Exec(ctx, `UPDATE orders SET status='paid', trade_no=$2, paid_at=$3 WHERE order_no=$1`, o.OrderNo, p.TradeNo, p.PaidAt); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ord_order SET status='paid', trade_no=$2, pay_time=$3 WHERE order_no=$1`, o.OrderNo, p.TradeNo, p.PaidAt); err != nil {
 		return err
 	}
 	plan, err := s.Plan(ctx, tx, o.PlanCode)
@@ -247,7 +247,7 @@ func (s *Service) markPaidTx(ctx context.Context, tx pgx.Tx, p Paid, expiresAt *
 func grant(ctx context.Context, tx pgx.Tx, user int64, plan Plan, channel string, expiresAt *time.Time, appleOrig *string) error {
 	now := time.Now()
 	var cur time.Time
-	err := tx.QueryRow(ctx, `SELECT expires_at FROM memberships WHERE user_id=$1 FOR UPDATE`, user).Scan(&cur)
+	err := tx.QueryRow(ctx, `SELECT expire_time FROM src.src_ord_membership WHERE user_id=$1 FOR UPDATE`, user).Scan(&cur)
 	if err != nil && !db.IsNoRows(err) {
 		return err
 	}
@@ -264,11 +264,11 @@ func grant(ctx context.Context, tx pgx.Tx, user int64, plan Plan, channel string
 	if auto {
 		next = &exp
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO memberships (user_id, plan_code, channel, expires_at, auto_renew, next_charge_at, grace_until, apple_original_transaction_id)
+	_, err = tx.Exec(ctx, `INSERT INTO src.src_ord_membership (user_id, plan_code, channel, expire_time, is_auto_renew, next_charge_time, grace_end_time, apple_original_transaction_id)
 		VALUES ($1,$2,$3,$4,$5,$6,NULL,$7)
-		ON CONFLICT (user_id) DO UPDATE SET plan_code=EXCLUDED.plan_code, channel=EXCLUDED.channel, expires_at=EXCLUDED.expires_at,
-			auto_renew=EXCLUDED.auto_renew, next_charge_at=EXCLUDED.next_charge_at, grace_until=NULL,
-			apple_original_transaction_id=COALESCE(EXCLUDED.apple_original_transaction_id, memberships.apple_original_transaction_id), updated_at=now()`,
+		ON CONFLICT (user_id) DO UPDATE SET plan_code=EXCLUDED.plan_code, channel=EXCLUDED.channel, expire_time=EXCLUDED.expire_time,
+			is_auto_renew=EXCLUDED.is_auto_renew, next_charge_time=EXCLUDED.next_charge_time, grace_end_time=NULL,
+			apple_original_transaction_id=COALESCE(EXCLUDED.apple_original_transaction_id, src.src_ord_membership.apple_original_transaction_id), update_time=now()`,
 		user, plan.Code, channel, exp, auto, next, appleOrig)
 	if err != nil {
 		return err
@@ -325,7 +325,7 @@ func (s *Service) AppleTransaction(ctx context.Context, user int64, signed strin
 func (s *Service) applyAppleTx(ctx context.Context, dbtx pgx.Tx, user int64, tx AppleTransaction) error {
 	// Already processed?
 	var exists bool
-	if err := dbtx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM orders WHERE channel='apple_iap' AND trade_no=$1)`, tx.TransactionID).Scan(&exists); err != nil {
+	if err := dbtx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ord_order WHERE channel='apple_iap' AND trade_no=$1)`, tx.TransactionID).Scan(&exists); err != nil {
 		return err
 	}
 	if exists {
@@ -334,7 +334,7 @@ func (s *Service) applyAppleTx(ctx context.Context, dbtx pgx.Tx, user int64, tx 
 	var o Order
 	var err error
 	if tx.AppAccountToken != "" {
-		o, err = scanOrder(dbtx.QueryRow(ctx, `SELECT `+orderCols+` FROM orders o JOIN users u ON u.id=o.user_id
+		o, err = scanOrder(dbtx.QueryRow(ctx, `SELECT `+orderCols+` FROM src.src_ord_order o JOIN src.src_usr_user u ON u.id=o.user_id
 			WHERE o.app_account_token=$1 FOR UPDATE OF o`, tx.AppAccountToken))
 	} else {
 		err = pgx.ErrNoRows
@@ -351,7 +351,7 @@ func (s *Service) applyAppleTx(ctx context.Context, dbtx pgx.Tx, user int64, tx 
 		if plan.AppleProductID == nil || *plan.AppleProductID != tx.ProductID {
 			return httpx.BadRequest("invalid_transaction", "商品与订单不一致")
 		}
-		if _, err := dbtx.Exec(ctx, `UPDATE orders SET status='paid', trade_no=$2, paid_at=$3 WHERE order_no=$1`,
+		if _, err := dbtx.Exec(ctx, `UPDATE src.src_ord_order SET status='paid', trade_no=$2, pay_time=$3 WHERE order_no=$1`,
 			o.OrderNo, tx.TransactionID, time.UnixMilli(tx.PurchaseDate)); err != nil {
 			return err
 		}
@@ -359,20 +359,20 @@ func (s *Service) applyAppleTx(ctx context.Context, dbtx pgx.Tx, user int64, tx 
 		// A renewal (or an order whose token we no longer have): find the
 		// user through the original transaction and record a renewal order.
 		var owner int64
-		err := dbtx.QueryRow(ctx, `SELECT user_id FROM memberships WHERE apple_original_transaction_id=$1`, tx.OriginalTransactionID).Scan(&owner)
+		err := dbtx.QueryRow(ctx, `SELECT user_id FROM src.src_ord_membership WHERE apple_original_transaction_id=$1`, tx.OriginalTransactionID).Scan(&owner)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("对应的订单")
 		}
 		if err != nil {
 			return err
 		}
-		if err := dbtx.QueryRow(ctx, `SELECT `+planCols+` FROM plans WHERE apple_product_id=$1`, tx.ProductID).Scan(
+		if err := dbtx.QueryRow(ctx, `SELECT `+planCols+` FROM src.src_ord_plan WHERE apple_product_id=$1`, tx.ProductID).Scan(
 			&plan.Code, &plan.Name, &plan.Period, &plan.AutoRenew, &plan.PriceFen, &plan.FirstPriceFen, &plan.RenewPriceFen, &plan.Seats,
 			&plan.Recommended, &plan.AppleProductID, &plan.Entitlements, &plan.OnSale, &plan.Sort); err != nil {
 			return err
 		}
 		o = Order{OrderNo: newOrderNo(), UserID: owner}
-		if _, err := dbtx.Exec(ctx, `INSERT INTO orders (order_no, user_id, plan_code, plan_name, amount_fen, channel, kind, status, trade_no, paid_at)
+		if _, err := dbtx.Exec(ctx, `INSERT INTO src.src_ord_order (order_no, user_id, plan_code, plan_name, order_amt, channel, order_type, status, trade_no, pay_time)
 			VALUES ($1,$2,$3,$4,$5,'apple_iap','renewal','paid',$6,$7)`, o.OrderNo, owner, plan.Code, plan.Name, plan.RenewPriceFen,
 			tx.TransactionID, time.UnixMilli(tx.PurchaseDate)); err != nil {
 			return err
@@ -418,17 +418,17 @@ func (s *Service) AppleNotification(ctx context.Context, signedPayload string) e
 		if err := s.Apple.Verifier.Decode(n.Data.SignedRenewalInfo, &ri); err != nil {
 			return err
 		}
-		_, err := s.Pool.Exec(ctx, `UPDATE memberships SET auto_renew=$2, next_charge_at=CASE WHEN $2 THEN expires_at END, updated_at=now()
+		_, err := s.Pool.Exec(ctx, `UPDATE src.src_ord_membership SET is_auto_renew=$2, next_charge_time=CASE WHEN $2 THEN expire_time END, update_time=now()
 			WHERE apple_original_transaction_id=$1`, ri.OriginalTransactionID, ri.AutoRenewStatus == 1)
 		return err
 	case "DID_FAIL_TO_RENEW":
-		_, err := s.Pool.Exec(ctx, `UPDATE memberships SET grace_until=expires_at + interval '3 days', updated_at=now()
+		_, err := s.Pool.Exec(ctx, `UPDATE src.src_ord_membership SET grace_end_time=expire_time + interval '3 days', update_time=now()
 			WHERE apple_original_transaction_id=$1`, tx.OriginalTransactionID)
 		return err
 	case "REFUND", "REVOKE":
 		return pgx.BeginFunc(ctx, s.Pool, func(dbtx pgx.Tx) error {
 			var no string
-			err := dbtx.QueryRow(ctx, `UPDATE orders SET status='refunded', refunded_at=now(), refund_reason='App Store 退款'
+			err := dbtx.QueryRow(ctx, `UPDATE src.src_ord_order SET status='refunded', refund_time=now(), refund_reason='App Store 退款'
 				WHERE channel='apple_iap' AND trade_no=$1 RETURNING order_no`, tx.TransactionID).Scan(&no)
 			if db.IsNoRows(err) {
 				return nil
@@ -446,13 +446,13 @@ func (s *Service) AppleNotification(ctx context.Context, signedPayload string) e
 func revoke(ctx context.Context, tx pgx.Tx, orderNo string) error {
 	var user int64
 	var period string
-	if err := tx.QueryRow(ctx, `SELECT o.user_id, p.period FROM orders o JOIN plans p ON p.code=o.plan_code WHERE o.order_no=$1`, orderNo).Scan(&user, &period); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT o.user_id, p.period_type FROM src.src_ord_order o JOIN src.src_ord_plan p ON p.code=o.plan_code WHERE o.order_no=$1`, orderNo).Scan(&user, &period); err != nil {
 		return err
 	}
 	interval := map[string]string{"month": "1 month", "quarter": "3 months", "year": "1 year"}[period]
-	_, err := tx.Exec(ctx, `UPDATE memberships SET expires_at = GREATEST(now(), expires_at - $2::interval),
-		auto_renew = CASE WHEN expires_at - $2::interval <= now() THEN false ELSE auto_renew END,
-		next_charge_at = CASE WHEN expires_at - $2::interval <= now() THEN NULL ELSE next_charge_at END, grace_until=NULL, updated_at=now()
+	_, err := tx.Exec(ctx, `UPDATE src.src_ord_membership SET expire_time = GREATEST(now(), expire_time - $2::interval),
+		is_auto_renew = CASE WHEN expire_time - $2::interval <= now() THEN false ELSE is_auto_renew END,
+		next_charge_time = CASE WHEN expire_time - $2::interval <= now() THEN NULL ELSE next_charge_time END, grace_end_time=NULL, update_time=now()
 		WHERE user_id=$1`, user, interval)
 	if err != nil {
 		return err
@@ -481,7 +481,7 @@ func (s *Service) Refund(ctx context.Context, orderNo, reason string) (Order, er
 		return o, httpx.E(http.StatusBadGateway, "provider_error", "退款请求失败：%v", err)
 	}
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE orders SET status='refunded', refunded_at=now(), refund_reason=$2 WHERE order_no=$1`, orderNo, reason); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ord_order SET status='refunded', refund_time=now(), refund_reason=$2 WHERE order_no=$1`, orderNo, reason); err != nil {
 			return err
 		}
 		return revoke(ctx, tx, orderNo)
@@ -495,7 +495,7 @@ func (s *Service) Refund(ctx context.Context, orderNo, reason string) (Order, er
 // SetAutoRenew turns auto-renew on/off for WeChat/Alipay/mock memberships.
 func (s *Service) SetAutoRenew(ctx context.Context, user int64, enabled bool) error {
 	var channel, plan string
-	err := s.Pool.QueryRow(ctx, `SELECT channel, plan_code FROM memberships WHERE user_id=$1`, user).Scan(&channel, &plan)
+	err := s.Pool.QueryRow(ctx, `SELECT channel, plan_code FROM src.src_ord_membership WHERE user_id=$1`, user).Scan(&channel, &plan)
 	if db.IsNoRows(err) {
 		return httpx.NotFound("会员")
 	}
@@ -512,22 +512,22 @@ func (s *Service) SetAutoRenew(ctx context.Context, user int64, enabled bool) er
 	if enabled && !p.AutoRenew {
 		return httpx.BadRequest("plan_not_renewable", "这个套餐不支持自动续费")
 	}
-	_, err = s.Pool.Exec(ctx, `UPDATE memberships SET auto_renew=$2, next_charge_at=CASE WHEN $2 THEN expires_at END, updated_at=now() WHERE user_id=$1`, user, enabled)
+	_, err = s.Pool.Exec(ctx, `UPDATE src.src_ord_membership SET is_auto_renew=$2, next_charge_time=CASE WHEN $2 THEN expire_time END, update_time=now() WHERE user_id=$1`, user, enabled)
 	return err
 }
 
 // GiftDays extends a membership (admin 赠送 7 天会员).
 func (s *Service) GiftDays(ctx context.Context, tx pgx.Tx, user int64, days int) error {
 	var exists bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM memberships WHERE user_id=$1)`, user).Scan(&exists); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ord_membership WHERE user_id=$1)`, user).Scan(&exists); err != nil {
 		return err
 	}
 	if exists {
-		_, err := tx.Exec(ctx, `UPDATE memberships SET expires_at=GREATEST(expires_at, now()) + make_interval(days => $2),
-			next_charge_at=CASE WHEN auto_renew THEN GREATEST(expires_at, now()) + make_interval(days => $2) END, updated_at=now() WHERE user_id=$1`, user, days)
+		_, err := tx.Exec(ctx, `UPDATE src.src_ord_membership SET expire_time=GREATEST(expire_time, now()) + make_interval(days => $2),
+			next_charge_time=CASE WHEN is_auto_renew THEN GREATEST(expire_time, now()) + make_interval(days => $2) END, update_time=now() WHERE user_id=$1`, user, days)
 		return err
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO memberships (user_id, plan_code, channel, expires_at) VALUES ($1, 'month', 'gift', now() + make_interval(days => $2))`, user, days)
+	_, err := tx.Exec(ctx, `INSERT INTO src.src_ord_membership (user_id, plan_code, channel, expire_time) VALUES ($1, 'month', 'gift', now() + make_interval(days => $2))`, user, days)
 	return err
 }
 
@@ -537,8 +537,8 @@ func (s *Service) GiftDays(ctx context.Context, tx pgx.Tx, user int64, days int)
 // that cannot charge without the user mark the renewal failed and keep
 // benefits for a 3-day grace period.
 func (s *Service) RunRenewals(ctx context.Context) error {
-	rows, err := s.Pool.Query(ctx, `SELECT m.user_id FROM memberships m WHERE m.auto_renew AND m.channel IN ('wechat_app','alipay_app','mock')
-		AND m.next_charge_at <= now() LIMIT 200`)
+	rows, err := s.Pool.Query(ctx, `SELECT m.user_id FROM src.src_ord_membership m WHERE m.is_auto_renew AND m.channel IN ('wechat_app','alipay_app','mock')
+		AND m.next_charge_time <= now() LIMIT 200`)
 	if err != nil {
 		return err
 	}
@@ -559,7 +559,7 @@ func (s *Service) renew(ctx context.Context, user int64) error {
 		var channel, planCode string
 		var next *time.Time
 		var exp time.Time
-		err := tx.QueryRow(ctx, `SELECT channel, plan_code, next_charge_at, expires_at FROM memberships WHERE user_id=$1 FOR UPDATE`, user).
+		err := tx.QueryRow(ctx, `SELECT channel, plan_code, next_charge_time, expire_time FROM src.src_ord_membership WHERE user_id=$1 FOR UPDATE`, user).
 			Scan(&channel, &planCode, &next, &exp)
 		if err != nil {
 			return err
@@ -572,7 +572,7 @@ func (s *Service) renew(ctx context.Context, user int64) error {
 			return err
 		}
 		o := Order{OrderNo: newOrderNo(), UserID: user, PlanCode: plan.Code, PlanName: plan.Name, AmountFen: plan.RenewPriceFen, Channel: channel, Kind: "renewal"}
-		if _, err := tx.Exec(ctx, `INSERT INTO orders (order_no, user_id, plan_code, plan_name, amount_fen, channel, kind) VALUES ($1,$2,$3,$4,$5,$6,'renewal')`,
+		if _, err := tx.Exec(ctx, `INSERT INTO src.src_ord_order (order_no, user_id, plan_code, plan_name, order_amt, channel, order_type) VALUES ($1,$2,$3,$4,$5,$6,'renewal')`,
 			o.OrderNo, user, plan.Code, plan.Name, o.AmountFen, channel); err != nil {
 			return err
 		}
@@ -584,16 +584,16 @@ func (s *Service) renew(ctx context.Context, user int64) error {
 			err = ErrUnsupported
 		}
 		if err != nil {
-			if _, err := tx.Exec(ctx, `UPDATE orders SET status='renew_failed' WHERE order_no=$1`, o.OrderNo); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ord_order SET status='renew_failed' WHERE order_no=$1`, o.OrderNo); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, `UPDATE memberships SET next_charge_at=NULL, auto_renew=false, grace_until=expires_at + interval '3 days', updated_at=now() WHERE user_id=$1`, user); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ord_membership SET next_charge_time=NULL, is_auto_renew=false, grace_end_time=expire_time + interval '3 days', update_time=now() WHERE user_id=$1`, user); err != nil {
 				return err
 			}
 			return inbox.Notify(ctx, tx, user, inbox.System, "自动续费失败",
 				"会员自动续费没有成功，权益为你保留 3 天，请在「我的 > 会员」重新开通。", map[string]any{"order_no": o.OrderNo})
 		}
-		if _, err := tx.Exec(ctx, `UPDATE orders SET status='paid', trade_no=$2, paid_at=now() WHERE order_no=$1`, o.OrderNo, trade); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ord_order SET status='paid', trade_no=$2, pay_time=now() WHERE order_no=$1`, o.OrderNo, trade); err != nil {
 			return err
 		}
 		return grant(ctx, tx, user, plan, channel, nil, nil)
@@ -602,10 +602,10 @@ func (s *Service) renew(ctx context.Context, user int64) error {
 
 // RunReminders sends the 扣费前 5 天提醒 once per charge date.
 func (s *Service) RunReminders(ctx context.Context) error {
-	rows, err := s.Pool.Query(ctx, `UPDATE memberships SET reminded_for=next_charge_at
-		WHERE auto_renew AND channel <> 'apple_iap' AND next_charge_at BETWEEN now() AND now() + interval '5 days'
-		  AND reminded_for IS DISTINCT FROM next_charge_at
-		RETURNING user_id, next_charge_at, (SELECT renew_price_fen FROM plans WHERE code=plan_code)`)
+	rows, err := s.Pool.Query(ctx, `UPDATE src.src_ord_membership SET reminded_charge_time=next_charge_time
+		WHERE is_auto_renew AND channel <> 'apple_iap' AND next_charge_time BETWEEN now() AND now() + interval '5 days'
+		  AND reminded_charge_time IS DISTINCT FROM next_charge_time
+		RETURNING user_id, next_charge_time, (SELECT renew_price_amt FROM src.src_ord_plan WHERE code=plan_code)`)
 	if err != nil {
 		return err
 	}
@@ -633,6 +633,6 @@ func (s *Service) RunReminders(ctx context.Context) error {
 
 // CloseStale closes unpaid orders older than 2 hours.
 func (s *Service) CloseStale(ctx context.Context) error {
-	_, err := s.Pool.Exec(ctx, `UPDATE orders SET status='closed' WHERE status='created' AND created_at < now() - interval '2 hours'`)
+	_, err := s.Pool.Exec(ctx, `UPDATE src.src_ord_order SET status='closed' WHERE status='created' AND create_time < now() - interval '2 hours'`)
 	return err
 }

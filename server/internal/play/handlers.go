@@ -51,8 +51,8 @@ const env = `ST_MakeEnvelope($1,$2,$3,$4,4326)`
 // Objects lists monsters, chests and checkpoints in the viewport (user=0: admin).
 func (s *Service) Objects(ctx context.Context, b territory.BBox, user int64) (MapObjects, error) {
 	out := MapObjects{Bosses: []BossSummary{}, Chests: []ChestView{}, Checkpoints: []CheckpointPin{}}
-	rows, err := s.Pool.Query(ctx, `SELECT `+bossCols+` FROM bosses b WHERE b.status='active'
-		AND ST_DWithin(b.center::geography, `+env+`::geography, b.radius_m) ORDER BY b.id LIMIT 100`, b[0], b[1], b[2], b[3])
+	rows, err := s.Pool.Query(ctx, `SELECT `+bossCols+` FROM src.src_ply_boss b WHERE b.status='active'
+		AND ST_DWithin(b.center_geom::geography, `+env+`::geography, b.radius_m) ORDER BY b.id LIMIT 100`, b[0], b[1], b[2], b[3])
 	if err != nil {
 		return out, err
 	}
@@ -62,9 +62,9 @@ func (s *Service) Objects(ctx context.Context, b territory.BBox, user int64) (Ma
 	if out.Bosses == nil {
 		out.Bosses = []BossSummary{}
 	}
-	rows, err = s.Pool.Query(ctx, `SELECT c.id, ST_Y(c.center), ST_X(c.center), c.radius_m, c.expires_at FROM chests c
-		WHERE c.expires_at > now() AND c.removed_at IS NULL AND c.center && `+env+`
-		  AND ($5 = 0 OR NOT EXISTS (SELECT 1 FROM chest_opens o WHERE o.chest_id=c.id AND o.user_id=$5))
+	rows, err = s.Pool.Query(ctx, `SELECT c.id, ST_Y(c.center_geom), ST_X(c.center_geom), c.radius_m, c.expire_time FROM src.src_ply_chest c
+		WHERE c.expire_time > now() AND c.remove_time IS NULL AND c.center_geom && `+env+`
+		  AND ($5 = 0 OR NOT EXISTS (SELECT 1 FROM src.src_ply_chest_open o WHERE o.chest_id=c.id AND o.user_id=$5))
 		ORDER BY c.id LIMIT 300`, b[0], b[1], b[2], b[3], user)
 	if err != nil {
 		return out, err
@@ -120,10 +120,10 @@ type Campaign struct {
 
 // Campaigns lists campaigns (activeOnly for the app).
 func (s *Service) Campaigns(ctx context.Context, user int64, activeOnly bool) ([]Campaign, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT c.id, c.title, c.type, c.description, c.rules, c.starts_at, c.ends_at, c.reward_energy, c.reward_medal_name,
-			EXISTS (SELECT 1 FROM campaign_completions x WHERE x.campaign_id=c.id AND x.user_id=$1),
-			(SELECT count(*) FROM campaign_completions x WHERE x.campaign_id=c.id)
-		FROM campaigns c WHERE ($2 = false OR (c.starts_at <= now() AND c.ends_at > now())) ORDER BY c.starts_at DESC LIMIT 200`, user, activeOnly)
+	rows, err := s.Pool.Query(ctx, `SELECT c.id, c.title, c.campaign_type, c.description, c.rules_json, c.start_time, c.end_time, c.reward_energy, c.reward_medal_name,
+			EXISTS (SELECT 1 FROM src.src_mkt_campaign_done x WHERE x.campaign_id=c.id AND x.user_id=$1),
+			(SELECT count(*) FROM src.src_mkt_campaign_done x WHERE x.campaign_id=c.id)
+		FROM src.src_mkt_campaign c WHERE ($2 = false OR (c.start_time <= now() AND c.end_time > now())) ORDER BY c.start_time DESC LIMIT 200`, user, activeOnly)
 	if err != nil {
 		return nil, err
 	}
@@ -170,9 +170,9 @@ type CheckpointView struct {
 }
 
 func (s *Service) routes(ctx context.Context, user int64, where string, args ...any) ([]RouteView, error) {
-	rows, err := s.Pool.Query(ctx, `SELECT r.id, r.name, r.description, r.reward_energy, r.starts_at, r.ends_at, r.checkpoints,
-			COALESCE(p.next_index,0), p.completed_at, (SELECT count(*) FROM route_progress x WHERE x.route_id=r.id AND x.completed_at IS NOT NULL)
-		FROM routes r LEFT JOIN route_progress p ON p.route_id=r.id AND p.user_id=$1 WHERE `+where+` ORDER BY r.starts_at DESC`, append([]any{user}, args...)...)
+	rows, err := s.Pool.Query(ctx, `SELECT r.id, r.name, r.description, r.reward_energy, r.start_time, r.end_time, r.checkpoints_json,
+			COALESCE(p.next_index,0), p.complete_time, (SELECT count(*) FROM src.src_ply_route_progress x WHERE x.route_id=r.id AND x.complete_time IS NOT NULL)
+		FROM src.src_ply_route r LEFT JOIN src.src_ply_route_progress p ON p.route_id=r.id AND p.user_id=$1 WHERE `+where+` ORDER BY r.start_time DESC`, append([]any{user}, args...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *Service) Routes(ctx context.Context, user int64) ([]RouteView, error) {
 	if user == 0 {
 		return s.routes(ctx, 0, `TRUE`)
 	}
-	return s.routes(ctx, user, `r.starts_at <= now() AND r.ends_at > now()`)
+	return s.routes(ctx, user, `r.start_time <= now() AND r.end_time > now()`)
 }
 
 // ---------------------------------------------------------------- app handler
@@ -442,6 +442,7 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, ops func(httpx.HandlerFunc) ht
 	mux.Handle("PATCH /admin/v1/routes/{id}", ops(h.patchRoute))
 	mux.Handle("DELETE /admin/v1/routes/{id}", ops(h.deleteRoute))
 	mux.Handle("GET /admin/v1/league", ops(h.league))
+	mux.Handle("GET /admin/v1/districts", ops(h.districts))
 }
 
 func (h *AdminHandler) audit(r *http.Request, action, target string, detail map[string]any) error {
@@ -516,21 +517,23 @@ func (h *AdminHandler) endBoss(w http.ResponseWriter, r *http.Request) error {
 
 func (h *AdminHandler) chests(w http.ResponseWriter, r *http.Request) error {
 	p := httpx.GetPage(r)
-	where := map[string]string{
-		"active":  `c.expires_at > now() AND c.removed_at IS NULL`,
-		"expired": `(c.expires_at <= now() OR c.removed_at IS NOT NULL)`,
+	where, ok := map[string]string{
+		"":        `TRUE`,
+		"active":  `c.expire_time > now() AND c.remove_time IS NULL`,
+		"expired": `c.expire_time <= now() AND c.remove_time IS NULL`,
+		"removed": `c.remove_time IS NOT NULL`,
 	}[r.URL.Query().Get("status")]
-	if where == "" {
-		where = "TRUE"
+	if !ok {
+		return httpx.BadRequest("invalid_status", "status 取值 active / expired / removed")
 	}
 	var total int
-	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT count(*) FROM chests c WHERE `+where).Scan(&total); err != nil {
+	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_ply_chest c WHERE `+where).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT c.id, ST_Y(c.center), ST_X(c.center), c.radius_m, c.expires_at, c.energy_min, c.energy_max,
-			(SELECT count(*) FROM chest_opens o WHERE o.chest_id=c.id), c.source,
-			CASE WHEN c.removed_at IS NOT NULL THEN 'removed' WHEN c.expires_at <= now() THEN 'expired' ELSE 'active' END
-		FROM chests c WHERE `+where+` ORDER BY c.id DESC LIMIT $1 OFFSET $2`, p.Size, p.Offset())
+	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT c.id, ST_Y(c.center_geom), ST_X(c.center_geom), c.radius_m, c.expire_time, c.energy_min, c.energy_max,
+			(SELECT count(*) FROM src.src_ply_chest_open o WHERE o.chest_id=c.id), c.source,
+			CASE WHEN c.remove_time IS NOT NULL THEN 'removed' WHEN c.expire_time <= now() THEN 'expired' ELSE 'active' END
+		FROM src.src_ply_chest c WHERE `+where+` ORDER BY c.id DESC LIMIT $1 OFFSET $2`, p.Size, p.Offset())
 	if err != nil {
 		return err
 	}
@@ -602,7 +605,7 @@ func (h *AdminHandler) removeChest(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if _, err := h.Svc.Pool.Exec(r.Context(), `UPDATE chests SET removed_at=now() WHERE id=$1 AND removed_at IS NULL`, id); err != nil {
+	if _, err := h.Svc.Pool.Exec(r.Context(), `UPDATE src.src_ply_chest SET remove_time=now() WHERE id=$1 AND remove_time IS NULL`, id); err != nil {
 		return err
 	}
 	if err := h.audit(r, "chest.remove", "chest:"+itoa(id), nil); err != nil {
@@ -612,7 +615,7 @@ func (h *AdminHandler) removeChest(w http.ResponseWriter, r *http.Request) error
 }
 
 func (h *AdminHandler) seasons(w http.ResponseWriter, r *http.Request) error {
-	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT id, name, starts_at, ends_at, settled_at FROM seasons ORDER BY starts_at DESC`)
+	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT id, name, start_time, end_time, settle_time FROM src.src_ply_season ORDER BY start_time DESC`)
 	if err != nil {
 		return err
 	}
@@ -639,7 +642,7 @@ func (h *AdminHandler) createSeason(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	var id int64
-	err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO seasons (name, starts_at, ends_at) VALUES ($1,$2,$3) RETURNING id`, in.Name, in.StartsAt, in.EndsAt).Scan(&id)
+	err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO src.src_ply_season (name, start_time, end_time) VALUES ($1,$2,$3) RETURNING id`, in.Name, in.StartsAt, in.EndsAt).Scan(&id)
 	if err := overlapErr(err); err != nil {
 		return err
 	}
@@ -661,7 +664,7 @@ func (h *AdminHandler) patchSeason(w http.ResponseWriter, r *http.Request) error
 	if err := in.validate(); err != nil {
 		return err
 	}
-	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE seasons SET name=$2, starts_at=$3, ends_at=$4 WHERE id=$1 AND settled_at IS NULL`, id, in.Name, in.StartsAt, in.EndsAt)
+	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE src.src_ply_season SET name=$2, start_time=$3, end_time=$4 WHERE id=$1 AND settle_time IS NULL`, id, in.Name, in.StartsAt, in.EndsAt)
 	if err := overlapErr(err); err != nil {
 		return err
 	}
@@ -744,7 +747,7 @@ func (h *AdminHandler) createCampaign(w http.ResponseWriter, r *http.Request) er
 	}
 	ad, _ := httpx.AdminFrom(r.Context())
 	var id int64
-	if err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO campaigns (title, type, description, rules, starts_at, ends_at, reward_energy, reward_medal_name, created_by)
+	if err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO src.src_mkt_campaign (title, campaign_type, description, rules_json, start_time, end_time, reward_energy, reward_medal_name, created_by)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,NULLIF($8,''),$9) RETURNING id`, in.Title, in.Type, in.Description, []byte(in.Rules), in.StartsAt, in.EndsAt,
 		in.RewardEnergy, deref(in.RewardMedalName), ad.ID).Scan(&id); err != nil {
 		return err
@@ -767,7 +770,7 @@ func (h *AdminHandler) patchCampaign(w http.ResponseWriter, r *http.Request) err
 	if err := in.validate(); err != nil {
 		return err
 	}
-	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE campaigns SET title=$2, type=$3, description=$4, rules=$5, starts_at=$6, ends_at=$7, reward_energy=$8,
+	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE src.src_mkt_campaign SET title=$2, campaign_type=$3, description=$4, rules_json=$5, start_time=$6, end_time=$7, reward_energy=$8,
 		reward_medal_name=NULLIF($9,'') WHERE id=$1`, id, in.Title, in.Type, in.Description, []byte(in.Rules), in.StartsAt, in.EndsAt, in.RewardEnergy, deref(in.RewardMedalName))
 	if err != nil {
 		return err
@@ -786,7 +789,7 @@ func (h *AdminHandler) deleteCampaign(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	tag, err := h.Svc.Pool.Exec(r.Context(), `DELETE FROM campaigns WHERE id=$1 AND starts_at > now()`, id)
+	tag, err := h.Svc.Pool.Exec(r.Context(), `DELETE FROM src.src_mkt_campaign WHERE id=$1 AND start_time > now()`, id)
 	if err != nil {
 		return err
 	}
@@ -842,7 +845,7 @@ func (h *AdminHandler) createRoute(w http.ResponseWriter, r *http.Request) error
 	cps, _ := json.Marshal(in.Checkpoints)
 	ad, _ := httpx.AdminFrom(r.Context())
 	var id int64
-	if err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO routes (name, description, checkpoints, reward_energy, starts_at, ends_at, created_by)
+	if err := h.Svc.Pool.QueryRow(r.Context(), `INSERT INTO src.src_ply_route (name, description, checkpoints_json, reward_energy, start_time, end_time, created_by)
 		VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, in.Name, in.Description, cps, in.RewardEnergy, in.StartsAt, in.EndsAt, ad.ID).Scan(&id); err != nil {
 		return err
 	}
@@ -865,7 +868,7 @@ func (h *AdminHandler) patchRoute(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	cps, _ := json.Marshal(in.Checkpoints)
-	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE routes SET name=$2, description=$3, checkpoints=$4, reward_energy=$5, starts_at=$6, ends_at=$7 WHERE id=$1`,
+	tag, err := h.Svc.Pool.Exec(r.Context(), `UPDATE src.src_ply_route SET name=$2, description=$3, checkpoints_json=$4, reward_energy=$5, start_time=$6, end_time=$7 WHERE id=$1`,
 		id, in.Name, in.Description, cps, in.RewardEnergy, in.StartsAt, in.EndsAt)
 	if err != nil {
 		return err
@@ -874,7 +877,7 @@ func (h *AdminHandler) patchRoute(w http.ResponseWriter, r *http.Request) error 
 		return httpx.NotFound("路线")
 	}
 	// Changing the points invalidates partial progress.
-	if _, err := h.Svc.Pool.Exec(r.Context(), `UPDATE route_progress SET next_index=0 WHERE route_id=$1 AND completed_at IS NULL`, id); err != nil {
+	if _, err := h.Svc.Pool.Exec(r.Context(), `UPDATE src.src_ply_route_progress SET next_index=0 WHERE route_id=$1 AND complete_time IS NULL`, id); err != nil {
 		return err
 	}
 	if err := h.audit(r, "route.update", "route:"+itoa(id), map[string]any{"name": in.Name}); err != nil {
@@ -888,7 +891,7 @@ func (h *AdminHandler) deleteRoute(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	tag, err := h.Svc.Pool.Exec(r.Context(), `DELETE FROM routes WHERE id=$1`, id)
+	tag, err := h.Svc.Pool.Exec(r.Context(), `DELETE FROM src.src_ply_route WHERE id=$1`, id)
 	if err != nil {
 		return err
 	}
@@ -928,4 +931,21 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// districts lists the districts that have crews (for the league selector).
+func (h *AdminHandler) districts(w http.ResponseWriter, r *http.Request) error {
+	rows, err := h.Svc.Pool.Query(r.Context(), `SELECT district, count(*) FROM src.src_soc_crew GROUP BY district ORDER BY count(*) DESC, district`)
+	if err != nil {
+		return err
+	}
+	type d struct {
+		Name  string `json:"name"`
+		Crews int    `json:"crews"`
+	}
+	items, err := pgx.CollectRows(rows, pgx.RowToStructByPos[d])
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, httpx.NewItems(items))
 }

@@ -141,8 +141,8 @@ type AdminReward struct {
 	Energy int          `json:"energy"`
 }
 
-const bossCols = `b.id, b.kind, b.name, b.level, ST_Y(b.center), ST_X(b.center), b.radius_m, b.hp, b.hp_max, b.status,
-	b.spawned_at, b.expires_at, b.location_name, (SELECT count(DISTINCT user_id) FROM boss_hits h WHERE h.boss_id=b.id), b.spawned_by`
+const bossCols = `b.id, b.boss_type, b.name, b.level, ST_Y(b.center_geom), ST_X(b.center_geom), b.radius_m, b.hp, b.hp_max, b.status,
+	b.spawn_time, b.expire_time, b.location_name, (SELECT count(DISTINCT user_id) FROM src.src_ply_boss_hit h WHERE h.boss_id=b.id), b.spawned_by`
 
 func scanBoss(r pgx.Row) (BossSummary, error) {
 	var b BossSummary
@@ -199,7 +199,7 @@ func (s *Service) Spawn(ctx context.Context, in SpawnInput, adminID int64) (int6
 		by = &adminID
 	}
 	var id int64
-	err := s.Pool.QueryRow(ctx, `INSERT INTO bosses (kind, name, level, location_name, center, radius_m, hp_max, hp, drops, spawned_by, expires_at)
+	err := s.Pool.QueryRow(ctx, `INSERT INTO src.src_ply_boss (boss_type, name, level, location_name, center_geom, radius_m, hp_max, hp, drops_json, spawned_by, expire_time)
 		VALUES ($1,$2,$3,$4, ST_SetSRID(ST_MakePoint($5,$6),4326), $7, $8, $8, $9, $10, now() + make_interval(secs => $11)) RETURNING id`,
 		in.Kind, def.Name, in.Level, in.LocationName, in.Lng, in.Lat, in.RadiusM, in.HP, drops, by, in.DurationH*3600).Scan(&id)
 	return id, err
@@ -208,7 +208,7 @@ func (s *Service) Spawn(ctx context.Context, in SpawnInput, adminID int64) (int6
 // Get builds the boss page for viewer (0 = admin: full rank and rewards).
 func (s *Service) Get(ctx context.Context, id, viewer int64) (BossView, error) {
 	var v BossView
-	b, err := scanBoss(s.Pool.QueryRow(ctx, `SELECT `+bossCols+` FROM bosses b WHERE b.id=$1`, id))
+	b, err := scanBoss(s.Pool.QueryRow(ctx, `SELECT `+bossCols+` FROM src.src_ply_boss b WHERE b.id=$1`, id))
 	if db.IsNoRows(err) {
 		return v, httpx.NotFound("怪兽")
 	}
@@ -219,10 +219,10 @@ func (s *Service) Get(ctx context.Context, id, viewer int64) (BossView, error) {
 	cfg := s.Config.For(viewer)
 	v.Description = bossDesc[b.Kind]
 	var dropsRaw []byte
-	if err := s.Pool.QueryRow(ctx, `SELECT drops, CASE WHEN status='defeated' THEN ended_at END,
-			(SELECT count(*) FROM territories t WHERE t.owner_user_id IS NOT NULL
-			   AND ST_DWithin(ST_PointOnSurface(t.geom)::geography, b.center::geography, b.radius_m))
-		FROM bosses b WHERE id=$1`, id).Scan(&dropsRaw, &v.DefeatedAt, &v.OccupiedTerritories); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT drops_json, CASE WHEN status='defeated' THEN end_time END,
+			(SELECT count(*) FROM src.src_ter_territory t WHERE t.owner_user_id IS NOT NULL
+			   AND ST_DWithin(ST_PointOnSurface(t.area_geom)::geography, b.center_geom::geography, b.radius_m))
+		FROM src.src_ply_boss b WHERE id=$1`, id).Scan(&dropsRaw, &v.DefeatedAt, &v.OccupiedTerritories); err != nil {
 		return v, err
 	}
 	v.EffectText = fmt.Sprintf("范围内领地每日能量产出减少 %.0f%%", cfg.Boss.YieldPenaltyPct)
@@ -247,7 +247,7 @@ func (s *Service) Get(ctx context.Context, id, viewer int64) (BossView, error) {
 		limit = 10000
 	}
 	rows, err := s.Pool.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url, sum(h.damage)::int AS dmg
-		FROM boss_hits h JOIN users u ON u.id=h.user_id WHERE h.boss_id=$1 GROUP BY u.id ORDER BY dmg DESC, min(h.id) LIMIT $2`, id, limit)
+		FROM src.src_ply_boss_hit h JOIN src.src_usr_user u ON u.id=h.user_id WHERE h.boss_id=$1 GROUP BY u.id ORDER BY dmg DESC, min(h.id) LIMIT $2`, id, limit)
 	if err != nil {
 		return v, err
 	}
@@ -266,27 +266,27 @@ func (s *Service) Get(ctx context.Context, id, viewer int64) (BossView, error) {
 	}
 	v.MyRewards = []RewardItem{}
 	if viewer > 0 {
-		if err := s.Pool.QueryRow(ctx, `SELECT COALESCE(sum(damage),0) FROM boss_hits WHERE boss_id=$1 AND user_id=$2`, id, viewer).Scan(&v.Me.Damage); err != nil {
+		if err := s.Pool.QueryRow(ctx, `SELECT COALESCE(sum(damage),0) FROM src.src_ply_boss_hit WHERE boss_id=$1 AND user_id=$2`, id, viewer).Scan(&v.Me.Damage); err != nil {
 			return v, err
 		}
 		if v.Me.Damage > 0 {
 			var r int
-			if err := s.Pool.QueryRow(ctx, `SELECT count(*)+1 FROM (SELECT user_id, sum(damage) d FROM boss_hits WHERE boss_id=$1 GROUP BY user_id) x
+			if err := s.Pool.QueryRow(ctx, `SELECT count(*)+1 FROM (SELECT user_id, sum(damage) d FROM src.src_ply_boss_hit WHERE boss_id=$1 GROUP BY user_id) x
 				WHERE x.d > $2`, id, v.Me.Damage).Scan(&r); err != nil {
 				return v, err
 			}
 			v.Me.Rank = &r
 		}
 		var until time.Time
-		if err := s.Pool.QueryRow(ctx, `SELECT until FROM boss_engagements WHERE boss_id=$1 AND user_id=$2 AND until > now()`, id, viewer).Scan(&until); err == nil {
+		if err := s.Pool.QueryRow(ctx, `SELECT engage_end_time FROM src.src_ply_boss_engage WHERE boss_id=$1 AND user_id=$2 AND engage_end_time > now()`, id, viewer).Scan(&until); err == nil {
 			v.Me.EngagedUntil = &until
 		}
 		var items []byte
-		if err := s.Pool.QueryRow(ctx, `SELECT items FROM boss_rewards WHERE boss_id=$1 AND user_id=$2`, id, viewer).Scan(&items); err == nil {
+		if err := s.Pool.QueryRow(ctx, `SELECT items_json FROM src.src_ply_boss_reward WHERE boss_id=$1 AND user_id=$2`, id, viewer).Scan(&items); err == nil {
 			_ = json.Unmarshal(items, &v.MyRewards)
 		}
 	} else {
-		rows, err := s.Pool.Query(ctx, `SELECT u.id, u.nickname, r.rank, r.damage, r.items, r.energy FROM boss_rewards r JOIN users u ON u.id=r.user_id
+		rows, err := s.Pool.Query(ctx, `SELECT u.id, u.nickname, r.rank, r.damage, r.items_json, r.energy FROM src.src_ply_boss_reward r JOIN src.src_usr_user u ON u.id=r.user_id
 			WHERE r.boss_id=$1 ORDER BY r.rank`, id)
 		if err != nil {
 			return v, err
@@ -312,7 +312,7 @@ func cooldownKey(boss, user int64) string { return fmt.Sprintf("boss:cd:%d:%d", 
 
 func inRange(ctx context.Context, q db.Querier, table string, id int64, lat, lng float64) (bool, error) {
 	var ok bool
-	err := q.QueryRow(ctx, `SELECT ST_DWithin(center::geography, ST_SetSRID(ST_MakePoint($2,$3),4326)::geography, radius_m) FROM `+table+` WHERE id=$1`,
+	err := q.QueryRow(ctx, `SELECT ST_DWithin(center_geom::geography, ST_SetSRID(ST_MakePoint($2,$3),4326)::geography, radius_m) FROM `+table+` WHERE id=$1`,
 		id, lng, lat).Scan(&ok)
 	if db.IsNoRows(err) {
 		return false, httpx.NotFound("目标")
@@ -336,7 +336,7 @@ type StrikeResult struct {
 func (s *Service) Strike(ctx context.Context, user, id int64, lat, lng float64) (StrikeResult, error) {
 	cfg := s.Config.For(user)
 	var res StrikeResult
-	ok, err := inRange(ctx, s.Pool, "bosses", id, lat, lng)
+	ok, err := inRange(ctx, s.Pool, "src.src_ply_boss", id, lat, lng)
 	if err != nil {
 		return res, err
 	}
@@ -358,7 +358,7 @@ func (s *Service) Strike(ctx context.Context, user, id int64, lat, lng float64) 
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var status string
 		var hp int
-		if err := tx.QueryRow(ctx, `SELECT status, hp FROM bosses WHERE id=$1 FOR UPDATE`, id).Scan(&status, &hp); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT status, hp FROM src.src_ply_boss WHERE id=$1 FOR UPDATE`, id).Scan(&status, &hp); err != nil {
 			return err
 		}
 		if status != "active" || hp <= 0 {
@@ -369,15 +369,15 @@ func (s *Service) Strike(ctx context.Context, user, id int64, lat, lng float64) 
 			return err
 		}
 		res.Energy = energy
-		err = tx.QueryRow(ctx, `SELECT crew_id FROM crew_members WHERE user_id=$1`, user).Scan(&crew)
+		err = tx.QueryRow(ctx, `SELECT crew_id FROM src.src_soc_crew_member WHERE user_id=$1`, user).Scan(&crew)
 		if err != nil && !db.IsNoRows(err) {
 			return err
 		}
 		bonus := 0.0
 		if crew != nil {
 			var mates int
-			if err := tx.QueryRow(ctx, `SELECT count(DISTINCT user_id) FROM boss_hits WHERE boss_id=$1 AND crew_id=$2 AND user_id<>$3
-				AND source='strike' AND created_at > now() - make_interval(secs => $4)`, id, *crew, user, cfg.Boss.ComboWindowS).Scan(&mates); err != nil {
+			if err := tx.QueryRow(ctx, `SELECT count(DISTINCT user_id) FROM src.src_ply_boss_hit WHERE boss_id=$1 AND crew_id=$2 AND user_id<>$3
+				AND source='strike' AND create_time > now() - make_interval(secs => $4)`, id, *crew, user, cfg.Boss.ComboWindowS).Scan(&mates); err != nil {
 				return err
 			}
 			res.ComboPct = math.Min(cfg.Boss.ComboMaxPct, float64(mates)*cfg.Boss.ComboPct)
@@ -391,7 +391,7 @@ func (s *Service) Strike(ctx context.Context, user, id int64, lat, lng float64) 
 		}
 		events = evs
 		res.Damage = hits.Damage
-		return tx.QueryRow(ctx, `SELECT id, hp, status FROM bosses WHERE id=$1`, id).Scan(&res.Boss.ID, &res.Boss.HP, &res.Boss.Status)
+		return tx.QueryRow(ctx, `SELECT id, hp, status FROM src.src_ply_boss WHERE id=$1`, id).Scan(&res.Boss.ID, &res.Boss.HP, &res.Boss.Status)
 	})
 	if err != nil {
 		s.Redis.Del(ctx, cooldownKey(id, user))
@@ -412,7 +412,7 @@ func crewBossBuff(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int6
 			continue
 		}
 		var owned bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM codex_items WHERE user_id=$1 AND kind='role' AND item=$2)`, user, r.Key).Scan(&owned); err == nil && owned {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type='role' AND item=$2)`, user, r.Key).Scan(&owned); err == nil && owned {
 			pct += r.BuffValue
 		}
 	}
@@ -426,8 +426,8 @@ func (s *Service) rally(ctx context.Context, crew, boss, by int64) {
 		return
 	}
 	var nick, name string
-	_ = s.Pool.QueryRow(ctx, `SELECT u.nickname, b.name FROM users u, bosses b WHERE u.id=$1 AND b.id=$2`, by, boss).Scan(&nick, &name)
-	rows, err := s.Pool.Query(ctx, `SELECT user_id FROM crew_members WHERE crew_id=$1 AND user_id<>$2`, crew, by)
+	_ = s.Pool.QueryRow(ctx, `SELECT u.nickname, b.name FROM src.src_usr_user u, src.src_ply_boss b WHERE u.id=$1 AND b.id=$2`, by, boss).Scan(&nick, &name)
+	rows, err := s.Pool.Query(ctx, `SELECT user_id FROM src.src_soc_crew_member WHERE crew_id=$1 AND user_id<>$2`, crew, by)
 	if err != nil {
 		return
 	}
@@ -446,7 +446,7 @@ func (s *Service) hit(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, boss,
 	var out activity.BossHit
 	var hp int
 	var status, kind, nick string
-	if err := tx.QueryRow(ctx, `SELECT b.hp, b.status, b.kind, b.name, u.nickname FROM bosses b, users u WHERE b.id=$1 AND u.id=$2 FOR UPDATE OF b`,
+	if err := tx.QueryRow(ctx, `SELECT b.hp, b.status, b.boss_type, b.name, u.nickname FROM src.src_ply_boss b, src.src_usr_user u WHERE b.id=$1 AND u.id=$2 FOR UPDATE OF b`,
 		boss, user).Scan(&hp, &status, &kind, &out.Name, &nick); err != nil {
 		return out, nil, err
 	}
@@ -455,12 +455,12 @@ func (s *Service) hit(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, boss,
 	}
 	dmg = min(dmg, hp)
 	out.BossID, out.Damage = boss, dmg
-	if _, err := tx.Exec(ctx, `INSERT INTO boss_hits (boss_id, user_id, crew_id, source, activity_id, damage, energy_spent) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_boss_hit (boss_id, user_id, crew_id, source, activity_id, damage, energy_spent) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
 		boss, user, crew, source, activityID, dmg, spent); err != nil {
 		return out, nil, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO user_monsters (user_id, kind, strikes) VALUES ($1,$2,1)
-		ON CONFLICT (user_id, kind) DO UPDATE SET strikes = user_monsters.strikes + 1`, user, kind); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_user_monster (user_id, boss_type, strikes) VALUES ($1,$2,1)
+		ON CONFLICT (user_id, boss_type) DO UPDATE SET strikes = src.src_ply_user_monster.strikes + 1`, user, kind); err != nil {
 		return out, nil, err
 	}
 	hp -= dmg
@@ -469,7 +469,7 @@ func (s *Service) hit(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, boss,
 		newStatus = "defeated"
 		out.Defeated = true
 	}
-	if _, err := tx.Exec(ctx, `UPDATE bosses SET hp=$2, status=$3, ended_at=CASE WHEN $3='defeated' THEN now() END WHERE id=$1`, boss, hp, newStatus); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ply_boss SET hp=$2, status=$3, end_time=CASE WHEN $3='defeated' THEN now() END WHERE id=$1`, boss, hp, newStatus); err != nil {
 		return out, nil, err
 	}
 	events := []realtime.Event{realtime.NewEvent(fmt.Sprintf("boss:%d", boss), nil, map[string]any{
@@ -504,12 +504,12 @@ const duplicateEnergy = 50
 func (s *Service) finish(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, boss int64, defeated bool) error {
 	var raw []byte
 	var kind, name string
-	if err := tx.QueryRow(ctx, `SELECT drops, kind, name FROM bosses WHERE id=$1`, boss).Scan(&raw, &kind, &name); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT drops_json, boss_type, name FROM src.src_ply_boss WHERE id=$1`, boss).Scan(&raw, &kind, &name); err != nil {
 		return err
 	}
 	var drops []gameplay.Drop
 	_ = json.Unmarshal(raw, &drops)
-	rows, err := tx.Query(ctx, `SELECT user_id, sum(damage)::int, sum(energy_spent)::int FROM boss_hits WHERE boss_id=$1
+	rows, err := tx.Query(ctx, `SELECT user_id, sum(damage)::int, sum(energy_spent)::int FROM src.src_ply_boss_hit WHERE boss_id=$1
 		GROUP BY user_id ORDER BY sum(damage) DESC, min(id)`, boss)
 	if err != nil {
 		return err
@@ -543,10 +543,10 @@ func (s *Service) finish(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, bo
 				case "role", "blueprint", "egg":
 					codexKind := d.Kind
 					var tag int64
-					q := `INSERT INTO codex_items (user_id, kind, item) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`
+					q := `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`
 					if d.Kind == "egg" { // an egg is a duplicate if the companion already exists in any state
-						q = `INSERT INTO codex_items (user_id, kind, item) SELECT $1,$2,$3
-							WHERE NOT EXISTS (SELECT 1 FROM codex_items WHERE user_id=$1 AND kind IN ('egg','companion') AND item=$3)`
+						q = `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) SELECT $1,$2,$3
+							WHERE NOT EXISTS (SELECT 1 FROM src.src_ply_codex_item WHERE user_id=$1 AND item_type IN ('egg','companion') AND item=$3)`
 					}
 					ct, err := tx.Exec(ctx, q, p.user, codexKind, d.Item)
 					if err != nil {
@@ -561,9 +561,9 @@ func (s *Service) finish(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, bo
 				}
 				items = append(items, it)
 			}
-			if _, err := tx.Exec(ctx, `INSERT INTO user_monsters (user_id, kind, defeats, best_rank) VALUES ($1,$2,1,$3)
-				ON CONFLICT (user_id, kind) DO UPDATE SET defeats = user_monsters.defeats + 1,
-				  best_rank = LEAST(COALESCE(user_monsters.best_rank, $3), $3)`, p.user, kind, rank); err != nil {
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_user_monster (user_id, boss_type, defeats, best_rank) VALUES ($1,$2,1,$3)
+				ON CONFLICT (user_id, boss_type) DO UPDATE SET defeats = src.src_ply_user_monster.defeats + 1,
+				  best_rank = LEAST(COALESCE(src.src_ply_user_monster.best_rank, $3), $3)`, p.user, kind, rank); err != nil {
 				return err
 			}
 			if err := codex.IncStat(ctx, tx, p.user, codex.StatBossDefeats, 1); err != nil {
@@ -573,7 +573,7 @@ func (s *Service) finish(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, bo
 			energy = int(math.Floor(float64(p.spent) * cfg.Boss.ExpireRefundPct / 100))
 		}
 		itemsRaw, _ := json.Marshal(items)
-		tag, err := tx.Exec(ctx, `INSERT INTO boss_rewards (boss_id, user_id, rank, damage, items, energy) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
+		tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_boss_reward (boss_id, user_id, rank, damage, items_json, energy) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING`,
 			boss, p.user, rank, p.damage, itemsRaw, energy)
 		if err != nil {
 			return err
@@ -609,7 +609,7 @@ func (s *Service) finish(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, bo
 
 // Expire ends monsters past their time (or early, by admin).
 func (s *Service) Expire(ctx context.Context, only int64) error {
-	rows, err := s.Pool.Query(ctx, `SELECT id FROM bosses WHERE status='active' AND (expires_at <= now() OR id=$1)`, only)
+	rows, err := s.Pool.Query(ctx, `SELECT id FROM src.src_ply_boss WHERE status='active' AND (expire_time <= now() OR id=$1)`, only)
 	if err != nil {
 		return err
 	}
@@ -620,7 +620,7 @@ func (s *Service) Expire(ctx context.Context, only int64) error {
 	cfg := s.Config.For(0)
 	for _, id := range ids {
 		err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-			tag, err := tx.Exec(ctx, `UPDATE bosses SET status='expired', ended_at=now() WHERE id=$1 AND status='active'`, id)
+			tag, err := tx.Exec(ctx, `UPDATE src.src_ply_boss SET status='expired', end_time=now() WHERE id=$1 AND status='active'`, id)
 			if err != nil || tag.RowsAffected() == 0 {
 				return err
 			}
@@ -638,7 +638,7 @@ func (s *Service) Expire(ctx context.Context, only int64) error {
 func (s *Service) Engage(ctx context.Context, user, id int64, lat, lng float64) (time.Time, error) {
 	cfg := s.Config.For(user)
 	var status string
-	if err := s.Pool.QueryRow(ctx, `SELECT status FROM bosses WHERE id=$1`, id).Scan(&status); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT status FROM src.src_ply_boss WHERE id=$1`, id).Scan(&status); err != nil {
 		if db.IsNoRows(err) {
 			return time.Time{}, httpx.NotFound("怪兽")
 		}
@@ -647,7 +647,7 @@ func (s *Service) Engage(ctx context.Context, user, id int64, lat, lng float64) 
 	if status != "active" {
 		return time.Time{}, errBossNotActive
 	}
-	ok, err := inRange(ctx, s.Pool, "bosses", id, lat, lng)
+	ok, err := inRange(ctx, s.Pool, "src.src_ply_boss", id, lat, lng)
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -655,8 +655,8 @@ func (s *Service) Engage(ctx context.Context, user, id int64, lat, lng float64) 
 		return time.Time{}, errOutOfRange
 	}
 	var until time.Time
-	err = s.Pool.QueryRow(ctx, `INSERT INTO boss_engagements (boss_id, user_id, until) VALUES ($1,$2, now() + make_interval(secs => $3))
-		ON CONFLICT (boss_id, user_id) DO UPDATE SET until=EXCLUDED.until RETURNING until`, id, user, cfg.Boss.EngageH*3600).Scan(&until)
+	err = s.Pool.QueryRow(ctx, `INSERT INTO src.src_ply_boss_engage (boss_id, user_id, engage_end_time) VALUES ($1,$2, now() + make_interval(secs => $3))
+		ON CONFLICT (boss_id, user_id) DO UPDATE SET engage_end_time=EXCLUDED.engage_end_time RETURNING engage_end_time`, id, user, cfg.Boss.EngageH*3600).Scan(&until)
 	return until, err
 }
 
@@ -675,8 +675,8 @@ func (s *Service) bossActivity(ctx context.Context, tx pgx.Tx, in activity.HookI
 			return out, nil, nil
 		}
 		rows, err := tx.Query(ctx, `SELECT id, ST_Length(ST_Intersection(ST_GeomFromText($1,4326)::geography,
-				ST_Buffer(center::geography, radius_m)))
-			FROM bosses WHERE status='active' AND ST_DWithin(center::geography, ST_GeomFromText($1,4326)::geography, radius_m)
+				ST_Buffer(center_geom::geography, radius_m)))
+			FROM src.src_ply_boss WHERE status='active' AND ST_DWithin(center_geom::geography, ST_GeomFromText($1,4326)::geography, radius_m)
 			ORDER BY id`, *track)
 		if err != nil {
 			return out, nil, err
@@ -693,8 +693,8 @@ func (s *Service) bossActivity(ctx context.Context, tx pgx.Tx, in activity.HookI
 		}
 		rows.Close()
 	} else {
-		rows, err := tx.Query(ctx, `SELECT e.boss_id FROM boss_engagements e JOIN bosses b ON b.id=e.boss_id
-			WHERE e.user_id=$1 AND e.until > $2 AND b.status='active' ORDER BY e.boss_id`, in.UserID, in.StartedAt)
+		rows, err := tx.Query(ctx, `SELECT e.boss_id FROM src.src_ply_boss_engage e JOIN src.src_ply_boss b ON b.id=e.boss_id
+			WHERE e.user_id=$1 AND e.engage_end_time > $2 AND b.status='active' ORDER BY e.boss_id`, in.UserID, in.StartedAt)
 		if err != nil {
 			return out, nil, err
 		}
@@ -724,10 +724,10 @@ func (s *Service) bossActivity(ctx context.Context, tx pgx.Tx, in activity.HookI
 // List returns monsters for admin.
 func (s *Service) List(ctx context.Context, status string, p httpx.Page) ([]BossSummary, int, error) {
 	var total int
-	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM bosses WHERE ($1='' OR status=$1)`, status).Scan(&total); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ply_boss WHERE ($1='' OR status=$1)`, status).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT `+bossCols+` FROM bosses b WHERE ($1='' OR b.status=$1) ORDER BY b.spawned_at DESC LIMIT $2 OFFSET $3`,
+	rows, err := s.Pool.Query(ctx, `SELECT `+bossCols+` FROM src.src_ply_boss b WHERE ($1='' OR b.status=$1) ORDER BY b.spawn_time DESC LIMIT $2 OFFSET $3`,
 		status, p.Size, p.Offset())
 	if err != nil {
 		return nil, 0, err

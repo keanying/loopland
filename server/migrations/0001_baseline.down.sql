@@ -1,0 +1,3 @@
+DROP SCHEMA IF EXISTS src CASCADE;
+DROP FUNCTION IF EXISTS lp_clean(geometry);
+DROP FUNCTION IF EXISTS lp_area(geometry);

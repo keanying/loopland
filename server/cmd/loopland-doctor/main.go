@@ -63,7 +63,11 @@ func main() {
 		rs = append(rs, result{name: name, err: f()})
 	}
 
-	fmt.Printf("环境：%s\n\n", cfg.Env)
+	src := config.Source
+	if src == "" {
+		src = "无（仅环境变量）"
+	}
+	fmt.Printf("环境：%s\n配置文件：%s\n\n", cfg.Env, src)
 	if cfg.Env == "prod" {
 		rs = append(rs, result{name: "正式环境配置完整性", err: cfg.ValidateProd()})
 	} else if m := cfg.Missing(); len(m) > 0 {

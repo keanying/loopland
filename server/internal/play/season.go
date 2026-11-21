@@ -34,7 +34,7 @@ type Season struct {
 
 func currentSeason(ctx context.Context, q db.Querier, at time.Time) (*Season, error) {
 	var s Season
-	err := q.QueryRow(ctx, `SELECT id, name, starts_at, ends_at, settled_at FROM seasons WHERE starts_at <= $1 AND ends_at > $1`, at).
+	err := q.QueryRow(ctx, `SELECT id, name, start_time, end_time, settle_time FROM src.src_ply_season WHERE start_time <= $1 AND end_time > $1`, at).
 		Scan(&s.ID, &s.Name, &s.StartsAt, &s.EndsAt, &s.SettledAt)
 	if db.IsNoRows(err) {
 		return nil, nil
@@ -54,13 +54,13 @@ func taskProgress(ctx context.Context, q db.Querier, user int64, t gameplay.Seas
 	var err error
 	switch t.Type {
 	case gameplay.TaskWeeklyCount:
-		err = q.QueryRow(ctx, `SELECT count(*) FROM activities WHERE user_id=$1 AND status='settled' AND started_at >= $2 AND started_at < $3`,
+		err = q.QueryRow(ctx, `SELECT count(*) FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2 AND start_time < $3`,
 			user, week, end).Scan(&v)
 		if cur != nil {
 			v++
 		}
 	case gameplay.TaskWeeklyAreaM2:
-		err = q.QueryRow(ctx, `SELECT COALESCE(sum(claimed_area_m2),0) FROM activities WHERE user_id=$1 AND status='settled' AND started_at >= $2 AND started_at < $3`,
+		err = q.QueryRow(ctx, `SELECT COALESCE(sum(claimed_area_m2),0) FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2 AND start_time < $3`,
 			user, week, end).Scan(&v)
 		if cur != nil {
 			for _, c := range cur.Claims {
@@ -68,7 +68,7 @@ func taskProgress(ctx context.Context, q db.Querier, user int64, t gameplay.Seas
 			}
 		}
 	case gameplay.TaskWeeklyDistance:
-		err = q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0)/1000 FROM activities WHERE user_id=$1 AND status='settled' AND started_at >= $2 AND started_at < $3`,
+		err = q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0)/1000 FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2 AND start_time < $3`,
 			user, week, end).Scan(&v)
 		if cur != nil {
 			v += cur.DistanceM / 1000
@@ -80,12 +80,12 @@ func taskProgress(ctx context.Context, q db.Querier, user int64, t gameplay.Seas
 		if season != nil {
 			from = season.StartsAt
 		}
-		err = q.QueryRow(ctx, `SELECT count(*) FROM activities a WHERE a.user_id=$1 AND a.status='settled' AND a.started_at >= $2 AND a.started_at < $3
-			AND NOT EXISTS (SELECT 1 FROM activities b WHERE b.user_id=a.user_id AND b.status='settled' AND b.sport=a.sport
-			                 AND b.started_at >= $4 AND b.started_at < a.started_at)`, user, week, end, from).Scan(&v)
+		err = q.QueryRow(ctx, `SELECT count(*) FROM src.src_act_activity a WHERE a.user_id=$1 AND a.status='settled' AND a.start_time >= $2 AND a.start_time < $3
+			AND NOT EXISTS (SELECT 1 FROM src.src_act_activity b WHERE b.user_id=a.user_id AND b.status='settled' AND b.sport=a.sport
+			                 AND b.start_time >= $4 AND b.start_time < a.start_time)`, user, week, end, from).Scan(&v)
 		if cur != nil && v == 0 {
 			var seen bool
-			err = q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activities WHERE user_id=$1 AND status='settled' AND sport=$2 AND started_at >= $3 AND id<>$4)`,
+			err = q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND sport=$2 AND start_time >= $3 AND id<>$4)`,
 				user, string(cur.Sport), from, cur.ActivityID).Scan(&seen)
 			if !seen {
 				v = 1
@@ -104,7 +104,7 @@ func (s *Service) tasks(ctx context.Context, tx pgx.Tx, in activity.HookInput) (
 	week := weekStart(in.StartedAt)
 	for _, t := range in.Config.SeasonTasks {
 		var done bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM task_completions WHERE user_id=$1 AND task_key=$2 AND period=$3)`,
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_task_done WHERE user_id=$1 AND task_key=$2 AND week_start_date=$3)`,
 			in.UserID, t.Key, week).Scan(&done); err != nil {
 			return out, err
 		}
@@ -118,7 +118,7 @@ func (s *Service) tasks(ctx context.Context, tx pgx.Tx, in activity.HookInput) (
 		tp := activity.TaskProgress{Key: t.Key, Name: t.Name, Progress: p, Target: t.Target, RewardEnergy: t.RewardEnergy}
 		if p >= t.Target {
 			tp.Completed = true
-			if _, err := tx.Exec(ctx, `INSERT INTO task_completions (user_id, task_key, period, reward_energy) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_task_done (user_id, task_key, week_start_date, reward_energy) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
 				in.UserID, t.Key, week, t.RewardEnergy); err != nil {
 				return out, err
 			}
@@ -209,8 +209,8 @@ type TaskView struct {
 	Completed    bool    `json:"completed"`
 }
 
-const seasonAreaSQL = `SELECT a.user_id, sum(a.claimed_area_m2) AS area FROM activities a
-	WHERE a.status='settled' AND a.started_at >= $1 AND a.started_at < $2 GROUP BY a.user_id HAVING sum(a.claimed_area_m2) > 0`
+const seasonAreaSQL = `SELECT a.user_id, sum(a.claimed_area_m2) AS area FROM src.src_act_activity a
+	WHERE a.status='settled' AND a.start_time >= $1 AND a.start_time < $2 GROUP BY a.user_id HAVING sum(a.claimed_area_m2) > 0`
 
 // GetSeason builds the season page.
 func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (SeasonView, error) {
@@ -227,7 +227,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 	from, to := season.StartsAt, season.EndsAt
 
 	var area float64
-	if err := s.Pool.QueryRow(ctx, `SELECT COALESCE(sum(claimed_area_m2),0) FROM activities WHERE user_id=$1 AND status='settled' AND started_at >= $2 AND started_at < $3`,
+	if err := s.Pool.QueryRow(ctx, `SELECT COALESCE(sum(claimed_area_m2),0) FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2 AND start_time < $3`,
 		user, from, to).Scan(&area); err != nil {
 		return v, err
 	}
@@ -243,7 +243,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 		}
 		v.Me.Rank = &r
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url, x.area FROM (`+seasonAreaSQL+`) x JOIN users u ON u.id=x.user_id
+	rows, err := s.Pool.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url, x.area FROM (`+seasonAreaSQL+`) x JOIN src.src_usr_user u ON u.id=x.user_id
 		ORDER BY x.area DESC LIMIT 50`, from, to)
 	if err != nil {
 		return v, err
@@ -262,7 +262,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 		v.Top = top
 	}
 	crewSQL := `SELECT c.id, c.name, sum(x.area) AS area FROM (` + seasonAreaSQL + `) x
-		JOIN crew_members m ON m.user_id=x.user_id JOIN crews c ON c.id=m.crew_id GROUP BY c.id`
+		JOIN src.src_soc_crew_member m ON m.user_id=x.user_id JOIN src.src_soc_crew c ON c.id=m.crew_id GROUP BY c.id`
 	rows, err = s.Pool.Query(ctx, crewSQL+` ORDER BY area DESC LIMIT 50`, from, to)
 	if err != nil {
 		return v, err
@@ -282,7 +282,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 	}
 	var crewID int64
 	var crewName string
-	err = s.Pool.QueryRow(ctx, `SELECT c.id, c.name FROM crew_members m JOIN crews c ON c.id=m.crew_id WHERE m.user_id=$1`, user).Scan(&crewID, &crewName)
+	err = s.Pool.QueryRow(ctx, `SELECT c.id, c.name FROM src.src_soc_crew_member m JOIN src.src_soc_crew c ON c.id=m.crew_id WHERE m.user_id=$1`, user).Scan(&crewID, &crewName)
 	if err == nil {
 		sc := &SeasonCrew{ID: crewID, Name: crewName}
 		err = s.Pool.QueryRow(ctx, `WITH t AS (`+crewSQL+`) SELECT COALESCE((SELECT area FROM t WHERE id=$3),0),
@@ -297,7 +297,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 	week := weekStart(time.Now())
 	for _, t := range cfg.SeasonTasks {
 		tv := TaskView{Key: t.Key, Name: t.Name, Type: t.Type, Target: t.Target, RewardEnergy: t.RewardEnergy}
-		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM task_completions WHERE user_id=$1 AND task_key=$2 AND period=$3)`,
+		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_ply_task_done WHERE user_id=$1 AND task_key=$2 AND week_start_date=$3)`,
 			user, t.Key, week).Scan(&tv.Completed); err != nil {
 			return v, err
 		}
@@ -314,7 +314,7 @@ func (s *Service) GetSeason(ctx context.Context, user int64, medals any) (Season
 // SettleSeasons settles every ended season: final tiers become season
 // medals in the codex; buildings and the codex are not reset.
 func (s *Service) SettleSeasons(ctx context.Context, only int64) error {
-	rows, err := s.Pool.Query(ctx, `SELECT id FROM seasons WHERE settled_at IS NULL AND (ends_at <= now() OR id=$1)`, only)
+	rows, err := s.Pool.Query(ctx, `SELECT id FROM src.src_ply_season WHERE settle_time IS NULL AND (end_time <= now() OR id=$1)`, only)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func (s *Service) SettleSeasons(ctx context.Context, only int64) error {
 		err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 			var name string
 			var from, to time.Time
-			if err := tx.QueryRow(ctx, `SELECT name, starts_at, ends_at FROM seasons WHERE id=$1 AND settled_at IS NULL FOR UPDATE`, id).Scan(&name, &from, &to); err != nil {
+			if err := tx.QueryRow(ctx, `SELECT name, start_time, end_time FROM src.src_ply_season WHERE id=$1 AND settle_time IS NULL FOR UPDATE`, id).Scan(&name, &from, &to); err != nil {
 				if db.IsNoRows(err) {
 					return nil
 				}
@@ -353,11 +353,11 @@ func (s *Service) SettleSeasons(ctx context.Context, only int64) error {
 			}
 			for i, r := range rs {
 				tier, _, _, _, _ := cfg.TierFor(r.area)
-				if _, err := tx.Exec(ctx, `INSERT INTO season_results (season_id, user_id, area_m2, rank, tier) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_season_result (season_id, user_id, area_m2, rank, tier) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 					id, r.user, r.area, i+1, tier); err != nil {
 					return err
 				}
-				if _, err := tx.Exec(ctx, `INSERT INTO codex_items (user_id, kind, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`,
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_codex_item (user_id, item_type, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`,
 					r.user, fmt.Sprintf("season:%s·%s", name, tier)); err != nil {
 					return err
 				}
@@ -366,7 +366,7 @@ func (s *Service) SettleSeasons(ctx context.Context, only int64) error {
 					return err
 				}
 			}
-			_, err = tx.Exec(ctx, `UPDATE seasons SET settled_at=now() WHERE id=$1`, id)
+			_, err = tx.Exec(ctx, `UPDATE src.src_ply_season SET settle_time=now() WHERE id=$1`, id)
 			return err
 		})
 		if err != nil {
@@ -400,8 +400,8 @@ type LeagueView struct {
 
 func liveStandings(ctx context.Context, q db.Querier, district string, week time.Time) ([]LeagueRow, error) {
 	rows, err := q.Query(ctx, `SELECT c.id, c.name, COALESCE(sum(a.claimed_area_m2),0) AS score, count(DISTINCT a.user_id)
-		FROM crews c JOIN crew_members m ON m.crew_id=c.id
-		LEFT JOIN activities a ON a.user_id=m.user_id AND a.status='settled' AND a.started_at >= $2 AND a.started_at < $3
+		FROM src.src_soc_crew c JOIN src.src_soc_crew_member m ON m.crew_id=c.id
+		LEFT JOIN src.src_act_activity a ON a.user_id=m.user_id AND a.status='settled' AND a.start_time >= $2 AND a.start_time < $3
 		WHERE c.district=$1 GROUP BY c.id ORDER BY score DESC, c.id`, district, week, week.AddDate(0, 0, 7))
 	if err != nil {
 		return nil, err
@@ -423,7 +423,7 @@ func liveStandings(ctx context.Context, q db.Querier, district string, week time
 func (s *Service) League(ctx context.Context, user int64, district string, week time.Time) (LeagueView, error) {
 	var myCrew int64
 	var myDistrict string
-	err := s.Pool.QueryRow(ctx, `SELECT c.id, c.district FROM crew_members m JOIN crews c ON c.id=m.crew_id WHERE m.user_id=$1`, user).Scan(&myCrew, &myDistrict)
+	err := s.Pool.QueryRow(ctx, `SELECT c.id, c.district FROM src.src_soc_crew_member m JOIN src.src_soc_crew c ON c.id=m.crew_id WHERE m.user_id=$1`, user).Scan(&myCrew, &myDistrict)
 	if err != nil && !db.IsNoRows(err) {
 		return LeagueView{}, err
 	}
@@ -457,8 +457,8 @@ func (s *Service) League(ctx context.Context, user int64, district string, week 
 }
 
 func storedStandings(ctx context.Context, q db.Querier, district string, week time.Time) ([]LeagueRow, error) {
-	rows, err := q.Query(ctx, `SELECT r.rank, c.id, c.name, r.score_m2, r.active_members FROM league_results r JOIN crews c ON c.id=r.crew_id
-		WHERE r.district=$1 AND r.week_start=$2 ORDER BY r.rank`, district, week)
+	rows, err := q.Query(ctx, `SELECT r.rank, c.id, c.name, r.score_m2, r.active_members FROM src.src_ply_league_result r JOIN src.src_soc_crew c ON c.id=r.crew_id
+		WHERE r.district=$1 AND r.week_start_date=$2 ORDER BY r.rank`, district, week)
 	if err != nil {
 		return nil, err
 	}
@@ -476,11 +476,11 @@ func storedStandings(ctx context.Context, q db.Querier, district string, week ti
 func (s *Service) SettleLeague(ctx context.Context) error {
 	last := weekStart(time.Now()).AddDate(0, 0, -7)
 	var done bool
-	if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM settings WHERE key='league_settled' AND value = to_jsonb($1::text))`,
+	if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_sys_setting WHERE setting_key='league_settled' AND setting_value = to_jsonb($1::text))`,
 		last.Format("2006-01-02")).Scan(&done); err != nil || done {
 		return err
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT DISTINCT district FROM crews`)
+	rows, err := s.Pool.Query(ctx, `SELECT DISTINCT district FROM src.src_soc_crew`)
 	if err != nil {
 		return err
 	}
@@ -498,12 +498,12 @@ func (s *Service) SettleLeague(ctx context.Context) error {
 				if r.ScoreM2 <= 0 {
 					continue
 				}
-				if _, err := tx.Exec(ctx, `INSERT INTO league_results (week_start, district, crew_id, rank, score_m2, active_members) VALUES ($1,$2,$3,$4,$5,$6)
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ply_league_result (week_start_date, district, crew_id, rank, score_m2, active_members) VALUES ($1,$2,$3,$4,$5,$6)
 					ON CONFLICT DO NOTHING`, last, d, r.Crew.ID, r.Rank, r.ScoreM2, r.ActiveMembers); err != nil {
 					return err
 				}
 				if r.Rank == 1 {
-					rows, err := tx.Query(ctx, `SELECT user_id FROM crew_members WHERE crew_id=$1`, r.Crew.ID)
+					rows, err := tx.Query(ctx, `SELECT user_id FROM src.src_soc_crew_member WHERE crew_id=$1`, r.Crew.ID)
 					if err != nil {
 						return err
 					}
@@ -520,8 +520,8 @@ func (s *Service) SettleLeague(ctx context.Context) error {
 				}
 			}
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO settings (key, value) VALUES ('league_settled', to_jsonb($1::text))
-			ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=now()`, last.Format("2006-01-02"))
+		_, err := tx.Exec(ctx, `INSERT INTO src.src_sys_setting (setting_key, setting_value) VALUES ('league_settled', to_jsonb($1::text))
+			ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value, update_time=now()`, last.Format("2006-01-02"))
 		return err
 	})
 }

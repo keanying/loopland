@@ -103,10 +103,10 @@ func (a *API) day(ctx context.Context, d time.Time) (dayStats, error) {
 	var s dayStats
 	end := d.AddDate(0, 0, 1)
 	err := a.Pool.QueryRow(ctx, `SELECT
-		(SELECT count(DISTINCT user_id) FROM activities WHERE created_at >= $1 AND created_at < $2),
-		(SELECT count(*) FROM activities WHERE created_at >= $1 AND created_at < $2),
-		(SELECT count(*) FROM territory_events WHERE kind IN ('claim','capture') AND created_at >= $1 AND created_at < $2),
-		(SELECT count(*) FROM risk_alerts WHERE status='open' AND created_at < $2)`, d, end).
+		(SELECT count(DISTINCT user_id) FROM src.src_act_activity WHERE create_time >= $1 AND create_time < $2),
+		(SELECT count(*) FROM src.src_act_activity WHERE create_time >= $1 AND create_time < $2),
+		(SELECT count(*) FROM src.src_ter_event WHERE event_type IN ('claim','capture') AND create_time >= $1 AND create_time < $2),
+		(SELECT count(*) FROM src.src_ris_alert WHERE status='open' AND create_time < $2)`, d, end).
 		Scan(&s.ActiveUsers, &s.Activities, &s.NewTerritories, &s.PendingRisk)
 	return s, err
 }
@@ -125,9 +125,9 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	start := today.AddDate(0, 0, -29)
 	rows, err := a.Pool.Query(ctx, `
 		SELECT d::date,
-		  (SELECT count(DISTINCT user_id) FROM activities WHERE created_at >= d AND created_at < d + interval '1 day'),
-		  (SELECT COALESCE(sum(distance_m),0)/1000 FROM activities WHERE status='settled' AND created_at >= d AND created_at < d + interval '1 day'),
-		  (SELECT count(*) FROM territory_events WHERE kind IN ('claim','capture') AND created_at >= d AND created_at < d + interval '1 day')
+		  (SELECT count(DISTINCT user_id) FROM src.src_act_activity WHERE create_time >= d AND create_time < d + interval '1 day'),
+		  (SELECT COALESCE(sum(distance_m),0)/1000 FROM src.src_act_activity WHERE status='settled' AND create_time >= d AND create_time < d + interval '1 day'),
+		  (SELECT count(*) FROM src.src_ter_event WHERE event_type IN ('claim','capture') AND create_time >= d AND create_time < d + interval '1 day')
 		FROM generate_series($1::timestamptz, $2::timestamptz, interval '1 day') d ORDER BY d`, start, today)
 	if err != nil {
 		return err
@@ -161,9 +161,9 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	}
 	var risk, refunds, renewFailed int
 	if err := a.Pool.QueryRow(ctx, `SELECT
-		(SELECT count(*) FROM risk_alerts WHERE status='open'),
-		(SELECT count(*) FROM orders WHERE status='refund_requested'),
-		(SELECT count(*) FROM orders WHERE status='renew_failed' AND created_at > now() - interval '3 days')`).Scan(&risk, &refunds, &renewFailed); err != nil {
+		(SELECT count(*) FROM src.src_ris_alert WHERE status='open'),
+		(SELECT count(*) FROM src.src_ord_order WHERE status='refund_requested'),
+		(SELECT count(*) FROM src.src_ord_order WHERE status='renew_failed' AND create_time > now() - interval '3 days')`).Scan(&risk, &refunds, &renewFailed); err != nil {
 		return err
 	}
 	todos := []todo{}
@@ -187,13 +187,13 @@ func (a *API) userStats(w http.ResponseWriter, r *http.Request) error {
 	var total, todayNew, members int
 	var cohort, retained int
 	err := a.Pool.QueryRow(ctx, `SELECT
-		(SELECT count(*) FROM users WHERE status <> 'deleted'),
-		(SELECT count(*) FROM users WHERE created_at >= $1),
-		(SELECT count(*) FROM memberships WHERE expires_at > now() OR grace_until > now()),
-		(SELECT count(*) FROM users WHERE created_at >= $2 AND created_at < $3),
-		(SELECT count(*) FROM users u WHERE u.created_at >= $2 AND u.created_at < $3
-		   AND EXISTS (SELECT 1 FROM activities a WHERE a.user_id=u.id AND a.created_at >= u.created_at + interval '1 day'
-		                AND a.created_at < u.created_at + interval '8 days'))`,
+		(SELECT count(*) FROM src.src_usr_user WHERE status <> 'deleted'),
+		(SELECT count(*) FROM src.src_usr_user WHERE create_time >= $1),
+		(SELECT count(*) FROM src.src_ord_membership WHERE expire_time > now() OR grace_end_time > now()),
+		(SELECT count(*) FROM src.src_usr_user WHERE create_time >= $2 AND create_time < $3),
+		(SELECT count(*) FROM src.src_usr_user u WHERE u.create_time >= $2 AND u.create_time < $3
+		   AND EXISTS (SELECT 1 FROM src.src_act_activity a WHERE a.user_id=u.id AND a.create_time >= u.create_time + interval '1 day'
+		                AND a.create_time < u.create_time + interval '8 days'))`,
 		today, today.AddDate(0, 0, -14), today.AddDate(0, 0, -7)).Scan(&total, &todayNew, &members, &cohort, &retained)
 	if err != nil {
 		return err
@@ -202,7 +202,7 @@ func (a *API) userStats(w http.ResponseWriter, r *http.Request) error {
 	if cohort > 0 {
 		ret = float64(retained) / float64(cohort)
 	}
-	rows, err := a.Pool.Query(ctx, `SELECT source, count(*) FROM users WHERE created_at >= now() - interval '30 days' GROUP BY source ORDER BY 2 DESC`)
+	rows, err := a.Pool.Query(ctx, `SELECT source, count(*) FROM src.src_usr_user WHERE create_time >= now() - interval '30 days' GROUP BY source ORDER BY 2 DESC`)
 	if err != nil {
 		return err
 	}
@@ -255,22 +255,22 @@ func (a *API) users(w http.ResponseWriter, r *http.Request) error {
 	}
 	switch filter {
 	case "member":
-		where += ` AND EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=u.id AND (m.expires_at > now() OR m.grace_until > now()))`
+		where += ` AND EXISTS (SELECT 1 FROM src.src_ord_membership m WHERE m.user_id=u.id AND (m.expire_time > now() OR m.grace_end_time > now()))`
 	case "today":
 		args = append(args, clock.Today())
-		where += fmt.Sprintf(` AND u.created_at >= $%d`, len(args))
+		where += fmt.Sprintf(` AND u.create_time >= $%d`, len(args))
 	case "abnormal":
-		where += ` AND (u.status='banned' OR u.muted_until > now() OR EXISTS (SELECT 1 FROM risk_alerts ra WHERE ra.user_id=u.id AND ra.status='open'))`
+		where += ` AND (u.status='banned' OR u.mute_end_time > now() OR EXISTS (SELECT 1 FROM src.src_ris_alert ra WHERE ra.user_id=u.id AND ra.status='open'))`
 	}
 	var total int
-	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM users u WHERE `+where, args...).Scan(&total); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_usr_user u WHERE `+where, args...).Scan(&total); err != nil {
 		return err
 	}
 	args = append(args, p.Size, p.Offset())
-	rows, err := a.Pool.Query(r.Context(), fmt.Sprintf(`SELECT u.id, u.nickname, u.phone_enc, u.source, u.created_at,
-			EXISTS (SELECT 1 FROM memberships m WHERE m.user_id=u.id AND (m.expires_at > now() OR m.grace_until > now())),
-			CASE WHEN u.status='active' AND u.muted_until > now() THEN 'muted' ELSE u.status END, u.delete_after
-		FROM users u WHERE %s ORDER BY u.id DESC LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args)), args...)
+	rows, err := a.Pool.Query(r.Context(), fmt.Sprintf(`SELECT u.id, u.nickname, u.phone_enc, u.source, u.create_time,
+			EXISTS (SELECT 1 FROM src.src_ord_membership m WHERE m.user_id=u.id AND (m.expire_time > now() OR m.grace_end_time > now())),
+			CASE WHEN u.status='active' AND u.mute_end_time > now() THEN 'muted' ELSE u.status END, u.delete_time
+		FROM src.src_usr_user u WHERE %s ORDER BY u.id DESC LIMIT $%d OFFSET $%d`, where, len(args)-1, len(args)), args...)
 	if err != nil {
 		return err
 	}
@@ -303,7 +303,7 @@ type alertRow struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-const alertCols = `ra.id, ra.activity_id, u.id, u.nickname, ra.type, ra.confidence, ra.detail, ra.status, ra.resolution, ra.note, ra.created_at`
+const alertCols = `ra.id, ra.activity_id, u.id, u.nickname, ra.alert_type, ra.confidence, ra.detail, ra.status, ra.resolution, ra.note, ra.create_time`
 
 func scanAlert(row pgx.Row) (alertRow, error) {
 	var x alertRow
@@ -332,14 +332,14 @@ func (a *API) userDetail(w http.ResponseWriter, r *http.Request) error {
 	}
 	var source string
 	var lastLogin *time.Time
-	if err := a.Pool.QueryRow(r.Context(), `SELECT source, last_login_at FROM users WHERE id=$1`, id).Scan(&source, &lastLogin); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT source, last_login_time FROM src.src_usr_user WHERE id=$1`, id).Scan(&source, &lastLogin); err != nil {
 		return err
 	}
 	n, err := codex.Count(r.Context(), a.Pool, id)
 	if err != nil {
 		return err
 	}
-	rows, err := a.Pool.Query(r.Context(), `SELECT `+alertCols+` FROM risk_alerts ra JOIN users u ON u.id=ra.user_id WHERE ra.user_id=$1 ORDER BY ra.id DESC LIMIT 50`, id)
+	rows, err := a.Pool.Query(r.Context(), `SELECT `+alertCols+` FROM src.src_ris_alert ra JOIN src.src_usr_user u ON u.id=ra.user_id WHERE ra.user_id=$1 ORDER BY ra.id DESC LIMIT 50`, id)
 	if err != nil {
 		return err
 	}
@@ -359,7 +359,7 @@ func (a *API) revealPhone(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var enc []byte
-	if err := a.Pool.QueryRow(r.Context(), `SELECT phone_enc FROM users WHERE id=$1`, id).Scan(&enc); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT phone_enc FROM src.src_usr_user WHERE id=$1`, id).Scan(&enc); err != nil {
 		if db.IsNoRows(err) {
 			return httpx.NotFound("用户")
 		}
@@ -394,7 +394,7 @@ func (a *API) userAction(w http.ResponseWriter, r *http.Request) error {
 	ad, _ := httpx.AdminFrom(ctx)
 	err = pgx.BeginFunc(ctx, a.Pool, func(tx pgx.Tx) error {
 		var exists bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE id=$1 AND status <> 'deleted')`, id).Scan(&exists); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_usr_user WHERE id=$1 AND status <> 'deleted')`, id).Scan(&exists); err != nil {
 			return err
 		}
 		if !exists {
@@ -419,14 +419,14 @@ func (a *API) userAction(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 		case "mute_7d":
-			if _, err := tx.Exec(ctx, `UPDATE users SET muted_until=now() + interval '7 days' WHERE id=$1`, id); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET mute_end_time=now() + interval '7 days' WHERE id=$1`, id); err != nil {
 				return err
 			}
 			if err := inbox.Notify(ctx, tx, id, inbox.System, "你已被禁言 7 天", "因违反社区规范，你在 7 天内不能修改资料和发布内容。", nil); err != nil {
 				return err
 			}
 		case "unmute":
-			if _, err := tx.Exec(ctx, `UPDATE users SET muted_until=NULL WHERE id=$1`, id); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET mute_end_time=NULL WHERE id=$1`, id); err != nil {
 				return err
 			}
 		case "ban", "unban":
@@ -448,16 +448,16 @@ func (a *API) userAction(w http.ResponseWriter, r *http.Request) error {
 func (a *API) setBan(ctx context.Context, tx pgx.Tx, id int64, ban bool, until *time.Time) error {
 	ad, _ := httpx.AdminFrom(ctx)
 	if ban {
-		if _, err := tx.Exec(ctx, `UPDATE users SET status='banned', banned_until=$2 WHERE id=$1 AND status <> 'deleted'`, id, until); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET status='banned', ban_end_time=$2 WHERE id=$1 AND status <> 'deleted'`, id, until); err != nil {
 			return err
 		}
 		if err := auth.RevokeAll(ctx, tx, id); err != nil {
 			return err
 		}
-	} else if _, err := tx.Exec(ctx, `UPDATE users SET status='active', banned_until=NULL WHERE id=$1 AND status='banned'`, id); err != nil {
+	} else if _, err := tx.Exec(ctx, `UPDATE src.src_usr_user SET status='active', ban_end_time=NULL WHERE id=$1 AND status='banned'`, id); err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, `SELECT id FROM territories WHERE owner_user_id=$1 AND frozen<>$2`, id, ban)
+	rows, err := tx.Query(ctx, `SELECT id FROM src.src_ter_territory WHERE owner_user_id=$1 AND is_frozen<>$2`, id, ban)
 	if err != nil {
 		return err
 	}
@@ -525,14 +525,14 @@ func (a *API) updatePlan(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if req.Recommended != nil && *req.Recommended {
-			if _, err := tx.Exec(ctx, `UPDATE plans SET recommended=false`); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ord_plan SET is_recommended=false`); err != nil {
 				return err
 			}
 		}
 		// first_price_fen: 0 clears the introductory price.
-		if _, err := tx.Exec(ctx, `UPDATE plans SET name=COALESCE($2,name), price_fen=COALESCE($3,price_fen),
-				first_price_fen=CASE WHEN $4::int IS NULL THEN first_price_fen WHEN $4 = 0 THEN NULL ELSE $4 END,
-				renew_price_fen=COALESCE($5,renew_price_fen), on_sale=COALESCE($6,on_sale), recommended=COALESCE($7,recommended), sort=COALESCE($8,sort)
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ord_plan SET name=COALESCE($2,name), price_amt=COALESCE($3,price_amt),
+				first_price_amt=CASE WHEN $4::int IS NULL THEN first_price_amt WHEN $4 = 0 THEN NULL ELSE $4 END,
+				renew_price_amt=COALESCE($5,renew_price_amt), is_on_sale=COALESCE($6,is_on_sale), is_recommended=COALESCE($7,is_recommended), sort=COALESCE($8,sort)
 			WHERE code=$1`, code, req.Name, req.PriceFen, req.FirstPriceFen, req.RenewPriceFen, req.OnSale, req.Recommended, req.Sort); err != nil {
 			return err
 		}
@@ -574,7 +574,7 @@ func (a *API) updateEntitlements(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	err := pgx.BeginFunc(ctx, a.Pool, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `UPDATE plans SET entitlements=$2 WHERE code=$1`, code, req.Entitlements)
+		tag, err := tx.Exec(ctx, `UPDATE src.src_ord_plan SET entitlements=$2 WHERE code=$1`, code, req.Entitlements)
 		if err != nil {
 			return err
 		}
@@ -599,12 +599,12 @@ func (a *API) orders(w http.ResponseWriter, r *http.Request) error {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	where := `($1='' OR o.status=$1) AND ($2='' OR o.order_no=$2 OR u.nickname ILIKE '%' || $2 || '%' OR o.user_id::text=$2)`
 	var total int
-	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM orders o JOIN users u ON u.id=o.user_id WHERE `+where, status, q).Scan(&total); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_ord_order o JOIN src.src_usr_user u ON u.id=o.user_id WHERE `+where, status, q).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := a.Pool.Query(r.Context(), `SELECT o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.amount_fen, o.channel, o.kind, o.status,
-			o.created_at, o.paid_at, o.refunded_at
-		FROM orders o JOIN users u ON u.id=o.user_id WHERE `+where+` ORDER BY o.created_at DESC LIMIT $3 OFFSET $4`, status, q, p.Size, p.Offset())
+	rows, err := a.Pool.Query(r.Context(), `SELECT o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.order_amt, o.channel, o.order_type, o.status,
+			o.create_time, o.pay_time, o.refund_time
+		FROM src.src_ord_order o JOIN src.src_usr_user u ON u.id=o.user_id WHERE `+where+` ORDER BY o.create_time DESC LIMIT $3 OFFSET $4`, status, q, p.Size, p.Offset())
 	if err != nil {
 		return err
 	}
@@ -626,12 +626,12 @@ func (a *API) orderStats(w http.ResponseWriter, r *http.Request) error {
 	month := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, clock.Shanghai)
 	var revenue, members, renewOK, renewAll, paidToday, refundToday int
 	err := a.Pool.QueryRow(r.Context(), `SELECT
-		(SELECT COALESCE(sum(amount_fen),0) FROM orders WHERE status='paid' AND paid_at >= $1),
-		(SELECT count(*) FROM memberships WHERE expires_at > now() OR grace_until > now()),
-		(SELECT count(*) FROM orders WHERE kind='renewal' AND status='paid' AND created_at >= $1),
-		(SELECT count(*) FROM orders WHERE kind='renewal' AND status IN ('paid','renew_failed') AND created_at >= $1),
-		(SELECT count(*) FROM orders WHERE paid_at >= $2),
-		(SELECT count(*) FROM orders WHERE refunded_at >= $2)`, month, today).Scan(&revenue, &members, &renewOK, &renewAll, &paidToday, &refundToday)
+		(SELECT COALESCE(sum(order_amt),0) FROM src.src_ord_order WHERE status='paid' AND pay_time >= $1),
+		(SELECT count(*) FROM src.src_ord_membership WHERE expire_time > now() OR grace_end_time > now()),
+		(SELECT count(*) FROM src.src_ord_order WHERE order_type='renewal' AND status='paid' AND create_time >= $1),
+		(SELECT count(*) FROM src.src_ord_order WHERE order_type='renewal' AND status IN ('paid','renew_failed') AND create_time >= $1),
+		(SELECT count(*) FROM src.src_ord_order WHERE pay_time >= $2),
+		(SELECT count(*) FROM src.src_ord_order WHERE refund_time >= $2)`, month, today).Scan(&revenue, &members, &renewOK, &renewAll, &paidToday, &refundToday)
 	if err != nil {
 		return err
 	}
@@ -794,12 +794,12 @@ func (a *API) alerts(w http.ResponseWriter, r *http.Request) error {
 	if status == "" {
 		status = "open"
 	}
-	where := `ra.status=$1 AND ($2='' OR ra.type=$2)`
+	where := `ra.status=$1 AND ($2='' OR ra.alert_type=$2)`
 	var total int
-	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM risk_alerts ra WHERE `+where, status, typ).Scan(&total); err != nil {
+	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_ris_alert ra WHERE `+where, status, typ).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := a.Pool.Query(r.Context(), `SELECT `+alertCols+` FROM risk_alerts ra JOIN users u ON u.id=ra.user_id WHERE `+where+`
+	rows, err := a.Pool.Query(r.Context(), `SELECT `+alertCols+` FROM src.src_ris_alert ra JOIN src.src_usr_user u ON u.id=ra.user_id WHERE `+where+`
 		ORDER BY ra.confidence DESC, ra.id DESC LIMIT $3 OFFSET $4`, status, typ, p.Size, p.Offset())
 	if err != nil {
 		return err
@@ -812,7 +812,7 @@ func (a *API) alerts(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *API) loadAlert(ctx context.Context, q db.Querier, id int64) (alertRow, error) {
-	x, err := scanAlert(q.QueryRow(ctx, `SELECT `+alertCols+` FROM risk_alerts ra JOIN users u ON u.id=ra.user_id WHERE ra.id=$1`, id))
+	x, err := scanAlert(q.QueryRow(ctx, `SELECT `+alertCols+` FROM src.src_ris_alert ra JOIN src.src_usr_user u ON u.id=ra.user_id WHERE ra.id=$1`, id))
 	if db.IsNoRows(err) {
 		return x, httpx.NotFound("告警")
 	}
@@ -866,7 +866,7 @@ func (a *API) alertDetail(w http.ResponseWriter, r *http.Request) error {
 		out["hr_avg"] = avgOrNil(hrSum, hrN)
 		out["cadence_avg"] = avgOrNil(cadSum, cadN)
 		var dev []byte
-		if err := a.Pool.QueryRow(ctx, `SELECT device FROM activities WHERE id=$1`, *al.ActivityID).Scan(&dev); err != nil {
+		if err := a.Pool.QueryRow(ctx, `SELECT device_json FROM src.src_act_activity WHERE id=$1`, *al.ActivityID).Scan(&dev); err != nil {
 			return err
 		}
 		var device anticheat.Device
@@ -874,13 +874,13 @@ func (a *API) alertDetail(w http.ResponseWriter, r *http.Request) error {
 		out["device"] = device
 		same := 0
 		if device.ID != "" {
-			if err := a.Pool.QueryRow(ctx, `SELECT count(*) FROM user_devices WHERE device_id=$1`, device.ID).Scan(&same); err != nil {
+			if err := a.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_usr_device WHERE device_id=$1`, device.ID).Scan(&same); err != nil {
 				return err
 			}
 		}
 		out["same_device_accounts"] = same
 	}
-	rows, err := a.Pool.Query(ctx, `SELECT `+alertCols+` FROM risk_alerts ra JOIN users u ON u.id=ra.user_id WHERE ra.user_id=$1 AND ra.id<>$2 ORDER BY ra.id DESC LIMIT 20`, al.User.ID, id)
+	rows, err := a.Pool.Query(ctx, `SELECT `+alertCols+` FROM src.src_ris_alert ra JOIN src.src_usr_user u ON u.id=ra.user_id WHERE ra.user_id=$1 AND ra.id<>$2 ORDER BY ra.id DESC LIMIT 20`, al.User.ID, id)
 	if err != nil {
 		return err
 	}
@@ -921,7 +921,7 @@ func (a *API) resolveAlert(w http.ResponseWriter, r *http.Request) error {
 		var status string
 		var actID *int64
 		var uid int64
-		err := tx.QueryRow(ctx, `SELECT status, activity_id, user_id FROM risk_alerts WHERE id=$1 FOR UPDATE`, id).Scan(&status, &actID, &uid)
+		err := tx.QueryRow(ctx, `SELECT status, activity_id, user_id FROM src.src_ris_alert WHERE id=$1 FOR UPDATE`, id).Scan(&status, &actID, &uid)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("告警")
 		}
@@ -962,13 +962,13 @@ func (a *API) resolveAlert(w http.ResponseWriter, r *http.Request) error {
 		default:
 			return httpx.BadRequest("invalid_body", "未知处置方式")
 		}
-		if _, err := tx.Exec(ctx, `UPDATE risk_alerts SET status='resolved', resolution=$2, note=NULLIF($3,''), resolved_by=$4, resolved_at=now() WHERE id=$1`,
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ris_alert SET status='resolved', resolution=$2, note=NULLIF($3,''), resolved_by=$4, resolve_time=now() WHERE id=$1`,
 			id, req.Action, req.Note, ad.ID); err != nil {
 			return err
 		}
 		// One decision settles every open alert of the same activity.
 		if actID != nil {
-			if _, err := tx.Exec(ctx, `UPDATE risk_alerts SET status='resolved', resolution=$2, note='同一运动记录已处理', resolved_by=$3, resolved_at=now()
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ris_alert SET status='resolved', resolution=$2, note='同一运动记录已处理', resolved_by=$3, resolve_time=now()
 				WHERE activity_id=$1 AND status='open'`, *actID, req.Action, ad.ID); err != nil {
 				return err
 			}

@@ -1,0 +1,58 @@
+# 圈圈 Loopland 后端配置（本地开发默认值，可直接提交）
+#
+# 读取顺序：内置默认值 → 本文件 → 环境变量（同名环境变量优先，见每项注释）。
+# 文件位置：$LOOPLAND_CONFIG，否则当前目录的 config.yaml，否则 server/config.yaml。
+# 正式环境请复制 config.prod.example.yaml，放在服务器上（不要提交），
+# 用 LOOPLAND_CONFIG=/etc/loopland/config.yaml 指定。
+# 密钥一律用 *_file 指向密钥文件（或用环境变量），不要直接写在这里。
+
+env: dev                         # LOOPLAND_ENV：dev | prod
+
+http:
+  addr: ":8080"                  # LOOPLAND_HTTP_ADDR：监听地址和端口
+  public_base_url: http://localhost:8080   # LOOPLAND_PUBLIC_BASE_URL：对外地址，支付回调用
+
+database:
+  url: postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable   # LOOPLAND_DATABASE_URL
+
+redis:
+  url: redis://localhost:6379/0  # LOOPLAND_REDIS_URL
+
+auth:
+  access_ttl: 2h                 # LOOPLAND_ACCESS_TTL
+  refresh_ttl: 720h              # LOOPLAND_REFRESH_TTL（30 天）
+  bootstrap_admin: "admin:admin-password-1"   # LOOPLAND_BOOTSTRAP_ADMIN：没有任何管理员时自动创建
+  # dev 模式下 JWT 密钥和数据加密密钥有内置默认值，正式环境必须配置：
+  # jwt_secret_file: secrets/jwt_secret
+  # admin_jwt_secret_file: secrets/admin_jwt_secret
+  # data_key_file: secrets/data_key
+
+jobs:
+  enabled: true                  # false = LOOPLAND_JOBS_OFF=1，本实例不跑后台任务
+
+features:
+  disabled: []                   # LOOPLAND_DISABLE：暂不上线的功能，见 config.prod.example.yaml
+
+# 第三方服务：dev 模式下不填就用假实现（短信验证码固定 000000、mock 支付）。
+aliyun:
+  access_key_id: ""
+  # access_key_secret_file: secrets/aliyun_access_key_secret
+  sms:
+    sign_name: ""
+    template_code: ""
+  captcha:
+    scene_id: ""
+
+wechat:
+  app_id: ""
+  pay:
+    mch_id: ""
+    serial_no: ""
+    public_key_id: ""
+
+alipay:
+  app_id: ""
+  sandbox: true
+
+apple:
+  bundle_id: com.loopland.app

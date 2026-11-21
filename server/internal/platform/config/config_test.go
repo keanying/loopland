@@ -54,3 +54,53 @@ func TestProdRequiresSecrets(t *testing.T) {
 		t.Fatal("prod without JWT secret accepted")
 	}
 }
+
+func TestYAMLFile(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "secrets"), 0o700)
+	os.WriteFile(filepath.Join(dir, "secrets", "sk"), []byte("yaml-secret\n"), 0o600)
+	p := filepath.Join(dir, "config.yaml")
+	os.WriteFile(p, []byte(`
+env: dev
+http:
+  addr: ":9999"
+  public_base_url: https://api.example.com/
+database:
+  url: postgres://from-yaml
+jobs:
+  enabled: false
+features:
+  disabled: [alipay, apple_iap]
+aliyun:
+  access_key_id: ak-yaml
+  access_key_secret_file: secrets/sk
+alipay:
+  sandbox: true
+`), 0o600)
+	t.Setenv("LOOPLAND_CONFIG", p)
+	t.Setenv("LOOPLAND_DATABASE_URL", "postgres://from-env") // env wins
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.HTTPAddr != ":9999" || c.PublicBaseURL != "https://api.example.com" || c.DatabaseURL != "postgres://from-env" ||
+		!c.JobsOff || len(c.Disabled) != 2 || c.Aliyun.AccessKeyID != "ak-yaml" || c.Aliyun.AccessKeySecret != "yaml-secret" || !c.Alipay.Sandbox {
+		t.Fatalf("%+v", c)
+	}
+	if Source != p {
+		t.Fatalf("source %q", Source)
+	}
+
+	os.WriteFile(p, []byte("htpp:\n  addr: \":1\"\n"), 0o600) // typo
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "htpp") {
+		t.Fatalf("unknown key must fail: %v", err)
+	}
+}
+
+func TestCommittedConfigFilesParse(t *testing.T) {
+	for _, f := range []string{"../../../config.yaml", "../../../config.prod.example.yaml"} {
+		if _, err := readFile(f); err != nil {
+			t.Errorf("%s: %v", f, err)
+		}
+	}
+}

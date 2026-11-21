@@ -52,7 +52,7 @@ LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live   # App �
 
 ## 接入真实服务
 
-见 **`docs/上线接入清单.md`**：每家服务去哪申请、拿到什么、填到哪里。后端变量模板 `server/.env.example`；配好后运行 `make doctor`（或部署环境里的 `loopland-doctor`）逐项验证密钥。正式环境缺配置会拒绝启动并列出缺项。
+见 **`docs/上线接入清单.md`**：每家服务去哪申请、拿到什么、填到哪里。后端配置 `server/config.yaml`（本地）/ `server/config.prod.example.yaml`（正式环境模板）；配好后运行 `make doctor`（或部署环境里的 `loopland-doctor`）逐项验证密钥。正式环境缺配置会拒绝启动并列出缺项。
 
 ## 上线前需要准备
 

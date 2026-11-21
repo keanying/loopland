@@ -306,7 +306,7 @@ func TestEndToEnd(t *testing.T) {
 
 	// Build: not enough energy, then with energy.
 	a.expectErr("POST", fmt.Sprintf("/v1/territories/%d/buildings", tid), map[string]any{"slot": 0, "building": "campfire"}, 403, "not_enough_energy")
-	e.sql(`UPDATE users SET energy=500 WHERE id=$1`, ares.User.ID)
+	e.sql(`UPDATE src.src_usr_user SET energy=500 WHERE id=$1`, ares.User.ID)
 	a.expectErr("POST", fmt.Sprintf("/v1/territories/%d/buildings", tid), map[string]any{"slot": 0, "building": "tower"}, 403, "level_too_low")
 	var built struct {
 		Territory struct {
@@ -445,7 +445,7 @@ func TestEndToEnd(t *testing.T) {
 
 	// Void B's first (settled) run: A's guard comes back.
 	var aid int64
-	e.app.Pool.QueryRow(context.Background(), `INSERT INTO risk_alerts (activity_id, user_id, type, confidence, detail) VALUES ($1,$2,'multi_account',0.5,'x') RETURNING id`,
+	e.app.Pool.QueryRow(context.Background(), `INSERT INTO src.src_ris_alert (activity_id, user_id, alert_type, confidence, detail) VALUES ($1,$2,'multi_account',0.5,'x') RETURNING id`,
 		s2.Activity.ID, bres.User.ID).Scan(&aid)
 	ad.must("POST", fmt.Sprintf("/admin/v1/risk/alerts/%d/resolve", aid), map[string]string{"action": "void"}, nil)
 	var terr struct {
@@ -465,6 +465,8 @@ func TestEndToEnd(t *testing.T) {
 		Total int `json:"total"`
 	}
 	ad.must("GET", "/admin/v1/territories?status=frozen", nil, &tl)
+	ad.must("GET", "/admin/v1/territories?status=frozen&q=1", nil, nil) // ILIKE % in a formatted query
+	ad.must("GET", "/admin/v1/users?filter=today&q=0001", nil, nil)
 	if tl.Total != 1 {
 		t.Fatalf("frozen list: %+v", tl)
 	}
@@ -597,7 +599,7 @@ func TestEndToEnd(t *testing.T) {
 	ad.must("POST", fmt.Sprintf("/admin/v1/users/%d/actions", bres.User.ID), map[string]string{"action": "ban"}, nil)
 	b.expectErr("GET", "/v1/me", nil, 403, "account_banned")
 	var frozen int
-	e.app.Pool.QueryRow(context.Background(), `SELECT count(*) FROM territories WHERE owner_user_id=$1 AND NOT frozen`, bres.User.ID).Scan(&frozen)
+	e.app.Pool.QueryRow(context.Background(), `SELECT count(*) FROM src.src_ter_territory WHERE owner_user_id=$1 AND NOT is_frozen`, bres.User.ID).Scan(&frozen)
 	if frozen != 0 {
 		t.Fatal("banned user's land must be frozen")
 	}

@@ -45,8 +45,13 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock(7310001)`) //nolint:errcheck
-	if _, err := conn.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_migrations (
-		version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`); err != nil {
+	if _, err := conn.Exec(ctx, `CREATE SCHEMA IF NOT EXISTS src;
+		CREATE TABLE IF NOT EXISTS src.src_sys_schema_migration (
+			version    TEXT        PRIMARY KEY,
+			apply_time TIMESTAMPTZ NOT NULL DEFAULT now());
+		COMMENT ON TABLE src.src_sys_schema_migration IS '数据库迁移记录';
+		COMMENT ON COLUMN src.src_sys_schema_migration.version IS '迁移版本（文件名去掉 .up.sql）';
+		COMMENT ON COLUMN src.src_sys_schema_migration.apply_time IS '执行时间'`); err != nil {
 		return err
 	}
 	files, err := fs.Glob(migrations.FS, "*.up.sql")
@@ -57,7 +62,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	for _, f := range files {
 		version := strings.TrimSuffix(f, ".up.sql")
 		var exists bool
-		if err := conn.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version=$1)`, version).Scan(&exists); err != nil {
+		if err := conn.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_sys_schema_migration WHERE version=$1)`, version).Scan(&exists); err != nil {
 			return err
 		}
 		if exists {
@@ -71,7 +76,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 			if _, err := tx.Exec(ctx, string(sql)); err != nil {
 				return fmt.Errorf("migration %s: %w", f, err)
 			}
-			_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (version) VALUES ($1)`, version)
+			_, err := tx.Exec(ctx, `INSERT INTO src.src_sys_schema_migration (version) VALUES ($1)`, version)
 			return err
 		})
 		if err != nil {

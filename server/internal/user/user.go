@@ -108,9 +108,9 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	var phoneEnc []byte
 	var consents, settings []byte
 	var bannedUntil *time.Time
-	err := q.QueryRow(ctx, `SELECT id, nickname, avatar_url, energy, energy_earned_total, phone_enc, realname_verified, is_adult,
-			status, muted_until, banned_until, delete_after, consents, settings, created_at
-		FROM users WHERE id=$1 AND status <> 'deleted'`, id).
+	err := q.QueryRow(ctx, `SELECT id, nickname, avatar_url, energy, energy_earned_total, phone_enc, is_realname_verified, is_adult,
+			status, mute_end_time, ban_end_time, delete_time, consents_json, settings_json, create_time
+		FROM src.src_usr_user WHERE id=$1 AND status <> 'deleted'`, id).
 		Scan(&u.ID, &u.Nickname, &u.AvatarURL, &u.Energy, &u.Earned, &phoneEnc, &u.RealnameVerified, &u.IsAdult,
 			&u.Status, &u.MutedUntil, &bannedUntil, &u.DeleteAfter, &consents, &settings, &u.CreatedAt)
 	if db.IsNoRows(err) {
@@ -138,12 +138,12 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	_ = json.Unmarshal(consents, &u.Consents)
 	_ = json.Unmarshal(settings, &u.Settings)
 
-	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM energy_ledger WHERE user_id=$1 AND day=$2 AND reason='activity'`,
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(delta),0) FROM src.src_ply_energy_ledger WHERE user_id=$1 AND ledger_date=$2 AND reason='activity'`,
 		id, clock.Today()).Scan(&u.EnergyToday); err != nil {
 		return u, err
 	}
 	var crew CrewRef
-	err = q.QueryRow(ctx, `SELECT c.id, c.name FROM crew_members m JOIN crews c ON c.id=m.crew_id WHERE m.user_id=$1`, id).Scan(&crew.ID, &crew.Name)
+	err = q.QueryRow(ctx, `SELECT c.id, c.name FROM src.src_soc_crew_member m JOIN src.src_soc_crew c ON c.id=m.crew_id WHERE m.user_id=$1`, id).Scan(&crew.ID, &crew.Name)
 	if err == nil {
 		u.Crew = &crew
 	} else if !db.IsNoRows(err) {
@@ -156,18 +156,18 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	if m.Active {
 		u.Membership = &m
 	}
-	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0), count(*) FROM activities WHERE user_id=$1 AND status='settled'`, id).
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0), count(*) FROM src.src_act_activity WHERE user_id=$1 AND status='settled'`, id).
 		Scan(&u.Stats.TotalDistanceM, &u.Stats.ActivityCount); err != nil {
 		return u, err
 	}
-	if err := q.QueryRow(ctx, `SELECT count(*), COALESCE(sum(area_m2),0) FROM territories WHERE owner_user_id=$1`, id).
+	if err := q.QueryRow(ctx, `SELECT count(*), COALESCE(sum(area_m2),0) FROM src.src_ter_territory WHERE owner_user_id=$1`, id).
 		Scan(&u.Stats.TerritoryCount, &u.Stats.TerritoryAreaM2); err != nil {
 		return u, err
 	}
 	weekStart := clock.Today()
 	weekStart = weekStart.AddDate(0, 0, -((int(weekStart.Weekday()) + 6) % 7))
-	if err := q.QueryRow(ctx, `SELECT count(*), COALESCE(sum(distance_m),0), COALESCE(sum(duration_s),0), COALESCE(sum(energy_granted),0)
-		FROM activities WHERE user_id=$1 AND status='settled' AND started_at >= $2`, id, weekStart).
+	if err := q.QueryRow(ctx, `SELECT count(*), COALESCE(sum(distance_m),0), COALESCE(sum(duration_sec),0), COALESCE(sum(energy_granted),0)
+		FROM src.src_act_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2`, id, weekStart).
 		Scan(&u.Stats.Week.Count, &u.Stats.Week.DistanceM, &u.Stats.Week.DurationS, &u.Stats.Week.Energy); err != nil {
 		return u, err
 	}
@@ -180,8 +180,8 @@ func LoadMembership(ctx context.Context, q db.Querier, id int64) (Membership, er
 	var m Membership
 	var exp time.Time
 	var grace *time.Time
-	err := q.QueryRow(ctx, `SELECT m.plan_code, p.name, m.expires_at, m.auto_renew, m.next_charge_at, m.channel, m.grace_until
-		FROM memberships m JOIN plans p ON p.code=m.plan_code WHERE m.user_id=$1`, id).
+	err := q.QueryRow(ctx, `SELECT m.plan_code, p.name, m.expire_time, m.is_auto_renew, m.next_charge_time, m.channel, m.grace_end_time
+		FROM src.src_ord_membership m JOIN src.src_ord_plan p ON p.code=m.plan_code WHERE m.user_id=$1`, id).
 		Scan(&m.PlanCode, &m.PlanName, &exp, &m.AutoRenew, &m.NextChargeAt, &m.Channel, &grace)
 	if db.IsNoRows(err) {
 		return Membership{Active: false}, nil
@@ -300,24 +300,24 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 				return httpx.BadRequest("invalid_nickname", "昵称 2–16 个字")
 			}
 			var muted bool
-			if err := tx.QueryRow(r.Context(), `SELECT COALESCE(muted_until > now(), false) FROM users WHERE id=$1`, uid).Scan(&muted); err != nil {
+			if err := tx.QueryRow(r.Context(), `SELECT COALESCE(mute_end_time > now(), false) FROM src.src_usr_user WHERE id=$1`, uid).Scan(&muted); err != nil {
 				return err
 			}
 			if muted {
 				return httpx.Forbidden("muted", "禁言期间不能修改昵称")
 			}
-			if _, err := tx.Exec(r.Context(), `UPDATE users SET nickname=$2 WHERE id=$1`, uid, n); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_usr_user SET nickname=$2 WHERE id=$1`, uid, n); err != nil {
 				return err
 			}
 		}
 		if req.AvatarURL != nil {
-			if _, err := tx.Exec(r.Context(), `UPDATE users SET avatar_url=NULLIF($2,'') WHERE id=$1`, uid, *req.AvatarURL); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_usr_user SET avatar_url=NULLIF($2,'') WHERE id=$1`, uid, *req.AvatarURL); err != nil {
 				return err
 			}
 		}
 		if len(req.Settings) > 0 {
 			var cur []byte
-			if err := tx.QueryRow(r.Context(), `SELECT settings FROM users WHERE id=$1 FOR UPDATE`, uid).Scan(&cur); err != nil {
+			if err := tx.QueryRow(r.Context(), `SELECT settings_json FROM src.src_usr_user WHERE id=$1 FOR UPDATE`, uid).Scan(&cur); err != nil {
 				return err
 			}
 			var s Settings
@@ -331,7 +331,7 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 				return httpx.BadRequest("invalid_body", "track_visibility 取值错误")
 			}
 			raw, _ := json.Marshal(s)
-			if _, err := tx.Exec(r.Context(), `UPDATE users SET settings=$2 WHERE id=$1`, uid, raw); err != nil {
+			if _, err := tx.Exec(r.Context(), `UPDATE src.src_usr_user SET settings_json=$2 WHERE id=$1`, uid, raw); err != nil {
 				return err
 			}
 		}
@@ -349,7 +349,7 @@ func (h *Handler) consents(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	raw, _ := json.Marshal(c)
-	if _, err := h.Pool.Exec(r.Context(), `UPDATE users SET consents=$2 WHERE id=$1`, httpx.UserID(r.Context()), raw); err != nil {
+	if _, err := h.Pool.Exec(r.Context(), `UPDATE src.src_usr_user SET consents_json=$2 WHERE id=$1`, httpx.UserID(r.Context()), raw); err != nil {
 		return err
 	}
 	return h.me(w, r)
@@ -368,7 +368,7 @@ func (h *Handler) realname(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("realname_failed", err.Error())
 	}
 	// Only the outcome is kept, never the name or ID number.
-	if _, err := h.Pool.Exec(r.Context(), `UPDATE users SET realname_verified=true, is_adult=$2, birth_year=$3 WHERE id=$1`,
+	if _, err := h.Pool.Exec(r.Context(), `UPDATE src.src_usr_user SET is_realname_verified=true, is_adult=$2, birth_year=$3 WHERE id=$1`,
 		httpx.UserID(r.Context()), IsAdult(birth, clock.Today()), birth.Year()); err != nil {
 		return err
 	}
@@ -378,8 +378,8 @@ func (h *Handler) realname(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) requestDeletion(w http.ResponseWriter, r *http.Request) error {
 	after := time.Now().Add(DeletionCoolingOff)
 	var got time.Time
-	err := h.Pool.QueryRow(r.Context(), `UPDATE users SET status='deleting', delete_after=COALESCE(delete_after, $2)
-		WHERE id=$1 AND status IN ('active','deleting') RETURNING delete_after`, httpx.UserID(r.Context()), after).Scan(&got)
+	err := h.Pool.QueryRow(r.Context(), `UPDATE src.src_usr_user SET status='deleting', delete_time=COALESCE(delete_time, $2)
+		WHERE id=$1 AND status IN ('active','deleting') RETURNING delete_time`, httpx.UserID(r.Context()), after).Scan(&got)
 	if db.IsNoRows(err) {
 		return httpx.Forbidden("account_banned", "账号当前状态不能注销，请联系客服")
 	}
@@ -390,7 +390,7 @@ func (h *Handler) requestDeletion(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (h *Handler) cancelDeletion(w http.ResponseWriter, r *http.Request) error {
-	if _, err := h.Pool.Exec(r.Context(), `UPDATE users SET status='active', delete_after=NULL WHERE id=$1 AND status='deleting'`,
+	if _, err := h.Pool.Exec(r.Context(), `UPDATE src.src_usr_user SET status='active', delete_time=NULL WHERE id=$1 AND status='deleting'`,
 		httpx.UserID(r.Context())); err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func (h *Handler) export(w http.ResponseWriter, r *http.Request) error {
 	}
 	var phone *string
 	var enc []byte
-	if err := h.Pool.QueryRow(r.Context(), `SELECT phone_enc FROM users WHERE id=$1`, uid).Scan(&enc); err != nil {
+	if err := h.Pool.QueryRow(r.Context(), `SELECT phone_enc FROM src.src_usr_user WHERE id=$1`, uid).Scan(&enc); err != nil {
 		return err
 	}
 	if enc != nil {
@@ -420,12 +420,12 @@ func (h *Handler) export(w http.ResponseWriter, r *http.Request) error {
 	}
 	out := map[string]any{"exported_at": time.Now(), "account": u, "phone": phone}
 	for key, sql := range map[string]string{
-		"activities": `SELECT id, sport, status, started_at, ended_at, distance_m, duration_s, amount, energy_granted,
-			ST_AsGeoJSON(track)::json AS track FROM activities WHERE user_id=$1 ORDER BY started_at`,
-		"territories": `SELECT id, area_m2, guard, captured_at, ST_AsGeoJSON(geom)::json AS geometry FROM territories WHERE owner_user_id=$1`,
-		"codex":       `SELECT kind, item, progress, obtained_at FROM codex_items WHERE user_id=$1`,
-		"orders":      `SELECT order_no, plan_name, amount_fen, channel, status, created_at, paid_at FROM orders WHERE user_id=$1`,
-		"energy":      `SELECT day, delta, reason, created_at FROM energy_ledger WHERE user_id=$1 ORDER BY id`,
+		"activities": `SELECT id, sport, status, start_time, end_time, distance_m, duration_sec, amount, energy_granted,
+			ST_AsGeoJSON(track_geom)::json AS track_geom FROM src.src_act_activity WHERE user_id=$1 ORDER BY start_time`,
+		"territories": `SELECT id, area_m2, guard, capture_time, ST_AsGeoJSON(area_geom)::json AS geometry FROM src.src_ter_territory WHERE owner_user_id=$1`,
+		"codex":       `SELECT item_type, item, progress, obtain_time FROM src.src_ply_codex_item WHERE user_id=$1`,
+		"orders":      `SELECT order_no, plan_name, order_amt, channel, status, create_time, pay_time FROM src.src_ord_order WHERE user_id=$1`,
+		"energy":      `SELECT ledger_date, delta, reason, create_time FROM src.src_ply_energy_ledger WHERE user_id=$1 ORDER BY id`,
 	} {
 		raw, err := jsonRows(sql)
 		if err != nil {

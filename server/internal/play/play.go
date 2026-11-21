@@ -37,10 +37,10 @@ func grant(ctx context.Context, q db.Querier, user int64, energy int, reason str
 	if energy == 0 {
 		return nil
 	}
-	if _, err := q.Exec(ctx, `UPDATE users SET energy = GREATEST(0, energy + $2) WHERE id=$1`, user, energy); err != nil {
+	if _, err := q.Exec(ctx, `UPDATE src.src_usr_user SET energy = GREATEST(0, energy + $2) WHERE id=$1`, user, energy); err != nil {
 		return err
 	}
-	_, err := q.Exec(ctx, `INSERT INTO energy_ledger (user_id, day, delta, reason, ref_id) VALUES ($1,$2,$3,$4,$5)`,
+	_, err := q.Exec(ctx, `INSERT INTO src.src_ply_energy_ledger (user_id, ledger_date, delta, reason, ref_id) VALUES ($1,$2,$3,$4,$5)`,
 		user, clock.Today(), energy, reason, ref)
 	return err
 }
@@ -48,7 +48,7 @@ func grant(ctx context.Context, q db.Querier, user int64, energy int, reason str
 // spend takes energy, failing when there isn't enough.
 func spend(ctx context.Context, tx pgx.Tx, user int64, energy int, reason string, ref int64) (int, error) {
 	var have int
-	if err := tx.QueryRow(ctx, `SELECT energy FROM users WHERE id=$1 FOR UPDATE`, user).Scan(&have); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT energy FROM src.src_usr_user WHERE id=$1 FOR UPDATE`, user).Scan(&have); err != nil {
 		return 0, err
 	}
 	if have < energy {

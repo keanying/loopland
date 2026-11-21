@@ -48,7 +48,7 @@ type planView struct {
 
 func (h *Handler) plans(w http.ResponseWriter, r *http.Request) error {
 	var adult *bool
-	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT is_adult FROM users WHERE id=$1`, httpx.UserID(r.Context())).Scan(&adult); err != nil {
+	if err := h.Svc.Pool.QueryRow(r.Context(), `SELECT is_adult FROM src.src_usr_user WHERE id=$1`, httpx.UserID(r.Context())).Scan(&adult); err != nil {
 		return err
 	}
 	if adult != nil && !*adult {

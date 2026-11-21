@@ -1,0 +1,68 @@
+# 圈圈 Loopland 后端 · 正式环境配置模板
+#
+# 复制到服务器（例如 /etc/loopland/config.yaml），启动时设置
+#   LOOPLAND_CONFIG=/etc/loopland/config.yaml
+# 本文件和 secrets/ 目录都不要提交到仓库。
+# 相对路径的 *_file 以本文件所在目录为基准。
+# 配好后运行 loopland-doctor 逐项检查，缺项时服务会拒绝启动并列出缺什么。
+
+env: prod
+
+http:
+  addr: ":8080"
+  public_base_url: https://api.example.com     # 已备案的公网 https 域名（支付回调）
+
+database:
+  url: postgres://loopland:CHANGE_ME@pgm-xxxx.pg.rds.aliyuncs.com:5432/loopland?sslmode=require
+
+redis:
+  url: rediss://:CHANGE_ME@r-xxxx.redis.rds.aliyuncs.com:6379/0
+
+auth:
+  access_ttl: 2h
+  refresh_ttl: 720h
+  jwt_secret_file: secrets/jwt_secret              # openssl rand -base64 48
+  admin_jwt_secret_file: secrets/admin_jwt_secret  # openssl rand -base64 48（与上面不同）
+  data_key_file: secrets/data_key                  # openssl rand -base64 32（务必备份）
+  bootstrap_admin: ""                              # 首次部署临时填「用户名:密码」，建好后清空
+
+jobs:
+  enabled: true        # 多实例时可以只留一台 true
+
+features:
+  # 可选：sms, captcha, oneclick, realname, wechat_login, apple_login, wechat_pay, alipay, apple_iap
+  disabled: []
+
+aliyun:
+  access_key_id: LTAI_CHANGE_ME
+  access_key_secret_file: secrets/aliyun_access_key_secret
+  sms:
+    sign_name: 圈圈
+    template_code: SMS_000000000
+  captcha:
+    scene_id: CHANGE_ME
+
+wechat:
+  app_id: wx0000000000000000
+  app_secret_file: secrets/wechat_app_secret
+  pay:
+    mch_id: "1900000000"
+    serial_no: CHANGE_ME
+    private_key_file: secrets/wechat_apiclient_key.pem
+    apiv3_key_file: secrets/wechat_apiv3_key
+    public_key_file: secrets/wechat_pub_key.pem
+    public_key_id: PUB_KEY_ID_CHANGE_ME
+
+alipay:
+  app_id: "2021000000000000"
+  private_key_file: secrets/alipay_app_private_key
+  public_key_file: secrets/alipay_public_key
+  sandbox: false
+
+apple:
+  bundle_id: com.loopland.app
+  iap:
+    issuer_id: ""
+    key_id: ""
+    # private_key_file: secrets/apple_iap_key.p8
+    sandbox: false

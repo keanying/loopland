@@ -31,7 +31,7 @@ type fixture struct {
 
 func (f fixture) user(t *testing.T, nick string) int64 {
 	var id int64
-	if err := f.pool.QueryRow(f.ctx, `INSERT INTO users (nickname, source) VALUES ($1,'sms') RETURNING id`, nick).Scan(&id); err != nil {
+	if err := f.pool.QueryRow(f.ctx, `INSERT INTO src.src_usr_user (nickname, source) VALUES ($1,'sms') RETURNING id`, nick).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -39,7 +39,7 @@ func (f fixture) user(t *testing.T, nick string) int64 {
 
 func (f fixture) activity(t *testing.T, user int64) int64 {
 	var id int64
-	if err := f.pool.QueryRow(f.ctx, `INSERT INTO activities (user_id, client_id, sport, started_at, ended_at)
+	if err := f.pool.QueryRow(f.ctx, `INSERT INTO src.src_act_activity (user_id, client_id, sport, start_time, end_time)
 		VALUES ($1, gen_random_uuid(), 'run', now(), now()) RETURNING id`, user).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ type terr struct {
 
 func (f fixture) get(t *testing.T, id int64) (terr, bool) {
 	var x terr
-	err := f.pool.QueryRow(f.ctx, `SELECT owner_user_id, area_m2, guard FROM territories WHERE id=$1`, id).Scan(&x.owner, &x.area, &x.guard)
+	err := f.pool.QueryRow(f.ctx, `SELECT owner_user_id, area_m2, guard FROM src.src_ter_territory WHERE id=$1`, id).Scan(&x.owner, &x.area, &x.guard)
 	if err == pgx.ErrNoRows {
 		return x, false
 	}
@@ -118,7 +118,7 @@ func TestWeakenThenCaptureCut(t *testing.T) {
 	a, b := f.user(t, "a"), f.user(t, "b")
 	first := f.claim(t, ClaimInput{UserID: a, ActivityID: f.activity(t, a), Ring: rect(0, 0, 200, 100), AttackEnergy: 50})
 	tid := first.Claims[0].TerritoryID
-	if _, err := f.pool.Exec(f.ctx, `UPDATE territories SET guard=100 WHERE id=$1`, tid); err != nil {
+	if _, err := f.pool.Exec(f.ctx, `UPDATE src.src_ter_territory SET guard=100 WHERE id=$1`, tid); err != nil {
 		t.Fatal(err)
 	}
 
@@ -147,7 +147,7 @@ func TestWeakenThenCaptureCut(t *testing.T) {
 		t.Fatalf("victim keeps both ends: %+v", x)
 	}
 	var unread int
-	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM notifications WHERE user_id=$1`, a).Scan(&unread)
+	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM src.src_msg_notification WHERE user_id=$1`, a).Scan(&unread)
 	if unread != 2 {
 		t.Fatalf("victim notifications = %d, want 2", unread)
 	}
@@ -158,10 +158,10 @@ func TestCaptureWholeAndRollback(t *testing.T) {
 	a, b := f.user(t, "a"), f.user(t, "b")
 	first := f.claim(t, ClaimInput{UserID: a, ActivityID: f.activity(t, a), Ring: rect(0, 0, 100, 100), AttackEnergy: 50})
 	tid := first.Claims[0].TerritoryID
-	if _, err := f.pool.Exec(f.ctx, `UPDATE territories SET guard=50 WHERE id=$1;`, tid); err != nil {
+	if _, err := f.pool.Exec(f.ctx, `UPDATE src.src_ter_territory SET guard=50 WHERE id=$1;`, tid); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.pool.Exec(f.ctx, `INSERT INTO territory_buildings (territory_id, slot, building, built_by) VALUES ($1, 0, 'campfire', $2)`, tid, a); err != nil {
+	if _, err := f.pool.Exec(f.ctx, `INSERT INTO src.src_ter_building (territory_id, slot, building, built_by) VALUES ($1, 0, 'campfire', $2)`, tid, a); err != nil {
 		t.Fatal(err)
 	}
 
@@ -175,12 +175,12 @@ func TestCaptureWholeAndRollback(t *testing.T) {
 		t.Fatalf("whole capture: %+v", x)
 	}
 	var n int
-	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM territory_buildings WHERE territory_id=$1`, tid).Scan(&n)
+	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM src.src_ter_building WHERE territory_id=$1`, tid).Scan(&n)
 	if n != 0 {
 		t.Fatal("buildings cleared on whole capture")
 	}
 	var total int
-	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM territories`).Scan(&total)
+	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM src.src_ter_territory`).Scan(&total)
 	if total != 2 { // a's (now b's) + the free ring around it
 		t.Fatalf("territories = %d, want 2", total)
 	}
@@ -192,11 +192,11 @@ func TestCaptureWholeAndRollback(t *testing.T) {
 	if !ok || *x.owner != a || x.guard != 50 {
 		t.Fatalf("restored: %+v ok=%v", x, ok)
 	}
-	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM territory_buildings WHERE territory_id=$1`, tid).Scan(&n)
+	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM src.src_ter_building WHERE territory_id=$1`, tid).Scan(&n)
 	if n != 1 {
 		t.Fatal("buildings restored")
 	}
-	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM territories`).Scan(&total)
+	f.pool.QueryRow(f.ctx, `SELECT count(*) FROM src.src_ter_territory`).Scan(&total)
 	if total != 1 {
 		t.Fatalf("free claim removed: territories = %d", total)
 	}
@@ -220,7 +220,7 @@ func TestRollbackCutAndWeaken(t *testing.T) {
 	}
 
 	// Weaken and roll back.
-	if _, err := f.pool.Exec(f.ctx, `UPDATE territories SET guard=100 WHERE id=$1`, tid); err != nil {
+	if _, err := f.pool.Exec(f.ctx, `UPDATE src.src_ter_territory SET guard=100 WHERE id=$1`, tid); err != nil {
 		t.Fatal(err)
 	}
 	act2 := f.activity(t, b)
@@ -240,7 +240,7 @@ func TestCrewMatesAreNotAttacked(t *testing.T) {
 	f := setup(t)
 	a, b := f.user(t, "a"), f.user(t, "b")
 	var crew int64
-	f.pool.QueryRow(f.ctx, `INSERT INTO crews (name, district, leader_id) VALUES ('c','徐汇区',$1) RETURNING id`, a).Scan(&crew)
+	f.pool.QueryRow(f.ctx, `INSERT INTO src.src_soc_crew (name, district, leader_id) VALUES ('c','徐汇区',$1) RETURNING id`, a).Scan(&crew)
 	f.claim(t, ClaimInput{UserID: a, CrewID: &crew, ActivityID: f.activity(t, a), Ring: rect(0, 0, 100, 100), AttackEnergy: 50})
 	out := f.claim(t, ClaimInput{UserID: b, CrewID: &crew, ActivityID: f.activity(t, b), Ring: rect(0, 0, 200, 100), AttackEnergy: 500})
 	if len(out.Attacks) != 0 || len(out.Claims) != 1 || !near(out.Claims[0].AreaM2, 10000, 30) {

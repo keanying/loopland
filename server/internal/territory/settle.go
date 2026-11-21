@@ -144,12 +144,12 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 	const loop = `lp_clean(ST_GeomFromText($1, 4326))`
 
 	rows, err := tx.Query(ctx, `
-		SELECT t.id, t.owner_user_id, u.nickname, u.avatar_url, t.owner_crew_id, t.guard, t.frozen,
-		       lp_area(ST_Intersection(t.geom, `+loop+`)),
-		       lp_area(ST_Difference(t.geom, `+loop+`)),
+		SELECT t.id, t.owner_user_id, u.nickname, u.avatar_url, t.owner_crew_id, t.guard, t.is_frozen,
+		       lp_area(ST_Intersection(t.area_geom, `+loop+`)),
+		       lp_area(ST_Difference(t.area_geom, `+loop+`)),
 		       t.area_m2
-		FROM territories t LEFT JOIN users u ON u.id = t.owner_user_id
-		WHERE ST_Intersects(t.geom, `+loop+`)
+		FROM src.src_ter_territory t LEFT JOIN src.src_usr_user u ON u.id = t.owner_user_id
+		WHERE ST_Intersects(t.area_geom, `+loop+`)
 		ORDER BY t.id
 		FOR UPDATE OF t`, wkt)
 	if err != nil {
@@ -181,7 +181,7 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 		}
 		switch {
 		case !res.Captured:
-			if _, err := tx.Exec(ctx, `UPDATE territories SET guard=$2, updated_at=now() WHERE id=$1`, v.id, res.GuardAfter); err != nil {
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET guard=$2, update_time=now() WHERE id=$1`, v.id, res.GuardAfter); err != nil {
 				return out, err
 			}
 			if err := event(ctx, tx, eventRow{territoryID: v.id, activityID: &in.ActivityID, kind: "weaken", actor: &in.UserID,
@@ -204,9 +204,9 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 		// The victim keeps the territory after a weaken or a cut: give the
 		// owner a window to reinforce it.
 		if v.ownerID != nil && in.DefenseWindowH > 0 && (!res.Captured || v.remainderM2 >= in.MinAreaM2) {
-			if _, err := tx.Exec(ctx, `INSERT INTO territory_defenses (territory_id, attacker_id, deadline)
+			if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_defense (territory_id, attacker_id, deadline_time)
 				VALUES ($1, $2, now() + make_interval(secs => $3))
-				ON CONFLICT (territory_id) DO UPDATE SET attacker_id=EXCLUDED.attacker_id, opened_at=now(), deadline=EXCLUDED.deadline`,
+				ON CONFLICT (territory_id) DO UPDATE SET attacker_id=EXCLUDED.attacker_id, open_time=now(), deadline_time=EXCLUDED.deadline_time`,
 				v.id, in.UserID, in.DefenseWindowH*3600); err != nil {
 				return out, err
 			}
@@ -229,7 +229,7 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 	if err := tx.QueryRow(ctx, `
 		WITH f AS (
 		  SELECT lp_clean(ST_Difference(`+loop+`, COALESCE(
-		    (SELECT ST_Union(geom) FROM territories WHERE ST_Intersects(geom, `+loop+`)),
+		    (SELECT ST_Union(area_geom) FROM src.src_ter_territory WHERE ST_Intersects(area_geom, `+loop+`)),
 		    ST_GeomFromText('POLYGON EMPTY', 4326)))) AS g)
 		SELECT lp_area(g) FROM f`, wkt).Scan(&freeArea); err != nil {
 		return out, err
@@ -237,10 +237,10 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 	if freeArea >= in.MinAreaM2 {
 		var id int64
 		err := tx.QueryRow(ctx, `
-			INSERT INTO territories (owner_user_id, owner_crew_id, geom, area_m2, guard, source_activity)
+			INSERT INTO src.src_ter_territory (owner_user_id, owner_crew_id, area_geom, area_m2, guard, source_activity)
 			SELECT $2, $3, g, lp_area(g), 0, $4 FROM (
 			  SELECT lp_clean(ST_Difference(`+loop+`, COALESCE(
-			    (SELECT ST_Union(geom) FROM territories WHERE ST_Intersects(geom, `+loop+`)),
+			    (SELECT ST_Union(area_geom) FROM src.src_ter_territory WHERE ST_Intersects(area_geom, `+loop+`)),
 			    ST_GeomFromText('POLYGON EMPTY', 4326)))) AS g) f
 			RETURNING id`, wkt, in.UserID, in.CrewID, in.ActivityID).Scan(&id)
 		if err != nil {
@@ -273,7 +273,7 @@ type stateStationing struct {
 
 func snapshot(ctx context.Context, tx pgx.Tx, id int64, crew *int64) (prevState, error) {
 	st := prevState{CrewID: crew, Buildings: []stateBuilding{}, Stationed: []stateStationing{}}
-	rows, err := tx.Query(ctx, `SELECT slot, building, built_by FROM territory_buildings WHERE territory_id=$1`, id)
+	rows, err := tx.Query(ctx, `SELECT slot, building, built_by FROM src.src_ter_building WHERE territory_id=$1`, id)
 	if err != nil {
 		return st, err
 	}
@@ -284,7 +284,7 @@ func snapshot(ctx context.Context, tx pgx.Tx, id int64, crew *int64) (prevState,
 	if err != nil {
 		return st, err
 	}
-	rows, err = tx.Query(ctx, `SELECT user_id, role FROM territory_stationed WHERE territory_id=$1`, id)
+	rows, err = tx.Query(ctx, `SELECT user_id, role FROM src.src_ter_station WHERE territory_id=$1`, id)
 	if err != nil {
 		return st, err
 	}
@@ -301,14 +301,14 @@ func captureWhole(ctx context.Context, tx pgx.Tx, in ClaimInput, v overlapRow) (
 		return 0, err
 	}
 	raw, _ := json.Marshal(st)
-	if _, err := tx.Exec(ctx, `DELETE FROM territory_buildings WHERE territory_id=$1`, v.id); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_building WHERE territory_id=$1`, v.id); err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM territory_stationed WHERE territory_id=$1`, v.id); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_station WHERE territory_id=$1`, v.id); err != nil {
 		return 0, err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE territories SET owner_user_id=$2, owner_crew_id=$3, guard=0, source_activity=$4,
-		captured_at=now(), updated_at=now() WHERE id=$1`, v.id, in.UserID, in.CrewID, in.ActivityID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET owner_user_id=$2, owner_crew_id=$3, guard=0, source_activity=$4,
+		capture_time=now(), update_time=now() WHERE id=$1`, v.id, in.UserID, in.CrewID, in.ActivityID); err != nil {
 		return 0, err
 	}
 	zero := 0
@@ -322,9 +322,9 @@ func captureCut(ctx context.Context, tx pgx.Tx, in ClaimInput, v overlapRow, wkt
 	var area float64
 	// New territory from the overlap, taken before the victim is cut.
 	err := tx.QueryRow(ctx, `
-		INSERT INTO territories (owner_user_id, owner_crew_id, geom, area_m2, guard, source_activity)
+		INSERT INTO src.src_ter_territory (owner_user_id, owner_crew_id, area_geom, area_m2, guard, source_activity)
 		SELECT $3, $4, g, lp_area(g), 0, $5 FROM (
-		  SELECT lp_clean(ST_Intersection(geom, `+loop+`)) AS g FROM territories WHERE id=$1) x
+		  SELECT lp_clean(ST_Intersection(area_geom, `+loop+`)) AS g FROM src.src_ter_territory WHERE id=$1) x
 		RETURNING id, area_m2`, v.id, wkt, in.UserID, in.CrewID, in.ActivityID).Scan(&id, &area)
 	if err != nil {
 		return 0, 0, err
@@ -333,8 +333,8 @@ func captureCut(ctx context.Context, tx pgx.Tx, in ClaimInput, v overlapRow, wkt
 		prevOwner: v.ownerID, newOwner: v.ownerID, prevGeomFrom: &v.id}); err != nil {
 		return 0, 0, err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE territories SET geom=lp_clean(ST_Difference(geom, `+loop+`)),
-		area_m2=lp_area(ST_Difference(geom, `+loop+`)), updated_at=now() WHERE id=$1`, v.id, wkt); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET area_geom=lp_clean(ST_Difference(area_geom, `+loop+`)),
+		area_m2=lp_area(ST_Difference(area_geom, `+loop+`)), update_time=now() WHERE id=$1`, v.id, wkt); err != nil {
 		return 0, 0, err
 	}
 	zero := 0
@@ -360,9 +360,9 @@ func event(ctx context.Context, q interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }, e eventRow) error {
 	var id int64
-	return q.QueryRow(ctx, `INSERT INTO territory_events
-		(territory_id, activity_id, kind, actor_user_id, prev_owner_id, new_owner_id, prev_guard, new_guard, prev_geom, prev_state, admin_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,(SELECT geom FROM territories WHERE id=$9),$10,$11) RETURNING id`,
+	return q.QueryRow(ctx, `INSERT INTO src.src_ter_event
+		(territory_id, activity_id, event_type, actor_user_id, prev_owner_id, new_owner_id, prev_guard, new_guard, prev_area_geom, prev_state_json, admin_id)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,(SELECT area_geom FROM src.src_ter_territory WHERE id=$9),$10,$11) RETURNING id`,
 		e.territoryID, e.activityID, e.kind, e.actor, e.prevOwner, e.newOwner, e.prevGuard, e.newGuard, e.prevGeomFrom, e.prevState, e.adminID).Scan(&id)
 }
 
@@ -385,8 +385,8 @@ func Rollback(ctx context.Context, tx pgx.Tx, activityID int64) error {
 		prevGuard, newGuard *int
 		prevState           []byte
 	}
-	rows, err := tx.Query(ctx, `SELECT id, territory_id, kind, prev_owner_id, new_owner_id, prev_guard, new_guard, prev_state
-		FROM territory_events WHERE activity_id=$1 ORDER BY id DESC`, activityID)
+	rows, err := tx.Query(ctx, `SELECT id, territory_id, event_type, prev_owner_id, new_owner_id, prev_guard, new_guard, prev_state_json
+		FROM src.src_ter_event WHERE activity_id=$1 ORDER BY id DESC`, activityID)
 	if err != nil {
 		return err
 	}
@@ -402,51 +402,51 @@ func Rollback(ctx context.Context, tx pgx.Tx, activityID int64) error {
 	for _, e := range evs {
 		ids = append(ids, e.territoryID)
 	}
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM territories WHERE id = ANY($1) ORDER BY id FOR UPDATE`, ids); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM src.src_ter_territory WHERE id = ANY($1) ORDER BY id FOR UPDATE`, ids); err != nil {
 		return err
 	}
 	notified := map[int64]bool{}
 	for _, e := range evs {
 		switch e.kind {
 		case "claim", "capture":
-			if _, err := tx.Exec(ctx, `DELETE FROM territories WHERE id=$1`, e.territoryID); err != nil {
+			if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_territory WHERE id=$1`, e.territoryID); err != nil {
 				return err
 			}
 		case "cut":
 			if _, err := tx.Exec(ctx, `
-				UPDATE territories t SET geom = g, area_m2 = lp_area(g), updated_at = now()
-				FROM (SELECT lp_clean(ST_Difference(ev.prev_geom, COALESCE(
-				        (SELECT ST_Union(o.geom) FROM territories o WHERE o.id <> ev.territory_id AND ST_Intersects(o.geom, ev.prev_geom)),
+				UPDATE src.src_ter_territory t SET area_geom = g, area_m2 = lp_area(g), update_time = now()
+				FROM (SELECT lp_clean(ST_Difference(ev.prev_area_geom, COALESCE(
+				        (SELECT ST_Union(o.area_geom) FROM src.src_ter_territory o WHERE o.id <> ev.territory_id AND ST_Intersects(o.area_geom, ev.prev_area_geom)),
 				        ST_GeomFromText('POLYGON EMPTY', 4326)))) AS g
-				      FROM territory_events ev WHERE ev.id = $1) x
+				      FROM src.src_ter_event ev WHERE ev.id = $1) x
 				WHERE t.id = $2 AND NOT ST_IsEmpty(g)`, e.id, e.territoryID); err != nil {
 				return err
 			}
 		case "capture_whole":
 			var st prevState
 			_ = json.Unmarshal(e.prevState, &st)
-			if _, err := tx.Exec(ctx, `UPDATE territories SET owner_user_id=$2, owner_crew_id=$3, guard=COALESCE($4,0), updated_at=now() WHERE id=$1`,
+			if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET owner_user_id=$2, owner_crew_id=$3, guard=COALESCE($4,0), update_time=now() WHERE id=$1`,
 				e.territoryID, e.prevOwner, st.CrewID, e.prevGuard); err != nil {
 				return err
 			}
-			if _, err := tx.Exec(ctx, `DELETE FROM territory_buildings WHERE territory_id=$1`, e.territoryID); err != nil {
+			if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_building WHERE territory_id=$1`, e.territoryID); err != nil {
 				return err
 			}
 			for _, b := range st.Buildings {
-				if _, err := tx.Exec(ctx, `INSERT INTO territory_buildings (territory_id, slot, building, built_by) VALUES ($1,$2,$3,$4)
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_building (territory_id, slot, building, built_by) VALUES ($1,$2,$3,$4)
 					ON CONFLICT DO NOTHING`, e.territoryID, b.Slot, b.Building, b.BuiltBy); err != nil {
 					return err
 				}
 			}
 			for _, s := range st.Stationed {
-				if _, err := tx.Exec(ctx, `INSERT INTO territory_stationed (user_id, role, territory_id) VALUES ($1,$2,$3)
+				if _, err := tx.Exec(ctx, `INSERT INTO src.src_ter_station (user_id, role, territory_id) VALUES ($1,$2,$3)
 					ON CONFLICT DO NOTHING`, s.UserID, s.Role, e.territoryID); err != nil {
 					return err
 				}
 			}
 		case "weaken":
 			if e.prevGuard != nil && e.newGuard != nil {
-				if _, err := tx.Exec(ctx, `UPDATE territories SET guard = guard + $2, updated_at=now() WHERE id=$1`,
+				if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET guard = guard + $2, update_time=now() WHERE id=$1`,
 					e.territoryID, *e.prevGuard-*e.newGuard); err != nil {
 					return err
 				}
@@ -475,17 +475,17 @@ func Rollback(ctx context.Context, tx pgx.Tx, activityID int64) error {
 // and after.
 func Reinforce(ctx context.Context, tx pgx.Tx, territoryID, user, activityID int64, energy, maxGuard int) (int, int, error) {
 	var before int
-	if err := tx.QueryRow(ctx, `SELECT guard FROM territories WHERE id=$1 FOR UPDATE`, territoryID).Scan(&before); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT guard FROM src.src_ter_territory WHERE id=$1 FOR UPDATE`, territoryID).Scan(&before); err != nil {
 		return 0, 0, err
 	}
 	after := min(maxGuard, before+max(0, energy))
 	if after < before {
 		after = before // already above the cap: never lower it
 	}
-	if _, err := tx.Exec(ctx, `UPDATE territories SET guard=$2, updated_at=now() WHERE id=$1`, territoryID, after); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ter_territory SET guard=$2, update_time=now() WHERE id=$1`, territoryID, after); err != nil {
 		return 0, 0, err
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM territory_defenses WHERE territory_id=$1`, territoryID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM src.src_ter_defense WHERE territory_id=$1`, territoryID); err != nil {
 		return 0, 0, err
 	}
 	return before, after, event(ctx, tx, eventRow{territoryID: territoryID, activityID: &activityID, kind: "reinforce", actor: &user,

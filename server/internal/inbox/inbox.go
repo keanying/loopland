@@ -30,7 +30,7 @@ func Notify(ctx context.Context, q db.Querier, userID int64, category, title, bo
 		data = map[string]any{}
 	}
 	raw, _ := json.Marshal(data)
-	_, err := q.Exec(ctx, `INSERT INTO notifications (user_id, category, title, body, data) VALUES ($1,$2,$3,$4,$5)`,
+	_, err := q.Exec(ctx, `INSERT INTO src.src_msg_notification (user_id, category, title, body, data_json) VALUES ($1,$2,$3,$4,$5)`,
 		userID, category, title, body, raw)
 	return err
 }
@@ -62,8 +62,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	if cat == "all" {
 		cat = ""
 	}
-	rows, err := h.Pool.Query(r.Context(), `SELECT id, category, title, body, data, read_at IS NOT NULL, created_at
-		FROM notifications WHERE user_id=$1 AND ($2='' OR category=$2) ORDER BY id DESC LIMIT $3 OFFSET $4`,
+	rows, err := h.Pool.Query(r.Context(), `SELECT id, category, title, body, data_json, read_time IS NOT NULL, create_time
+		FROM src.src_msg_notification WHERE user_id=$1 AND ($2='' OR category=$2) ORDER BY id DESC LIMIT $3 OFFSET $4`,
 		uid, cat, p.Size, p.Offset())
 	if err != nil {
 		return err
@@ -79,8 +79,8 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var total, unread int
-	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FILTER (WHERE $2='' OR category=$2), count(*) FILTER (WHERE read_at IS NULL)
-		FROM notifications WHERE user_id=$1`, uid, cat).Scan(&total, &unread); err != nil {
+	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FILTER (WHERE $2='' OR category=$2), count(*) FILTER (WHERE read_time IS NULL)
+		FROM src.src_msg_notification WHERE user_id=$1`, uid, cat).Scan(&total, &unread); err != nil {
 		return err
 	}
 	if items == nil {
@@ -99,18 +99,18 @@ func (h *Handler) read(w http.ResponseWriter, r *http.Request) error {
 	}
 	uid := httpx.UserID(r.Context())
 	if req.All {
-		_, err := h.Pool.Exec(r.Context(), `UPDATE notifications SET read_at=now() WHERE user_id=$1 AND read_at IS NULL`, uid)
+		_, err := h.Pool.Exec(r.Context(), `UPDATE src.src_msg_notification SET read_time=now() WHERE user_id=$1 AND read_time IS NULL`, uid)
 		if err != nil {
 			return err
 		}
 	} else if len(req.IDs) > 0 {
-		_, err := h.Pool.Exec(r.Context(), `UPDATE notifications SET read_at=now() WHERE user_id=$1 AND id=ANY($2) AND read_at IS NULL`, uid, req.IDs)
+		_, err := h.Pool.Exec(r.Context(), `UPDATE src.src_msg_notification SET read_time=now() WHERE user_id=$1 AND id=ANY($2) AND read_time IS NULL`, uid, req.IDs)
 		if err != nil {
 			return err
 		}
 	}
 	var unread int
-	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FROM notifications WHERE user_id=$1 AND read_at IS NULL`, uid).Scan(&unread); err != nil {
+	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_msg_notification WHERE user_id=$1 AND read_time IS NULL`, uid).Scan(&unread); err != nil {
 		return err
 	}
 	return httpx.OK(w, map[string]int{"unread": unread})

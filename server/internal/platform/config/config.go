@@ -142,8 +142,34 @@ type Alipay struct {
 // Dev reports whether dev-only shortcuts are enabled.
 func (c Config) Dev() bool { return c.Env == "dev" }
 
-// Load reads the environment. In dev every secret has a safe default.
+// fileValues holds config.yaml flattened to environment-variable names;
+// the real environment always takes precedence (see get).
+var fileValues map[string]string
+
+// get reads a setting: environment variable first, then config.yaml.
+func get(k string) string {
+	if v, ok := os.LookupEnv(k); ok && v != "" {
+		return v
+	}
+	return fileValues[k]
+}
+
+// Source is the config file Load used ("" when none).
+var Source string
+
+// Load reads config.yaml (see File) and the environment. In dev every
+// secret has a safe default.
 func Load() (Config, error) {
+	p, err := findFile()
+	if err != nil {
+		return Config{}, err
+	}
+	fileValues, Source = nil, p
+	if p != "" {
+		if fileValues, err = readFile(p); err != nil {
+			return Config{}, err
+		}
+	}
 	c := Config{
 		Env:            env("LOOPLAND_ENV", "dev"),
 		HTTPAddr:       env("LOOPLAND_HTTP_ADDR", ":8080"),
@@ -151,48 +177,47 @@ func Load() (Config, error) {
 		RedisURL:       env("LOOPLAND_REDIS_URL", "redis://localhost:6379/0"),
 		AccessTTL:      dur("LOOPLAND_ACCESS_TTL", 2*time.Hour),
 		RefreshTTL:     dur("LOOPLAND_REFRESH_TTL", 30*24*time.Hour),
-		BootstrapAdmin: os.Getenv("LOOPLAND_BOOTSTRAP_ADMIN"),
+		BootstrapAdmin: get("LOOPLAND_BOOTSTRAP_ADMIN"),
 		PublicBaseURL:  strings.TrimRight(env("LOOPLAND_PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
-		JobsOff:        os.Getenv("LOOPLAND_JOBS_OFF") == "1",
+		JobsOff:        get("LOOPLAND_JOBS_OFF") == "1",
 		Aliyun: Aliyun{
-			AccessKeyID:     os.Getenv("ALIYUN_ACCESS_KEY_ID"),
+			AccessKeyID:     get("ALIYUN_ACCESS_KEY_ID"),
 			AccessKeySecret: secretEnv("ALIYUN_ACCESS_KEY_SECRET"),
-			SMSSignName:     os.Getenv("ALIYUN_SMS_SIGN_NAME"),
-			SMSTemplateCode: os.Getenv("ALIYUN_SMS_TEMPLATE_CODE"),
-			CaptchaSceneID:  os.Getenv("ALIYUN_CAPTCHA_SCENE_ID"),
+			SMSSignName:     get("ALIYUN_SMS_SIGN_NAME"),
+			SMSTemplateCode: get("ALIYUN_SMS_TEMPLATE_CODE"),
+			CaptchaSceneID:  get("ALIYUN_CAPTCHA_SCENE_ID"),
 		},
 		WeChat: WeChat{
-			AppID:            os.Getenv("WECHAT_APP_ID"),
+			AppID:            get("WECHAT_APP_ID"),
 			AppSecret:        secretEnv("WECHAT_APP_SECRET"),
-			MchID:            os.Getenv("WECHAT_MCH_ID"),
-			MchSerialNo:      os.Getenv("WECHAT_MCH_SERIAL_NO"),
+			MchID:            get("WECHAT_MCH_ID"),
+			MchSerialNo:      get("WECHAT_MCH_SERIAL_NO"),
 			MchPrivateKey:    secretEnv("WECHAT_MCH_PRIVATE_KEY"),
 			APIv3Key:         secretEnv("WECHAT_APIV3_KEY"),
 			PlatformPubKey:   secretEnv("WECHAT_PAY_PUBLIC_KEY"),
-			PlatformPubKeyID: os.Getenv("WECHAT_PAY_PUBLIC_KEY_ID"),
+			PlatformPubKeyID: get("WECHAT_PAY_PUBLIC_KEY_ID"),
 		},
 		Apple: Apple{
 			BundleID:   env("APPLE_BUNDLE_ID", "com.loopland.app"),
-			IssuerID:   os.Getenv("APPLE_IAP_ISSUER_ID"),
-			KeyID:      os.Getenv("APPLE_IAP_KEY_ID"),
+			IssuerID:   get("APPLE_IAP_ISSUER_ID"),
+			KeyID:      get("APPLE_IAP_KEY_ID"),
 			PrivateKey: secretEnv("APPLE_IAP_PRIVATE_KEY"),
-			Sandbox:    os.Getenv("APPLE_IAP_SANDBOX") == "1",
+			Sandbox:    get("APPLE_IAP_SANDBOX") == "1",
 		},
 		Alipay: Alipay{
-			AppID:      os.Getenv("ALIPAY_APP_ID"),
+			AppID:      get("ALIPAY_APP_ID"),
 			PrivateKey: secretEnv("ALIPAY_PRIVATE_KEY"),
 			PublicKey:  secretEnv("ALIPAY_PUBLIC_KEY"),
-			Sandbox:    os.Getenv("ALIPAY_SANDBOX") == "1",
+			Sandbox:    get("ALIPAY_SANDBOX") == "1",
 		},
 	}
-	var err error
 	if c.JWTSecret, err = secret("LOOPLAND_JWT_SECRET", c.Dev(), "dev-app-jwt-secret-change-me-0123456789"); err != nil {
 		return c, err
 	}
 	if c.AdminJWTSecret, err = secret("LOOPLAND_ADMIN_JWT_SECRET", c.Dev(), "dev-admin-jwt-secret-change-me-012345678"); err != nil {
 		return c, err
 	}
-	key := os.Getenv("LOOPLAND_DATA_KEY") // base64 of 32 bytes
+	key := secretEnv("LOOPLAND_DATA_KEY") // base64 of 32 bytes
 	switch {
 	case key != "":
 		if c.DataKey, err = base64.StdEncoding.DecodeString(key); err != nil || len(c.DataKey) != 32 {
@@ -206,7 +231,7 @@ func Load() (Config, error) {
 	if c.Env != "dev" && c.Env != "prod" {
 		return c, fmt.Errorf("LOOPLAND_ENV must be dev or prod")
 	}
-	for _, f := range strings.Split(os.Getenv("LOOPLAND_DISABLE"), ",") {
+	for _, f := range strings.Split(get("LOOPLAND_DISABLE"), ",") {
 		if f = strings.TrimSpace(f); f != "" {
 			c.Disabled = append(c.Disabled, f)
 		}
@@ -217,10 +242,10 @@ func Load() (Config, error) {
 // secretEnv reads K, or the file named by K_FILE (Kubernetes secret mounts,
 // PEM keys). Trailing newlines from files are trimmed.
 func secretEnv(k string) string {
-	if v := os.Getenv(k); v != "" {
+	if v := get(k); v != "" {
 		return v
 	}
-	if p := os.Getenv(k + "_FILE"); p != "" {
+	if p := get(k + "_FILE"); p != "" {
 		if b, err := os.ReadFile(p); err == nil {
 			return strings.TrimRight(string(b), "\r\n")
 		}
@@ -229,14 +254,14 @@ func secretEnv(k string) string {
 }
 
 func env(k, def string) string {
-	if v := os.Getenv(k); v != "" {
+	if v := get(k); v != "" {
 		return v
 	}
 	return def
 }
 
 func dur(k string, def time.Duration) time.Duration {
-	if v := os.Getenv(k); v != "" {
+	if v := get(k); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			return d
 		}
@@ -248,7 +273,7 @@ func dur(k string, def time.Duration) time.Duration {
 }
 
 func secret(k string, dev bool, devDefault string) ([]byte, error) {
-	v := os.Getenv(k)
+	v := secretEnv(k)
 	if v == "" {
 		if !dev {
 			return nil, fmt.Errorf("%s is required outside dev", k)

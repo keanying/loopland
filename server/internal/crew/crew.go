@@ -50,7 +50,7 @@ type Crew struct {
 // Of returns the user's crew id.
 func Of(ctx context.Context, q db.Querier, user int64) (*int64, error) {
 	var id int64
-	err := q.QueryRow(ctx, `SELECT crew_id FROM crew_members WHERE user_id=$1`, user).Scan(&id)
+	err := q.QueryRow(ctx, `SELECT crew_id FROM src.src_soc_crew_member WHERE user_id=$1`, user).Scan(&id)
 	if db.IsNoRows(err) {
 		return nil, nil
 	}
@@ -79,12 +79,12 @@ func (h *Handler) Routes(mux *http.ServeMux, auth func(httpx.HandlerFunc) http.H
 }
 
 const crewCols = `c.id, c.name, c.avatar_url, c.district, c.join_mode, u.id, u.nickname, u.avatar_url,
-	(SELECT count(*) FROM crew_members m WHERE m.crew_id=c.id),
-	(SELECT count(*) FROM territories t WHERE t.owner_crew_id=c.id),
-	(SELECT COALESCE(sum(area_m2),0) FROM territories t WHERE t.owner_crew_id=c.id),
+	(SELECT count(*) FROM src.src_soc_crew_member m WHERE m.crew_id=c.id),
+	(SELECT count(*) FROM src.src_ter_territory t WHERE t.owner_crew_id=c.id),
+	(SELECT COALESCE(sum(area_m2),0) FROM src.src_ter_territory t WHERE t.owner_crew_id=c.id),
 	CASE WHEN c.leader_id=$1 THEN 'leader'
-	     WHEN EXISTS (SELECT 1 FROM crew_members m WHERE m.crew_id=c.id AND m.user_id=$1) THEN 'member'
-	     WHEN EXISTS (SELECT 1 FROM crew_applications a WHERE a.crew_id=c.id AND a.user_id=$1) THEN 'applicant' END`
+	     WHEN EXISTS (SELECT 1 FROM src.src_soc_crew_member m WHERE m.crew_id=c.id AND m.user_id=$1) THEN 'member'
+	     WHEN EXISTS (SELECT 1 FROM src.src_soc_crew_apply a WHERE a.crew_id=c.id AND a.user_id=$1) THEN 'applicant' END`
 
 func scanCrew(row pgx.Row) (Crew, error) {
 	var c Crew
@@ -94,7 +94,7 @@ func scanCrew(row pgx.Row) (Crew, error) {
 }
 
 func (h *Handler) load(ctx context.Context, viewer, id int64) (Crew, error) {
-	c, err := scanCrew(h.Pool.QueryRow(ctx, `SELECT `+crewCols+` FROM crews c JOIN users u ON u.id=c.leader_id WHERE c.id=$2`, viewer, id))
+	c, err := scanCrew(h.Pool.QueryRow(ctx, `SELECT `+crewCols+` FROM src.src_soc_crew c JOIN src.src_usr_user u ON u.id=c.leader_id WHERE c.id=$2`, viewer, id))
 	if db.IsNoRows(err) {
 		return c, httpx.NotFound("跑团")
 	}
@@ -104,9 +104,9 @@ func (h *Handler) load(ctx context.Context, viewer, id int64) (Crew, error) {
 	weekStart := clock.Today()
 	weekStart = weekStart.AddDate(0, 0, -((int(weekStart.Weekday()) + 6) % 7))
 	rows, err := h.Pool.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url,
-			COALESCE((SELECT sum(distance_m) FROM activities a WHERE a.user_id=u.id AND a.status='settled' AND a.started_at >= $2), 0) AS d,
-			COALESCE((SELECT sum(claimed_area_m2) FROM activities a WHERE a.user_id=u.id AND a.status='settled' AND a.started_at >= $2), 0) AS ar
-		FROM crew_members m JOIN users u ON u.id=m.user_id WHERE m.crew_id=$1 ORDER BY ar DESC, d DESC LIMIT 50`, id, weekStart)
+			COALESCE((SELECT sum(distance_m) FROM src.src_act_activity a WHERE a.user_id=u.id AND a.status='settled' AND a.start_time >= $2), 0) AS d,
+			COALESCE((SELECT sum(claimed_area_m2) FROM src.src_act_activity a WHERE a.user_id=u.id AND a.status='settled' AND a.start_time >= $2), 0) AS ar
+		FROM src.src_soc_crew_member m JOIN src.src_usr_user u ON u.id=m.user_id WHERE m.crew_id=$1 ORDER BY ar DESC, d DESC LIMIT 50`, id, weekStart)
 	if err != nil {
 		return c, err
 	}
@@ -151,7 +151,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 		} else if c != nil {
 			return httpx.Conflict("already_in_crew", "你已经在一个跑团里了")
 		}
-		err := tx.QueryRow(r.Context(), `INSERT INTO crews (name, district, join_mode, avatar_url, leader_id) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+		err := tx.QueryRow(r.Context(), `INSERT INTO src.src_soc_crew (name, district, join_mode, avatar_url, leader_id) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
 			req.Name, req.District, req.JoinMode, req.AvatarURL, uid).Scan(&id)
 		if db.IsUniqueViolation(err) {
 			return httpx.Conflict("name_taken", "这个跑团名称已被使用")
@@ -159,10 +159,10 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(r.Context(), `INSERT INTO crew_members (crew_id, user_id) VALUES ($1,$2)`, id, uid); err != nil {
+		if _, err := tx.Exec(r.Context(), `INSERT INTO src.src_soc_crew_member (crew_id, user_id) VALUES ($1,$2)`, id, uid); err != nil {
 			return err
 		}
-		_, err = tx.Exec(r.Context(), `DELETE FROM crew_applications WHERE user_id=$1`, uid)
+		_, err = tx.Exec(r.Context(), `DELETE FROM src.src_soc_crew_apply WHERE user_id=$1`, uid)
 		return err
 	})
 	if err != nil {
@@ -181,11 +181,11 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	q, district := r.URL.Query().Get("q"), r.URL.Query().Get("district")
 	where := `($2='' OR c.name ILIKE '%' || $2 || '%') AND ($3='' OR c.district=$3)`
 	var total int
-	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FROM crews c WHERE `+where+` AND $1::bigint IS NOT NULL`, uid, q, district).Scan(&total); err != nil {
+	if err := h.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_soc_crew c WHERE `+where+` AND $1::bigint IS NOT NULL`, uid, q, district).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := h.Pool.Query(r.Context(), `SELECT `+crewCols+` FROM crews c JOIN users u ON u.id=c.leader_id WHERE `+where+`
-		ORDER BY (SELECT COALESCE(sum(area_m2),0) FROM territories t WHERE t.owner_crew_id=c.id) DESC, c.id LIMIT $4 OFFSET $5`,
+	rows, err := h.Pool.Query(r.Context(), `SELECT `+crewCols+` FROM src.src_soc_crew c JOIN src.src_usr_user u ON u.id=c.leader_id WHERE `+where+`
+		ORDER BY (SELECT COALESCE(sum(area_m2),0) FROM src.src_ter_territory t WHERE t.owner_crew_id=c.id) DESC, c.id LIMIT $4 OFFSET $5`,
 		uid, q, district, p.Size, p.Offset())
 	if err != nil {
 		return err
@@ -220,8 +220,8 @@ func (h *Handler) members(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	rows, err := h.Pool.Query(r.Context(), `SELECT u.id, u.nickname, u.avatar_url, CASE WHEN c.leader_id=u.id THEN 'leader' ELSE 'member' END, m.joined_at
-		FROM crew_members m JOIN users u ON u.id=m.user_id JOIN crews c ON c.id=m.crew_id WHERE m.crew_id=$1 ORDER BY m.joined_at`, id)
+	rows, err := h.Pool.Query(r.Context(), `SELECT u.id, u.nickname, u.avatar_url, CASE WHEN c.leader_id=u.id THEN 'leader' ELSE 'member' END, m.join_time
+		FROM src.src_soc_crew_member m JOIN src.src_usr_user u ON u.id=m.user_id JOIN src.src_soc_crew c ON c.id=m.crew_id WHERE m.crew_id=$1 ORDER BY m.join_time`, id)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (h *Handler) members(w http.ResponseWriter, r *http.Request) error {
 
 func requireLeader(ctx context.Context, q db.Querier, crew, uid int64) error {
 	var leader int64
-	err := q.QueryRow(ctx, `SELECT leader_id FROM crews WHERE id=$1`, crew).Scan(&leader)
+	err := q.QueryRow(ctx, `SELECT leader_id FROM src.src_soc_crew WHERE id=$1`, crew).Scan(&leader)
 	if db.IsNoRows(err) {
 		return httpx.NotFound("跑团")
 	}
@@ -258,8 +258,8 @@ func (h *Handler) applications(w http.ResponseWriter, r *http.Request) error {
 	if err := requireLeader(r.Context(), h.Pool, id, httpx.UserID(r.Context())); err != nil {
 		return err
 	}
-	rows, err := h.Pool.Query(r.Context(), `SELECT u.id, u.nickname, u.avatar_url, a.created_at FROM crew_applications a JOIN users u ON u.id=a.user_id
-		WHERE a.crew_id=$1 ORDER BY a.created_at`, id)
+	rows, err := h.Pool.Query(r.Context(), `SELECT u.id, u.nickname, u.avatar_url, a.create_time FROM src.src_soc_crew_apply a JOIN src.src_usr_user u ON u.id=a.user_id
+		WHERE a.crew_id=$1 ORDER BY a.create_time`, id)
 	if err != nil {
 		return err
 	}
@@ -283,13 +283,13 @@ func addMember(ctx context.Context, tx pgx.Tx, crew, uid int64) error {
 	} else if c != nil {
 		return httpx.Conflict("already_in_crew", "已经在一个跑团里了")
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO crew_members (crew_id, user_id) VALUES ($1,$2)`, crew, uid); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_soc_crew_member (crew_id, user_id) VALUES ($1,$2)`, crew, uid); err != nil {
 		if db.IsUniqueViolation(err) {
 			return httpx.Conflict("already_in_crew", "已经在一个跑团里了")
 		}
 		return err
 	}
-	_, err := tx.Exec(ctx, `DELETE FROM crew_applications WHERE user_id=$1`, uid)
+	_, err := tx.Exec(ctx, `DELETE FROM src.src_soc_crew_apply WHERE user_id=$1`, uid)
 	return err
 }
 
@@ -303,7 +303,7 @@ func (h *Handler) join(w http.ResponseWriter, r *http.Request) error {
 	err = pgx.BeginFunc(r.Context(), h.Pool, func(tx pgx.Tx) error {
 		var mode string
 		var leader int64
-		err := tx.QueryRow(r.Context(), `SELECT join_mode, leader_id FROM crews WHERE id=$1 FOR UPDATE`, id).Scan(&mode, &leader)
+		err := tx.QueryRow(r.Context(), `SELECT join_mode, leader_id FROM src.src_soc_crew WHERE id=$1 FOR UPDATE`, id).Scan(&mode, &leader)
 		if db.IsNoRows(err) {
 			return httpx.NotFound("跑团")
 		}
@@ -320,7 +320,7 @@ func (h *Handler) join(w http.ResponseWriter, r *http.Request) error {
 				return httpx.Conflict("already_in_crew", "你已经在一个跑团里了")
 			}
 			status = "applied"
-			tag, err := tx.Exec(r.Context(), `INSERT INTO crew_applications (crew_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, id, uid)
+			tag, err := tx.Exec(r.Context(), `INSERT INTO src.src_soc_crew_apply (crew_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, id, uid)
 			if err != nil {
 				return err
 			}
@@ -351,7 +351,7 @@ func (h *Handler) decide(w http.ResponseWriter, r *http.Request, approve bool) e
 		if err := requireLeader(r.Context(), tx, id, httpx.UserID(r.Context())); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(r.Context(), `DELETE FROM crew_applications WHERE crew_id=$1 AND user_id=$2`, id, applicant)
+		tag, err := tx.Exec(r.Context(), `DELETE FROM src.src_soc_crew_apply WHERE crew_id=$1 AND user_id=$2`, id, applicant)
 		if err != nil {
 			return err
 		}
@@ -384,24 +384,24 @@ func (h *Handler) leave(w http.ResponseWriter, r *http.Request) error {
 	uid := httpx.UserID(r.Context())
 	err = pgx.BeginFunc(r.Context(), h.Pool, func(tx pgx.Tx) error {
 		var leader int64
-		if err := tx.QueryRow(r.Context(), `SELECT leader_id FROM crews WHERE id=$1 FOR UPDATE`, id).Scan(&leader); err != nil {
+		if err := tx.QueryRow(r.Context(), `SELECT leader_id FROM src.src_soc_crew WHERE id=$1 FOR UPDATE`, id).Scan(&leader); err != nil {
 			if db.IsNoRows(err) {
 				return httpx.NotFound("跑团")
 			}
 			return err
 		}
 		var n int
-		if err := tx.QueryRow(r.Context(), `SELECT count(*) FROM crew_members WHERE crew_id=$1`, id).Scan(&n); err != nil {
+		if err := tx.QueryRow(r.Context(), `SELECT count(*) FROM src.src_soc_crew_member WHERE crew_id=$1`, id).Scan(&n); err != nil {
 			return err
 		}
 		if leader == uid {
 			if n > 1 {
 				return httpx.Conflict("leader_must_transfer", "请先把团长转让给其他成员")
 			}
-			_, err := tx.Exec(r.Context(), `DELETE FROM crews WHERE id=$1`, id) // last member: disband
+			_, err := tx.Exec(r.Context(), `DELETE FROM src.src_soc_crew WHERE id=$1`, id) // last member: disband
 			return err
 		}
-		tag, err := tx.Exec(r.Context(), `DELETE FROM crew_members WHERE crew_id=$1 AND user_id=$2`, id, uid)
+		tag, err := tx.Exec(r.Context(), `DELETE FROM src.src_soc_crew_member WHERE crew_id=$1 AND user_id=$2`, id, uid)
 		if err != nil {
 			return err
 		}
@@ -433,7 +433,7 @@ func (h *Handler) kick(w http.ResponseWriter, r *http.Request) error {
 		if err := requireLeader(r.Context(), tx, id, uid); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(r.Context(), `DELETE FROM crew_members WHERE crew_id=$1 AND user_id=$2`, id, target)
+		tag, err := tx.Exec(r.Context(), `DELETE FROM src.src_soc_crew_member WHERE crew_id=$1 AND user_id=$2`, id, target)
 		if err != nil {
 			return err
 		}
@@ -465,13 +465,13 @@ func (h *Handler) transfer(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		var ok bool
-		if err := tx.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM crew_members WHERE crew_id=$1 AND user_id=$2)`, id, req.UserID).Scan(&ok); err != nil {
+		if err := tx.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM src.src_soc_crew_member WHERE crew_id=$1 AND user_id=$2)`, id, req.UserID).Scan(&ok); err != nil {
 			return err
 		}
 		if !ok || req.UserID == uid {
 			return httpx.BadRequest("not_member", "只能转让给跑团里的其他成员")
 		}
-		if _, err := tx.Exec(r.Context(), `UPDATE crews SET leader_id=$2 WHERE id=$1`, id, req.UserID); err != nil {
+		if _, err := tx.Exec(r.Context(), `UPDATE src.src_soc_crew SET leader_id=$2 WHERE id=$1`, id, req.UserID); err != nil {
 			return err
 		}
 		return inbox.Notify(r.Context(), tx, req.UserID, inbox.Interaction, "你成为了团长", "原团长把跑团转让给了你", map[string]any{"crew_id": id})
