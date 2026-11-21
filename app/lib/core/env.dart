@@ -1,28 +1,28 @@
 import 'package:flutter/foundation.dart';
 
-/// Build-time configuration via `--dart-define`.
+import 'sdk_config.dart';
+
+/// Build-time configuration via `--dart-define` (see `config/*.json.example`).
+/// SDK keys live in [SdkConfig]; this class keeps the app-level switches.
 class Env {
   Env._();
 
   static const _apiBase = String.fromEnvironment('API_BASE');
 
-  /// `dev` enables the mock payment channel and fixed SMS code hints.
-  static const env = String.fromEnvironment('LOOPLAND_ENV', defaultValue: 'prod');
-  static bool get isDev => env == 'dev';
+  /// `dev` enables the mock payment channel, fixed SMS code hints, the
+  /// 「环境检查」page and the `dev:` credentials when an SDK is not configured.
+  static String get env => SdkConfig.current.env;
+  static bool get isDev => SdkConfig.current.isDev;
 
-  static const amapIosKey = String.fromEnvironment('AMAP_IOS_KEY');
-  static const amapAndroidKey = String.fromEnvironment('AMAP_ANDROID_KEY');
+  static String get amapIosKey => SdkConfig.current.amapIosKey;
+  static String get amapAndroidKey => SdkConfig.current.amapAndroidKey;
 
-  static const wechatAppId = String.fromEnvironment('WECHAT_APP_ID');
-  static const wechatUniversalLink = String.fromEnvironment('WECHAT_UNIVERSAL_LINK');
-  static const alipayAppId = String.fromEnvironment('ALIPAY_APP_ID');
-
-  /// Version string sent to `/v1/me/consents`.
+  /// Version string sent to `/v1/me/consents` and stored with the local
+  /// first-launch privacy consent.
   static const privacyVersion = '2026-11';
 
   static bool get isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  static bool get isAndroid =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// `ios | android` as the API expects in `platform` / `X-Platform`.
   static String get platform => isIOS ? 'ios' : 'android';
@@ -36,9 +36,5 @@ class Env {
   }
 
   /// The AMap key for the current platform; empty means "use the fallback map".
-  static String get amapKey {
-    if (isIOS) return amapIosKey;
-    if (isAndroid) return amapAndroidKey;
-    return '';
-  }
+  static String get amapKey => SdkConfig.current.amapKey;
 }

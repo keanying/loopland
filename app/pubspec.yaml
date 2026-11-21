@@ -29,6 +29,12 @@ dependencies:
   fluwx: 6.0.6
   tobias: 6.0.0
   in_app_purchase: 3.3.1
+  in_app_purchase_storekit: 0.4.17
+  ali_auth: 1.4.0
+  # 人机验证（阿里云验证码 2.0 Web 接入）
+  webview_flutter: 4.14.1
+  # 设备风控：root / 越狱 / 模拟器 / 多开
+  safe_device: 1.4.1
   sign_in_with_apple: 8.2.0
   # 界面
   video_player: 2.14.1
