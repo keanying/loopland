@@ -211,7 +211,7 @@ export const MEDAL_TYPE: Record<string, { text: string; unit: string }> = {
 // ---------- 系统配置 · 第三方服务 ----------
 
 /** Display order of provider groups (docs/api/系统配置.md). */
-export const PROVIDER_GROUPS = ['账号与安全', '支付', 'AI', '通知', '地图'];
+export const PROVIDER_GROUPS = ['账号与安全', '支付', '存储', 'AI', '通知', '地图'];
 
 export const PROVIDER_SOURCE: Record<string, { text: string; color: string; hint: string }> = {
   db: { text: '来源：管理端', color: 'purple', hint: '在管理端保存过，以数据库里的配置为准' },

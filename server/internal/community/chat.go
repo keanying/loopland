@@ -57,7 +57,10 @@ type Conversation struct {
 	LastMessage *Message   `json:"last_message"`
 	UnreadCount int        `json:"unread_count"`
 	Muted       bool       `json:"muted"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	// PeerReadMessageID is how far the other person has read (direct
+	// chats; 0 for groups), for 已读 receipts.
+	PeerReadMessageID int64     `json:"peer_read_message_id"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 const messageCols = `id, conversation_id, sender_id, message_type, content, payload_json, create_time`
@@ -101,7 +104,8 @@ func conversations(ctx context.Context, q db.Querier, viewer int64, where, tail 
 			cm.is_muted, COALESCE(c.last_message_time, c.create_time),
 			(SELECT count(*) FROM src.src_msg_loop_message m WHERE m.conversation_id=c.id AND m.id > cm.last_read_message_id
 				AND m.sender_id IS DISTINCT FROM $1),
-			(SELECT p.user_id FROM src.src_msg_loop_conv_member p WHERE p.conversation_id=c.id AND p.user_id<>$1 AND c.conversation_type='direct' LIMIT 1)
+			(SELECT p.user_id FROM src.src_msg_loop_conv_member p WHERE p.conversation_id=c.id AND p.user_id<>$1 AND c.conversation_type='direct' LIMIT 1),
+			COALESCE((SELECT p.last_read_message_id FROM src.src_msg_loop_conv_member p WHERE p.conversation_id=c.id AND p.user_id<>$1 AND c.conversation_type='direct' LIMIT 1), 0)
 		FROM src.src_msg_loop_conv_member cm JOIN src.src_msg_loop_conversation c ON c.id=cm.conversation_id
 		WHERE cm.user_id=$1 AND `+where+` `+tail, append([]any{viewer}, args...)...)
 	if err != nil {
@@ -116,7 +120,7 @@ func conversations(ctx context.Context, q db.Querier, viewer int64, where, tail 
 	}
 	rs, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (row, error) {
 		var x row
-		err := r.Scan(&x.c.ID, &x.c.Type, &x.c.Title, &x.c.AvatarURL, &x.refT, &x.refID, &x.lastID, &x.c.Muted, &x.c.UpdatedAt, &x.c.UnreadCount, &x.peer)
+		err := r.Scan(&x.c.ID, &x.c.Type, &x.c.Title, &x.c.AvatarURL, &x.refT, &x.refID, &x.lastID, &x.c.Muted, &x.c.UpdatedAt, &x.c.UnreadCount, &x.peer, &x.c.PeerReadMessageID)
 		return x, err
 	})
 	if err != nil {
@@ -183,6 +187,11 @@ func conversation(ctx context.Context, q db.Querier, viewer, id int64) (Conversa
 		return Conversation{}, errNotMember
 	}
 	return cs[0], nil
+}
+
+// Conversation is GET /v1/conversations/{id}.
+func (s *Service) Conversation(ctx context.Context, viewer, id int64) (Conversation, error) {
+	return conversation(ctx, s.Pool, viewer, id)
 }
 
 // ListConversations is GET /v1/conversations.

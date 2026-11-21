@@ -20,6 +20,7 @@ type Handler struct{ Svc *Service }
 func (h *Handler) Routes(mux *http.ServeMux, auth, authAny func(httpx.HandlerFunc) http.Handler) {
 	mux.Handle("GET /v1/conversations", auth(h.conversations))
 	mux.Handle("POST /v1/conversations/direct", auth(h.direct))
+	mux.Handle("GET /v1/conversations/{id}", auth(h.conversation))
 	mux.Handle("GET /v1/conversations/{id}/messages", auth(h.messages))
 	mux.Handle("POST /v1/conversations/{id}/messages", auth(h.send))
 	mux.Handle("POST /v1/conversations/{id}/read", auth(h.read))
@@ -62,6 +63,18 @@ func (h *Handler) conversations(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpx.OK(w, l)
+}
+
+func (h *Handler) conversation(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	c, err := h.Svc.Conversation(r.Context(), uid(r), id)
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, c)
 }
 
 func (h *Handler) direct(w http.ResponseWriter, r *http.Request) error {

@@ -91,12 +91,18 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
     _conv = widget.initial;
+    _peerRead = widget.initial?.peerReadMessageId ?? 0;
     _pager = CursorPager((cursor) => _api.messages(_id, before: cursor))..addListener(_onPage);
-    if (_conv == null) {
-      _api.findConversation(_id).then((c) {
-        if (mounted && c != null) setState(() => _conv = c);
-      }).catchError((_) {});
-    }
+    // Always refresh: the header may be missing and the peer's read
+    // position may have moved since the list was loaded.
+    _api.findConversation(_id).then((c) {
+      if (mounted && c != null) {
+        setState(() {
+          _conv = c;
+          if (c.peerReadMessageId > _peerRead) _peerRead = c.peerReadMessageId;
+        });
+      }
+    }).catchError((_) {});
   }
 
   @override

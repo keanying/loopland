@@ -84,6 +84,7 @@ class Conversation {
     this.lastMessage,
     this.unreadCount = 0,
     this.muted = false,
+    this.peerReadMessageId = 0,
     this.updatedAt,
   });
   final int id;
@@ -96,6 +97,9 @@ class Conversation {
   final ChatMessage? lastMessage;
   final int unreadCount;
   final bool muted;
+
+  /// 私信里对方已读到的消息 id（群聊为 0）。
+  final int peerReadMessageId;
   final DateTime? updatedAt;
 
   bool get isGroup => type == 'group';
@@ -112,6 +116,7 @@ class Conversation {
         lastMessage: lastMessage ?? this.lastMessage,
         unreadCount: unreadCount ?? this.unreadCount,
         muted: muted ?? this.muted,
+        peerReadMessageId: peerReadMessageId,
         updatedAt: updatedAt ?? this.updatedAt,
       );
 
@@ -128,6 +133,7 @@ class Conversation {
       refId: ref == null ? null : jin(ref['id']),
       lastMessage: last == null ? null : ChatMessage.fromJson(last),
       unreadCount: ji(j['unread_count']),
+      peerReadMessageId: ji(j['peer_read_message_id']),
       muted: jb(j['muted']),
       updatedAt: jdt(j['updated_at']),
     );
@@ -449,10 +455,17 @@ class Race {
   bool get signedUp => myEntry != null;
   String get statusName => raceStatusNames[status] ?? status;
 
-  /// Signup is possible while `signup` and not full.
-  bool get canSignup => status == 'signup' && myEntry == null && (capacity <= 0 || signedCount < capacity);
+  /// Signup is possible before `signup_end_time` and while not full. The
+  /// server reports `running` (not `signup`) once the race window opened,
+  /// even when the signup deadline is still ahead.
+  bool canSignupAt(DateTime now) =>
+      myEntry == null &&
+      (capacity <= 0 || signedCount < capacity) &&
+      (status == 'signup' || (status == 'running' && (signupEndTime?.isAfter(now) ?? false)));
 
-  /// Cancel before the start.
+  bool get canSignup => canSignupAt(DateTime.now());
+
+  /// Cancel before the start (afterwards 409 `race_started`).
   bool get canCancel => myEntry?.status == 'signed' && (status == 'signup' || status == 'upcoming');
 
   factory Race.fromJson(Json j) => Race(

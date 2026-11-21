@@ -264,7 +264,9 @@ void main() {
     expect(signed.myEntry?.status, 'signed');
     // Already started: cancelling is refused (409 race_started).
     await expectLater(a.g.cancelRaceSignup(raceId), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'race_started')));
-    print('race status while running with signup open: ${signed.status}');
+    // The server reports `running` once the window opened, signup still open.
+    expect(signed.status, 'running');
+    expect(signed.canSignupAt(DateTime.now()), isFalse); // already signed
 
     // ── 结算：集结加成 + 赛事完赛 ──
     final wait = rallyStart.difference(DateTime.now()) + const Duration(seconds: 10); // the run ends 5 s before the upload

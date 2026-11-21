@@ -244,8 +244,8 @@ void main() {
     await t.pumpWidget(routedApp('/chat/4', overrides()));
     await t.runAsync(() async => rt.start());
     await idle(t);
-    // Header found from the conversation list (no GET /v1/conversations/{id}).
-    expect(fake.calls, contains('GET /v1/conversations'));
+    // Header (and the peer's read position) from GET /v1/conversations/{id}.
+    expect(fake.calls, contains('GET /v1/conversations/4'));
     expect(find.text('周六世纪公园约跑'), findsOneWidget);
     expect(find.text('组局群聊'), findsOneWidget);
     expect(find.text('周六 06:50 东门集合'), findsOneWidget);

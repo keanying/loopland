@@ -4,6 +4,7 @@ import '../claim/geo.dart';
 import '../core/providers.dart';
 import 'api_client.dart';
 import 'community_common.dart';
+import 'errors.dart';
 import 'gathering_models.dart';
 import 'models.dart';
 
@@ -36,19 +37,14 @@ class GatheringApi {
   Future<Conversation> openDirect(int userId) async =>
       Conversation.fromJson(_j(await c.post('/v1/conversations/direct', {'user_id': userId})));
 
-  /// The contract has no `GET /v1/conversations/{id}`: look it up in the
-  /// conversation list (first few pages).
-  Future<Conversation?> findConversation(int id, {int maxPages = 5}) async {
-    String? cursor;
-    for (var i = 0; i < maxPages; i++) {
-      final p = await conversations(cursor: cursor, limit: 50);
-      for (final x in p.items) {
-        if (x.id == id) return x;
-      }
-      if (!p.hasMore) break;
-      cursor = p.nextCursor;
+  /// `GET /v1/conversations/{id}`; null when it doesn't exist or I'm not a member.
+  Future<Conversation?> findConversation(int id) async {
+    try {
+      return Conversation.fromJson(_j(await c.get('/v1/conversations/$id')));
+    } on ApiException catch (e) {
+      if (e.status == 404 || e.status == 403) return null;
+      rethrow;
     }
-    return null;
   }
 
   /// Newest first; [before] is the `next_cursor` of the previous page (the id

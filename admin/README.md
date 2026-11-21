@@ -1,7 +1,7 @@
-# 圈圈 Loopland · 管理端（V1 + V2 第一批「玩法深化」）
+# 圈圈 Loopland · 管理端（V1 + V2 第一批「玩法深化」+ 第二批「社区」）
 
 运营后台。技术栈：Vite 6 + React 18 + TypeScript（strict）+ Ant Design 5 + react-router 6 + ECharts 5 + TanStack Query 5。
-接口约定见 `../docs/api/v1.md`「管理端」一节和 `../docs/api/v2-1-玩法.md`（「管理端」与玩法配置新增字段），类型和请求函数手写在 `src/api/`。
+接口约定见 `../docs/api/v1.md`「管理端」一节、`../docs/api/v2-1-玩法.md`（「管理端」与玩法配置新增字段）和 `../docs/api/v2-2-社区.md`（「管理端」），类型和请求函数手写在 `src/api/`。
 
 ## 运行
 
@@ -27,7 +27,7 @@ pnpm run dev:mock          # 终端 1
 pnpm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
 ```
 
-V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
+V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
 
 `scripts/screenshots.cjs` 用 Playwright 依次打开所有页面（管理员、运营、审核员三种视角和窄屏），把整页 PNG 存到 `screenshots/`；浏览器控制台有 error / warning 时脚本以非 0 退出。`screenshots/real/` 是连真实后端时的截图。
 
@@ -154,18 +154,20 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 | `/operations` | 玩法运营（V2） | `?tab=` bosses 城市怪兽（按状态、详情抽屉：血量、全部参与者伤害排名与每人奖励、掉落表公示、伤害规则、提前结束）· chests 宝箱（可开启 / 已过期 / 已下架，下架）· seasons 赛季（新建 / 编辑，前端先查重叠，已结算不可改；手动结算两步确认）· campaigns 限时活动（配速 / 夜跑 / 距离各自的规则字段，配速用 分:秒，未开始才能删）· routes 城市定向（2–12 个打卡点，可上下移动，右侧 SVG 预览，点地图追加点）· league 城区联赛（城区来自 `/admin/v1/districts` + 周选择，排行） |
 | `/risk` | 风控防作弊 | 告警按置信度排序、证据（速度曲线超阈值标红、轨迹瞬移段标红、设备 / 定位来源 / 步频 / 心率 / 同设备账号 / 历史）、处置（作废并回滚 / 警告 / 封禁 30 天 / 误报放行）、判定规则 |
 | `/gameplay` | 玩法配置 | 建筑（含 V2「图纸可越级建造」）/ 角色 / 怪兽掉落 / 能量换算；V2：怪兽（合击、投放默认值、结算、各运动伤害）、宝箱、守地、赛季段位（递增校验，显示 III/II/I 起点）、赛季任务、奖牌（type + target，累计里程同步旧字段 `distance_km`）、伙伴养成、跑团接力。改动格子高亮，未发布改动（旧值 → 新值），校验不过（掉落合计 100%、段位递增、数值范围、key 唯一）不能发布并列出原因，灰度 10% 或全量，推到全量，回滚，发布记录。V2 之前的配置缺某个分区时可「按默认值添加」 |
+| `/review` | 内容审核（V2 社区） | 顶部：待审核 / 今日已处理 / 本页高风险 / 最早等待。`?tab=` 审核队列（默认）：按 `target_type` 分 8 类（带待审数），待审核按风险分排序，风险分徽标 + 原因、被举报数、文字和图片（点击放大）；通过 / 拒绝（预设原因 + 补充），多选批量通过 / 拒绝；已通过 / 已拒绝看审核人和时间；快捷键 J/K 上下、A 通过、R 拒绝、X 勾选 · reports 举报处理（按状态和对象类型，下架可同时禁言 0–365 天，驳回）· posts 动态管理（关键词 / 作者 ID / 审核状态，详情看图片、附带运动轨迹、可见范围，下架带原因）· settings 敏感词与审核设置（仅管理员：拦截词 / 审核词标签式编辑、批量粘贴、自动通过阈值、举报自动隐藏人数、本地「试一试」打分）。左侧图标显示待审核数 |
+| `/community` | 组局与赛事（V2 社区） | 组局管理（状态 / 类型筛选，取消带原因）· `?tab=races` 赛事管理（线上 / 线下、运动、距离、时间窗、报名截止、线下赛地图选点、名额、穿戴设备、奖牌 key / 名称 / 图片、发布；取消；报名名单，线下赛「标记完赛」/「改成绩」） |
 | `/audit` | 审计日志 | 按操作人筛选 |
 | `/admins` | 后台账号 | 仅管理员：新建、改角色、停用、重置密码 |
 
-内容审核、商户与活动还没做，左侧菜单里显示为灰色「V2」。
+商户与活动还没做，左侧菜单里显示为灰色「V2」。总览增加「内容审核」卡片（`pending_reviews` 与周同比、按类型分布）和待办「内容审核」。
 
 ## 权限
 
 菜单和按钮按当前角色隐藏或禁用，规则在 `src/auth/permissions.ts`，与后端路由守卫一致：
 
 - 管理员：全部；只有管理员能发布 / 推全量 / 回滚玩法配置、退款、管理后台账号。
-- 运营：除上述三项外的全部页面和操作（含玩法运营）。
-- 审核员：总览、用户（列表、详情、处置，不能看完整号码）、风控；看不到玩法运营。
+- 运营：除上述三项外的全部页面和操作（含玩法运营、内容审核、组局与赛事）；敏感词与审核设置只有管理员能看能改。
+- 审核员：总览、用户（列表、详情、处置，不能看完整号码）、内容审核（队列 / 举报 / 动态）、风控；看不到玩法运营、组局与赛事、敏感词设置。
 - 商户对接：V1 只有总览。
 
 后端仍是最终裁判，越权请求返回 403，前端用消息提示。
@@ -176,11 +178,11 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 src/
   api/        类型（types.ts）、请求封装（client.ts，401 回登录页）、各接口（admin.ts）
   config.ts   浏览器端配置（来自 config.yaml，见「配置」）；config.types.ts 配置的类型
-  mocks/      假数据和内存版接口，只在 app.mock 为 true 时按需加载；路由相对 api.admin_prefix；后端稳定后可整个删除
+  mocks/      假数据和内存版接口，只在 app.mock 为 true 时按需加载；路由相对 api.admin_prefix；后端稳定后可整个删除（community.ts 社区，images.ts 内联 SVG 假图片）
   auth/       登录态、角色权限
   components/ 布局、卡片、图表、地图（map/AMapView.tsx、map/SvgMap.tsx，都画 V2 玩法对象）、MapOps.tsx（召唤 / 投放 / 撒宝箱弹窗）
   hooks/      useAdminNames（把后端返回的管理员 id 显示成用户名）、useGameplayDefaults
-  pages/      各页面；operations/ 玩法运营各 tab；gameplay/config.ts 玩法配置的字段、默认值、校验与 diff
+  pages/      各页面；operations/ 玩法运营各 tab；gameplay/config.ts 玩法配置的字段、默认值、校验与 diff；review/ 内容审核各 tab（shared.tsx 风险徽标、图片预览、原因弹窗）；community/ 组局与赛事
 scripts/screenshots.cjs, scripts/screenshots-v2.cjs（devConfig.cjs 从配置里取开发服务器地址）
 config.yaml, config.mock.yaml, config.local.example.yaml, loadConfig.ts（读取、合并、校验配置）
 ```
@@ -198,3 +200,15 @@ config.yaml, config.mock.yaml, config.local.example.yaml, loadConfig.ts（读取
 - 怪兽详情 `rewards[]` 是 `{user, rank, damage, items, energy}`。
 - 夜跑专场时段后端要求 0–23 且 from < to（不跨零点），表单已按此限制。
 - 城区列表来自 `GET /admin/v1/districts`（`{"items":[{"name":"徐汇区","crews":12}]}`，只含有跑团的城区，按跑团数排序），联赛页默认选第一个；接口返回空时才退回上海 16 个区的固定列表。
+
+## V2 第二批「社区」与约定的出入
+
+按后端实际实现兼容（`server/internal/social/admin.go`、`server/internal/community/admin.go`）：
+
+- `GET /admin/v1/posts?q=` 只按正文模糊匹配，不按动态 ID；从审核队列跳到动态管理时用 `user_id` + `post`（打开详情），从举报跳转时用正文摘要。
+- 赛事的 `medal` 总是存在：key 留空由后端生成，名称留空为「标题 完赛奖牌」，没有「不发奖牌」；有人完赛后改 key 返回 409 `medal_awarded`。赛事运动只能是跑步 / 骑行 / 徒步 / 健走，标题 ≤ 40 字。
+- 已完赛的报名再调 `finish` 只改成绩、不重复发奖牌，名单里显示「改成绩」。
+- 拒绝审核、下架动态不填原因时后端用默认原因；页面仍要求选择或填写，好通知作者。
+- 举报处理的审计动作是 `report.handle`（`detail.action` 区分下架 / 驳回）；禁言天数后端允许 0–365。
+- `pending_reviews_wow` 是比例（0.2 = +20%），上周为 0 时是 `null`。
+- 页面上比后端更严的校验：线下赛报名截止不能晚于开赛；进行中的赛事不能改类型、运动、距离和开始时间；开赛前不能标记完赛。

@@ -246,6 +246,10 @@ class GatheringFake {
 
     // ── conversations ──
     if (m == 'GET' && p == '/v1/conversations') return (200, {'items': convs, 'next_cursor': null});
+    if (m == 'GET' && seg.length == 4 && seg[2] == 'conversations' && seg[3] != 'direct') {
+      final c = convs.where((c) => '${c['id']}' == seg[3]).firstOrNull;
+      return c == null ? _err(404, 'not_found', '会话不存在') : (200, c);
+    }
     if (m == 'POST' && p == '/v1/conversations/direct') {
       final uid = body['user_id'];
       if (uid == 66) return _err(403, 'blocked', '对方已把你拉黑，无法私信');

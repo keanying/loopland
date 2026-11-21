@@ -64,6 +64,31 @@ func TestCommunityIntegration(t *testing.T) {
 		t.Fatal("still in the rally chat after leaving the crew")
 	}
 
+	// A conversation can be fetched by id by its members only.
+	var conv struct {
+		ID                int64  `json:"id"`
+		Type              string `json:"type"`
+		PeerReadMessageID int64  `json:"peer_read_message_id"`
+	}
+	a.must("GET", fmt.Sprintf("/v1/conversations/%d", *r.ConversationID), nil, &conv)
+	if conv.ID != *r.ConversationID || conv.Type != "group" || conv.PeerReadMessageID != 0 {
+		t.Fatalf("conversation: %+v", conv)
+	}
+	b.expectErr("GET", fmt.Sprintf("/v1/conversations/%d", *r.ConversationID), nil, 403, "not_member")
+
+	// Direct chat: the sender sees how far the peer has read.
+	var dm struct {
+		ID int64 `json:"id"`
+	}
+	a.must("POST", "/v1/conversations/direct", map[string]any{"user_id": bid}, &dm)
+	e.follow(bid, aid)
+	m2 := a.say(dm.ID, "在吗")
+	b.must("POST", fmt.Sprintf("/v1/conversations/%d/read", dm.ID), map[string]any{"message_id": m2.ID}, nil)
+	a.must("GET", fmt.Sprintf("/v1/conversations/%d", dm.ID), nil, &conv)
+	if conv.PeerReadMessageID != m2.ID {
+		t.Fatalf("peer read: %+v want %d", conv, m2.ID)
+	}
+
 	// Profiles count approved posts (own pending ones only for the author).
 	a.must("POST", "/v1/posts", map[string]any{"content": "今天天气不错"}, nil)
 	var prof struct {

@@ -81,6 +81,12 @@ void main() {
     expect(h.unreadChat, 5);
     expect(h.rallies.single.bonusActive, isTrue);
     expect(h.races.single.canSignup, isFalse); // full
+    final now = DateTime.utc(2026, 11, 21, 12);
+    Race race(String status, DateTime signupEnd) =>
+        Race.fromJson({'id': 1, 'status': status, 'signup_end_time': signupEnd.toIso8601String(), 'my_entry': null});
+    expect(race('running', now.add(const Duration(hours: 1))).canSignupAt(now), isTrue);
+    expect(race('running', now.subtract(const Duration(hours: 1))).canSignupAt(now), isFalse);
+    expect(race('upcoming', now.add(const Duration(hours: 1))).canSignupAt(now), isFalse);
     expect(InboxSummary.fromJson({'interaction': 1, 'monster': 2, 'chat': 4}).total, 7);
     final e = ChatEvent.parse({'type': 'conversation_read', 'conversation_id': 4, 'user_id': 7, 'message_id': 77});
     expect(e, isA<ConversationReadEvent>().having((x) => x.messageId, 'messageId', 77));
