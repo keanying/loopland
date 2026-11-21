@@ -6,6 +6,7 @@
 // community_common.dart.
 import '../claim/geo.dart';
 import 'community_common.dart';
+import 'local_models.dart' show MeetupBooking;
 import 'models.dart';
 
 /// `{name, lat, lng}` (GCJ-02).
@@ -189,6 +190,7 @@ class Meetup {
     this.distanceM,
     this.createdAt,
     this.members = const [],
+    this.booking,
   });
   final int id;
   final String type;
@@ -208,6 +210,10 @@ class Meetup {
 
   /// Only from `GET /v1/meetups/{id}`.
   final List<UserBrief> members;
+
+  /// D-11: the venue booked for this meetup (field name not in the contract;
+  /// read from `booking` when present).
+  final MeetupBooking? booking;
 
   String get typeName => meetupTypeNames[type] ?? type;
   bool get isOpen => status == 'open';
@@ -239,6 +245,7 @@ class Meetup {
           distanceM: d,
           createdAt: createdAt,
           members: members,
+          booking: booking,
         );
 
   factory Meetup.fromJson(Json j) => Meetup(
@@ -261,6 +268,7 @@ class Meetup {
         distanceM: jdn(j['distance_m']),
         createdAt: jdt(j['created_at']),
         members: jl(j['members'], UserBrief.fromJson),
+        booking: MeetupBooking.maybe(j['booking']),
       );
 }
 
@@ -375,14 +383,19 @@ class RaceMedal {
   }
 }
 
-/// `my_entry`. `status`: `signed | finished | dnf`.
+/// `my_entry`. `status`: `pending_pay | signed | finished | dnf`
+/// (`pending_pay`: paid race, waiting for the payment; cancelled after 15 min).
 class RaceEntry {
-  const RaceEntry({required this.status, this.resultSec, this.finishedAt, this.rank});
+  const RaceEntry({required this.status, this.resultSec, this.finishedAt, this.rank, this.orderNo});
   final String status;
   final int? resultSec;
   final DateTime? finishedAt;
   final int? rank;
+
+  /// The fee order (not in the contract; read when the server sends it).
+  final String? orderNo;
   bool get finished => status == 'finished';
+  bool get pendingPay => status == 'pending_pay';
   static RaceEntry? maybe(Object? v) {
     final j = jmn(v);
     return j == null
@@ -391,7 +404,8 @@ class RaceEntry {
             status: js(j['status'], 'signed'),
             resultSec: jin(j['result_sec']),
             finishedAt: jdt(j['finished_at']),
-            rank: jin(j['rank']));
+            rank: jin(j['rank']),
+            orderNo: jsn(j['order_no']) ?? jsn(jm(j['order'])['order_no']));
   }
 }
 
@@ -434,6 +448,7 @@ class Race {
     this.status = 'signup',
     this.myEntry,
     this.leaderboard = const [],
+    this.feeAmt = 0,
   });
   final int id;
   final String type, title;
@@ -451,6 +466,10 @@ class Race {
   /// Only from `GET /v1/races/{id}` (top 50).
   final List<RaceRankEntry> leaderboard;
 
+  /// D-12 报名费（分）; 0 = free.
+  final int feeAmt;
+  bool get isPaid => feeAmt > 0;
+
   bool get isOnline => type == 'online';
   bool get signedUp => myEntry != null;
   String get statusName => raceStatusNames[status] ?? status;
@@ -465,8 +484,10 @@ class Race {
 
   bool get canSignup => canSignupAt(DateTime.now());
 
-  /// Cancel before the start (afterwards 409 `race_started`).
-  bool get canCancel => myEntry?.status == 'signed' && (status == 'signup' || status == 'upcoming');
+  /// Cancel before the start (afterwards 409 `race_started`); a pending fee
+  /// order can be dropped too.
+  bool get canCancel =>
+      (myEntry?.status == 'signed' || myEntry?.status == 'pending_pay') && (status == 'signup' || status == 'upcoming');
 
   factory Race.fromJson(Json j) => Race(
         id: ji(j['id']),
@@ -487,7 +508,27 @@ class Race {
         status: js(j['status'], 'signup'),
         myEntry: RaceEntry.maybe(j['my_entry']),
         leaderboard: jl(j['leaderboard'], RaceRankEntry.fromJson),
+        feeAmt: ji(j['fee_amt']),
       );
+}
+
+/// `POST /v1/races/{id}/signup` of a paid race: `{"race", "pay_params"}`.
+/// The contract has no order number in it; the app reads `order.order_no`,
+/// `order_no` or `my_entry.order_no` when present (needed to poll the order
+/// and for `mock` payment).
+class RaceSignup {
+  const RaceSignup({required this.race, this.payParams = const {}, this.orderNo});
+  final Race race;
+  final Json payParams;
+  final String? orderNo;
+  factory RaceSignup.fromJson(Json j) {
+    final race = Race.fromJson(jmn(j['race']) ?? j);
+    return RaceSignup(
+      race: race,
+      payParams: jm(j['pay_params']),
+      orderNo: jsn(jm(j['order'])['order_no']) ?? jsn(j['order_no']) ?? jsn(jm(j['pay_params'])['order_no']) ?? race.myEntry?.orderNo,
+    );
+  }
 }
 
 // ───────────────────────────── 消息与社区首页 ─────────────────────────────

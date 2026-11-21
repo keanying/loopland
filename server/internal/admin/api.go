@@ -192,6 +192,14 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if renewFailed > 0 {
 		todos = append(todos, todo{"renew_failed", fmt.Sprintf("%d 个续费失败订单可提醒", renewFailed), renewFailed, 3, "/plans?tab=orders&status=renew_failed"})
 	}
+	// 本地生活 (M-04): weekly merchant statements waiting for confirmation.
+	var pendingStatements int
+	if err := a.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_fin_loop_statement WHERE statement_status='draft'`).Scan(&pendingStatements); err != nil {
+		return err
+	}
+	if pendingStatements > 0 {
+		todos = append(todos, todo{"statement_confirm", fmt.Sprintf("%d 张结算单待确认", pendingStatements), pendingStatements, 2, "/merchant/settlement"})
+	}
 	return httpx.OK(w, map[string]any{"today": t, "last_week": lw, "trend": trend, "todos": todos,
 		"pending_reviews": pendingReviews, "pending_reviews_wow": pendingWoW})
 }
@@ -619,7 +627,7 @@ func (a *API) orders(w http.ResponseWriter, r *http.Request) error {
 	if err := a.Pool.QueryRow(r.Context(), `SELECT count(*) FROM src.src_ord_loop_order o JOIN src.src_usr_loop_user u ON u.id=o.user_id WHERE `+where, status, q).Scan(&total); err != nil {
 		return err
 	}
-	rows, err := a.Pool.Query(r.Context(), `SELECT o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.order_amt, o.channel, o.order_type, o.status,
+	rows, err := a.Pool.Query(r.Context(), `SELECT o.order_no, o.user_id, u.nickname, COALESCE(o.plan_code, ''), o.plan_name, o.order_amt, o.channel, o.order_type, o.status,
 			o.create_time, o.pay_time, o.refund_time
 		FROM src.src_ord_loop_order o JOIN src.src_usr_loop_user u ON u.id=o.user_id WHERE `+where+` ORDER BY o.create_time DESC LIMIT $3 OFFSET $4`, status, q, p.Size, p.Offset())
 	if err != nil {

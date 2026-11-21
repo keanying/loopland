@@ -158,6 +158,10 @@ type Config struct {
 	// AI follow-along routines and AI settings (docs/api/v2-3-AI.md).
 	Workouts []Workout  `json:"workouts"`
 	AI       AISettings `json:"ai"`
+
+	// 本地生活 (docs/api/v2-4-本地生活与商户.md): venue check-ins and booking.
+	Venue   VenueSettings   `json:"venue"`
+	Booking BookingSettings `json:"booking"`
 }
 
 // Default returns the launch numbers from the product documents.
@@ -167,6 +171,8 @@ func Default() Config {
 	defaultCommunity(&c)
 	c.Rally = defaultRally()
 	c.Workouts, c.AI = DefaultWorkouts(), defaultAI()
+	c.Venue, c.Booking = defaultVenue(), defaultBooking()
+	c.syncVenueEnergy()
 	return c
 }
 
@@ -260,6 +266,9 @@ func (c Config) Validate() error {
 		return err
 	}
 	if err := c.validateAI(); err != nil {
+		return err
+	}
+	if err := c.validateVenue(); err != nil {
 		return err
 	}
 	if c.MinClaimAreaM2 <= 0 {

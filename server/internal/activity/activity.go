@@ -109,6 +109,10 @@ type Extra struct {
 	// (docs/api/v2-2-社区.md).
 	Rally *RallyBonus `json:"rally"`
 	Races []RaceDone  `json:"races"`
+	// Coupons are the 联名权益 coupons earned on the way: supply stations
+	// passed and merchant chests opened (docs/api/v2-4-本地生活与商户.md;
+	// elements are perks.Coupon).
+	Coupons []any `json:"coupons"`
 }
 
 // RallyBonus is the crew rally bonus applied to this activity (集结跑加成).
@@ -234,7 +238,7 @@ type Community interface {
 }
 
 func emptyExtra() Extra {
-	return Extra{BossDamage: []BossHit{}, Chests: []ChestOpen{}, Defended: []Defended{}, Routes: []RouteStep{}, Campaigns: []CampaignDone{}, Tasks: []TaskProgress{}, Races: []RaceDone{}}
+	return Extra{BossDamage: []BossHit{}, Chests: []ChestOpen{}, Defended: []Defended{}, Routes: []RouteStep{}, Campaigns: []CampaignDone{}, Tasks: []TaskProgress{}, Races: []RaceDone{}, Coupons: []any{}}
 }
 
 func emptySettlement(status string, flags []anticheat.Flag) Settlement {
@@ -275,6 +279,9 @@ type Service struct {
 	Hook   Hook // optional V2 gameplay
 	// Community is optional: crew rally bonus and online races.
 	Community Community
+	// OnVoid runs inside Void after the activity is marked voided (e.g.
+	// perks voids the redemptions that relied on it).
+	OnVoid []func(ctx context.Context, tx pgx.Tx, activityID int64) error
 }
 
 func badRequest(msg string) error { return httpx.BadRequest("invalid_body", msg) }
@@ -744,6 +751,11 @@ func (s *Service) Void(ctx context.Context, tx pgx.Tx, id int64) error {
 	}
 	if _, err := tx.Exec(ctx, `UPDATE src.src_act_loop_activity SET status='voided', result_json=jsonb_set(COALESCE(result_json,'{}'), '{status}', '"voided"') WHERE id=$1`, id); err != nil {
 		return err
+	}
+	for _, f := range s.OnVoid {
+		if err := f(ctx, tx, id); err != nil {
+			return err
+		}
 	}
 	return inbox.Notify(ctx, tx, user, inbox.System, "运动记录已作废",
 		"你的一条运动记录经核查判定为异常，已作废，相关领地和能量已收回。如有异议请联系客服。", map[string]any{"activity_id": id})

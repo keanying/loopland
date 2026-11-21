@@ -158,7 +158,16 @@ export const AUDIT_ACTION: Record<string, string> = {
   'race.finish': '标记线下赛完赛',
 };
 
-export const TODO_TYPE: Record<string, string> = { risk: '风控', refund: '会员退款', renew_failed: '续费失败', review: '内容审核' };
+export const TODO_TYPE: Record<string, string> = {
+  risk: '风控',
+  refund: '会员退款',
+  renew_failed: '续费失败',
+  review: '内容审核',
+  // V2 第四批 M-04
+  merchant_review: '商户资质',
+  booking_refund: '订场退款',
+  statement_confirm: '结算单',
+};
 
 // ---------- V2 玩法 ----------
 

@@ -87,6 +87,10 @@ type Order struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	PaidAt          *time.Time `json:"paid_at"`
 	RefundedAt      *time.Time `json:"refunded_at,omitempty"`
+	// BizType and BizID say what the order pays for (membership orders keep
+	// the V1 JSON; see biz.go).
+	BizType string `json:"-"`
+	BizID   *int64 `json:"-"`
 }
 
 // Service is the billing domain.
@@ -100,6 +104,9 @@ type Service struct {
 	AppleFn   func() *AppleStore
 	Log       *slog.Logger
 	Dev       bool
+
+	// fulfillers deliver non-membership orders (Register, biz.go).
+	fulfillers map[string]Fulfiller
 }
 
 func (s *Service) provider(channel string) (Provider, bool) {
@@ -147,14 +154,14 @@ func (s *Service) Plan(ctx context.Context, q db.Querier, code string) (Plan, er
 	return p, err
 }
 
-const orderCols = `o.order_no, o.user_id, u.nickname, o.plan_code, o.plan_name, o.order_amt, o.channel, o.order_type, o.status, o.trade_no,
-	o.app_account_token, o.create_time, o.pay_time, o.refund_time`
+const orderCols = `o.order_no, o.user_id, u.nickname, COALESCE(o.plan_code, ''), o.plan_name, o.order_amt, o.channel, o.order_type, o.status, o.trade_no,
+	o.app_account_token, o.create_time, o.pay_time, o.refund_time, o.biz_type, o.biz_id`
 
 func scanOrder(r pgx.Row) (Order, error) {
 	var o Order
 	var nick string
 	err := r.Scan(&o.OrderNo, &o.UserID, &nick, &o.PlanCode, &o.PlanName, &o.AmountFen, &o.Channel, &o.Kind, &o.Status, &o.TradeNo,
-		&o.AppAccountToken, &o.CreatedAt, &o.PaidAt, &o.RefundedAt)
+		&o.AppAccountToken, &o.CreatedAt, &o.PaidAt, &o.RefundedAt, &o.BizType, &o.BizID)
 	o.User = &UserRef{ID: o.UserID, Nickname: nick}
 	return o, err
 }
@@ -232,34 +239,48 @@ func (s *Service) CreateOrder(ctx context.Context, user int64, planCode, channel
 // MarkPaid records a verified payment and grants membership. It is
 // idempotent: callbacks are delivered more than once.
 func (s *Service) MarkPaid(ctx context.Context, p Paid, expiresAt *time.Time) error {
-	return pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error { return s.markPaidTx(ctx, tx, p, expiresAt) })
+	var refund bool
+	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		var err error
+		refund, err = s.markPaidTx(ctx, tx, p, expiresAt)
+		return err
+	})
+	if err == nil && refund {
+		s.refundLate(ctx, p.OrderNo)
+	}
+	return err
 }
 
-func (s *Service) markPaidTx(ctx context.Context, tx pgx.Tx, p Paid, expiresAt *time.Time) error {
+// markPaidTx returns refund=true when a non-membership order was paid for
+// something that is gone (biz.go: the refund follows after commit).
+func (s *Service) markPaidTx(ctx context.Context, tx pgx.Tx, p Paid, expiresAt *time.Time) (bool, error) {
 	o, err := scanOrder(tx.QueryRow(ctx, `SELECT `+orderCols+` FROM src.src_ord_loop_order o JOIN src.src_usr_loop_user u ON u.id=o.user_id WHERE o.order_no=$1 FOR UPDATE OF o`, p.OrderNo))
 	if db.IsNoRows(err) {
-		return fmt.Errorf("notify for unknown order %s", p.OrderNo)
+		return false, fmt.Errorf("notify for unknown order %s", p.OrderNo)
 	}
 	if err != nil {
-		return err
+		return false, err
 	}
 	if o.Status == "paid" || o.Status == "refunded" || o.Status == "refund_requested" {
-		return nil
+		return false, nil
 	}
 	if p.AmountFen != o.AmountFen {
-		return fmt.Errorf("order %s: paid %d fen, expected %d", o.OrderNo, p.AmountFen, o.AmountFen)
+		return false, fmt.Errorf("order %s: paid %d fen, expected %d", o.OrderNo, p.AmountFen, o.AmountFen)
 	}
 	if p.PaidAt.IsZero() {
 		p.PaidAt = time.Now()
 	}
 	if _, err := tx.Exec(ctx, `UPDATE src.src_ord_loop_order SET status='paid', trade_no=$2, pay_time=$3 WHERE order_no=$1`, o.OrderNo, p.TradeNo, p.PaidAt); err != nil {
-		return err
+		return false, err
+	}
+	if o.BizType != BizMembership {
+		return s.fulfilPaid(ctx, tx, o)
 	}
 	plan, err := s.Plan(ctx, tx, o.PlanCode)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return grant(ctx, tx, o.UserID, plan, o.Channel, expiresAt, nil)
+	return false, grant(ctx, tx, o.UserID, plan, o.Channel, expiresAt, nil)
 }
 
 // grant extends (or starts) a membership by one period of plan.
@@ -502,8 +523,13 @@ func (s *Service) Refund(ctx context.Context, orderNo, reason string) (Order, er
 		return o, httpx.E(http.StatusBadGateway, "provider_error", "退款请求失败：%v", err)
 	}
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE src.src_ord_loop_order SET status='refunded', refund_time=now(), refund_reason=$2 WHERE order_no=$1`, orderNo, reason); err != nil {
-			return err
+		tag, err := tx.Exec(ctx, `UPDATE src.src_ord_loop_order SET status='refunded', refund_time=now(), refund_reason=$2
+			WHERE order_no=$1 AND status IN ('paid','refund_requested')`, orderNo, reason)
+		if err != nil || tag.RowsAffected() == 0 {
+			return err // refunded concurrently (biz retry job): nothing more to do
+		}
+		if o.BizType != BizMembership {
+			return s.fulfilRefunded(ctx, tx, o, reason)
 		}
 		return revoke(ctx, tx, orderNo)
 	})

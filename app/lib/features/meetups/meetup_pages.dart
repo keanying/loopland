@@ -17,6 +17,9 @@ import '../../widgets/cursor_list.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
 import '../community/place_picker.dart';
+import '../local/booking_flow.dart' show bookVenue;
+import '../local/meetup_booking.dart';
+import '../local/venue_widgets.dart' show slotRangeText;
 import '../social/social_widgets.dart' show UserAvatar, openProfile;
 
 const _types = ['', 'run', 'ball', 'ride'];
@@ -261,6 +264,8 @@ class _MeetupDetailPageState extends ConsumerState<MeetupDetailPage> {
                         if (m.requirement.isNotEmpty) _InfoRow(icon: Icons.rule_rounded, label: '要求', value: m.requirement),
                       ]),
                     ),
+                    // D-11: booked venue / time (or「给这个局订场」for the creator).
+                    if (m.type == 'ball') ...[const SizedBox(height: 12), MeetupBookingCard(meetup: m)],
                     if (m.description.isNotEmpty) ...[
                       const SectionHeader('说明'),
                       LLCard(child: Text(m.description, style: const TextStyle(height: 1.6))),
@@ -432,6 +437,10 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
   int _capacity = 10;
   bool _busy = false;
 
+  /// D-11「同时订场」for 约球.
+  bool _bookVenue = false;
+  VenuePick? _pick;
+
   @override
   void initState() {
     super.initState();
@@ -480,7 +489,24 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
     if (p != null && mounted) setState(() => _place = p);
   }
 
+  Future<void> _pickVenue() async {
+    final p = await pickVenueSlots(context, now: widget.now == null ? null : () => widget.now!);
+    if (p == null || !mounted) return;
+    setState(() {
+      _pick = p;
+      // The meetup happens at the venue, at the booked time.
+      _place = Place(name: p.venue.name, lat: p.venue.lat, lng: p.venue.lng);
+      _start = p.selection.start.toLocal();
+      _end = p.selection.end.toLocal();
+    });
+  }
+
   Future<void> _submit() async {
+    final booking = _types[_type] == 'ball' && _bookVenue;
+    if (booking && _pick == null) {
+      toast(context, '请选择场馆和时段，或关闭「同时订场」');
+      return;
+    }
     final place = _place;
     if (place == null) {
       toast(context, '请在地图上选择集合地点');
@@ -509,6 +535,14 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
     ref.invalidate(myMeetupsProvider);
     ref.invalidate(communityHomeProvider);
     toast(context, m.isPending ? '已提交，审核通过后会出现在附近列表' : '发起成功，群聊已创建');
+    final pick = _pick;
+    if (booking && pick != null) {
+      // Pay for the court right away; if it fails the meetup stays and the
+      // creator can book again from the meetup page.
+      final b = await bookVenue(context, ref, venue: pick.venue, selection: pick.selection, meetupId: m.id, showResult: false);
+      if (!mounted) return;
+      toast(context, b == null ? '组局已发起，场地还没订上，可以在组局详情里再订' : (b.isPaid ? '发起成功，场地已订好' : '发起成功，场地订单待支付'));
+    }
     if (context.canPop()) {
       context.pop(m);
     } else {
@@ -553,6 +587,34 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
                 value: _place?.name ?? '在地图上选择',
                 onTap: _pickPlace,
               ),
+              if (_types[_type] == 'ball') ...[
+                LLCard(
+                  key: const Key('meetup_book_toggle'),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+                  child: Row(children: [
+                    const Icon(Icons.event_available_rounded, color: LL.lime),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('同时订场', style: TextStyle(fontWeight: FontWeight.w800)),
+                        Text('订合作场馆的时段，发起后支付场地费', style: TextStyle(color: LL.text3, fontSize: 12)),
+                      ]),
+                    ),
+                    Switch(value: _bookVenue, onChanged: (v) => setState(() => _bookVenue = v)),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+                if (_bookVenue)
+                  _PickTile(
+                    key: const Key('meetup_pick_venue'),
+                    icon: Icons.stadium_outlined,
+                    label: '场地',
+                    value: _pick == null
+                        ? '选择场馆和时段'
+                        : '${_pick!.venue.name}\n${slotRangeText(_pick!.selection.start, _pick!.selection.end)}',
+                    onTap: _pickVenue,
+                  ),
+              ],
               LLCard(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(children: [

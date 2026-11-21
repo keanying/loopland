@@ -21,6 +21,7 @@ import (
 	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
+	"github.com/keanying/loopland/server/internal/shop"
 )
 
 // Service holds the dependencies shared by the handlers.
@@ -86,6 +87,8 @@ type UserBrief struct {
 	Nickname  string   `json:"nickname"`
 	AvatarURL *string  `json:"avatar_url"`
 	Crew      *CrewRef `json:"crew"`
+	// AvatarFrame is the equipped avatar frame key (能量商城), null if none.
+	AvatarFrame *string `json:"avatar_frame"`
 }
 
 // DeletedNickname is shown for deleted accounts.
@@ -97,7 +100,7 @@ func Briefs(ctx context.Context, q db.Querier, ids []int64) (map[int64]UserBrief
 	if len(ids) == 0 {
 		return out, nil
 	}
-	rows, err := q.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url, u.status, c.id, c.name
+	rows, err := q.Query(ctx, `SELECT u.id, u.nickname, u.avatar_url, u.status, c.id, c.name, `+shop.FrameSQL("u.id")+`
 		FROM src.src_usr_loop_user u
 		LEFT JOIN src.src_soc_loop_crew_member m ON m.user_id=u.id
 		LEFT JOIN src.src_soc_loop_crew c ON c.id=m.crew_id
@@ -111,7 +114,7 @@ func Briefs(ctx context.Context, q db.Querier, ids []int64) (map[int64]UserBrief
 		var status string
 		var cid *int64
 		var cname *string
-		if err := rows.Scan(&b.ID, &b.Nickname, &b.AvatarURL, &status, &cid, &cname); err != nil {
+		if err := rows.Scan(&b.ID, &b.Nickname, &b.AvatarURL, &status, &cid, &cname, &b.AvatarFrame); err != nil {
 			return nil, err
 		}
 		if status == "deleted" {

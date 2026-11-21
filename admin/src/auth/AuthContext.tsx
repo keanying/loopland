@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await api.login({ username, password });
     setToken(res.token);
-    setAdmin(res.admin);
+    // Merchant staff need their merchant_id (V2 第四批); fetch /me when the login response leaves it out.
+    setAdmin(res.admin.role === 'merchant' && res.admin.merchant_id == null ? await api.me().catch(() => res.admin) : res.admin);
   }, []);
 
   const value = useMemo<AuthState>(

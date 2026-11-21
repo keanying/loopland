@@ -11,7 +11,7 @@
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>发布动态、更换头像时，圈圈需要读取你选择的照片。</string>
 	<key>NSCameraUsageDescription</key>
-	<string>拍照发布动态、更换头像，以及 AI 跟练识别动作并自动计数时，圈圈需要使用相机。AI 跟练的画面只在手机本地识别，不上传、不保存。</string>
+	<string>拍照发布动态、更换头像、扫场馆二维码签到，以及 AI 跟练识别动作并自动计数时，圈圈需要使用相机。扫码和 AI 跟练的画面只在手机本地识别，不上传、不保存。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>保存分享海报到相册。</string>
 	<key>NSMotionUsageDescription</key>

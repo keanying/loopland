@@ -8,6 +8,7 @@ import '../../claim/geo.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/monster_art.dart';
+import '../local/coupons_pages.dart';
 import 'locate.dart';
 import 'play_widgets.dart';
 
@@ -80,12 +81,29 @@ class _ChestSheetState extends ConsumerState<ChestSheet> {
             ),
             const SizedBox(height: 12),
             Text(
-              o == null ? '能量宝箱' : '+${o.energy} 能量',
+              o == null
+                  ? (c.isMerchant ? '${c.merchant?.name ?? '商户'}宝箱' : '能量宝箱')
+                  : (o.coupon != null ? '开出「${o.coupon!.perk.title}」' : '+${o.energy} 能量'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: o == null ? LL.text : LL.yellow),
             ),
             const SizedBox(height: 6),
-            if (o == null)
+            // V2 batch 4 (A-16): merchant chests hold a coupon instead of energy.
+            if (o == null && c.perk != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text('宝箱里是「${c.perk!.title}」券，开启后放进卡券包',
+                    textAlign: TextAlign.center, style: const TextStyle(color: LL.pink, fontWeight: FontWeight.w700)),
+              ),
+            if (o?.coupon != null) ...[
+              CouponCard(coupon: o!.coupon!, compact: true, onTap: () {
+                Navigator.pop(context, true);
+                openCoupon(context, o.coupon!);
+              }),
+              const SizedBox(height: 6),
+              const Text('已放进卡券包 · 到店出示二维码核销，核销当天要有运动记录',
+                  textAlign: TextAlign.center, style: TextStyle(color: LL.text2, fontSize: 12)),
+            ] else if (o == null)
               Countdown(
                 until: c.expiresAt,
                 builder: (_, left) => Text(

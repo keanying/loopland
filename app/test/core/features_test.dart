@@ -78,4 +78,18 @@ void main() {
     expect(captchaMode(off, none), CaptchaMode.skip, reason: 'dev: no scene id, server off → skip');
     expect(captchaMode(const ServerFeatures.unreachable(captcha: true), android), CaptchaMode.show);
   });
+
+  test('service channels (订场 / 报名费): WeChat + Alipay on iOS too, never IAP', () {
+    const all = ServerFeatures(login: {}, pay: {'alipay_app', 'apple_iap', 'mock', 'wechat_app'}, captcha: false);
+    final ios = SdkConfig.fromMap(const {'WECHAT_APP_ID': 'wx1', 'WECHAT_UNIVERSAL_LINK': 'https://l.test/w/'}, platform: 'ios', release: true);
+    final android = SdkConfig.fromMap(const {'WECHAT_APP_ID': 'wx1'}, platform: 'android', release: true);
+    final iosNoWechat = SdkConfig.fromMap(const {}, platform: 'ios', release: true);
+    final dev = SdkConfig.fromMap(const {'LOOPLAND_ENV': 'dev'}, platform: 'ios');
+    expect(servicePayChannels(all, ios), ['wechat_app', 'alipay_app']);
+    expect(servicePayChannels(all, android), ['wechat_app', 'alipay_app']);
+    expect(servicePayChannels(all, iosNoWechat), ['alipay_app'], reason: 'release hides an unconfigured WeChat');
+    expect(servicePayChannels(all, dev), ['wechat_app', 'alipay_app', 'mock']);
+    expect(servicePayChannels(const ServerFeatures(login: {}, pay: {'alipay_app'}, captcha: false), ios), ['alipay_app']);
+    expect(servicePayChannels(all, SdkConfig.fromMap(const {}, platform: 'other', release: true)), isEmpty);
+  });
 }

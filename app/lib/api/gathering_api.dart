@@ -135,6 +135,13 @@ class GatheringApi {
   /// 409 `signup_closed` / `race_full`.
   Future<Race> signupRace(int id) async => Race.fromJson(_j(await c.post('/v1/races/$id/signup')));
 
+  /// D-12 paid race: creates the fee order (`my_entry.status = pending_pay`).
+  /// [channel] `wechat_app | alipay_app | mock`. Errors as [signupRace] plus
+  /// 403 `realname_required` / `minor_not_allowed`.
+  Future<RaceSignup> signupPaidRace(int id, String channel) async =>
+      RaceSignup.fromJson(_j(await c.post('/v1/races/$id/signup', {'channel': channel})));
+
+  /// Paid races are refunded to the original channel.
   Future<Race> cancelRaceSignup(int id) async => Race.fromJson(_j(await c.delete('/v1/races/$id/signup')));
 
   // ── 跑团补充 ──

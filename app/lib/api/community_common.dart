@@ -26,11 +26,15 @@ List<T> jl<T>(Object? v, T Function(Json) f) =>
 /// `UserBrief`: every place a user appears in the community APIs.
 /// `crew` is null without a crew; deleted users read「已注销用户」.
 class UserBrief {
-  const UserBrief({required this.id, required this.nickname, this.avatarUrl, this.crew});
+  const UserBrief({required this.id, required this.nickname, this.avatarUrl, this.crew, this.avatarFrame});
   final int id;
   final String nickname;
   final String? avatarUrl;
   final CrewRef? crew;
+
+  /// V2 batch 4 (E-05): key of the equipped avatar frame (`frame_gold`, …),
+  /// drawn by UserAvatar; null = none.
+  final String? avatarFrame;
 
   bool get isDeleted => nickname == '已注销用户';
 
@@ -39,6 +43,7 @@ class UserBrief {
         nickname: js(j['nickname']),
         avatarUrl: jsn(j['avatar_url']),
         crew: jmn(j['crew']) == null ? null : CrewRef.fromJson(jm(j['crew'])),
+        avatarFrame: jsn(j['avatar_frame']),
       );
 
   static UserBrief? maybe(Object? v) => v is Map ? UserBrief.fromJson(v.cast<String, dynamic>()) : null;
@@ -48,6 +53,7 @@ class UserBrief {
         'nickname': nickname,
         'avatar_url': avatarUrl,
         'crew': crew == null ? null : {'id': crew!.id, 'name': crew!.name},
+        'avatar_frame': avatarFrame,
       };
 }
 

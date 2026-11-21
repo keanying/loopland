@@ -18,6 +18,8 @@ import 'features/community/crew_pages.dart';
 import 'features/community/gathering_routes.dart';
 import 'features/debug/env_check_page.dart';
 import 'features/inbox/inbox_page.dart';
+import 'features/local/local_routes.dart';
+import 'features/local/perks_routes.dart';
 import 'features/login/bind_phone_page.dart';
 import 'features/login/consent_page.dart';
 import 'features/login/login_page.dart';
@@ -138,6 +140,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...socialRoutes(),
       // V2 AI · 助手 / 问 AI（features/ai/ai_routes.dart）
       ...aiRoutes(),
+      // V2 本地生活 · 订场 / 场馆签到（features/local/local_routes.dart）
+      ...localRoutes(),
+      // V2 本地生活 · 卡券包（features/local/perks_routes.dart）
+      ...perksRoutes(),
     ],
   );
 });

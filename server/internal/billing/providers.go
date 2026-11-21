@@ -78,7 +78,7 @@ func NewWeChatPay(appID, mchID, serialNo, apiV3Key, privateKey, pubKey, pubKeyID
 // Create implements Provider.
 func (w *WeChatPay) Create(ctx context.Context, o Order, p Plan, _ string) (map[string]any, error) {
 	bm := make(gopay.BodyMap)
-	bm.Set("appid", w.AppID).Set("description", "圈圈会员-"+p.Name).Set("out_trade_no", o.OrderNo).
+	bm.Set("appid", w.AppID).Set("description", subject(o, p)).Set("out_trade_no", o.OrderNo).
 		Set("time_expire", time.Now().Add(2*time.Hour).Format(time.RFC3339)).Set("notify_url", w.NotifyURL).
 		SetBodyMap("amount", func(b gopay.BodyMap) { b.Set("total", o.AmountFen).Set("currency", "CNY") })
 	rsp, err := w.cli.V3TransactionApp(ctx, bm)
@@ -161,12 +161,20 @@ func NewAlipay(appID, privateKey, publicKey, notifyURL string, sandbox bool) (*A
 	return &Alipay{PublicKey: publicKey, NotifyURL: notifyURL, cli: cli}, nil
 }
 
+// subject is the goods description shown on the payment sheet.
+func subject(o Order, p Plan) string {
+	if o.BizType != "" && o.BizType != BizMembership {
+		return "圈圈-" + o.PlanName
+	}
+	return "圈圈会员-" + p.Name
+}
+
 func yuan(fen int) string { return strconv.FormatFloat(float64(fen)/100, 'f', 2, 64) }
 
 // Create implements Provider.
 func (a *Alipay) Create(ctx context.Context, o Order, p Plan, _ string) (map[string]any, error) {
 	bm := make(gopay.BodyMap)
-	bm.Set("subject", "圈圈会员-"+p.Name).Set("out_trade_no", o.OrderNo).Set("total_amount", yuan(o.AmountFen)).
+	bm.Set("subject", subject(o, p)).Set("out_trade_no", o.OrderNo).Set("total_amount", yuan(o.AmountFen)).
 		Set("timeout_express", "2h")
 	s, err := a.cli.TradeAppPay(ctx, bm)
 	if err != nil {

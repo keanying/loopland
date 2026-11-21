@@ -191,13 +191,26 @@ class MapBoss {
 }
 
 class MapChest {
-  const MapChest({required this.id, required this.center, this.radiusM = 50, this.expiresAt});
+  const MapChest({required this.id, required this.center, this.radiusM = 50, this.expiresAt, this.merchant, this.perk});
   final int id;
   final LatLng center;
   final double radiusM;
   final DateTime? expiresAt;
+
+  /// V2 batch 4 (A-16): a merchant chest (opens a coupon instead of energy):
+  /// `merchant` + `perk_title` in map objects (not in the contract text yet).
+  final PerkMerchant? merchant;
+  final Perk? perk;
+  bool get isMerchant => merchant != null || perk != null;
+
   factory MapChest.fromJson(Json j) => MapChest(
-      id: _i(j['id']), center: _ll(j['center']) ?? const LatLng(0, 0), radiusM: _d(j['radius_m'], 50), expiresAt: _dt(j['expires_at']));
+      id: _i(j['id']),
+      center: _ll(j['center']) ?? const LatLng(0, 0),
+      radiusM: _d(j['radius_m'], 50),
+      expiresAt: _dt(j['expires_at']),
+      merchant: PerkMerchant.maybe(j['merchant']),
+      // The server sends `perk_title` on merchant chests; a full `perk` also works.
+      perk: Perk.maybe(j['perk']) ?? (j['perk_title'] is String ? Perk(title: j['perk_title'] as String) : null));
 }
 
 class MapCheckpoint {
@@ -231,17 +244,31 @@ class MapCheckpoint {
 
 /// `GET /v1/map/objects`.
 class MapObjects {
-  const MapObjects({this.bosses = const [], this.chests = const [], this.checkpoints = const []});
+  const MapObjects({
+    this.bosses = const [],
+    this.chests = const [],
+    this.checkpoints = const [],
+    this.supplies = const [],
+    this.venues = const [],
+  });
   final List<MapBoss> bosses;
   final List<MapChest> chests;
   final List<MapCheckpoint> checkpoints;
 
-  bool get isEmpty => bosses.isEmpty && chests.isEmpty && checkpoints.isEmpty;
+  /// V2 batch 4 (A-16): 补给站.
+  final List<MapSupply> supplies;
+
+  /// V2 batch 4 (C-08): venues (据点) with the 馆主's avatar.
+  final List<MapVenue> venues;
+
+  bool get isEmpty => bosses.isEmpty && chests.isEmpty && checkpoints.isEmpty && supplies.isEmpty && venues.isEmpty;
 
   factory MapObjects.fromJson(Json j) => MapObjects(
         bosses: _l(j['bosses'], MapBoss.fromJson),
         chests: _l(j['chests'], MapChest.fromJson),
         checkpoints: _l(j['checkpoints'], MapCheckpoint.fromJson),
+        supplies: _l(j['supplies'], MapSupply.fromJson),
+        venues: _l(j['venues'], MapVenue.fromJson),
       );
 }
 
@@ -419,10 +446,14 @@ class StrikeResult {
 
 /// `POST /v1/chests/{id}/open`.
 class ChestOpenResult {
-  const ChestOpenResult({required this.energy, this.bonus = false});
+  const ChestOpenResult({required this.energy, this.bonus = false, this.coupon});
   final int energy;
   final bool bonus;
-  factory ChestOpenResult.fromJson(Json j) => ChestOpenResult(energy: _i(j['energy']), bonus: _b(j['bonus']));
+
+  /// V2 batch 4: merchant chests give a coupon instead of energy.
+  final Coupon? coupon;
+  factory ChestOpenResult.fromJson(Json j) =>
+      ChestOpenResult(energy: _i(j['energy']), bonus: _b(j['bonus']), coupon: Coupon.maybe(j['coupon']));
 }
 
 // ───────────────────────────── 守地挑战 ─────────────────────────────

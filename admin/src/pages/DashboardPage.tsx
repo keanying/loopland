@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Col, Empty, Row, Segmented, Skeleton, Table, Tag } from 'antd';
-import { ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, SafetyOutlined } from '@ant-design/icons';
+import { AccountBookOutlined, ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, SafetyOutlined, ShopOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { EChartsOption } from 'echarts';
 import { api } from '../api/admin';
@@ -29,6 +29,9 @@ function todoRoute(t: DashboardTodo): string {
   if (link.startsWith('/')) return link;
   if (t.type === 'risk') return '/risk';
   if (t.type === 'review') return '/review';
+  if (t.type === 'merchant_review') return '/merchant/merchants?status=reviewing';
+  if (t.type === 'booking_refund') return '/merchant/bookings?status=refunding';
+  if (t.type === 'statement_confirm') return '/merchant/settlement?status=draft';
   if (t.type === 'refund') return '/plans?tab=orders&status=refund_requested';
   return '/plans?tab=orders&status=renew_failed';
 }
@@ -47,6 +50,9 @@ const TODO_ICON: Record<string, ReactNode> = {
   refund: <CrownOutlined />,
   renew_failed: <CrownOutlined />,
   review: <FileDoneOutlined />,
+  merchant_review: <ShopOutlined />,
+  booking_refund: <ShopOutlined />,
+  statement_confirm: <AccountBookOutlined />,
 };
 
 function MetricCard({ value, unit, label, now, before, invert }: { value: number; unit?: string; label: string; now: number; before: number; invert?: boolean }) {

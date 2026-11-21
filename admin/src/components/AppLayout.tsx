@@ -23,6 +23,7 @@ import { api } from '../api/admin';
 import { useAuth } from '../auth/AuthContext';
 import type { Permission } from '../auth/permissions';
 import Logo from './Logo';
+import { useMerchantNav } from '../pages/merchant/navItems';
 
 interface MenuItem {
   to: string;
@@ -30,10 +31,12 @@ interface MenuItem {
   icon: ReactNode;
   v2?: boolean;
   perm?: Permission;
+  /** 商户与活动: shown when the role may open any page of the group. */
+  group?: boolean;
 }
 
 const MENU: MenuItem[] = [
-  { to: '/', label: '总览', icon: <AppstoreOutlined /> },
+  { to: '/', label: '总览', icon: <AppstoreOutlined />, perm: 'dashboard.read' },
   { to: '/users', label: '用户管理', icon: <TeamOutlined />, perm: 'users.read' },
   { to: '/plans', label: '会员套餐与订单', icon: <CrownOutlined />, perm: 'plans.read' },
   { to: '/territories', label: '地图与领地', icon: <CompassOutlined />, perm: 'territories.read' },
@@ -41,7 +44,8 @@ const MENU: MenuItem[] = [
   { to: '/review', label: '内容审核', icon: <FileDoneOutlined />, perm: 'review.read' },
   { to: '/community', label: '组局与赛事', icon: <FlagOutlined />, perm: 'community.read' },
   { to: '/risk', label: '风控防作弊', icon: <SafetyOutlined />, perm: 'risk.read' },
-  { to: '/merchants', label: '商户与活动（V2）', icon: <ShopOutlined />, v2: true },
+  // V2 第四批「本地生活与商户」: one entry for the group; its pages share a sub-navigation (pages/merchant/navItems.ts)
+  { to: '/merchant', label: '商户与活动', icon: <ShopOutlined />, group: true },
   { to: '/operations', label: '玩法运营', icon: <ThunderboltOutlined />, perm: 'ops.read' },
   { to: '/gameplay', label: '玩法配置', icon: <ControlOutlined />, perm: 'gameplay.read' },
   { to: '/audit', label: '审计日志', icon: <AuditOutlined />, perm: 'audit.read' },
@@ -52,7 +56,8 @@ const MENU: MenuItem[] = [
 ];
 
 export default function AppLayout() {
-  const { logout, can } = useAuth();
+  const { logout, can, admin } = useAuth();
+  const merchantNav = useMerchantNav();
   const navigate = useNavigate();
   // Pending count on the 内容审核 icon (same query as the queue's stats header).
   const reviewStats = useQuery({ queryKey: ['reviews', 'stats'], queryFn: api.reviewStats, enabled: can('review.read'), refetchInterval: 60_000 });
@@ -65,7 +70,7 @@ export default function AppLayout() {
           <div className="side-logo" role="img" aria-label="圈圈 Loopland 管理端">
             <Logo />
           </div>
-          {MENU.filter((m) => !m.perm || can(m.perm)).map((m) =>
+          {MENU.filter((m) => (m.group ? merchantNav.length > 0 : !m.perm || can(m.perm))).map((m) =>
             m.v2 ? (
               <Tooltip key={m.to} title={m.label + ' · 下个版本上线'} placement="right">
                 <span className="side-link disabled" aria-disabled="true" aria-label={m.label}>
@@ -74,7 +79,7 @@ export default function AppLayout() {
                 </span>
               </Tooltip>
             ) : (
-              <Tooltip key={m.to} title={m.to === '/review' && pendingReviews ? `${m.label} · ${pendingReviews} 条待审核` : m.label} placement="right">
+              <Tooltip key={m.to} title={m.to === '/review' && pendingReviews ? `${m.label} · ${pendingReviews} 条待审核` : m.group && admin?.role === 'merchant' ? '核销与结算' : m.label} placement="right">
                 <NavLink to={m.to} end={m.to === '/'} aria-label={m.label} className={({ isActive }) => 'side-link' + (isActive ? ' active' : '')}>
                   {m.icon}
                   {m.to === '/review' && pendingReviews > 0 && <span className="side-count num">{pendingReviews > 99 ? '99+' : pendingReviews}</span>}

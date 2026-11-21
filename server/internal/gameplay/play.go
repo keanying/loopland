@@ -177,6 +177,7 @@ func (c *Config) Normalize() {
 		c.Rally = defaultRally()
 	}
 	c.normalizeAI()
+	c.normalizeVenue()
 }
 
 func (c Config) validatePlay() error {

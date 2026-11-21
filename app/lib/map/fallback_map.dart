@@ -5,10 +5,13 @@ import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/models.dart';
+import '../api/perks_models.dart';
 import '../claim/geo.dart';
 import '../core/theme.dart';
+import '../widgets/cosmetics.dart';
 import '../widgets/monster_art.dart';
 import 'territory_map.dart';
+import 'venue_marker.dart';
 
 const double _ky = earthRadiusM * math.pi / 180; // metres per degree latitude
 
@@ -183,7 +186,7 @@ class _FallbackTerritoryMapState extends State<FallbackTerritoryMap> implements 
       }
       final paint = CustomPaint(
         size: size,
-        painter: TerritoryPainter(view: _view, layers: widget.layers, refLat: _refLat),
+        painter: TerritoryPainter(view: _view, layers: widget.layers, refLat: _refLat, repaint: VenueAvatars.instance),
       );
       if (!widget.interactive) return ClipRect(child: paint);
       return ClipRect(
@@ -208,7 +211,7 @@ class _FallbackTerritoryMapState extends State<FallbackTerritoryMap> implements 
 
 /// Paints the whole map. Public so golden/screenshot tests can use it.
 class TerritoryPainter extends CustomPainter {
-  TerritoryPainter({required this.view, required this.layers, required this.refLat});
+  TerritoryPainter({required this.view, required this.layers, required this.refLat, super.repaint});
   final MapView view;
   final MapLayers layers;
   final double refLat;
@@ -228,6 +231,9 @@ class TerritoryPainter extends CustomPainter {
     for (final b in layers.objects.bosses) {
       _paintBossArea(canvas, b);
     }
+    for (final s in layers.objects.supplies) {
+      _paintSupplyArea(canvas, s);
+    }
     for (final l in layers.loops) {
       _paintLoop(canvas, l);
     }
@@ -238,7 +244,24 @@ class TerritoryPainter extends CustomPainter {
       _paintLabel(canvas, size, t);
     }
     _paintObjects(canvas, size);
-    if (layers.myLocation != null) _paintMe(canvas, view.toScreen(layers.myLocation!));
+    if (layers.myLocation != null) paintMapMarker(canvas, view.toScreen(layers.myLocation!), layers.myMarker);
+  }
+
+  void _paintSupplyArea(Canvas canvas, MapSupply s) {
+    final c = view.toScreen(s.center);
+    final r = s.radiusM / view.mpp;
+    if (r < 6) return;
+    final color = s.claimedToday ? LL.text3 : LL.pink;
+    canvas.drawCircle(c, r, Paint()..color = color.withValues(alpha: 0.1));
+    _dashed(
+        canvas,
+        Path()..addOval(Rect.fromCircle(center: c, radius: r)),
+        Paint()
+          ..color = color.withValues(alpha: 0.7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+        dash: 6,
+        gap: 5);
   }
 
   // ── V2 gameplay objects ──
@@ -285,6 +308,20 @@ class TerritoryPainter extends CustomPainter {
     for (final c in layers.objects.chests) {
       final o = view.toScreen(c.center);
       if (area.contains(o)) paintChest(canvas, o, 14);
+    }
+    for (final s in layers.objects.supplies) {
+      final o = view.toScreen(s.center);
+      if (!area.contains(o)) continue;
+      paintSupply(canvas, o, claimed: s.claimedToday);
+      if (!s.claimedToday && s.perkTitle.isNotEmpty && view.mpp < 4) {
+        paintPill(canvas, o + const Offset(0, 30), s.perkTitle, LL.pink);
+      }
+    }
+    // V2 batch 4 (C-08): venues with the 馆主's avatar (labels when zoomed in).
+    for (final v in layers.objects.venues) {
+      final o = view.toScreen(v.center);
+      if (!area.contains(o)) continue;
+      paintVenueMarker(canvas, o, v, avatar: VenueAvatars.instance.peek(v.ownerAvatarUrl), label: view.mpp < 4);
     }
     for (final b in layers.objects.bosses) {
       final o = view.toScreen(b.center);
@@ -373,7 +410,8 @@ class TerritoryPainter extends CustomPainter {
   }
 
   void _paintTerritory(Canvas canvas, TerritorySummary t, {bool selected = false}) {
-    final color = relationColor(t.relation);
+    // V2 batch 4: the owner's skin replaces the relation colours.
+    final tc = TerritoryColors.of(t.skin, relationColor(t.relation));
     for (final poly in t.polygons) {
       if (poly.isEmpty) continue;
       final path = _ringPath(poly.first);
@@ -381,11 +419,12 @@ class TerritoryPainter extends CustomPainter {
         path.addPath(_ringPath(hole), Offset.zero);
       }
       path.fillType = PathFillType.evenOdd;
-      canvas.drawPath(path, Paint()..color = color.withValues(alpha: selected ? 0.5 : 0.32));
+      canvas.drawPath(path, Paint()..color = tc.fill.withValues(alpha: selected ? 0.5 : 0.32));
+      paintSkinPattern(canvas, path, tc.pattern, tc.stroke);
       canvas.drawPath(
           path,
           Paint()
-            ..color = t.frozen ? LL.sky : color
+            ..color = t.frozen ? LL.sky : tc.stroke
             ..style = PaintingStyle.stroke
             ..strokeWidth = selected ? 3.5 : 2
             ..strokeJoin = StrokeJoin.round);
@@ -447,12 +486,6 @@ class TerritoryPainter extends CustomPainter {
     canvas.drawCircle(b, 3, Paint()..color = LL.night);
   }
 
-  void _paintMe(Canvas canvas, Offset o) {
-    canvas.drawCircle(o, 18, Paint()..color = LL.lavender.withValues(alpha: 0.25));
-    canvas.drawCircle(o, 9, Paint()..color = LL.text);
-    canvas.drawCircle(o, 6.5, Paint()..color = LL.lavender);
-  }
-
   void _paintLabel(Canvas canvas, Size size, TerritorySummary t) {
     final c = centerOf(t);
     if (c == null || t.polygons.isEmpty || t.polygons.first.isEmpty) return;
@@ -506,8 +539,8 @@ class TerritoryPainter extends CustomPainter {
       old.layers != layers;
 }
 
-/// Gameplay object under a screen point (bosses first, then chests, then
-/// checkpoints), using the marker sizes drawn by [TerritoryPainter].
+/// Gameplay object under a screen point (bosses first, then chests,
+/// supplies, then checkpoints), using the marker sizes drawn by [TerritoryPainter].
 MapObjectHit? hitTestObjects(MapView view, MapObjects objects, Offset p) {
   for (final b in objects.bosses) {
     final o = view.toScreen(b.center);
@@ -517,6 +550,12 @@ MapObjectHit? hitTestObjects(MapView view, MapObjects objects, Offset p) {
   }
   for (final c in objects.chests) {
     if ((view.toScreen(c.center) - p).distance < 24) return ChestHit(c);
+  }
+  for (final s in objects.supplies) {
+    if ((view.toScreen(s.center) - p).distance < 24) return SupplyHit(s);
+  }
+  for (final v in objects.venues) {
+    if ((view.toScreen(v.center) - p).distance < 24) return VenueHit(v);
   }
   for (final c in objects.checkpoints) {
     if ((view.toScreen(c.center) - p).distance < 22) return CheckpointHit(c);

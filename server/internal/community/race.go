@@ -35,6 +35,7 @@ type Race struct {
 	Capacity         int                `json:"capacity"`
 	SignedCount      int                `json:"signed_count"`
 	RequiresWearable bool               `json:"requires_wearable"`
+	FeeAmt           int                `json:"fee_amt"`
 	Medal            activity.RaceMedal `json:"medal"`
 	Status           string             `json:"status"`
 	MyEntry          *Entry             `json:"my_entry"`
@@ -48,6 +49,8 @@ type Entry struct {
 	ResultSec  *int       `json:"result_sec"`
 	FinishedAt *time.Time `json:"finished_at"`
 	Rank       *int       `json:"rank"`
+	// OrderNo is the fee order of a paid race (pending_pay: pay it).
+	OrderNo *string `json:"order_no,omitempty"`
 }
 
 // LeaderRow is one leaderboard line.
@@ -67,9 +70,9 @@ const entryStatusSQL = `CASE WHEN e.entry_status='signed' AND now() >= r.end_tim
 // raceCols uses $1 = viewer (0: nobody).
 const raceCols = `r.id, r.race_type, r.title, r.cover_url, r.description, r.sport, r.distance_m, r.start_time, r.end_time, r.signup_end_time,
 	r.place_name, ST_Y(r.place_geom), ST_X(r.place_geom), r.capacity_qty,
-	(SELECT count(*) FROM src.src_mkt_loop_race_entry x WHERE x.race_id=r.id), r.is_wearable_required,
+	(SELECT count(*) FROM src.src_mkt_loop_race_entry x WHERE x.race_id=r.id AND x.entry_status <> 'pending_pay'), r.is_wearable_required,
 	r.medal_key, r.medal_name, r.medal_image_url, ` + raceStatusSQL + `, r.is_published,
-	` + entryStatusSQL + `, e.result_sec, e.finish_time,
+	` + entryStatusSQL + `, e.result_sec, e.finish_time, r.fee_amt, e.order_no,
 	CASE WHEN e.entry_status='finished' AND e.result_sec IS NOT NULL THEN 1 + (SELECT count(*) FROM src.src_mkt_loop_race_entry o
 		WHERE o.race_id=r.id AND o.entry_status='finished' AND (o.result_sec < e.result_sec OR (o.result_sec = e.result_sec AND o.finish_time < e.finish_time))) END`
 
@@ -88,7 +91,7 @@ func queryRaces(ctx context.Context, q db.Querier, where string, args ...any) ([
 		var e Entry
 		err := row.Scan(&r.ID, &r.Type, &r.Title, &r.CoverURL, &r.Description, &r.Sport, &r.DistanceM, &r.StartTime, &r.EndTime, &r.SignupEndTime,
 			&pname, &lat, &lng, &r.Capacity, &r.SignedCount, &r.RequiresWearable, &r.Medal.Key, &r.Medal.Name, &r.Medal.ImageURL, &r.Status, &published,
-			&est, &e.ResultSec, &e.FinishedAt, &e.Rank)
+			&est, &e.ResultSec, &e.FinishedAt, &r.FeeAmt, &e.OrderNo, &e.Rank)
 		if pname != nil && lat != nil && lng != nil {
 			r.Place = &Place{Name: *pname, Lat: *lat, Lng: *lng}
 		}
@@ -217,7 +220,7 @@ func (s *Service) CancelSignup(ctx context.Context, user, id int64) (Race, error
 	if started {
 		return Race{}, httpx.Conflict("race_started", "赛事已经开始，不能取消报名")
 	}
-	if _, err := s.Pool.Exec(ctx, `DELETE FROM src.src_mkt_loop_race_entry WHERE race_id=$1 AND user_id=$2 AND entry_status='signed'`, id, user); err != nil {
+	if err := s.withdraw(ctx, user, id); err != nil {
 		return Race{}, err
 	}
 	return s.Race(ctx, user, id, false)
@@ -308,6 +311,7 @@ type RaceInput struct {
 	Place            *Place             `json:"place"`
 	Capacity         int                `json:"capacity"`
 	RequiresWearable bool               `json:"requires_wearable"`
+	FeeAmt           int                `json:"fee_amt"`
 	Medal            activity.RaceMedal `json:"medal"`
 	Published        bool               `json:"published"`
 }
@@ -341,6 +345,9 @@ func (in *RaceInput) validate(cfg gameplay.Config) error {
 	}
 	if in.Capacity <= 0 {
 		return bad("名额必须为正")
+	}
+	if in.FeeAmt < 0 || in.FeeAmt > 1_000_000 {
+		return bad("报名费应在 0–10000 元之间")
 	}
 	if in.Type == "offline" {
 		if in.Place == nil || strings.TrimSpace(in.Place.Name) == "" || !in.Place.valid() {
@@ -383,11 +390,11 @@ func (s *Service) CreateRace(ctx context.Context, adminID int64, in RaceInput) (
 	name, lat, lng := placeArgs(in.Place)
 	var id int64
 	err := s.Pool.QueryRow(ctx, `INSERT INTO src.src_mkt_loop_race (race_type, title, cover_url, description, sport, distance_m, start_time, end_time,
-			signup_end_time, place_name, place_geom, capacity_qty, is_wearable_required, medal_key, medal_name, medal_image_url, is_published, created_by)
+			signup_end_time, place_name, place_geom, capacity_qty, is_wearable_required, medal_key, medal_name, medal_image_url, is_published, created_by, fee_amt)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, CASE WHEN $11::float8 IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint($12,$11),4326) END,
-			$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
+			$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
 		in.Type, in.Title, in.CoverURL, in.Description, in.Sport, in.DistanceM, in.StartTime, in.EndTime, in.SignupEndTime, name, lat, lng,
-		in.Capacity, in.RequiresWearable, in.Medal.Key, in.Medal.Name, in.Medal.ImageURL, in.Published, adminID).Scan(&id)
+		in.Capacity, in.RequiresWearable, in.Medal.Key, in.Medal.Name, in.Medal.ImageURL, in.Published, adminID, in.FeeAmt).Scan(&id)
 	if db.IsUniqueViolation(err) {
 		return 0, httpx.Conflict("medal_key_taken", "奖牌 key 已被其他赛事使用")
 	}
@@ -402,7 +409,7 @@ func (s *Service) RaceInputOf(ctx context.Context, id int64) (RaceInput, error) 
 	}
 	return RaceInput{Type: r.Type, Title: r.Title, CoverURL: r.CoverURL, Description: r.Description, Sport: r.Sport, DistanceM: r.DistanceM,
 		StartTime: r.StartTime, EndTime: r.EndTime, SignupEndTime: r.SignupEndTime, Place: r.Place, Capacity: r.Capacity,
-		RequiresWearable: r.RequiresWearable, Medal: r.Medal, Published: *r.Published}, nil
+		RequiresWearable: r.RequiresWearable, FeeAmt: r.FeeAmt, Medal: r.Medal, Published: *r.Published}, nil
 }
 
 // UpdateRace is PATCH /admin/v1/races/{id}.
@@ -423,9 +430,9 @@ func (s *Service) UpdateRace(ctx context.Context, id int64, oldKey string, in Ra
 		name, lat, lng := placeArgs(in.Place)
 		_, err := tx.Exec(ctx, `UPDATE src.src_mkt_loop_race SET race_type=$2, title=$3, cover_url=$4, description=$5, sport=$6, distance_m=$7, start_time=$8,
 				end_time=$9, signup_end_time=$10, place_name=$11, place_geom=CASE WHEN $12::float8 IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint($13,$12),4326) END,
-				capacity_qty=$14, is_wearable_required=$15, medal_key=$16, medal_name=$17, medal_image_url=$18, is_published=$19, update_time=now()
+				capacity_qty=$14, is_wearable_required=$15, medal_key=$16, medal_name=$17, medal_image_url=$18, is_published=$19, fee_amt=$20, update_time=now()
 			WHERE id=$1`, id, in.Type, in.Title, in.CoverURL, in.Description, in.Sport, in.DistanceM, in.StartTime, in.EndTime, in.SignupEndTime,
-			name, lat, lng, in.Capacity, in.RequiresWearable, in.Medal.Key, in.Medal.Name, in.Medal.ImageURL, in.Published)
+			name, lat, lng, in.Capacity, in.RequiresWearable, in.Medal.Key, in.Medal.Name, in.Medal.ImageURL, in.Published, in.FeeAmt)
 		if db.IsUniqueViolation(err) {
 			return httpx.Conflict("medal_key_taken", "奖牌 key 已被其他赛事使用")
 		}
@@ -433,9 +440,12 @@ func (s *Service) UpdateRace(ctx context.Context, id int64, oldKey string, in Ra
 	})
 }
 
-// CancelRace is POST /admin/v1/races/{id}/cancel; entrants are notified.
+// CancelRace is POST /admin/v1/races/{id}/cancel; entrants are notified
+// and paid fees refunded.
 func (s *Service) CancelRace(ctx context.Context, id int64) error {
-	return pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+	var refunds []string
+	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		refunds = nil
 		var title string
 		err := tx.QueryRow(ctx, `UPDATE src.src_mkt_loop_race SET race_status='cancelled', update_time=now() WHERE id=$1 AND race_status<>'cancelled' RETURNING title`, id).Scan(&title)
 		if db.IsNoRows(err) {
@@ -464,8 +474,13 @@ func (s *Service) CancelRace(ctx context.Context, id int64) error {
 				return err
 			}
 		}
-		return nil
+		refunds, err = cancelFees(ctx, tx, id)
+		return err
 	})
+	if err == nil {
+		s.refundFees(ctx, refunds, "赛事取消")
+	}
+	return err
 }
 
 // AdminEntry is a row of GET /admin/v1/races/{id}/entries.

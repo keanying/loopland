@@ -20,6 +20,7 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/realtime"
+	"github.com/keanying/loopland/server/internal/territory"
 )
 
 // Service implements the gameplay hook, the app and admin endpoints and the
@@ -30,6 +31,23 @@ type Service struct {
 	Config *gameplay.Store
 	Hub    *realtime.Hub
 	Log    *slog.Logger
+	// Perks is optional 第四批联名权益 (internal/perks): supply stations on
+	// the map and along the track, merchant chests whose reward is a coupon.
+	Perks Perks
+}
+
+// Perks issues merchant coupons during gameplay. Coupons are opaque JSON
+// objects here.
+type Perks interface {
+	// Supplies lists the supply stations in the viewport (a JSON array).
+	Supplies(ctx context.Context, b territory.BBox, user int64) (any, error)
+	// SuppliesOnTrack issues the coupons of supply stations the track passed.
+	SuppliesOnTrack(ctx context.Context, tx pgx.Tx, in activity.HookInput, track *string) ([]any, error)
+	// ChestCoupon issues the coupon of a merchant chest.
+	ChestCoupon(ctx context.Context, tx pgx.Tx, chestID, dropID, user int64, activityID *int64) (any, error)
+	// SoftError reports a ChestCoupon error that only means "no coupon this
+	// time" (sold out, already got one today, drop paused).
+	SoftError(err error) bool
 }
 
 // grant adds reward energy (not counted against the daily activity cap).
@@ -102,7 +120,7 @@ func lineWKT(pts []geo.LatLng) *string {
 // AfterSettle implements activity.Hook.
 func (s *Service) AfterSettle(ctx context.Context, tx pgx.Tx, in activity.HookInput) (activity.Extra, func(context.Context), error) {
 	ex := activity.Extra{BossDamage: []activity.BossHit{}, Chests: []activity.ChestOpen{}, Defended: []activity.Defended{},
-		Routes: []activity.RouteStep{}, Campaigns: []activity.CampaignDone{}, Tasks: []activity.TaskProgress{}}
+		Routes: []activity.RouteStep{}, Campaigns: []activity.CampaignDone{}, Tasks: []activity.TaskProgress{}, Coupons: []any{}}
 	var events []realtime.Event
 	track := lineWKT(in.Points)
 	steps := []func() error{
@@ -111,7 +129,15 @@ func (s *Service) AfterSettle(ctx context.Context, tx pgx.Tx, in activity.HookIn
 			ex.BossDamage, events = hits, append(events, evs...)
 			return err
 		},
-		func() (err error) { ex.Chests, err = s.chestsOnTrack(ctx, tx, in, track); return },
+		func() (err error) { ex.Chests, ex.Coupons, err = s.chestsOnTrack(ctx, tx, in, track); return },
+		func() error {
+			if s.Perks == nil {
+				return nil
+			}
+			cs, err := s.Perks.SuppliesOnTrack(ctx, tx, in, track)
+			ex.Coupons = append(ex.Coupons, cs...)
+			return err
+		},
 		func() (err error) { ex.Defended, err = s.defend(ctx, tx, in, track); return },
 		func() (err error) { ex.Routes, err = s.routeProgress(ctx, tx, in); return },
 		func() (err error) { ex.Campaigns, err = s.campaigns(ctx, tx, in); return },

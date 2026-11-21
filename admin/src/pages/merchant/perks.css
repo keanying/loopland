@@ -1,0 +1,80 @@
+/* V2 第四批 · 投放 / 联名活动 / 能量商城 */
+.drop-ic { display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; flex-shrink: 0; }
+.drop-ic.supply { background: var(--ink); color: #fff; }
+.drop-ic.chest { background: #ffc857; color: var(--ink); }
+.drop-ic.stronghold { background: var(--card); color: var(--ink); border: 1.5px solid var(--ink); }
+.drop-cell { display: flex; gap: 10px; align-items: center; min-width: 220px; }
+.drop-cell b { display: block; line-height: 1.35; }
+.drop-cell .muted { font-size: 12px; }
+.cap-cell { min-width: 150px; }
+.cap-track { position: relative; height: 6px; border-radius: 3px; background: #ececef; overflow: hidden; margin-top: 4px; }
+.cap-track > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; }
+.cap-track > i.issued { background: #c9c9cf; }
+.cap-track > i.redeemed { background: var(--ink); }
+.cap-track.full > i.issued { background: #f2b8b0; }
+
+/* 新建投放 wizard */
+.type-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.type-card { border: 1.5px solid var(--line); border-radius: 18px; padding: 14px; background: #fff; cursor: pointer; text-align: left; font: inherit; color: inherit; display: flex; flex-direction: column; gap: 8px; min-height: 100%; }
+.type-card:hover:not(:disabled) { border-color: #b9b9bf; }
+.type-card.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.type-card.on .muted { color: #c9c9cf; }
+.type-card:disabled { cursor: not-allowed; opacity: .55; }
+.type-card .type-name { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.type-card .muted { font-size: 12px; line-height: 1.55; }
+.wizard-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; align-items: start; }
+.wizard-side { position: sticky; top: 0; display: flex; flex-direction: column; gap: 12px; }
+.drop-map .map-wrap { min-height: 340px; height: 340px; }
+.cap-stepper { display: inline-flex; align-items: center; gap: 10px; }
+.cap-stepper .ant-input-number { width: 120px; }
+.cap-stepper .ant-input-number-input { text-align: center; font-weight: 700; font-size: 18px; }
+.fixed-note { background: var(--card); border-radius: 14px; padding: 10px 14px; font-size: 12.5px; color: #55555b; line-height: 1.6; }
+.fixed-note b { color: var(--ink); }
+
+/* coupon preview (App dark theme) */
+.coupon-phone { width: 300px; }
+.coupon-phone .phone-screen { min-height: 0; padding: 20px 14px 16px; }
+.cp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 16px; }
+.cp-chip { font-size: 11px; background: #26223a; color: var(--lavender); border-radius: 999px; padding: 2px 8px; }
+.coupon { display: flex; border-radius: 16px; overflow: hidden; background: #1e1e22; position: relative; }
+.coupon-stub { width: 92px; flex-shrink: 0; background: var(--lime); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px 6px; text-align: center; border-right: 2px dashed #0e0e10; }
+.coupon-value { font-weight: 900; font-size: 22px; line-height: 1.15; word-break: break-all; }
+.coupon-value.long { font-size: 15px; }
+.coupon-merchant { font-size: 11px; font-weight: 700; margin-top: 4px; opacity: .8; }
+.coupon-main { padding: 12px; min-width: 0; flex: 1; }
+.coupon-title { font-weight: 800; font-size: 14.5px; line-height: 1.35; word-break: break-word; }
+.coupon-desc { font-size: 12px; color: #a9a9af; margin-top: 4px; line-height: 1.45; }
+.coupon-src { font-size: 11px; color: var(--lavender); margin-top: 8px; }
+.coupon-btn { margin-top: 12px; background: var(--lime); color: var(--ink); border-radius: 999px; text-align: center; font-weight: 800; padding: 9px; font-size: 13px; }
+.cp-rules { margin-top: 12px; background: #17171a; border-radius: 14px; padding: 10px 12px; font-size: 12px; color: #d4d4d8; line-height: 1.6; }
+.cp-rules-t { font-weight: 800; color: #fff; margin-bottom: 2px; }
+.cp-line { color: #a9a9af; }
+.cp-note { margin-top: 6px; color: var(--lime); font-weight: 700; }
+
+/* 联名活动 cards */
+.bc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+.bc-card { background: #fff; border: 1.5px solid #ececef; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.bc-card.running { border-color: var(--ink); }
+.bc-card.ended { background: #f7f7f8; }
+.bc-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.bc-title { font-weight: 800; font-size: 16px; line-height: 1.35; }
+.bc-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.bc-desc { font-size: 13px; color: #55555b; line-height: 1.55; min-height: 40px; }
+.bc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.bc-stats > div { background: var(--card); border-radius: 12px; padding: 8px 10px; }
+.bc-stats b { display: block; font-size: 16px; }
+.bc-stats span { font-size: 11.5px; color: var(--muted); }
+.bc-goal { font-size: 12px; display: flex; justify-content: space-between; margin-bottom: 4px; }
+.bc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+
+/* 能量商城 */
+.skin-swatch { display: block; border-radius: 14px; flex-shrink: 0; }
+.shop-thumb { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; background: var(--card); display: block; }
+.energy-note { display: flex; gap: 10px; align-items: center; background: #f4fbd2; border: 1px solid #c8e05a; border-radius: 16px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+.energy-note b { white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .wizard-grid { grid-template-columns: minmax(0, 1fr); }
+  .wizard-side { position: static; }
+  .type-cards { grid-template-columns: minmax(0, 1fr); }
+}

@@ -189,6 +189,12 @@ screenshots/  组件测试生成的界面截图
   - 画面只在手机本地交给 ML Kit 识别，不上传、不保存（页面和课程列表都有说明，训练结束立即关闭摄像头，切到后台释放摄像头并暂停）。「全身入镜」提示；4 秒窗口内光线太暗 / 可用帧不足 40% / 2.5 秒没有画面时自动改为手动计数（+1 / +10 / −1），点状态条可恢复自动；没有摄像头权限、没有摄像头、Web / 桌面：计时 + 手动计数。
   - 语音（`flutter_tts`，zh-CN）：准备、每组开始、过半、最后 3 个、最后 3 秒倒数、休息与下一个动作、完成；右上角静音开关（记在本机；跑步页目前没有语音设置）。
   - 上传沿用 `POST /v1/activities`（跳绳 `amount` = 总次数，其余为分钟数）+ `coach`（`workout_key`、`camera`、`reps_detected`、`reps_manual`、`sets_done`），结果走原来的结算页（能量、复核）。手动补记比识别多 20% 以上时小结页提示可能进入人工复核（服务端规则 `coach_mismatch`）。
+- **联名权益 / 卡券包 / 能量商城（V2 第四批 A-16、E-04、E-05，接口 `docs/api/v2-4-本地生活与商户.md`）**：代码在 `lib/api/perks_api.dart`、`perks_models.dart`、`lib/features/local/`（`campaigns_tab.dart`、`shop_tab.dart`、`coupons_pages.dart`、`supply_sheet.dart`）、`lib/widgets/cosmetics.dart`。
+  - 本地生活「联名活动」：进行中的品牌联名（时间、门店数、权益、怎么领：补给站 / 商户宝箱 / 据点、规则、投放点，点投放点回到地图并居中）。「能量商城」：领地皮肤 / 头像框 / 地图标记按类型筛选、预览，兑换前确认（`not_enough_energy`、`already_owned`），装备 / 卸下（同类只装备一个）；明示「能量只能运动获得，不能充值、不能转让」，没有付费入口。
+  - 卡券包 `/me/coupons`（我的、结算页、联名活动入口）：未使用 / 已使用 / 已过期；券详情 `/me/coupons/:id` 显示到店二维码（`qr_flutter` 本地绘制，`GET /v1/coupons/{id}/qr` 每 50 秒和回到前台时刷新，倒计时，截图无效）、券码、规则（含「核销需要当天有一条运动记录」）、有效期、来源。没有做屏幕调亮（不想为此引入原生插件）。
+  - 地图：补给站图标 + 范围圈（今天领过变灰），点开「领取」（先定位判断范围，`too_far` / `already_claimed` / `sold_out`）；商户宝箱（`merchant` + `perk_title`）开出券；结算页「联名福利」列出本次得到的券。
+  - 装扮：`UserBrief.avatar_frame` 由 `UserAvatar` 按 key 画框（服务端默认 `frame_gold` / `frame_runner` / `frame_night`，另有几种备用；未知 key 画通用框，尺寸不变）；领地 `skin` 的 fill / stroke / pattern（`grid`、`stripe(s)`、`wave(s)`、`dot(s)`、`hex`）在备用地图上完整绘制，高德只用颜色；`/v1/me` 的 `equipped.map_marker` 替换我的位置标记（高德作为定位图标）。
+  - 联调：`LOOPLAND_LIVE_API=… LOOPLAND_LIVE_DB=<同一个库的 psql 连接串> flutter test integration_live/perks_live_test.dart`（`LOOPLAND_LIVE_DB` 用来给测试账号加能量；不设时只测能量不足）。
 - 离线：进行中的运动每 5 秒和每次暂停写入 `runs/in_progress.json`（先写临时文件再改名）；结束后先写入 `runs/pending/<client_id>.json` 再上传；启动时提示恢复中断的运动并补传，补传使用相同 `client_id`（服务端幂等）。
 
 ## 坐标系

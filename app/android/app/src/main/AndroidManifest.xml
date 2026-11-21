@@ -19,8 +19,8 @@
     <!-- 合规：ali_auth 插件声明了以下权限，一键登录并不需要，移除 -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
-    <!-- AI 跟练：前置摄像头 + 端上姿态识别（ML Kit，画面只在本机处理，不上传、不保存）。
-         没有摄像头的设备也能安装（只计时 + 手动计数） -->
+    <!-- AI 跟练（前置摄像头 + 端上姿态识别）和场馆签到扫码（mobile_scanner，后置摄像头 + 端上条码识别），
+         画面只在本机处理，不上传、不保存。没有摄像头的设备也能安装（跟练只计时 + 手动计数，签到用定位） -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
@@ -56,6 +56,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- 场馆二维码 App Link：https://<links.universal_link_domain>/v/<内容>（go_router 路由 /v/:payload）。
+                 域名来自生成的 loopland.properties（LOOPLAND_LINK_DOMAIN）；服务器需在
+                 https://<域名>/.well-known/assetlinks.json 声明 com.loopland.app 的签名证书 SHA-256 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="${LOOPLAND_LINK_DOMAIN}" android:pathPrefix="/v/"/>
             </intent-filter>
         </activity>
         <!-- 高德 Key：config/app.yaml 的 amap.android_key → AMAP_ANDROID_KEY（dart-define 或生成的 android/loopland.properties，见 build.gradle.kts） -->

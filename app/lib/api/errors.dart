@@ -80,6 +80,16 @@ const errorMessages = <String, String>{
   'invalid_content': '问题不能为空，最多 500 字',
   'invalid_activity': '这次运动还没结算完成，稍后再生成战报',
   'invalid_ai_report': '这次运动还没有 AI 战报，先生成一篇吧',
+  // V2 本地生活 · 场馆签到 / 订场 / 报名费
+  'already_checked_in': '今天已经在这个场馆签到过了，明天再来',
+  'minor_not_allowed': '未成年账号暂不支持订场和付费报名',
+  'slot_unavailable': '这个时段刚被订走了，换一个时段吧',
+  'cancel_too_late': '开始前 2 小时内不能自助取消，如需退款请联系客服',
+  // V2 本地生活 · 补给站 / 卡券 / 能量商城
+  'too_far': '不在补给站范围内，走近一点再领取',
+  'already_claimed': '今天已经领过这个补给站的券了，明天再来',
+  'sold_out': '今天的券已经发完了，明天再来',
+  'already_owned': '你已经拥有这件装扮了',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',

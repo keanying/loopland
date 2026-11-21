@@ -3,16 +3,20 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../api/community_common.dart' show CursorPager;
+import '../../api/errors.dart';
 import '../../api/gathering_api.dart';
 import '../../api/gathering_models.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../pay/payment_service.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
+import '../local/booking_flow.dart' show ChannelPicker, PayFlow;
 import '../social/social_widgets.dart' show UserAvatar, mediaUrl, openProfile;
 
 const _statuses = ['', 'signup', 'upcoming', 'running', 'finished'];
@@ -109,6 +113,82 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
     toast(context, done);
   }
 
+  /// D-12 paid signup: pick a channel → `POST signup {channel}` (entry
+  /// `pending_pay`) → pay → poll until `signed`.
+  Future<void> _paidSignup(Race r) async {
+    if (ref.read(userProvider)?.isMinor == true) {
+      await PayFlow.minorNotice(context, '付费报名');
+      return;
+    }
+    final channel = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: LL.card,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (_) => RaceFeeSheet(race: r),
+    );
+    if (channel == null || !mounted) return;
+    final pay = ref.read(paymentServiceProvider);
+    setState(() => _busy = true);
+    try {
+      await pay.ensureChannelReady(channel);
+      final s = await _api.signupPaidRace(r.id, channel);
+      ref.invalidate(raceProvider(widget.raceId));
+      var paid = s.race.myEntry?.status == 'signed';
+      if (!paid) {
+        final no = s.orderNo;
+        if (no != null) {
+          paid = (await pay.payOrder(no, channel, s.payParams)).isPaid;
+        } else {
+          // No order number in the response: let the SDK run, then ask the race.
+          await pay.sdkPay(channel, s.payParams);
+          paid = await _waitSigned(r.id);
+        }
+      }
+      if (!mounted) return;
+      ref.invalidate(raceProvider(widget.raceId));
+      ref.invalidate(communityHomeProvider);
+      toast(context, paid ? '报名成功，已支付 ${Fmt.yuan(r.feeAmt)}' : '支付结果确认中，稍后刷新查看；15 分钟内未支付自动取消');
+    } catch (e) {
+      final ex = ApiException.from(e);
+      ref.invalidate(raceProvider(widget.raceId));
+      if (mounted && !PayFlow.handleError(context, ex, what: '付费报名')) showError(context, ex);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<bool> _waitSigned(int id) async {
+    for (var i = 0; i < 15; i++) {
+      final r = await _api.race(id);
+      if (r.myEntry?.status == 'signed') return true;
+      if (r.myEntry == null) return false;
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    return false;
+  }
+
+  Future<void> _cancel(Race r) async {
+    final e = r.myEntry;
+    if (r.isPaid && e?.status == 'signed') {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: const Text('取消报名？'),
+          content: Text('报名费 ${Fmt.yuan(r.feeAmt)} 将原路退回，一般 1–3 个工作日到账。'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(d, false), child: const Text('再想想')),
+            FilledButton(onPressed: () => Navigator.pop(d, true), child: const Text('取消并退款')),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+      await _act(() => _api.cancelRaceSignup(r.id), '已取消报名，报名费原路退回');
+      return;
+    }
+    await _act(() => _api.cancelRaceSignup(r.id), '已取消报名');
+  }
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(raceProvider(widget.raceId));
@@ -143,6 +223,7 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
                         _Row(Icons.schedule_rounded, '比赛时间', '${Fmt.dateTime(r.startTime)} – ${Fmt.dateTime(r.endTime)}'),
                         _Row(Icons.how_to_reg_outlined, '报名截止', Fmt.dateTime(r.signupEndTime)),
                         if (r.place != null) _Row(Icons.place_outlined, '地点', r.place!.name),
+                        _Row(Icons.payments_outlined, '报名费', r.isPaid ? Fmt.yuan(r.feeAmt) : '免费'),
                         _Row(Icons.groups_outlined, '名额',
                             '已报名 ${Fmt.thousands(r.signedCount)}${r.capacity > 0 ? ' / ${Fmt.thousands(r.capacity)}' : ''}'),
                       ]),
@@ -234,13 +315,41 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
   Widget _actions(Race r) {
     final e = r.myEntry;
     final Widget button;
-    if (r.canCancel) {
+    if (r.canCancel && (e?.pendingPay ?? false)) {
+      // The server reuses the unpaid order when signing up again.
+      button = Row(children: [
+        Expanded(
+          child: OutlinedButton(
+            key: const Key('race_cancel'),
+            onPressed: _busy ? null : () => _cancel(r),
+            child: const Text('取消报名'),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: FilledButton(
+            key: const Key('race_repay'),
+            onPressed: _busy ? null : () => _paidSignup(r),
+            child: Text('继续支付 ${Fmt.yuan(r.feeAmt)}'),
+          ),
+        ),
+      ]);
+    } else if (r.canCancel) {
       button = OutlinedButton(
-        onPressed: _busy ? null : () => _act(() => _api.cancelRaceSignup(r.id), '已取消报名'),
-        child: const Text('取消报名'),
+        key: const Key('race_cancel'),
+        onPressed: _busy ? null : () => _cancel(r),
+        child: Text(r.isPaid ? '取消报名并退款' : '取消报名'),
+      );
+    } else if (r.canSignup && r.isPaid) {
+      button = FilledButton(
+        key: const Key('race_signup'),
+        onPressed: _busy ? null : () => _paidSignup(r),
+        child: Text('报名 ${Fmt.yuan(r.feeAmt)}'),
       );
     } else if (r.canSignup) {
       button = FilledButton(
+        key: const Key('race_signup'),
         onPressed: _busy ? null : () => _act(() => _api.signupRace(r.id), r.isOnline ? '报名成功，比赛时间内去跑吧' : '报名成功'),
         child: const Text('立即报名（免费）'),
       );
@@ -279,6 +388,7 @@ class _MyResult extends StatelessWidget {
           LL.lime,
         ),
       'dnf' => ('未完赛', '比赛时间内没有完成规定距离', LL.card2),
+      'pending_pay' => ('待支付', '报名费 ${Fmt.yuan(race.feeAmt)}，15 分钟内未支付自动取消报名', LL.yellow),
       _ => (
           '已报名',
           race.isOnline ? '在比赛时间内完成一次 ≥ ${Fmt.km(race.distanceM, digits: 1)} km 的${sportName(race.sport)}即可完赛' : '按时到场参赛',
@@ -335,6 +445,53 @@ class _MedalImage extends StatelessWidget {
       width: 64,
       height: 77,
       child: Image.network(mediaUrl(u), fit: BoxFit.contain, errorBuilder: (_, _, _) => art),
+    );
+  }
+}
+
+/// 报名费确认（D-12）：金额、退款规则、支付方式（微信 / 支付宝，iOS 同样）。
+/// Pops with the chosen channel.
+class RaceFeeSheet extends ConsumerStatefulWidget {
+  const RaceFeeSheet({super.key, required this.race});
+  final Race race;
+  @override
+  ConsumerState<RaceFeeSheet> createState() => _RaceFeeSheetState();
+}
+
+class _RaceFeeSheetState extends ConsumerState<RaceFeeSheet> {
+  String? _channel;
+  @override
+  Widget build(BuildContext context) {
+    final r = widget.race;
+    final channels = ref.watch(paymentServiceProvider).serviceChannels(ref.watch(featuresProvider).value);
+    if (!channels.contains(_channel)) _channel = channels.firstOrNull;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('报名缴费', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 10),
+          LLCard(
+            color: LL.card2,
+            child: Row(children: [
+              Expanded(child: Text(r.title, style: const TextStyle(fontWeight: FontWeight.w800))),
+              Text(Fmt.yuan(r.feeAmt), style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: LL.lime)),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          const Text('报名即下单，15 分钟内未支付自动取消。比赛开始前取消报名，报名费原路退回；赛事被取消时自动退款。',
+              style: TextStyle(color: LL.text3, fontSize: 12, height: 1.5)),
+          const SizedBox(height: 8),
+          const Text('支付方式', style: TextStyle(color: LL.text2)),
+          ChannelPicker(channels: channels, value: _channel, onChanged: (c) => setState(() => _channel = c)),
+          const SizedBox(height: 8),
+          FilledButton(
+            key: const Key('race_pay'),
+            onPressed: _channel == null ? null : () => Navigator.pop(context, _channel),
+            child: Text('支付 ${Fmt.yuan(r.feeAmt)}'),
+          ),
+        ]),
+      ),
     );
   }
 }

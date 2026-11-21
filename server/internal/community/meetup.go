@@ -37,8 +37,22 @@ type Meetup struct {
 	DistanceM      *float64     `json:"distance_m"`
 	CreatedAt      time.Time    `json:"created_at"`
 	Members        *[]UserBrief `json:"members,omitempty"`
+	// Booking is the venue booked for this meetup (detail only; D-11).
+	Booking *MeetupBooking `json:"booking,omitempty"`
 
 	creatorID int64
+}
+
+// MeetupBooking is the venue slot booked for a ball meetup (约球订场).
+type MeetupBooking struct {
+	ID    int64 `json:"id"`
+	Venue struct {
+		ID   int64  `json:"id"`
+		Name string `json:"name"`
+	} `json:"venue"`
+	StartTime time.Time `json:"start_time"`
+	EndTime   time.Time `json:"end_time"`
+	Status    string    `json:"status"`
 }
 
 var meetupTypes = map[string]bool{"run": true, "ball": true, "ride": true}
@@ -121,6 +135,18 @@ func (s *Service) Meetup(ctx context.Context, q db.Querier, viewer, id int64) (M
 		}
 	}
 	m.Members = &members
+	// The latest live booking: paid ones for everybody, an unpaid one for the creator.
+	var b MeetupBooking
+	err = q.QueryRow(ctx, `SELECT b.id, v.id, v.venue_name, b.start_time, b.end_time, b.booking_status
+		FROM src.src_ord_loop_booking b JOIN src.src_mer_loop_venue v ON v.id=b.venue_id
+		WHERE b.meetup_id=$1 AND (b.booking_status IN ('paid','completed') OR (b.booking_status='pending_pay' AND b.user_id=$2))
+		ORDER BY b.id DESC LIMIT 1`, id, viewer).Scan(&b.ID, &b.Venue.ID, &b.Venue.Name, &b.StartTime, &b.EndTime, &b.Status)
+	if err != nil && !db.IsNoRows(err) {
+		return m, err
+	}
+	if err == nil {
+		m.Booking = &b
+	}
 	return m, nil
 }
 

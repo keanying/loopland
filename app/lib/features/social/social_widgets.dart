@@ -9,6 +9,7 @@ import '../../api/community_models.dart';
 import '../../claim/geo.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
+import '../../widgets/cosmetics.dart';
 
 /// 1.3K / 18.6K / 1.2M style counts (as in the prototypes).
 String compactCount(int n) {
@@ -29,6 +30,8 @@ Color avatarColor(int id) => _avatarColors[id.abs() % _avatarColors.length];
 String mediaUrl(String url) => url.startsWith('/') ? '${Env.apiBase}$url' : url;
 
 /// Round avatar: the user's photo, or the first character on a colour.
+/// With an equipped `avatar_frame` (E-05) the frame is drawn around the photo
+/// inside the same [size] (the ring option is dropped then).
 class UserAvatar extends StatelessWidget {
   const UserAvatar({super.key, required this.user, this.size = 44, this.ring = false, this.onTap});
   final UserBrief user;
@@ -41,20 +44,31 @@ class UserAvatar extends StatelessWidget {
     final color = avatarColor(user.id);
     final name = user.nickname;
     final ch = name.isEmpty ? '?' : String.fromCharCodes(name.runes.take(1)).toUpperCase();
-    Widget fallback() => Container(
-          alignment: Alignment.center,
-          color: color,
-          child: Text(ch, style: TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: size * 0.42)),
-        );
-    Widget img = ClipOval(
-      child: SizedBox(
-        width: size,
-        height: size,
-        child: user.avatarUrl == null
-            ? fallback()
-            : Image.network(mediaUrl(user.avatarUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback()),
-      ),
-    );
+    Widget photo(double size) {
+      Widget fallback() => Container(
+            alignment: Alignment.center,
+            color: color,
+            child: Text(ch, style: TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: size * 0.42)),
+          );
+      return ClipOval(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: user.avatarUrl == null
+              ? fallback()
+              : Image.network(mediaUrl(user.avatarUrl!), fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback()),
+        ),
+      );
+    }
+
+    final frame = user.avatarFrame;
+    if (frame != null && frame.isNotEmpty) {
+      return Semantics(
+        label: '$name的头像',
+        child: GestureDetector(onTap: onTap, child: FramedAvatar(frameKey: frame, size: size, child: photo)),
+      );
+    }
+    Widget img = photo(size);
     if (ring) {
       img = Container(
         padding: const EdgeInsets.all(3),

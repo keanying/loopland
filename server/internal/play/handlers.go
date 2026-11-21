@@ -21,6 +21,10 @@ type MapObjects struct {
 	Bosses      []BossSummary   `json:"bosses"`
 	Chests      []ChestView     `json:"chests"`
 	Checkpoints []CheckpointPin `json:"checkpoints"`
+	// Supplies are merchant supply stations (第四批, filled by Perks).
+	Supplies any `json:"supplies"`
+	// Venues are venue check-in points with this week's owner (第四批, venues.go).
+	Venues []VenuePin `json:"venues"`
 }
 
 // ChestView is a chest on the map.
@@ -34,6 +38,15 @@ type ChestView struct {
 	Opens     *int      `json:"opens,omitempty"`
 	Source    string    `json:"source,omitempty"`
 	Status    string    `json:"status,omitempty"`
+	// Merchant and PerkTitle are set on merchant chests (开箱得券).
+	Merchant  *ChestMerchant `json:"merchant,omitempty"`
+	PerkTitle *string        `json:"perk_title,omitempty"`
+}
+
+// ChestMerchant names the merchant behind a merchant chest.
+type ChestMerchant struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // CheckpointPin is an orienteering point on the map.
@@ -50,7 +63,7 @@ const env = `ST_MakeEnvelope($1,$2,$3,$4,4326)`
 
 // Objects lists monsters, chests and checkpoints in the viewport (user=0: admin).
 func (s *Service) Objects(ctx context.Context, b territory.BBox, user int64) (MapObjects, error) {
-	out := MapObjects{Bosses: []BossSummary{}, Chests: []ChestView{}, Checkpoints: []CheckpointPin{}}
+	out := MapObjects{Bosses: []BossSummary{}, Chests: []ChestView{}, Checkpoints: []CheckpointPin{}, Supplies: []any{}}
 	rows, err := s.Pool.Query(ctx, `SELECT `+bossCols+` FROM src.src_ply_loop_boss b WHERE b.status='active'
 		AND ST_DWithin(b.center_geom::geography, `+env+`::geography, b.radius_m) ORDER BY b.id LIMIT 100`, b[0], b[1], b[2], b[3])
 	if err != nil {
@@ -62,7 +75,9 @@ func (s *Service) Objects(ctx context.Context, b territory.BBox, user int64) (Ma
 	if out.Bosses == nil {
 		out.Bosses = []BossSummary{}
 	}
-	rows, err = s.Pool.Query(ctx, `SELECT c.id, ST_Y(c.center_geom), ST_X(c.center_geom), c.radius_m, c.expire_time FROM src.src_ply_loop_chest c
+	rows, err = s.Pool.Query(ctx, `SELECT c.id, ST_Y(c.center_geom), ST_X(c.center_geom), c.radius_m, c.expire_time, m.id, m.merchant_name, d.perk_title
+		FROM src.src_ply_loop_chest c
+		LEFT JOIN src.src_mer_loop_drop d ON d.id=c.drop_id LEFT JOIN src.src_mer_loop_merchant m ON m.id=d.merchant_id
 		WHERE c.expire_time > now() AND c.remove_time IS NULL AND c.center_geom && `+env+`
 		  AND ($5 = 0 OR NOT EXISTS (SELECT 1 FROM src.src_ply_loop_chest_open o WHERE o.chest_id=c.id AND o.user_id=$5))
 		ORDER BY c.id LIMIT 300`, b[0], b[1], b[2], b[3], user)
@@ -71,13 +86,27 @@ func (s *Service) Objects(ctx context.Context, b territory.BBox, user int64) (Ma
 	}
 	out.Chests, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (ChestView, error) {
 		var c ChestView
-		return c, r.Scan(&c.ID, &c.Center.Lat, &c.Center.Lng, &c.RadiusM, &c.ExpiresAt)
+		var mid *int64
+		var mname *string
+		err := r.Scan(&c.ID, &c.Center.Lat, &c.Center.Lng, &c.RadiusM, &c.ExpiresAt, &mid, &mname, &c.PerkTitle)
+		if mid != nil {
+			c.Merchant = &ChestMerchant{ID: *mid, Name: *mname}
+		}
+		return c, err
 	})
 	if err != nil {
 		return out, err
 	}
 	if out.Chests == nil {
 		out.Chests = []ChestView{}
+	}
+	if s.Perks != nil {
+		if out.Supplies, err = s.Perks.Supplies(ctx, b, user); err != nil {
+			return out, err
+		}
+	}
+	if out.Venues, err = s.venuePins(ctx, b); err != nil {
+		return out, err
 	}
 	routes, err := s.Routes(ctx, user)
 	if err != nil {
@@ -305,11 +334,11 @@ func (h *Handler) openChest(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &p); err != nil {
 		return err
 	}
-	e, bonus, err := h.Svc.OpenChest(r.Context(), httpx.UserID(r.Context()), id, p.Lat, p.Lng)
+	e, bonus, coupon, err := h.Svc.OpenChest(r.Context(), httpx.UserID(r.Context()), id, p.Lat, p.Lng)
 	if err != nil {
 		return err
 	}
-	return httpx.OK(w, map[string]any{"energy": e, "bonus": bonus})
+	return httpx.OK(w, map[string]any{"energy": e, "bonus": bonus, "coupon": coupon})
 }
 
 func (h *Handler) season(w http.ResponseWriter, r *http.Request) error {

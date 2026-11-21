@@ -70,6 +70,8 @@ android {
 
         // 高德 Key → <meta-data android:name="com.amap.api.v2.apikey">
         manifestPlaceholders["AMAP_ANDROID_KEY"] = sdkValue("AMAP_ANDROID_KEY")
+        // 场馆二维码 App Link 域名（links.universal_link_domain）→ MainActivity 的 https intent-filter
+        manifestPlaceholders["LOOPLAND_LINK_DOMAIN"] = looplandProps.getProperty("LOOPLAND_LINK_DOMAIN")?.takeIf { it.isNotBlank() } ?: "loopland.invalid"
     }
 
     signingConfigs {

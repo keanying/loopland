@@ -42,13 +42,16 @@ export interface MapLayers {
   bosses: boolean;
   chests: boolean;
   checkpoints: boolean;
+  /** V2 第四批 补给站 (shown unless false). */
+  supplies?: boolean;
 }
 
-export const ALL_LAYERS: MapLayers = { territories: true, bosses: true, chests: true, checkpoints: true };
+export const ALL_LAYERS: MapLayers = { territories: true, bosses: true, chests: true, checkpoints: true, supplies: true };
 
 export type MapObjectRef = { type: 'boss' | 'chest'; id: number };
 
 export const CHEST_COLOR = '#F2C94C';
+export const SUPPLY_COLOR = '#3D8B2F';
 const ROUTE_COLORS = ['#2F6FD0', '#3D8B2F', '#D93A2B', '#7B6AE0', '#D99A0B'];
 export const routeColor = (routeId: number) => ROUTE_COLORS[Math.abs(routeId) % ROUTE_COLORS.length];
 

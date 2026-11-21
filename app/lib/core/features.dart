@@ -91,6 +91,19 @@ List<String> payChannels(ServerFeatures? f, SdkConfig c) {
   return [for (final ch in local) if (f.pay.contains(ch)) ch];
 }
 
+/// Channels for physical services (订场 E-03, 赛事报名费 D-12): WeChat Pay /
+/// Alipay on Android **and iOS** (offline services are not IAP), `mock` in
+/// dev; intersected with the server list like [payChannels].
+List<String> servicePayChannels(ServerFeatures? f, SdkConfig c) {
+  final local = [
+    if (c.isMobile && c.offerWechatPayAnyPlatform) 'wechat_app',
+    if (c.isMobile && c.alipayConfigured) 'alipay_app',
+    if (c.isDev) 'mock',
+  ];
+  if (f == null || !f.fetched) return local;
+  return [for (final ch in local) if (f.pay.contains(ch)) ch];
+}
+
 /// Show the captcha before `POST /v1/auth/sms/send` only when the server asks
 /// for it and the client can actually render it.
 enum CaptchaMode { skip, show, misconfigured }

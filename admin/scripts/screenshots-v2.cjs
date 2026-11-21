@@ -5,6 +5,8 @@
 //   pnpm run screenshots:v2            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
 //   ONLY=community pnpm run screenshots:v2   # 只跑第二批「社区」(内容审核 / 举报 / 动态 / 敏感词 / 组局 / 赛事 / 总览 / 角色)
 //   ONLY=ai pnpm run screenshots:v2          # 只跑第三批「AI」(23_ 起：AI 审核 / 双阈值 / AI 用量 / AI 对话 / AI 大模型 / 跟练配置 / 角色)
+//   ONLY=perks pnpm run screenshots:v2       # 只跑第四批的投放 / 联名活动 / 能量商城 / 补给站图层（scripts/screenshots-v2-perks.cjs）
+//   ONLY=merchant pnpm run screenshots:v2    # 只跑第四批的商户 / 场馆 / 订场 / 核销结算 / 核销台（含窄屏商户对接 + 假摄像头扫码）/ 总览待办（scripts/screenshots-v2-merchant.cjs）
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -14,6 +16,10 @@ const OUT = path.join(__dirname, '..', 'screenshots', process.env.SHOT_DIR || 'v
 const PASSWORD = process.env.ADMIN_PASSWORD || 'loopland';
 const ONLY_COMMUNITY = process.env.ONLY === 'community';
 const ONLY_AI = process.env.ONLY === 'ai';
+const ONLY_PERKS = process.env.ONLY === 'perks';
+const perksShots = require('./screenshots-v2-perks.cjs');
+const ONLY_MERCHANT = process.env.ONLY === 'merchant';
+const merchantShots = require('./screenshots-v2-merchant.cjs');
 const WRITES = !process.env.NO_WRITES;
 
 async function main() {
@@ -53,6 +59,16 @@ async function main() {
       t?.parentElement?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       return !!t;
     }, re);
+
+  if (ONLY_MERCHANT) {
+    await merchantShots({ browser, session, shot, BASE, problems, writes: WRITES });
+    return finish();
+  }
+
+  if (ONLY_PERKS) {
+    await perksShots({ browser, session, shot, BASE, problems, writes: WRITES });
+    return finish();
+  }
 
   const { ctx, page } = await session('admin');
 
@@ -679,12 +695,18 @@ async function main() {
     await m.close();
   }
 
-  await browser.close();
-  if (problems.length) {
-    console.error('\nProblems:\n' + [...new Set(problems)].join('\n'));
-    process.exit(1);
+  if (!ONLY_COMMUNITY && !ONLY_AI) await perksShots({ browser, session, shot, BASE, problems, writes: WRITES });
+  if (!ONLY_COMMUNITY && !ONLY_AI) await merchantShots({ browser, session, shot, BASE, problems, writes: WRITES });
+  return finish();
+
+  async function finish() {
+    await browser.close();
+    if (problems.length) {
+      console.error('\nProblems:\n' + [...new Set(problems)].join('\n'));
+      process.exit(1);
+    }
+    console.log('\nNo console errors or warnings.');
   }
-  console.log('\nNo console errors or warnings.');
 }
 
 main().catch((e) => {

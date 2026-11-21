@@ -23,6 +23,7 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/platform/secure"
+	"github.com/keanying/loopland/server/internal/shop"
 )
 
 // DeletionCoolingOff is the 注销冷静期.
@@ -99,6 +100,8 @@ type User struct {
 	Membership       *Membership `json:"membership"`
 	Stats            Stats       `json:"stats"`
 	CreatedAt        time.Time   `json:"created_at"`
+	// Equipped is what the user wears from the 能量商城 (key per type).
+	Equipped shop.Equipped `json:"equipped"`
 
 	// Internal, not serialised.
 	HasPhone bool  `json:"-"`
@@ -172,6 +175,9 @@ func Load(ctx context.Context, q db.Querier, cfgs *gameplay.Store, box *secure.B
 	if err := q.QueryRow(ctx, `SELECT count(*), COALESCE(sum(distance_m),0), COALESCE(sum(duration_sec),0), COALESCE(sum(energy_granted),0)
 		FROM src.src_act_loop_activity WHERE user_id=$1 AND status='settled' AND start_time >= $2`, id, weekStart).
 		Scan(&u.Stats.Week.Count, &u.Stats.Week.DistanceM, &u.Stats.Week.DurationS, &u.Stats.Week.Energy); err != nil {
+		return u, err
+	}
+	if u.Equipped, err = shop.LoadEquipped(ctx, q, id); err != nil {
 		return u, err
 	}
 	return u, nil

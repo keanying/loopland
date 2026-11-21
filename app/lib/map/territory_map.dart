@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/models.dart';
+import '../api/local_models.dart' show MapVenue;
+import '../api/perks_models.dart';
 import '../claim/geo.dart';
 import '../core/env.dart';
 import '../core/theme.dart';
@@ -70,6 +72,18 @@ class CheckpointHit extends MapObjectHit {
   final MapCheckpoint checkpoint;
 }
 
+/// V2 batch 4 (A-16): a 补给站.
+class SupplyHit extends MapObjectHit {
+  const SupplyHit(this.supply);
+  final MapSupply supply;
+}
+
+/// V2 batch 4 (C-08): a venue (据点) with its 馆主.
+class VenueHit extends MapObjectHit {
+  const VenueHit(this.venue);
+  final MapVenue venue;
+}
+
 /// "沙发怪 · 38%" (remaining HP).
 String bossLabel(MapBoss b) => '${b.name} · ${(b.hpFraction * 100).round()}%';
 
@@ -96,6 +110,7 @@ class MapLayers {
     this.hintTarget,
     this.myLocation,
     this.selectedId,
+    this.myMarker,
   });
   final List<TerritorySummary> territories;
 
@@ -112,6 +127,10 @@ class MapLayers {
   final LatLng? hintTarget;
   final LatLng? myLocation;
   final int? selectedId;
+
+  /// V2 batch 4 (E-05): equipped `map_marker` key for [myLocation]; null =
+  /// the default dot.
+  final String? myMarker;
 }
 
 /// The territory map. Uses the AMap SDK when a key for the current platform

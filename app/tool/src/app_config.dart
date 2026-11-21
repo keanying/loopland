@@ -502,6 +502,8 @@ String renderAndroidProperties(ResolvedConfig c) => [
   'LOOPLAND_PROFILE=${propertiesEscape(c.profile)}',
   '# 高德 Key → AndroidManifest <meta-data com.amap.api.v2.apikey>（manifestPlaceholders）',
   'AMAP_ANDROID_KEY=${propertiesEscape(c['amap.android_key'])}',
+  '# 场馆二维码 App Link 域名（links.universal_link_domain）→ MainActivity https intent-filter',
+  'LOOPLAND_LINK_DOMAIN=${propertiesEscape(c['links.universal_link_domain'])}',
   '# release 签名配置文件（相对 android/，密码只写在那个文件里）',
   'KEY_PROPERTIES=${propertiesEscape(c.keyProperties)}',
   '',

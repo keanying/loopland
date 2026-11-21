@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'antd';
 import { bossColor, bossKindName } from '../../utils/gameplay';
 import { config } from '../../config';
-import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, type MapProps } from './colors';
+import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, SUPPLY_COLOR, type MapProps } from './colors';
 
 // Minimal typings for the parts of AMap JS API 2.0 we use.
 interface LngLatLike {
@@ -216,9 +216,23 @@ export default function AMapView({
         }
       }
     }
+    if (layers.supplies !== false) {
+      for (const c of objects?.supplies ?? []) {
+        out.push(new ns.Circle({ center: [c.center.lng, c.center.lat], radius: c.radius_m, fillColor: SUPPLY_COLOR, fillOpacity: 0.12, strokeColor: SUPPLY_COLOR, strokeWeight: 1, strokeStyle: 'dashed', bubble: true }));
+        out.push(
+          new ns.Marker({
+            position: [c.center.lng, c.center.lat],
+            anchor: 'center',
+            zIndex: 106,
+            content: `<div class="amap-supply" title="${esc(c.name)}">补</div>`,
+            title: `${c.name} · ${c.perk_title}`,
+          }),
+        );
+      }
+    }
     for (const o of out) m.add(o);
     objOverlays.current = out;
-  }, [ns, objects, layers.bosses, layers.chests, layers.checkpoints, selectedObject]);
+  }, [ns, objects, layers.bosses, layers.chests, layers.checkpoints, layers.supplies, selectedObject]);
 
   useEffect(() => {
     const m = map.current;

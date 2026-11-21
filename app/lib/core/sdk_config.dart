@@ -193,6 +193,9 @@ class SdkConfig {
   bool get offerWechatPay => isAndroid && _offer(wechatConfigured);
   bool get offerAppleIap => isIOS;
 
+  /// WeChat Pay for physical services (订场 / 报名费), allowed on iOS too.
+  bool get offerWechatPayAnyPlatform => isMobile && _offer(wechatConfigured);
+
   /// Required keys for a production build of the current platform.
   List<SdkCheck> checks() => [
         SdkCheck('阿里云号码认证（一键登录）', oneClickConfigured,

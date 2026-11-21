@@ -17,6 +17,7 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
+	"github.com/keanying/loopland/server/internal/shop"
 )
 
 // Service implements reads and the owner/admin operations.
@@ -50,6 +51,8 @@ type Summary struct {
 	Guard     int             `json:"guard"`
 	Frozen    bool            `json:"frozen"`
 	UpdatedAt time.Time       `json:"updated_at"`
+	// Skin is the owner's equipped territory skin (能量商城); null = default colours.
+	Skin *shop.Skin `json:"skin"`
 }
 
 // Slot is one building slot.
@@ -97,8 +100,9 @@ type Detail struct {
 	Events       []Event     `json:"events"`
 }
 
-const summaryCols = `t.id, COALESCE(t.name, '领地 #' || t.id), t.owner_user_id, u.nickname, u.avatar_url, t.owner_crew_id, c.name,
-	ST_AsGeoJSON(t.area_geom, 7)::text, ST_Y(ST_PointOnSurface(t.area_geom)), ST_X(ST_PointOnSurface(t.area_geom)), t.area_m2, t.guard, t.is_frozen, t.update_time`
+var summaryCols = `t.id, COALESCE(t.name, '领地 #' || t.id), t.owner_user_id, u.nickname, u.avatar_url, t.owner_crew_id, c.name,
+	ST_AsGeoJSON(t.area_geom, 7)::text, ST_Y(ST_PointOnSurface(t.area_geom)), ST_X(ST_PointOnSurface(t.area_geom)), t.area_m2, t.guard, t.is_frozen, t.update_time,
+	` + shop.SkinSQL("t.owner_user_id")
 
 const summaryFrom = ` FROM src.src_ter_loop_territory t LEFT JOIN src.src_usr_loop_user u ON u.id=t.owner_user_id LEFT JOIN src.src_soc_loop_crew c ON c.id=t.owner_crew_id `
 
@@ -107,10 +111,12 @@ func scanSummary(row pgx.Row, viewer int64, viewerCrew *int64) (Summary, error) 
 	var ownerID, crewID *int64
 	var nick, avatar, crewName *string
 	var geom string
+	var skin []byte
 	if err := row.Scan(&s.ID, &s.Name, &ownerID, &nick, &avatar, &crewID, &crewName, &geom, &s.Center.Lat, &s.Center.Lng,
-		&s.AreaM2, &s.Guard, &s.Frozen, &s.UpdatedAt); err != nil {
+		&s.AreaM2, &s.Guard, &s.Frozen, &s.UpdatedAt, &skin); err != nil {
 		return s, err
 	}
+	s.Skin = shop.ParseSkin(skin)
 	s.Geometry = json.RawMessage(geom)
 	if ownerID != nil {
 		s.Owner = &UserRef{ID: *ownerID, Nickname: deref(nick), AvatarURL: avatar}

@@ -14,6 +14,7 @@ import '../../widgets/common.dart';
 import '../../widgets/monster_art.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_report_card.dart';
+import '../local/coupons_pages.dart';
 import '../social/compose_page.dart';
 
 class ResultArgs {
@@ -204,7 +205,7 @@ class ResultPage extends ConsumerWidget {
 
   /// V2 settlement blocks: boss damage, chests, defended territories, routes,
   /// campaigns, season tasks, companion, crew relay; batch 2: rally bonus,
-  /// finished races.
+  /// finished races; batch 4: coupons (补给站 / 商户宝箱).
   List<Widget> _v2Blocks(BuildContext context, Settlement s, int expPerLevel) {
     final bonus = s.chests.fold(0, (a, c) => a + c.energy) +
         s.campaigns.fold(0, (a, c) => a + c.rewardEnergy) +
@@ -313,6 +314,8 @@ class ResultPage extends ConsumerWidget {
             onTap: () => context.push('/races/${r.raceId}'),
           ),
       ],
+      // V2 第四批：经过补给站、开商户宝箱得到的券 → 卡券包.
+      if (s.coupons.isNotEmpty) SettlementCoupons(coupons: s.coupons),
       if (bonus > 0)
         Padding(
           padding: const EdgeInsets.only(top: 8),

@@ -304,6 +304,7 @@ void main() {
       expect(props, contains('\nAMAP_ANDROID_KEY=a-key\n'));
       expect(props, contains('\nLOOPLAND_PROFILE=prod\n'));
       expect(props, contains('\nKEY_PROPERTIES=key.properties\n'));
+      expect(props, contains('\nLOOPLAND_LINK_DOMAIN=loop.test\n'));
       final win = _gen('dev', sets: {'android.key_properties': r'C:\ci\key.properties'});
       expect(_file(win, 'android/loopland.properties'), contains(r'KEY_PROPERTIES=C\:\\ci\\key.properties'));
       expect(propertiesEscape('a=b:c#d é'), r'a\=b\:c\#d \u00e9');

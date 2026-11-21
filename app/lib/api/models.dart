@@ -1,6 +1,8 @@
 // API models for docs/api/v1.md (App sections). Hand-written so the parsing
 // is tolerant: unknown fields are ignored, missing optional fields default.
 import '../claim/geo.dart';
+import 'local_models.dart' show MapVenue;
+import 'perks_models.dart';
 
 part 'models_v2.dart';
 
@@ -179,6 +181,7 @@ class User {
     this.membership,
     this.stats = const UserStats(),
     this.createdAt,
+    this.equipped = const EquippedItems(),
   });
 
   final int id;
@@ -202,6 +205,10 @@ class User {
   final Membership? membership;
   final UserStats stats;
   final DateTime? createdAt;
+
+  /// V2 batch 4 (E-05): equipped cosmetics (territory skin, avatar frame,
+  /// map marker for my own location).
+  final EquippedItems equipped;
 
   /// 未成年时不展示任何付费入口。
   bool get isMinor => isAdult == false;
@@ -228,6 +235,7 @@ class User {
             _mn(j['membership']) == null ? null : Membership.fromJson(_m(j['membership'])),
         stats: UserStats.fromJson(_m(j['stats'])),
         createdAt: _dt(j['created_at']),
+        equipped: EquippedItems.fromJson(_m(j['equipped'])),
       );
 }
 
@@ -781,6 +789,7 @@ class Settlement {
     this.relay,
     this.rally,
     this.races = const [],
+    this.coupons = const [],
   });
 
   /// `settled | review | voided`.
@@ -810,6 +819,9 @@ class Settlement {
   final RallyBonus? rally;
   final List<RaceFinish> races;
 
+  // V2 第四批（本地生活）：经过补给站、开商户宝箱得到的券。
+  final List<Coupon> coupons;
+
   double get claimedAreaM2 => claims.fold(0.0, (s, c) => s + c.areaM2);
 
   factory Settlement.fromJson(Json j) => Settlement(
@@ -834,6 +846,7 @@ class Settlement {
         relay: RelayRecord.parse(j['relay']),
         rally: RallyBonus.parse(j['rally']),
         races: _l(j['races'], RaceFinish.fromJson),
+        coupons: _l(j['coupons'], Coupon.fromJson),
       );
 }
 
@@ -1004,6 +1017,7 @@ class TerritorySummary {
     this.areaM2 = 0,
     this.guard = 0,
     this.frozen = false,
+    this.skin,
   });
   final int id;
   final String name;
@@ -1018,6 +1032,10 @@ class TerritorySummary {
   final int guard;
   final bool frozen;
 
+  /// V2 batch 4 (E-05): the owner's equipped territory skin; null = default
+  /// colours by relation.
+  final CosmeticStyle? skin;
+
   bool get isMine => relation == 'mine';
 
   static TerritorySummary fromJson(Json j) => TerritorySummary(
@@ -1031,6 +1049,7 @@ class TerritorySummary {
         areaM2: _d(j['area_m2']),
         guard: _i(j['guard']),
         frozen: _b(j['frozen']),
+        skin: CosmeticStyle.maybe(j['skin']),
       );
 }
 

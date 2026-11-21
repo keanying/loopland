@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../api/ai_models.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
+import '../../api/perks_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
 import '../../core/features.dart';
@@ -19,9 +20,11 @@ import '../../map/territory_map.dart';
 import '../../run/location_source.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
+import '../../widgets/cosmetics.dart';
 import '../../widgets/nav_shell.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_widgets.dart';
+import '../local/supply_sheet.dart';
 import '../play/chest_sheet.dart';
 import '../play/defense_banner.dart';
 import '../play/play_providers.dart';
@@ -123,8 +126,24 @@ class _MapPageState extends ConsumerState<MapPage> {
                 bosses: _objects.bosses,
                 chests: [for (final c in _objects.chests) if (c.id != chest.id) c],
                 checkpoints: _objects.checkpoints,
+                supplies: _objects.supplies,
+                venues: _objects.venues,
               ));
         }
+      case SupplyHit(:final supply):
+        final s = await showModalBottomSheet<MapSupply>(
+            context: context, isScrollControlled: true, builder: (_) => SupplySheet(supply: supply, myLocation: _me));
+        if (s != null && mounted) {
+          setState(() => _objects = MapObjects(
+                bosses: _objects.bosses,
+                chests: _objects.chests,
+                checkpoints: _objects.checkpoints,
+                supplies: [for (final e in _objects.supplies) e.id == s.id ? s : e],
+                venues: _objects.venues,
+              ));
+        }
+      case VenueHit(:final venue):
+        context.push('/venues/${venue.id}');
     }
   }
 
@@ -187,7 +206,8 @@ class _MapPageState extends ConsumerState<MapPage> {
           child: TerritoryMapView(
             controller: _map,
             initialCenter: _me ?? const LatLng(31.2304, 121.4737),
-            layers: MapLayers(territories: _items, objects: _objects, myLocation: _me, selectedId: _selected),
+            layers: MapLayers(
+                territories: _items, objects: _objects, myLocation: _me, selectedId: _selected, myMarker: user?.equipped.mapMarker),
             onBoundsChanged: _onBounds,
             onTerritoryTap: _openTerritory,
             onObjectTap: _openObject,
@@ -200,7 +220,8 @@ class _MapPageState extends ConsumerState<MapPage> {
           top: top + 8,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Avatar(name: user?.nickname ?? '', size: 56),
+              FramedAvatar(
+                  frameKey: user?.equipped.avatarFrame, size: 56, child: (s) => Avatar(name: user?.nickname ?? '', size: s)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

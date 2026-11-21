@@ -27,6 +27,8 @@ export interface AdminMe {
   id: number;
   username: string;
   role: AdminRole;
+  /** V2 第四批: the merchant a `merchant` account is bound to (omitted for other roles). */
+  merchant_id?: number | null;
 }
 
 export interface LoginRequest {
@@ -48,7 +50,15 @@ export interface DashboardMetrics {
   pending_risk: number;
 }
 
-export type TodoType = 'risk' | 'refund' | 'renew_failed' | 'review';
+export type TodoType =
+  | 'risk'
+  | 'refund'
+  | 'renew_failed'
+  | 'review'
+  // V2 第四批 M-04
+  | 'merchant_review'
+  | 'booking_refund'
+  | 'statement_confirm';
 
 export interface DashboardTodo {
   type: TodoType;
@@ -617,10 +627,22 @@ export interface MapCheckpoint {
   state?: 'next' | 'done' | 'todo';
 }
 
+/** V2 第四批: an active 补给站 (supply drop) on the map (docs/api/v2-4-本地生活与商户.md 「地图」). */
+export interface MapSupply {
+  id: number;
+  name: string;
+  center: LatLng;
+  radius_m: number;
+  perk_title: string;
+  claimed_today?: boolean;
+}
+
 export interface MapObjects {
   bosses: MapBoss[];
   chests: MapChest[];
   checkpoints: MapCheckpoint[];
+  /** V2 第四批 补给站. */
+  supplies?: MapSupply[];
 }
 
 export interface BossListItem {

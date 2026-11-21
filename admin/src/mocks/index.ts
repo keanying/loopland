@@ -26,6 +26,8 @@ import * as db from './data';
 import { listProviders, saveProvider, testProvider } from './providers';
 import { communityRoutes, pendingReviews } from './community';
 import { aiRoutes } from './ai';
+import { mapSupplies, perkRoutes } from './perks';
+import { merchantOf, merchantRoutes, merchantTodos } from './merchant';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -279,7 +281,7 @@ type Handler = (ctx: { m: RegExpMatchArray; q: URLSearchParams; body: Record<str
 const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/me$/, ({ adminId }) => {
     const a = db.admins.find((x) => x.id === adminId)!;
-    return { id: a.id, username: a.username, role: a.role };
+    return { id: a.id, username: a.username, role: a.role, ...(a.role === 'merchant' ? { merchant_id: merchantOf(a.id) } : {}) };
   }],
 
   ['GET', /^\/dashboard$/, (): Dashboard => {
@@ -293,6 +295,7 @@ const routes: [string, RegExp, Handler][] = [
     if (renew) todos.push({ type: 'renew_failed', title: `${renew} 笔自动续费失败`, count: renew, priority: 3, link: '/orders?status=renew_failed' });
     const reviews = pendingReviews();
     if (reviews) todos.push({ type: 'review', title: `${reviews} 条内容待审核`, count: reviews, priority: 1, link: '/review' });
+    todos.push(...merchantTodos()); // V2 第四批 M-04
     return {
       today: { active_users: db.trend.active_users[last], activities: 31620, new_territories: db.trend.new_territories[last], pending_risk: open },
       last_week: { active_users: db.trend.active_users[last - 7], activities: 30380, new_territories: db.trend.new_territories[last - 7], pending_risk: open + 2 },
@@ -558,6 +561,8 @@ const routes: [string, RegExp, Handler][] = [
         .filter((r) => Date.parse(r.starts_at) <= now && Date.parse(r.ends_at) > now)
         .flatMap((r) => r.checkpoints.map((c, index) => ({ route_id: r.id, index, name: c.name, center: { lat: c.lat!, lng: c.lng! }, radius_m: c.radius_m })))
         .filter((c) => inBbox(b, c.center)),
+      // V2 第四批: 补给站 (active supply drops)
+      supplies: mapSupplies(b),
     };
   }],
   ['GET', /^\/bosses$/, ({ q }) => {
@@ -824,6 +829,12 @@ const routes: [string, RegExp, Handler][] = [
 
   // V2 第三批「AI」(docs/api/v2-3-AI.md 「管理端 · AI 用量」)
   ...aiRoutes(log),
+
+  // V2 第四批「本地生活与商户」· 商户 / 场馆 / 订场 / 核销 / 结算
+  ...merchantRoutes(log),
+
+  // V2 第四批「本地生活与商户」· 投放 / 联名活动 / 能量商城 (keep last: its /merchants and /venues are fallbacks)
+  ...perkRoutes(log),
 ];
 
 export async function mockFetch(method: string, url: string, body: unknown, token: string | null): Promise<unknown> {
@@ -839,7 +850,7 @@ export async function mockFetch(method: string, url: string, body: unknown, toke
     if (!a || !b.password || b.password === 'wrong') fail(401, 'invalid_credentials', '用户名或密码错误');
     if (a.disabled) fail(403, 'forbidden', '账号已停用');
     log(a.id, 'admin.login', `admin:${a.id}`);
-    return { token: `mock-${a.id}`, admin: { id: a.id, username: a.username, role: a.role } };
+    return { token: `mock-${a.id}`, admin: { id: a.id, username: a.username, role: a.role, ...(a.role === 'merchant' ? { merchant_id: merchantOf(a.id) } : {}) } };
   }
 
   const adminId = Number(/^mock-(\d+)$/.exec(token ?? '')?.[1]);

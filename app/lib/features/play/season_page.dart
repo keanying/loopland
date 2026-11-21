@@ -133,7 +133,7 @@ class _SeasonPageState extends ConsumerState<SeasonPage> {
         const SizedBox(width: 10),
         Expanded(
           child: _EntryTile(
-              icon: Icons.storefront_outlined, color: LL.pink, title: '本地生活', sub: '订场 · 联名', soon: true, onTap: () => toast(context, '本地生活即将开放')),
+              icon: Icons.storefront_outlined, color: LL.pink, title: '本地生活', sub: '订场 · 联名', onTap: () => context.push('/local')),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -142,8 +142,7 @@ class _SeasonPageState extends ConsumerState<SeasonPage> {
               color: LL.yellow,
               title: '能量商城',
               sub: '${Fmt.thousands(user?.energy ?? 0)} 可用',
-              soon: true,
-              onTap: () => toast(context, '能量商城即将开放')),
+              onTap: () => context.push('/local?tab=shop')),
         ),
       ]),
       const SizedBox(height: 16),
@@ -266,12 +265,11 @@ class _RankBox extends StatelessWidget {
 }
 
 class _EntryTile extends StatelessWidget {
-  const _EntryTile({required this.icon, required this.color, required this.title, required this.sub, required this.onTap, this.soon = false});
+  const _EntryTile({required this.icon, required this.color, required this.title, required this.sub, required this.onTap});
   final IconData icon;
   final Color color;
   final String title, sub;
   final VoidCallback onTap;
-  final bool soon;
   @override
   Widget build(BuildContext context) => LLCard(
         onTap: onTap,
@@ -286,7 +284,7 @@ class _EntryTile extends StatelessWidget {
           const SizedBox(height: 10),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
           const SizedBox(height: 2),
-          Text(soon ? '即将开放' : sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 12)),
+          Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 12)),
         ]),
       );
 }

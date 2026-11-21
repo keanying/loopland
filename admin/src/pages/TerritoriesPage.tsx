@@ -116,6 +116,7 @@ export default function TerritoriesPage() {
           { label: `怪兽 ${ob?.bosses.length ?? 0}`, value: 'bosses' },
           { label: `宝箱 ${ob?.chests.length ?? 0}`, value: 'chests' },
           { label: `定向打卡点 ${ob?.checkpoints.length ?? 0}`, value: 'checkpoints' },
+          { label: `补给站 ${ob?.supplies?.length ?? 0}`, value: 'supplies' },
         ]
       : []),
   ];
@@ -147,7 +148,7 @@ export default function TerritoriesPage() {
                 aria-label="图层"
                 options={layerOptions}
                 value={(Object.keys(layers) as (keyof MapLayers)[]).filter((k) => layers[k])}
-                onChange={(v) => setLayers({ territories: v.includes('territories'), bosses: v.includes('bosses'), chests: v.includes('chests'), checkpoints: v.includes('checkpoints') })}
+                onChange={(v) => setLayers({ territories: v.includes('territories'), bosses: v.includes('bosses'), chests: v.includes('chests'), checkpoints: v.includes('checkpoints'), supplies: v.includes('supplies') })}
               />
             }
             extra={

@@ -44,7 +44,9 @@ class MePage extends ConsumerWidget {
             Row(children: [
               GestureDetector(
                 onTap: () => context.push('/users/${u.id}'),
-                child: UserAvatar(user: UserBrief(id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl), size: 76),
+                child: UserAvatar(
+                    user: UserBrief(id: u.id, nickname: u.nickname, avatarUrl: u.avatarUrl, avatarFrame: u.equipped.avatarFrame),
+                    size: 76),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -149,6 +151,20 @@ class MePage extends ConsumerWidget {
                 onTap: () => context.push('/ai'),
               ),
             _MenuTile(icon: Icons.history_rounded, color: LL.sky, title: '运动记录', onTap: () => context.push('/activities')),
+            _MenuTile(
+              icon: Icons.receipt_long_outlined,
+              color: LL.lime,
+              title: '我的订场',
+              sub: '合作场馆订单、取消与退款',
+              onTap: () => context.push('/me/bookings'),
+            ),
+            _MenuTile(
+              icon: Icons.confirmation_number_outlined,
+              color: LL.pink,
+              title: '卡券包',
+              sub: '补给站、商户宝箱、据点得到的联名券',
+              onTap: () => context.push('/me/coupons'),
+            ),
             _MenuTile(icon: Icons.notifications_none_rounded, color: LL.pink, title: '消息', onTap: () => context.push('/inbox')),
             _MenuTile(
               icon: Icons.verified_user_outlined,
@@ -160,12 +176,13 @@ class MePage extends ConsumerWidget {
             _MenuTile(icon: Icons.block_rounded, color: LL.orange, title: '黑名单', onTap: () => context.push('/me/blocks')),
             _MenuTile(icon: Icons.settings_outlined, color: LL.text2, title: '设置与隐私', onTap: () => context.push('/settings')),
             const SizedBox(height: 12),
+            // 本地生活（设计稿 08）：订场 · 联名活动 · 能量商城
             Row(children: const [
-              Expanded(child: _SoonTile('订场')),
+              Expanded(child: _LocalTile('订场', '合作场馆', Icons.event_available_rounded, LL.lime, '/local?tab=booking')),
               SizedBox(width: 8),
-              Expanded(child: _SoonTile('联名福利')),
+              Expanded(child: _LocalTile('联名福利', '品牌活动', Icons.local_offer_outlined, LL.pink, '/local?tab=campaigns')),
               SizedBox(width: 8),
-              Expanded(child: _SoonTile('能量商城')),
+              Expanded(child: _LocalTile('能量商城', '能量换装扮', Icons.storefront_outlined, LL.sky, '/local?tab=shop')),
             ]),
           ]),
         ),
@@ -262,19 +279,21 @@ class _MenuTile extends StatelessWidget {
   }
 }
 
-class _SoonTile extends StatelessWidget {
-  const _SoonTile(this.title);
-  final String title;
+class _LocalTile extends StatelessWidget {
+  const _LocalTile(this.title, this.sub, this.icon, this.color, this.path);
+  final String title, sub, path;
+  final IconData icon;
+  final Color color;
   @override
-  Widget build(BuildContext context) => Opacity(
-        opacity: 0.6,
-        child: LLCard(
-          padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            const ComingSoon(),
-          ]),
-        ),
+  Widget build(BuildContext context) => LLCard(
+        key: Key('local_${title.hashCode}'),
+        padding: const EdgeInsets.all(12),
+        onTap: () => context.push(path),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: color),
+          const SizedBox(height: 6),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(sub, style: const TextStyle(color: LL.text3, fontSize: 12)),
+        ]),
       );
 }

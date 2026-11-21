@@ -245,12 +245,14 @@ class RaceCard extends StatelessWidget {
               Tag(r.isOnline ? '线上赛' : '线下赛', color: r.isOnline ? LL.sky : LL.orange),
               const SizedBox(width: 8),
               Tag(r.statusName, color: r.status == 'signup' || r.status == 'running' ? LL.lime : LL.card2),
+              if (r.isPaid) ...[const SizedBox(width: 8), Tag('报名 ${Fmt.yuan(r.feeAmt)}', color: LL.yellow)],
               const Spacer(),
               if (r.myEntry != null)
                 Text(
                     switch (r.myEntry!.status) {
                       'finished' => '已完赛',
                       'dnf' => '未完赛',
+                      'pending_pay' => '待支付',
                       _ => '已报名',
                     },
                     style: const TextStyle(color: LL.lime, fontWeight: FontWeight.w800)),

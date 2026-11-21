@@ -180,12 +180,29 @@ class PaymentService {
     }
   }
 
+  /// Channels for physical services (订场 / 赛事报名费): WeChat Pay and Alipay
+  /// on both platforms (no IAP for offline services), plus `mock` in dev.
+  List<String> serviceChannels([ServerFeatures? features]) => servicePayChannels(features, SdkConfig.current);
+
   Future<Order> purchase(Plan plan, String channel) async {
     // Check before creating an order the user cannot pay.
     if (channel == 'wechat_app') await gateways.ensureWechatReady();
     final r = await api.createOrder(plan.code, channel);
-    final no = r.order.orderNo;
-    final p = r.payParams;
+    if (channel == 'apple_iap') {
+      final p = r.payParams;
+      await _apple('${p['product_id'] ?? plan.appleProductId}', '${p['app_account_token']}');
+      return pollOrder(r.order.orderNo);
+    }
+    return payOrder(r.order.orderNo, channel, r.payParams);
+  }
+
+  /// Pays an order another endpoint created (`POST /v1/bookings`, paid race
+  /// signup): hands [payParams] to the channel SDK, then polls the order.
+  /// Call [ensureChannelReady] before creating the order. Throws `cancelled`
+  /// when the user backed out and the server also says unpaid.
+  Future<Order> payOrder(String orderNo, String channel, Map<String, dynamic> payParams) async {
+    final no = orderNo;
+    final p = payParams;
     switch (channel) {
       case 'mock':
         await api.devPay(no);
@@ -217,12 +234,35 @@ class PaymentService {
             error: status == '6001'
                 ? ApiException(status: 0, code: 'cancelled', message: '支付已取消')
                 : ApiException(status: 0, code: 'provider_error', message: '${res['memo'] ?? '支付宝支付失败'}'));
-      case 'apple_iap':
-        await _apple('${p['product_id'] ?? plan.appleProductId}', '${p['app_account_token']}');
-        return pollOrder(no);
       default:
         throw ApiException(status: 0, code: 'channel_not_allowed');
     }
+  }
+
+  /// Hands [payParams] to the channel SDK without polling an order (for a
+  /// response that carries no order number; the caller polls its own
+  /// resource). Returns whether the SDK reported success or "processing";
+  /// throws `cancelled` when the user backed out.
+  Future<bool> sdkPay(String channel, Map<String, dynamic> payParams) async {
+    switch (channel) {
+      case 'wechat_app':
+        final code = await gateways.wechatPay(payParams);
+        if (code == -2) throw ApiException(status: 0, code: 'cancelled', message: '支付已取消');
+        return code == 0;
+      case 'alipay_app':
+        final res = await gateways.alipay('${payParams['order_string'] ?? ''}');
+        final status = '${res['resultStatus']}';
+        if (status == '6001') throw ApiException(status: 0, code: 'cancelled', message: '支付已取消');
+        return status == '9000' || status == '8000' || status == '6004';
+      default:
+        throw ApiException(status: 0, code: 'channel_not_allowed', message: '缺少订单号，无法使用${channelNames[channel] ?? channel}');
+    }
+  }
+
+  /// Checks the channel can be used before an order is created (WeChat
+  /// installed / configured).
+  Future<void> ensureChannelReady(String channel) async {
+    if (channel == 'wechat_app') await gateways.ensureWechatReady();
   }
 
   /// After the SDK returned: poll the order. If the SDK said "not paid" the

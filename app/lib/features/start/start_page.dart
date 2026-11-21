@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../local/venue_section.dart';
 
 class SportInfo {
   const SportInfo(this.key, this.icon, this.desc, {this.tag});
@@ -31,8 +32,6 @@ const homeSportInfo = [
   SportInfo('rope', Icons.cable_rounded, '按次数换能量，招募药剂师。'),
   SportInfo('hiit', Icons.local_fire_department_rounded, '高强度间歇训练，按时长换能量。'),
 ];
-
-const venueSports = ['篮球', '足球', '羽毛球', '网球', '游泳', '攀岩', '健身房'];
 
 /// 开始：选运动。
 class StartPage extends ConsumerStatefulWidget {
@@ -146,38 +145,8 @@ class _StartPageState extends ConsumerState<StartPage> {
     ];
   }
 
-  Widget _venueSection() {
-    return Column(children: [
-      GridView.count(
-        crossAxisCount: 3,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        childAspectRatio: 1.1,
-        children: [
-          for (final v in venueSports)
-            Opacity(
-              opacity: 0.6,
-              child: LLCard(
-                padding: const EdgeInsets.all(8),
-                child: Center(child: Text(v, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-              ),
-            ),
-        ],
-      ),
-      const SizedBox(height: 14),
-      const LLCard(
-        child: Row(children: [
-          Expanded(
-            child: Text('场馆签到、馆主争夺和订场将在下个版本开放。', style: TextStyle(color: LL.text2)),
-          ),
-          SizedBox(width: 8),
-          ComingSoon(),
-        ]),
-      ),
-    ]);
-  }
+  /// 场馆球类（C-07 / C-08）：附近场馆签到、扫码、订场入口。
+  Widget _venueSection() => const VenueCheckinSection();
 }
 
 class _SportTile extends StatelessWidget {

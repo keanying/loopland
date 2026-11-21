@@ -49,64 +49,81 @@ func chestBuff(ctx context.Context, q db.Querier, cfg gameplay.Config, user int6
 	return pct
 }
 
-func (s *Service) openChest(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, chest, user int64, activityID *int64) (int, bool, error) {
+// openChest opens a chest. A merchant chest (drop_id set, 第四批) holds a
+// coupon instead of energy; the coupon (nil otherwise) is returned.
+func (s *Service) openChest(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, chest, user int64, activityID *int64) (int, bool, any, error) {
 	var lo, hi int
-	if err := tx.QueryRow(ctx, `SELECT energy_min, energy_max FROM src.src_ply_loop_chest WHERE id=$1 FOR UPDATE`, chest).Scan(&lo, &hi); err != nil {
-		return 0, false, err
+	var dropID *int64
+	if err := tx.QueryRow(ctx, `SELECT energy_min, energy_max, drop_id FROM src.src_ply_loop_chest WHERE id=$1 FOR UPDATE`, chest).Scan(&lo, &hi, &dropID); err != nil {
+		return 0, false, nil, err
+	}
+	if dropID != nil && s.Perks != nil {
+		tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_chest_open (chest_id, user_id, energy, is_bonus, activity_id) VALUES ($1,$2,0,false,$3) ON CONFLICT DO NOTHING`,
+			chest, user, activityID)
+		if err != nil {
+			return 0, false, nil, err
+		}
+		if tag.RowsAffected() == 0 {
+			return 0, false, nil, httpx.Conflict("already_opened", "这个宝箱你已经开过了")
+		}
+		coupon, err := s.Perks.ChestCoupon(ctx, tx, chest, *dropID, user, activityID)
+		if err != nil {
+			return 0, false, nil, err
+		}
+		return 0, false, coupon, codex.IncStat(ctx, tx, user, codex.StatChests, 1)
 	}
 	energy, bonus := chestReward(cfg, chest, user, lo, hi, chestBuff(ctx, tx, cfg, user))
 	tag, err := tx.Exec(ctx, `INSERT INTO src.src_ply_loop_chest_open (chest_id, user_id, energy, is_bonus, activity_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING`,
 		chest, user, energy, bonus, activityID)
 	if err != nil {
-		return 0, false, err
+		return 0, false, nil, err
 	}
 	if tag.RowsAffected() == 0 {
-		return 0, false, httpx.Conflict("already_opened", "这个宝箱你已经开过了")
+		return 0, false, nil, httpx.Conflict("already_opened", "这个宝箱你已经开过了")
 	}
 	if err := grant(ctx, tx, user, energy, "chest", chest); err != nil {
-		return 0, false, err
+		return 0, false, nil, err
 	}
-	return energy, bonus, codex.IncStat(ctx, tx, user, codex.StatChests, 1)
+	return energy, bonus, nil, codex.IncStat(ctx, tx, user, codex.StatChests, 1)
 }
 
-// OpenChest opens a chest the user stands next to.
-func (s *Service) OpenChest(ctx context.Context, user, id int64, lat, lng float64) (int, bool, error) {
+// OpenChest opens a chest the user stands next to. coupon is set for a
+// merchant chest.
+func (s *Service) OpenChest(ctx context.Context, user, id int64, lat, lng float64) (energy int, bonus bool, coupon any, err error) {
 	var expired bool
-	err := s.Pool.QueryRow(ctx, `SELECT expire_time <= now() OR remove_time IS NOT NULL FROM src.src_ply_loop_chest WHERE id=$1`, id).Scan(&expired)
+	err = s.Pool.QueryRow(ctx, `SELECT expire_time <= now() OR remove_time IS NOT NULL FROM src.src_ply_loop_chest WHERE id=$1`, id).Scan(&expired)
 	if db.IsNoRows(err) {
-		return 0, false, httpx.NotFound("宝箱")
+		return 0, false, nil, httpx.NotFound("宝箱")
 	}
 	if err != nil {
-		return 0, false, err
+		return 0, false, nil, err
 	}
 	if expired {
-		return 0, false, httpx.Conflict("chest_expired", "宝箱已经消失了")
+		return 0, false, nil, httpx.Conflict("chest_expired", "宝箱已经消失了")
 	}
 	ok, err := inRange(ctx, s.Pool, "src.src_ply_loop_chest", id, lat, lng)
 	if err != nil {
-		return 0, false, err
+		return 0, false, nil, err
 	}
 	if !ok {
-		return 0, false, errOutOfRange
+		return 0, false, nil, errOutOfRange
 	}
-	var energy int
-	var bonus bool
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var err error
-		energy, bonus, err = s.openChest(ctx, tx, s.Config.For(user), id, user, nil)
+		energy, bonus, coupon, err = s.openChest(ctx, tx, s.Config.For(user), id, user, nil)
 		if err != nil {
 			return err
 		}
 		_, err = codex.AwardMedals(ctx, tx, s.Config.For(user), user)
 		return err
 	})
-	return energy, bonus, err
+	return energy, bonus, coupon, err
 }
 
-func (s *Service) chestsOnTrack(ctx context.Context, tx pgx.Tx, in activity.HookInput, track *string) ([]activity.ChestOpen, error) {
-	out := []activity.ChestOpen{}
+func (s *Service) chestsOnTrack(ctx context.Context, tx pgx.Tx, in activity.HookInput, track *string) ([]activity.ChestOpen, []any, error) {
+	out, coupons := []activity.ChestOpen{}, []any{}
 	if track == nil {
-		return out, nil
+		return out, coupons, nil
 	}
 	rows, err := tx.Query(ctx, `SELECT c.id FROM src.src_ply_loop_chest c
 		WHERE c.expire_time > now() AND c.remove_time IS NULL AND c.create_time <= $3
@@ -114,21 +131,32 @@ func (s *Service) chestsOnTrack(ctx context.Context, tx pgx.Tx, in activity.Hook
 		  AND NOT EXISTS (SELECT 1 FROM src.src_ply_loop_chest_open o WHERE o.chest_id=c.id AND o.user_id=$2)
 		ORDER BY c.id`, *track, in.UserID, time.Now())
 	if err != nil {
-		return out, err
+		return out, coupons, err
 	}
 	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
 	if err != nil {
-		return out, err
+		return out, coupons, err
 	}
 	aid := in.ActivityID
 	for _, id := range ids {
-		e, _, err := s.openChest(ctx, tx, in.Config, id, in.UserID, &aid)
+		e, _, coupon, err := s.openChest(ctx, tx, in.Config, id, in.UserID, &aid)
+		if err != nil && s.Perks != nil && s.Perks.SoftError(err) {
+			// A merchant chest with nothing for this user today: leave it
+			// unopened rather than record an empty open.
+			if _, err := tx.Exec(ctx, `DELETE FROM src.src_ply_loop_chest_open WHERE chest_id=$1 AND user_id=$2`, id, in.UserID); err != nil {
+				return out, coupons, err
+			}
+			continue
+		}
 		if err != nil {
-			return out, err
+			return out, coupons, err
 		}
 		out = append(out, activity.ChestOpen{ChestID: id, Energy: e})
+		if coupon != nil {
+			coupons = append(coupons, coupon)
+		}
 	}
-	return out, nil
+	return out, coupons, nil
 }
 
 // ---------------------------------------------------------------- defense

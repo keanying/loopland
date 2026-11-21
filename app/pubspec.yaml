@@ -50,6 +50,10 @@ dependencies:
   camera: 0.12.2
   google_mlkit_pose_detection: 0.16.1
   flutter_tts: 4.2.5
+  # 场馆签到（C-07）：App 内扫场馆二维码（Android CameraX + ML Kit 条码，iOS Apple Vision）
+  mobile_scanner: 7.5.0
+  # 卡券包（E-04）：到店出示的券码二维码（纯 Dart 绘制，无原生代码）
+  qr_flutter: 4.1.0
 
 dev_dependencies:
   flutter_test:

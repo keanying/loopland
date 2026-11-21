@@ -9,8 +9,11 @@ import '../api/models.dart';
 import '../claim/geo.dart';
 import '../core/sdk_config.dart';
 import '../core/theme.dart';
+import '../widgets/cosmetics.dart';
 import '../widgets/monster_art.dart';
+import '../api/local_models.dart' show MapVenue;
 import 'territory_map.dart';
+import 'venue_marker.dart';
 
 /// AMap (高德) implementation. Coordinates are GCJ-02 end to end, so no
 /// conversion is needed here. Territories are drawn as SDK polygons; taps are
@@ -113,12 +116,29 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
     for (final c in o.checkpoints) {
       need('cp:${c.index}:${c.state}', () => MarkerBitmaps.checkpoint(c.index, c.state));
     }
+    for (final s in o.supplies) {
+      need('supply:${s.claimedToday}', () => PerkBitmaps.supply(s.claimedToday));
+    }
+    final marker = widget.layers.myMarker;
+    if (marker != null) need('me:$marker', () => PerkBitmaps.myMarker(marker));
+    // V2 batch 4 (C-08): venue pins; first without, then with the avatar.
+    for (final v in o.venues) {
+      need(_venueKey(v, false), () => venueMarkerBitmap(v, null));
+      final url = v.ownerAvatarUrl;
+      if (url != null && !_icons.containsKey(_venueKey(v, true))) {
+        VenueAvatars.instance.load(url).then((img) {
+          if (img != null && mounted) need(_venueKey(v, true), () => venueMarkerBitmap(v, img));
+        }).ignore();
+      }
+    }
   }
+
+  static String _venueKey(MapVenue v, bool avatar) => 'venue:${v.id}:${v.ownerNickname}:${avatar ? v.ownerAvatarUrl : ''}';
 
   @override
   void didUpdateWidget(covariant AmapTerritoryMap old) {
     super.didUpdateWidget(old);
-    if (old.layers.objects != widget.layers.objects) _loadIcons();
+    if (old.layers.objects != widget.layers.objects || old.layers.myMarker != widget.layers.myMarker) _loadIcons();
   }
 
   @override
@@ -181,17 +201,27 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
   Set<amap.Polygon> _polygons() {
     final out = <amap.Polygon>{};
     for (final t in widget.layers.territories) {
-      final color = relationColor(t.relation);
+      // V2 batch 4: the owner's skin colours (SDK polygons have no pattern).
+      final tc = TerritoryColors.of(t.skin, relationColor(t.relation));
       final selected = t.id == widget.layers.selectedId;
       for (final poly in t.polygons) {
         if (poly.isEmpty || poly.first.length < 3) continue;
         out.add(amap.Polygon(
           points: [for (final p in poly.first) _ll(p)],
           strokeWidth: selected ? 6 : 4,
-          strokeColor: color,
-          fillColor: color.withValues(alpha: selected ? 0.5 : 0.32),
+          strokeColor: tc.stroke,
+          fillColor: tc.fill.withValues(alpha: selected ? 0.5 : 0.32),
         ));
       }
+    }
+    for (final sp in widget.layers.objects.supplies) {
+      final color = sp.claimedToday ? LL.text3 : LL.pink;
+      out.add(amap.Polygon(
+        points: [for (final p in circleRing(sp.center, sp.radiusM, n: 32)) _ll(p)],
+        strokeWidth: 2,
+        strokeColor: color.withValues(alpha: 0.7),
+        fillColor: color.withValues(alpha: 0.1),
+      ));
     }
     for (final b in widget.layers.objects.bosses) {
       final color = monsterColor(b.kind);
@@ -258,6 +288,28 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
             onTap: (_) => tap?.call(ChestHit(c))));
       }
     }
+    for (final sp in o.supplies) {
+      final icon = _icons['supply:${sp.claimedToday}'];
+      if (icon == null) continue;
+      out.add(amap.Marker(
+          position: _ll(sp.center),
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          zIndex: 1,
+          infoWindowEnable: false,
+          onTap: (_) => tap?.call(SupplyHit(sp))));
+    }
+    for (final v in o.venues) {
+      final icon = _icons[_venueKey(v, true)] ?? _icons[_venueKey(v, false)];
+      if (icon == null) continue;
+      out.add(amap.Marker(
+          position: _ll(v.center),
+          icon: icon,
+          anchor: const Offset(0.5, 30 / 84),
+          zIndex: 1,
+          infoWindowEnable: false,
+          onTap: (_) => tap?.call(VenueHit(v))));
+    }
     for (final b in o.bosses) {
       final icon = _icons[_bossKey(b)];
       if (icon == null) continue;
@@ -289,7 +341,11 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
         scrollGesturesEnabled: widget.interactive,
         zoomGesturesEnabled: widget.interactive,
         touchPoiEnabled: false,
-        myLocationStyleOptions: amap.MyLocationStyleOptions(widget.layers.myLocation != null),
+        myLocationStyleOptions: amap.MyLocationStyleOptions(
+          widget.layers.myLocation != null,
+          // V2 batch 4: equipped map marker (E-05) replaces the SDK blue dot.
+          icon: widget.layers.myMarker == null ? null : _icons['me:${widget.layers.myMarker}'],
+        ),
         polygons: _polygons(),
         polylines: _polylines(),
         markers: _markers(),

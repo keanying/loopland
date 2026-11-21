@@ -46,7 +46,7 @@ func (h *Handler) Routes(mux *http.ServeMux, auth, authAny func(httpx.HandlerFun
 
 	mux.Handle("GET /v1/races", auth(h.races))
 	mux.Handle("GET /v1/races/{id}", auth(h.race))
-	mux.Handle("POST /v1/races/{id}/signup", auth(h.raceAction(h.Svc.Signup)))
+	mux.Handle("POST /v1/races/{id}/signup", auth(h.signup))
 	mux.Handle("DELETE /v1/races/{id}/signup", auth(h.raceAction(h.Svc.CancelSignup)))
 
 	mux.Handle("GET /v1/inbox/summary", authAny(h.summary))
@@ -315,6 +315,31 @@ func (h *Handler) race(w http.ResponseWriter, r *http.Request) error {
 	ra, err := h.Svc.Race(r.Context(), uid(r), id, false)
 	if err != nil {
 		return err
+	}
+	return httpx.OK(w, ra)
+}
+
+// signup returns the Race for free races and {"race","pay_params"} for
+// paid ones (docs/api/v2-4-本地生活与商户.md D-12).
+func (h *Handler) signup(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Channel string `json:"channel"`
+	}
+	if r.ContentLength != 0 {
+		if err := httpx.Decode(r, &req); err != nil {
+			return err
+		}
+	}
+	ra, params, err := h.Svc.SignupWith(r.Context(), uid(r), id, req.Channel, httpx.ClientIP(r))
+	if err != nil {
+		return err
+	}
+	if ra.FeeAmt > 0 {
+		return httpx.OK(w, map[string]any{"race": ra, "pay_params": params})
 	}
 	return httpx.OK(w, ra)
 }

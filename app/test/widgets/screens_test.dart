@@ -128,7 +128,10 @@ void main() {
 
   testWidgets('开始 page lists GPS / venue (V2) / home sports', (t) async {
     await phone(t, size: const Size(390, 1100));
-    await t.pumpWidget(RepaintBoundary(key: const Key('shot'), child: wrap(const StartPage(), overrides: fakeBackend())));
+    await t.pumpWidget(RepaintBoundary(
+        key: const Key('shot'),
+        child: wrap(const StartPage(),
+            overrides: [...fakeBackend(), locationSourceProvider.overrideWithValue(FakeLocationSource([fixAt(0, 0, 0)]))])));
     await idle(t);
     expect(find.text('开始跑步'), findsOneWidget);
     expect(find.text('招募 弓箭手'), findsOneWidget);
@@ -136,7 +139,9 @@ void main() {
     await screenshot(t, find.byKey(const Key('shot')), 'screenshots/start.png');
     await t.tap(find.text('场馆球类'));
     await t.pump();
-    expect(find.text('即将开放'), findsOneWidget);
+    // V2 batch 4: venue check-in (details in local_pages_test.dart).
+    expect(find.text('场馆签到'), findsOneWidget);
+    expect(find.text('扫码'), findsOneWidget);
     await t.tap(find.text('居家跟练'));
     await t.pump();
     // AI 跟练 first; the old free-form timer stays as 「手动记录」.

@@ -15,12 +15,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/gameplay"
 	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/realtime"
+	"github.com/keanying/loopland/server/internal/shop"
 )
 
 // Service implements the community endpoints, the settlement step
@@ -32,6 +34,9 @@ type Service struct {
 	Hub    *realtime.Hub
 	Mod    *moderation.Moderator
 	Log    *slog.Logger
+	// Billing takes race fees (docs/api/v2-4-本地生活与商户.md D-12); nil:
+	// paid races cannot be signed up for.
+	Billing *billing.Service
 }
 
 // CrewRef is a compact crew.
@@ -46,6 +51,8 @@ type UserBrief struct {
 	Nickname  string   `json:"nickname"`
 	AvatarURL *string  `json:"avatar_url"`
 	Crew      *CrewRef `json:"crew"`
+	// AvatarFrame is the equipped avatar frame key (能量商城), null if none.
+	AvatarFrame *string `json:"avatar_frame"`
 }
 
 // Place is a named point.
@@ -73,7 +80,8 @@ func briefs(ctx context.Context, q db.Querier, ids []int64) (map[int64]UserBrief
 		return out, nil
 	}
 	rows, err := q.Query(ctx, `SELECT u.id, CASE WHEN u.status='deleted' THEN '已注销用户' ELSE u.nickname END,
-			CASE WHEN u.status='deleted' THEN NULL ELSE u.avatar_url END, c.id, c.name
+			CASE WHEN u.status='deleted' THEN NULL ELSE u.avatar_url END, c.id, c.name,
+			CASE WHEN u.status='deleted' THEN NULL ELSE `+shop.FrameSQL("u.id")+` END
 		FROM src.src_usr_loop_user u
 		LEFT JOIN src.src_soc_loop_crew_member m ON m.user_id=u.id LEFT JOIN src.src_soc_loop_crew c ON c.id=m.crew_id
 		WHERE u.id = ANY($1)`, ids)
@@ -85,7 +93,7 @@ func briefs(ctx context.Context, q db.Querier, ids []int64) (map[int64]UserBrief
 		var b UserBrief
 		var cid *int64
 		var cname *string
-		if err := rows.Scan(&b.ID, &b.Nickname, &b.AvatarURL, &cid, &cname); err != nil {
+		if err := rows.Scan(&b.ID, &b.Nickname, &b.AvatarURL, &cid, &cname, &b.AvatarFrame); err != nil {
 			return nil, err
 		}
 		if cid != nil {
@@ -184,7 +192,8 @@ func weekStart() time.Time {
 // time and rallies 3 hours after their start are marked ended.
 func (s *Service) Jobs() map[string]func(context.Context) error {
 	return map[string]func(context.Context) error{
-		"community_end": s.EndPast,
+		"community_end":   s.EndPast,
+		"race_fee_expire": s.ExpireRaceFees,
 	}
 }
 

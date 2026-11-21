@@ -30,6 +30,7 @@ import (
 	"github.com/keanying/loopland/server/internal/jobs"
 	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/moderation"
+	"github.com/keanying/loopland/server/internal/perks"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -37,9 +38,11 @@ import (
 	"github.com/keanying/loopland/server/internal/play"
 	"github.com/keanying/loopland/server/internal/providers"
 	"github.com/keanying/loopland/server/internal/realtime"
+	"github.com/keanying/loopland/server/internal/shop"
 	"github.com/keanying/loopland/server/internal/social"
 	"github.com/keanying/loopland/server/internal/territory"
 	"github.com/keanying/loopland/server/internal/user"
+	"github.com/keanying/loopland/server/internal/venue"
 )
 
 // App is the assembled service.
@@ -57,6 +60,8 @@ type App struct {
 	Moderation *moderation.Moderator
 	// AI is 第三批「AI」: assistant, routes, reports, workouts, classifier.
 	AI *ai.Service
+	// Perks is 第四批 part B: drops, coupons, redemptions, statements.
+	Perks *perks.Service
 }
 
 // Options allow tests to replace external services.
@@ -109,11 +114,14 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	}
 	terrSvc := &territory.Service{Pool: pool, Config: store}
 	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse}
-	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log}
+	// 本地生活 part B: drops, coupons, redemptions, brand campaigns, statements.
+	perksSvc := &perks.Service{Pool: pool, Log: log, QRKey: perks.DeriveKey(cfg.DataKey)}
+	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log, Perks: perksSvc}
 	// 社区 part B: chat, meetups, rallies (settlement bonus), races.
 	commSvc := &community.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Mod: mod, Log: log}
 	mod.Register(moderation.Meetup, commSvc.MeetupApplier())
 	actSvc := &activity.Service{Pool: pool, Config: store, Hook: playSvc, Community: commSvc}
+	actSvc.OnVoid = append(actSvc.OnVoid, perksSvc.ActivityVoided)
 	billSvc := &billing.Service{Pool: pool, Providers: opt.Payments, Apple: opt.AppleIAP, Log: log, Dev: cfg.Dev()}
 	if opt.Payments == nil {
 		billSvc.PaymentFn = reg.Payment
@@ -121,6 +129,13 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	if opt.AppleIAP == nil {
 		billSvc.AppleFn = reg.AppleStore
 	}
+	// 本地生活 part A: merchants, venues, check-ins, owners, booking; race fees.
+	venueSvc := &venue.Service{Pool: pool, Config: store, Box: box, Billing: billSvc, Activities: actSvc, Log: log,
+		QRKey: venue.DeriveQRKey(cfg.DataKey), LinkBase: cfg.PublicBaseURL}
+	venueSvc.Coupons, venueSvc.Extras = perksSvc, perksSvc // 据点发券、商户的投放和今日核销
+	billSvc.Register(billing.BizBooking, venueSvc.BookingFulfiller())
+	commSvc.Billing = billSvc
+	billSvc.Register(billing.BizRaceFee, commSvc.RaceFeeFulfiller())
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 
 	mux := http.NewServeMux()
@@ -176,17 +191,29 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleReviewer), adminAPI.Guard(admin.RoleAdmin))
 	(&ai.Handler{Svc: aiSvc}).Routes(mux, authed)
 	(&ai.AdminHandler{Svc: aiSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps), adminAPI.Guard(admin.RoleAdmin))
+	(&perks.Handler{Svc: perksSvc}).Routes(mux, authed)
+	(&perks.AdminHandler{Svc: perksSvc, Audit: admin.Audit, Scope: admin.MerchantScope}).Routes(mux, perks.Guards{
+		Ops: adminAPI.Guard(admin.RoleAdmin, admin.RoleOps), Admin: adminAPI.Guard(admin.RoleAdmin),
+		Redeem: adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleMerchant), Settle: adminAPI.Guard(admin.RoleAdmin, admin.RoleMerchant)})
+	// 能量商城 (E-05).
+	shopSvc := &shop.Service{Pool: pool}
+	(&shop.Handler{Svc: shopSvc}).Routes(mux, authed)
+	(&shop.AdminHandler{Svc: shopSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
+	(&venue.Handler{Svc: venueSvc}).Routes(mux, authed)
+	(&venue.AdminHandler{Svc: venueSvc, Audit: admin.Audit, Scope: admin.MerchantScope}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps),
+		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleMerchant), adminAPI.Guard(admin.RoleAdmin))
 	mux.Handle("GET /v1/ws", hub)
 
 	return &App{
 		Handler: withMiddleware(mux, log),
-		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs())},
+		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs(), perksSvc.Jobs(), venueSvc.Jobs())},
 		Hub:     hub,
 		Play:    playSvc,
 		Config:  store, Pool: pool, Redis: rdb,
 		Providers:  reg,
 		Moderation: mod,
 		AI:         aiSvc,
+		Perks:      perksSvc,
 	}, nil
 }
 

@@ -3,7 +3,8 @@ import { Button, Tooltip } from 'antd';
 import { AimOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import type { MapCheckpoint } from '../../api/types';
 import { bossKindName, bossColor } from '../../utils/gameplay';
-import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, type MapProps } from './colors';
+import type { LatLng } from '../../api/types';
+import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, SUPPLY_COLOR, type MapProps } from './colors';
 
 // Room for boss labels above and the legend below.
 const PAD = { x: 40, top: 56, bottom: 76 };
@@ -42,7 +43,15 @@ export default function SvgMap({
   pickPoint,
   onViewport,
   preview,
-}: MapProps & { preview?: boolean }) {
+  fallbackCenter,
+  checkpointLabel = '定向打卡点',
+}: MapProps & {
+  preview?: boolean;
+  /** Frame this point when there is nothing else to show (so a click can still pick). */
+  fallbackCenter?: LatLng | null;
+  /** Legend text for the checkpoint markers (e.g. a form's point being placed). */
+  checkpointLabel?: string;
+}) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   // The viewBox follows the container's pixel size so the polygons fill it.
@@ -63,6 +72,7 @@ export default function SvgMap({
 
   const bosses = layers.bosses ? objects?.bosses ?? [] : [];
   const chests = layers.chests ? objects?.chests ?? [] : [];
+  const supplies = layers.supplies !== false ? objects?.supplies ?? [] : [];
   const routes = useMemo(() => (layers.checkpoints ? routesOf(objects) : new Map<number, MapCheckpoint[]>()), [objects, layers.checkpoints]);
   const shownItems = layers.territories ? items : [];
 
@@ -86,6 +96,11 @@ export default function SvgMap({
     }
     for (const c of objects?.chests ?? []) add(c.center.lng, c.center.lat);
     for (const c of objects?.checkpoints ?? []) add(c.center.lng, c.center.lat);
+    for (const c of objects?.supplies ?? []) add(c.center.lng, c.center.lat);
+    if (!Number.isFinite(minX) && fallbackCenter) {
+      add(fallbackCenter.lng - 0.01, fallbackCenter.lat - 0.008);
+      add(fallbackCenter.lng + 0.01, fallbackCenter.lat + 0.008);
+    }
     if (!Number.isFinite(minX)) return null;
     const k = Math.cos((((minY + maxY) / 2) * Math.PI) / 180);
     const spanX = Math.max((maxX - minX) * k, 1e-6);
@@ -98,7 +113,8 @@ export default function SvgMap({
       inv: (x, y) => ({ lng: minX + (x - ox) / (k * scale), lat: maxY - (y - oy) / scale }),
       pxPerM: scale / M_PER_DEG_LAT,
     };
-  }, [items, objects, W, H]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the fallback only matters when it moves noticeably
+  }, [items, objects, W, H, fallbackCenter ? `${fallbackCenter.lat.toFixed(2)},${fallbackCenter.lng.toFixed(2)}` : '']);
 
   // Wheel zoom needs a non-passive listener so the page does not scroll.
   useEffect(() => {
@@ -163,7 +179,7 @@ export default function SvgMap({
 
   const z = 1 / Math.sqrt(view.s); // label size factor: grows slower than the map
   const moved = () => !!drag.current?.moved;
-  const empty = shownItems.length === 0 && bosses.length === 0 && chests.length === 0 && routes.size === 0;
+  const empty = shownItems.length === 0 && bosses.length === 0 && chests.length === 0 && routes.size === 0 && supplies.length === 0;
 
   return (
     <div className="map-wrap" ref={wrapRef}>
@@ -310,6 +326,26 @@ export default function SvgMap({
               }),
             )}
 
+          {/* 补给站 (V2 第四批): range circle + cup marker */}
+          {proj &&
+            supplies.map((c) => {
+              const [x, y] = proj.fwd(c.center.lng, c.center.lat);
+              const r = 9 * z;
+              return (
+                <g key={`sp${c.id}`} transform={`translate(${x} ${y})`} style={{ pointerEvents: picking ? 'none' : 'auto' }}>
+                  <circle r={Math.max(r, c.radius_m * proj.pxPerM)} fill={SUPPLY_COLOR} fillOpacity={0.12} stroke={SUPPLY_COLOR} strokeWidth={1} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+                  <circle r={r} fill="#141414" stroke="#fff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                  <path d={`M ${-4 * z} ${-3 * z} h ${7 * z} v ${4 * z} a ${3 * z} ${3 * z} 0 0 1 ${-3 * z} ${3 * z} h ${-1 * z} a ${3 * z} ${3 * z} 0 0 1 ${-3 * z} ${-3 * z} z M ${3 * z} ${-2 * z} h ${1.5 * z} a ${1.5 * z} ${1.5 * z} 0 0 1 0 ${3 * z} h ${-1.5 * z}`} fill="none" stroke="#DCF26A" strokeWidth={1.4} vectorEffect="non-scaling-stroke" />
+                  {preview && (
+                    <text x={r + 4 * z} y={0} dominantBaseline="central" fontSize={11 * z} fontWeight={700} fill="#141414" stroke="#fff" strokeWidth={3 * z} paintOrder="stroke">
+                      {c.name}
+                    </text>
+                  )}
+                  <title>{`${c.name} · ${c.perk_title} · 半径 ${c.radius_m} m`}</title>
+                </g>
+              );
+            })}
+
           {/* chests */}
           {proj &&
             chests.map((c) => {
@@ -430,7 +466,13 @@ export default function SvgMap({
         {routes.size > 0 && (
           <span>
             <span className="swatch" style={{ background: '#fff', borderRadius: '50%', border: '2px solid #2F6FD0' }} />
-            定向打卡点
+            {checkpointLabel}
+          </span>
+        )}
+        {supplies.length > 0 && (
+          <span>
+            <span className="swatch" style={{ background: '#141414', borderRadius: '50%', border: `2px solid ${SUPPLY_COLOR}` }} />
+            补给站
           </span>
         )}
         {preview && <span className="muted">底色为附近领地</span>}
