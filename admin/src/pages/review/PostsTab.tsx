@@ -81,7 +81,7 @@ export default function PostsTab() {
           <Input.Search
             allowClear
             style={{ width: 220 }}
-            placeholder="正文关键词或动态 ID"
+            placeholder="正文关键词"
             value={kw}
             onChange={(e) => setKw(e.target.value)}
             onSearch={(v) => set({ q: v.trim() || null, page: null, post: null })}

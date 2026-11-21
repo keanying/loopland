@@ -69,6 +69,7 @@ const errorMessages = <String, String>{
   'meetup_started': '这个局已经开始了，不能再报名',
   'signup_closed': '报名已截止',
   'race_full': '赛事名额已满',
+  'race_started': '赛事已经开始，不能取消报名',
   'invalid_invite': '邀请码无效或已过期',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',

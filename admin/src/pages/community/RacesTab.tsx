@@ -179,7 +179,6 @@ interface FormValues {
   signup_end: Dayjs;
   capacity: number;
   requires_wearable: boolean;
-  has_medal: boolean;
   medal_key?: string;
   medal_name?: string;
   medal_image_url?: string;
@@ -197,7 +196,6 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
   const editing = value && value !== 'new' ? value : null;
   const running = editing?.status === 'running';
   const type = Form.useWatch('type', form) ?? 'online';
-  const hasMedal = Form.useWatch('has_medal', form) ?? true;
   const lat = Form.useWatch('lat', form);
   const lng = Form.useWatch('lng', form);
   const placeName = Form.useWatch('place_name', form);
@@ -235,7 +233,7 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
       place: v.type === 'offline' ? { name: (v.place_name ?? '').trim(), lat: Number(v.lat), lng: Number(v.lng) } : null,
       capacity: v.capacity,
       requires_wearable: v.type === 'online' && v.requires_wearable,
-      medal: v.has_medal ? { key: (v.medal_key ?? '').trim(), name: (v.medal_name ?? '').trim(), image_url: v.medal_image_url?.trim() || null } : null,
+      medal: { key: (v.medal_key ?? '').trim(), name: (v.medal_name ?? '').trim(), image_url: v.medal_image_url?.trim() || null },
       published: v.published,
     });
   };
@@ -270,7 +268,6 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
             signup_end: dayjs(editing.signup_end_time),
             capacity: editing.capacity,
             requires_wearable: editing.requires_wearable,
-            has_medal: !!editing.medal,
             medal_key: editing.medal?.key ?? '',
             medal_name: editing.medal?.name ?? '',
             medal_image_url: editing.medal?.image_url ?? '',
@@ -289,7 +286,6 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
             signup_end: start.subtract(1, 'minute'),
             capacity: 1000,
             requires_wearable: false,
-            has_medal: true,
             published: false,
             lat: null,
             lng: null,
@@ -309,7 +305,7 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
               </Col>
               <Col span={14}>
                 <Form.Item name="title" label="赛事名称" rules={[{ required: true, whitespace: true, message: '请填写名称' }]}>
-                  <Input maxLength={30} showCount placeholder="城市 10K 线上赛" />
+                  <Input maxLength={40} showCount placeholder="城市 10K 线上赛" />
                 </Form.Item>
               </Col>
               <Col span={10}>
@@ -319,7 +315,7 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
               </Col>
               <Col span={14}>
                 <Form.Item name="distance_km" label="距离" rules={[{ required: true, message: '请填写距离' }, { type: 'number', min: 0.1, message: '至少 0.1 km' }]} extra={type === 'online' ? '时间窗内单次运动达到这个距离即完赛，用时按距离折算' : undefined}>
-                  <InputNumber className="num" min={0.1} max={300} step={1} precision={3} suffix="km" style={{ width: '100%' }} disabled={running} />
+                  <InputNumber className="num" min={0.1} max={500} step={1} precision={3} suffix="km" style={{ width: '100%' }} disabled={running} />
                 </Form.Item>
               </Col>
             </Row>
@@ -391,30 +387,25 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
             </Row>
 
             <div className="tile" style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <b>完赛奖牌</b>
-                <Form.Item name="has_medal" valuePropName="checked" noStyle>
-                  <Switch checkedChildren="发奖牌" unCheckedChildren="不发" />
-                </Form.Item>
-              </div>
-              {hasMedal && (
-                <Row gutter={12} style={{ marginTop: 10 }}>
+              <b>完赛奖牌</b>
+              <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>
+                完赛即发（图鉴「奖牌」类），每场赛事一枚
+              </span>
+              <Row gutter={12} style={{ marginTop: 10 }}>
                   <Col span={12}>
                     <Form.Item
                       name="medal_key"
                       label="奖牌 key（图鉴 item）"
-                      rules={[
-                        { required: true, message: '请填写 key' },
-                        { pattern: /^[a-z0-9_]{3,48}$/, message: '小写字母、数字、下划线，3–48 位' },
-                      ]}
+                      rules={[{ pattern: /^[a-z0-9_]{3,64}$/, message: '小写字母、数字、下划线，3–64 位' }]}
+                      extra={editing ? '已有人完赛后不能再改' : '留空自动生成'}
                       style={{ marginBottom: 8 }}
                     >
-                      <Input className="num" placeholder="race_2026_city10k" disabled={!!editing?.medal && editing.signed_count > 0 && editing.status !== 'signup'} />
+                      <Input className="num" placeholder="race_2026_city10k" allowClear />
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item name="medal_name" label="奖牌名称" rules={[{ required: true, whitespace: true, message: '请填写名称' }]} style={{ marginBottom: 8 }}>
-                      <Input maxLength={20} placeholder="城市 10K 完赛奖牌" />
+                    <Form.Item name="medal_name" label="奖牌名称" extra="留空为「赛事名称 完赛奖牌」" style={{ marginBottom: 8 }}>
+                      <Input maxLength={30} placeholder="城市 10K 完赛奖牌" />
                     </Form.Item>
                   </Col>
                   <Col flex="auto">
@@ -428,7 +419,6 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
                     </Col>
                   )}
                 </Row>
-              )}
             </div>
             <Form.Item name="published" label="发布到 App" valuePropName="checked" extra="不发布时是草稿，App 看不到">
               <Switch checkedChildren="发布" unCheckedChildren="草稿" />
@@ -511,7 +501,7 @@ function EntriesDrawer({ race, onClose, writable }: { race: Race | null; onClose
               <Tile v={<span style={{ fontSize: 15 }}>{dt(race.start_time, 'MM-DD HH:mm')}</span>} l={`至 ${dt(race.end_time, 'MM-DD HH:mm')}`} />
             </Col>
             <Col xs={12} md={6}>
-              <Tile v={<span style={{ fontSize: 15 }}>{race.medal?.name ?? '不发奖牌'}</span>} l={RACE_STATUS[race.status]?.text ?? race.status} />
+              <Tile v={<span style={{ fontSize: 15 }}>{race.medal?.name ?? '—'}</span>} l={RACE_STATUS[race.status]?.text ?? race.status} />
             </Col>
           </Row>
           {offline ? (
@@ -556,9 +546,11 @@ function EntriesDrawer({ race, onClose, writable }: { race: Race | null; onClose
                       align: 'right' as const,
                       render: (_: unknown, e: RaceEntry) =>
                         e.status === 'finished' ? (
-                          <span className="muted" style={{ fontSize: 12 }}>
-                            已发奖牌
-                          </span>
+                          <Tooltip title="已发奖牌；改成绩不会重复发">
+                            <Button size="small" disabled={!canFinish} onClick={() => setFinishing(e)}>
+                              改成绩
+                            </Button>
+                          </Tooltip>
                         ) : (
                           <Tooltip title={!started ? '开赛后才能标记' : undefined}>
                             <Button size="small" type="primary" disabled={!canFinish} onClick={() => setFinishing(e)}>
@@ -592,16 +584,17 @@ function FinishModal({ race, entry, onClose, onDone }: { race: Race; entry: Race
   const open = entry !== null;
   useEffect(() => {
     if (open) {
-      setText('');
+      setText(entry?.result_sec ? duration(entry.result_sec) : '');
       setTried(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when the dialog opens
   }, [open]);
   const sec = parseHms(text);
   const valid = sec !== null && sec > 0 && sec <= 24 * 3600;
   const finish = useMutation({
     mutationFn: (s: number) => api.finishRaceEntry(race.id, entry!.user.id, s),
     onSuccess: () => {
-      toastOk(`已标记 ${entry?.user.nickname} 完赛${race.medal ? `，发放「${race.medal.name}」` : ''}`);
+      toastOk(entry?.status === 'finished' ? `已修改 ${entry.user.nickname} 的成绩` : `已标记 ${entry?.user.nickname} 完赛，发放「${race.medal?.name ?? '完赛奖牌'}」`);
       onDone();
     },
   });
@@ -612,8 +605,8 @@ function FinishModal({ race, entry, onClose, onDone }: { race: Race; entry: Race
   return (
     <Modal
       open={entry !== null}
-      title={entry ? `标记完赛：${entry.user.nickname}` : ''}
-      okText="标记完赛"
+      title={entry ? `${entry.status === 'finished' ? '修改成绩' : '标记完赛'}：${entry.user.nickname}` : ''}
+      okText={entry?.status === 'finished' ? '保存成绩' : '标记完赛'}
       cancelText="取消"
       okButtonProps={{ loading: finish.isPending }}
       onCancel={onClose}
@@ -641,7 +634,7 @@ function FinishModal({ race, entry, onClose, onDone }: { race: Race; entry: Race
             : '也可以输入分:秒（如 52:10）或总秒数'}
       </div>
       <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-        标记后{race.medal ? `发放奖牌「${race.medal.name}」并` : ''}给用户发站内信，不能撤销。
+        {entry?.status === 'finished' ? '只更新成绩，不会重复发奖牌。' : `标记后发放奖牌「${race.medal?.name ?? '完赛奖牌'}」并给用户发站内信，不能撤销。`}
       </div>
     </Modal>
   );

@@ -144,6 +144,7 @@ export const AUDIT_ACTION: Record<string, string> = {
   'review.batch': '批量审核',
   'report.remove': '举报处理：下架',
   'report.dismiss': '举报处理：驳回',
+  'report.handle': '处理举报',
   'post.delete': '下架动态',
   'moderation.settings': '修改敏感词与审核设置',
   'meetup.cancel': '取消组局',
@@ -321,5 +322,5 @@ export const RACE_ENTRY_STATUS: Record<string, { text: string; color: string }> 
   dnf: { text: '未完赛', color: 'default' },
 };
 
-/** Sports a race can be for (subset of SPORT_LABEL that has a distance). */
-export const RACE_SPORTS = ['run', 'ride', 'hike', 'walk', 'swim'];
+/** Sports a race can be for (the GPS sports, server gameplay.GPSSports). */
+export const RACE_SPORTS = ['run', 'ride', 'hike', 'walk'];

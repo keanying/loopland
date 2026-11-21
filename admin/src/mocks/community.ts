@@ -521,7 +521,7 @@ export const races: RaceRow[] = [
     {
       type: 'offline', title: '徐汇滨江健走 6K', cover_url: photo(25, '滨江健走', 1200, 675), description: '因场地施工取消。',
       sport: 'walk', distance_m: 6000, start_time: iso(dayAt(6, 8, 0)), end_time: iso(dayAt(6, 11, 0)), signup_end_time: iso(dayAt(4, 23, 59)),
-      place: { name: '徐汇滨江龙美术馆', lat: 31.1725, lng: 121.4595 }, capacity: 200, requires_wearable: false, medal: null, published: true, cancelled: true,
+      place: { name: '徐汇滨江龙美术馆', lat: 31.1725, lng: 121.4595 }, capacity: 200, requires_wearable: false, medal: { key: 'race_2026_xuhui_walk6k', name: '徐汇滨江健走 6K 完赛奖牌', image_url: null }, published: true, cancelled: true,
     },
     (r) => makeEntries(12, 0, 0, Date.parse(r.start_time), Date.parse(r.end_time), false),
   ),
@@ -532,36 +532,32 @@ function raceInput(body: Record<string, unknown>, base?: RaceRow): Omit<RaceRow,
   const type = merged.type as RaceInput['type'];
   if (type !== 'online' && type !== 'offline') fail(400, 'invalid_body', 'type 只能是 online / offline');
   const title = String(merged.title ?? '').trim();
-  if (!title || title.length > 30) fail(400, 'invalid_body', '赛事名称 1–30 字');
+  if (!title || [...title].length > 40) fail(400, 'invalid_body', '标题 1–40 字');
   const sport = String(merged.sport ?? '');
-  if (!['run', 'ride', 'hike', 'walk', 'swim'].includes(sport)) fail(400, 'invalid_body', '运动类型无效');
+  if (!['run', 'ride', 'hike', 'walk'].includes(sport)) fail(400, 'invalid_body', '赛事运动类型只能是跑步、骑行、徒步、健走');
   const distance = Number(merged.distance_m);
-  if (!Number.isInteger(distance) || distance <= 0) fail(400, 'invalid_body', '距离必须是正整数（米）');
+  if (!(distance > 0) || distance > 500000) fail(400, 'invalid_body', '赛事距离不合法');
   const start = Date.parse(String(merged.start_time ?? ''));
   const end = Date.parse(String(merged.end_time ?? ''));
-  const signup = Date.parse(String(merged.signup_end_time ?? ''));
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) fail(400, 'invalid_body', '结束时间必须晚于开始时间');
-  if (!Number.isFinite(signup)) fail(400, 'invalid_body', '报名截止时间必填');
-  if (signup > end) fail(400, 'invalid_body', '报名截止不能晚于赛事结束');
-  if (type === 'offline' && signup > start) fail(400, 'invalid_body', '线下赛报名截止不能晚于开赛');
+  const signupRaw = Date.parse(String(merged.signup_end_time ?? ''));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) fail(400, 'invalid_body', '结束时间需晚于开始时间');
+  const signup = Number.isFinite(signupRaw) ? signupRaw : start; // server: empty → start time
+  if (signup > end) fail(400, 'invalid_body', '报名截止时间不能晚于结束时间');
   const capacity = Number(merged.capacity);
-  if (!Number.isInteger(capacity) || capacity < 1) fail(400, 'invalid_body', '名额至少 1 人');
-  if (base && capacity < base.entries.length) fail(400, 'invalid_body', `已有 ${base.entries.length} 人报名，名额不能少于报名人数`);
+  if (!Number.isInteger(capacity) || capacity < 1) fail(400, 'invalid_body', '名额必须为正');
   let place: Place | null = null;
   if (type === 'offline') {
     const p = (merged.place ?? null) as Place | null;
-    if (!p || !String(p.name ?? '').trim() || !Number.isFinite(Number(p.lat)) || !Number.isFinite(Number(p.lng))) fail(400, 'invalid_body', '线下赛需要集合地点（名称和坐标）');
+    if (!p || !String(p.name ?? '').trim() || !Number.isFinite(Number(p.lat)) || !Number.isFinite(Number(p.lng))) fail(400, 'invalid_body', '线下赛需要地点');
     place = { name: String(p.name).trim(), lat: Number(p.lat), lng: Number(p.lng) };
   }
-  let medal: RaceInput['medal'] = null;
-  const md = merged.medal as RaceInput['medal'];
-  if (md && (md.key || md.name)) {
-    if (!/^[a-z0-9_]{3,48}$/.test(String(md.key ?? ''))) fail(400, 'invalid_body', '奖牌 key 只能用小写字母、数字和下划线（3–48 位）');
-    if (!String(md.name ?? '').trim()) fail(400, 'invalid_body', '奖牌名称必填');
-    const clash = races.find((x) => x.id !== base?.id && x.medal?.key === md.key);
-    if (clash) fail(409, 'medal_key_taken', `奖牌 key 已被「${clash.title}」使用`);
-    medal = { key: md.key, name: String(md.name).trim(), image_url: md.image_url || null };
-  }
+  // Medal is always awarded; like the server, an empty key is generated and an empty name defaults to the title.
+  const md = (merged.medal ?? {}) as Partial<RaceInput['medal']>;
+  const key = String(md.key ?? '').trim() || `race_${Date.now().toString(36)}`;
+  if (!/^[a-z0-9_]{3,64}$/.test(key)) fail(400, 'invalid_body', '奖牌 key 只能用小写字母、数字、下划线（3–64 位）');
+  if (races.some((x) => x.id !== base?.id && x.medal.key === key)) fail(409, 'medal_key_taken', '奖牌 key 已被其他赛事使用');
+  if (base && key !== base.medal.key && base.entries.some((e) => e.status === 'finished')) fail(409, 'medal_awarded', '已经有人完赛，不能再改奖牌 key');
+  const medal: RaceInput['medal'] = { key, name: String(md.name ?? '').trim() || `${title} 完赛奖牌`, image_url: md.image_url || null };
   return {
     type, title, sport, distance_m: distance, place, capacity, medal,
     cover_url: (merged.cover_url as string) || null,
@@ -599,8 +595,8 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       if (!t) fail(404, 'not_found', '审核任务不存在');
       if (t.status !== 'pending') fail(409, 'already_reviewed', '这条内容已经被审核过了');
       const approve = m[2] === 'approve';
-      const reason = String(body.reason ?? '').trim();
-      if (!approve && !reason) fail(400, 'invalid_body', '请填写拒绝原因');
+      // like the server: an empty rejection reason becomes 内容不符合社区规范
+      const reason = String(body.reason ?? '').trim() || (approve ? '' : '内容不符合社区规范');
       if (reason.length > 200) fail(400, 'invalid_body', '拒绝原因最多 200 字');
       decide(t, approve, reason, adminId);
       log(adminId, approve ? 'review.approve' : 'review.reject', `${t.target_type}:${t.target_id}`, approve ? { task_id: t.id } : { task_id: t.id, reason });
@@ -612,8 +608,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       const action = body.action;
       if (!ids.length || ids.length > 100 || !ids.every(Number.isInteger)) fail(400, 'invalid_body', 'ids 需要 1–100 个');
       if (action !== 'approve' && action !== 'reject') fail(400, 'invalid_body', 'action 只能是 approve / reject');
-      const reason = String(body.reason ?? '').trim();
-      if (action === 'reject' && !reason) fail(400, 'invalid_body', '批量拒绝需要填写原因');
+      const reason = String(body.reason ?? '').trim() || (action === 'reject' ? '内容不符合社区规范' : '');
       let done = 0;
       for (const id of ids) {
         const t = tasks.find((x) => x.id === id);
@@ -644,13 +639,13 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       const action = body.action;
       if (action !== 'remove' && action !== 'dismiss') fail(400, 'invalid_body', 'action 只能是 remove / dismiss');
       const mute = Number(body.mute_days ?? 0);
-      if (!Number.isInteger(mute) || mute < 0 || mute > 30) fail(400, 'invalid_body', '禁言天数应在 0–30 之间');
+      if (!Number.isInteger(mute) || mute < 0 || mute > 365) fail(400, 'invalid_body', '禁言天数 0–365');
       const note = String(body.note ?? '').trim();
       const now = new Date().toISOString();
       const who = adminRef(adminId);
       if (action === 'dismiss') {
         Object.assign(r, { status: 'dismissed', handled_by: who, handled_at: now });
-        log(adminId, 'report.dismiss', `${r.target_type}:${r.target_id}`, { report_id: r.id, note: note || undefined });
+        log(adminId, 'report.handle', `${r.target_type}:${r.target_id}`, { report_id: r.id, action: 'dismiss', mute_days: 0, note: note || undefined });
         return {};
       }
       const same = reports.filter((x) => x.status === 'pending' && x.target_type === r.target_type && x.target_id === r.target_id);
@@ -666,7 +661,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
           u.muted_until = new Date(Date.now() + mute * DAY).toISOString();
         }
       }
-      log(adminId, 'report.remove', `${r.target_type}:${r.target_id}`, { report_ids: same.map((x) => x.id), mute_days: mute, note: note || undefined });
+      log(adminId, 'report.handle', `${r.target_type}:${r.target_id}`, { report_id: r.id, action: 'remove', mute_days: mute, note: note || undefined });
       return {};
     }],
 
@@ -678,7 +673,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       const rs = q.get('review_status') ?? '';
       if (rs && !['pending', 'approved', 'rejected'].includes(rs)) fail(400, 'invalid_status', 'review_status 取值 pending / approved / rejected');
       const list = posts
-        .filter((p) => (!kw || p.content.includes(kw) || String(p.id) === kw.replace(/^#/, '')) && (!uid || p.author.id === uid) && (!rs || p.review_status === rs))
+        .filter((p) => (!kw || p.content.toLowerCase().includes(kw.toLowerCase())) && (!uid || p.author.id === uid) && (!rs || p.review_status === rs))
         .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
       return paginate(list.map(clone), q);
     }],
@@ -687,8 +682,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       const p = posts.find((x) => x.id === Number(m[1]));
       if (!p) fail(404, 'not_found', '动态不存在');
       if (p.deleted) fail(409, 'already_deleted', '这条动态已经下架');
-      const reason = String(body.reason ?? '').trim();
-      if (!reason) fail(400, 'invalid_body', '请填写下架原因');
+      const reason = String(body.reason ?? '').trim() || '违反社区规范';
       p.deleted = true;
       log(adminId, 'post.delete', `post:${p.id}`, { reason });
       return {};
@@ -763,7 +757,6 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
     ['POST', /^\/races$/, ({ body, role, adminId }) => {
       requireRole(role, COMMUNITY_ROLES);
       const v = raceInput(body);
-      if (Date.parse(v.start_time) < Date.now() - HOUR) fail(400, 'invalid_body', '开始时间不能早于现在');
       const r: RaceRow = { id: ++raceSeq, cancelled: false, entries: [], ...v };
       races.push(r);
       log(adminId, 'race.create', `race:${r.id}`, { title: r.title, published: r.published });
@@ -773,11 +766,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       requireRole(role, COMMUNITY_ROLES);
       const r = races.find((x) => x.id === Number(m[1]));
       if (!r) fail(404, 'not_found', '赛事不存在');
-      const st = raceStatus(r);
-      if (st === 'cancelled') fail(409, 'race_cancelled', '赛事已取消，不能修改');
-      if (st === 'finished') fail(409, 'race_finished', '赛事已结束，不能修改');
       const v = raceInput(body, r);
-      if (st === 'running' && (v.type !== r.type || v.sport !== r.sport || v.distance_m !== r.distance_m || v.start_time !== r.start_time)) fail(409, 'race_started', '赛事已开始，不能修改类型、运动、距离和开始时间');
       Object.assign(r, v);
       log(adminId, 'race.update', `race:${r.id}`, { fields: Object.keys(body) });
       return raceOut(r);
@@ -786,8 +775,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       requireRole(role, COMMUNITY_ROLES);
       const r = races.find((x) => x.id === Number(m[1]));
       if (!r) fail(404, 'not_found', '赛事不存在');
-      const st = raceStatus(r);
-      if (st === 'cancelled' || st === 'finished') fail(409, 'race_closed', '赛事已取消或已结束');
+      if (r.cancelled) fail(404, 'not_found', '赛事不存在或已取消');
       r.cancelled = true;
       log(adminId, 'race.cancel', `race:${r.id}`, { signed: r.entries.length });
       return raceOut(r);
@@ -804,16 +792,14 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       requireRole(role, COMMUNITY_ROLES);
       const r = races.find((x) => x.id === Number(m[1]));
       if (!r) fail(404, 'not_found', '赛事不存在');
-      if (r.type !== 'offline') fail(400, 'not_offline', '只有线下赛可以手动标记完赛');
-      if (r.cancelled) fail(409, 'race_cancelled', '赛事已取消');
-      if (Date.now() < Date.parse(r.start_time)) fail(409, 'race_not_started', '赛事还没开始');
-      const e = r.entries.find((x) => x.user.id === Number(m[2]));
-      if (!e) fail(404, 'not_found', '该用户没有报名这场赛事');
-      if (e.status === 'finished') fail(409, 'already_finished', '该用户已经完赛');
       const sec = Number(body.result_sec);
-      if (!Number.isInteger(sec) || sec <= 0 || sec > 24 * 3600) fail(400, 'invalid_body', '成绩应为 1 秒到 24 小时之间的整数秒');
-      Object.assign(e, { status: 'finished', result_sec: sec, finished_at: new Date().toISOString() });
-      log(adminId, 'race.finish', `race:${r.id}`, { user_id: e.user.id, result_sec: sec, medal: r.medal?.key });
+      if (!Number.isInteger(sec) || sec <= 0) fail(400, 'invalid_body', '成绩必须为正');
+      const e = r.entries.find((x) => x.user.id === Number(m[2]));
+      if (!e) fail(404, 'not_found', '报名记录不存在');
+      // already finished: only the result is corrected, no second medal (server FinishOffline)
+      if (e.status === 'finished') e.result_sec = sec;
+      else Object.assign(e, { status: 'finished', result_sec: sec, finished_at: new Date().toISOString() });
+      log(adminId, 'race.finish', `race:${r.id}`, { user_id: e.user.id, result_sec: sec });
       return {};
     }],
   ];

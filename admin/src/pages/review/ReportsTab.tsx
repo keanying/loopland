@@ -180,7 +180,7 @@ export default function ReportsTab() {
               </div>
               <div className="rv-detail-text">{viewing.target_preview || '（无摘要）'}</div>
               {viewing.target_type === 'post' && (
-                <Link to={`/review?tab=posts&q=${viewing.target_id}`} style={{ fontSize: 12 }}>
+                <Link to={`/review?tab=posts&q=${encodeURIComponent((viewing.target_preview ?? '').slice(0, 20))}&post=${viewing.target_id}`} style={{ fontSize: 12 }}>
                   在动态管理中查看完整动态
                 </Link>
               )}
@@ -288,7 +288,7 @@ function HandleModal({ value, onClose, onDone }: { value: { r: AdminReport; acti
               <div style={{ marginBottom: 6 }}>同时禁言{author}</div>
               <Space wrap style={{ marginBottom: 12 }}>
                 <Segmented value={MUTE_PRESETS.includes(mute) ? mute : -1} onChange={(v) => Number(v) >= 0 && setMute(Number(v))} options={[...MUTE_PRESETS.map((d) => ({ label: d ? `${d} 天` : '不禁言', value: d })), ...(MUTE_PRESETS.includes(mute) ? [] : [{ label: `${mute} 天`, value: -1 }])]} />
-                <InputNumber className="num" min={0} max={30} precision={0} value={mute} onChange={(v) => setMute(v ?? 0)} suffix="天" style={{ width: 120 }} aria-label="禁言天数" />
+                <InputNumber className="num" min={0} max={365} precision={0} value={mute} onChange={(v) => setMute(v ?? 0)} suffix="天" style={{ width: 120 }} aria-label="禁言天数" />
               </Space>
             </>
           ) : (

@@ -1097,7 +1097,8 @@ export interface Race {
   capacity: number;
   signed_count: number;
   requires_wearable: boolean;
-  medal: RaceMedal | null;
+  /** Always present: the server fills in a key / name when left empty. */
+  medal: RaceMedal;
   status: RaceStatus;
   published: boolean;
 }
@@ -1115,7 +1116,8 @@ export interface RaceInput {
   place: Place | null;
   capacity: number;
   requires_wearable: boolean;
-  medal: RaceMedal | null;
+  /** Empty key → generated; empty name → "<title> 完赛奖牌". */
+  medal: RaceMedal;
   published: boolean;
 }
 

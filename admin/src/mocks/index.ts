@@ -283,7 +283,7 @@ const routes: [string, RegExp, Handler][] = [
     if (refunds) todos.push({ type: 'refund', title: `${refunds} 笔会员退款申请`, count: refunds, priority: 2, link: '/orders?status=refund_requested' });
     if (renew) todos.push({ type: 'renew_failed', title: `${renew} 笔自动续费失败`, count: renew, priority: 3, link: '/orders?status=renew_failed' });
     const reviews = pendingReviews();
-    if (reviews) todos.push({ type: 'review', title: `${reviews} 条内容待审核`, count: reviews, priority: 2, link: '/review' });
+    if (reviews) todos.push({ type: 'review', title: `${reviews} 条内容待审核`, count: reviews, priority: 1, link: '/review' });
     return {
       today: { active_users: db.trend.active_users[last], activities: 31620, new_territories: db.trend.new_territories[last], pending_risk: open },
       last_week: { active_users: db.trend.active_users[last - 7], activities: 30380, new_territories: db.trend.new_territories[last - 7], pending_risk: open + 2 },

@@ -391,7 +391,7 @@ function TaskDetail({ t, writable, busy, onApprove, onReject }: { t: ReviewTask;
             {t.target_type === 'post' && (
               <>
                 {' · '}
-                <Link to={`/review?tab=posts&q=${t.target_id}`}>在动态管理中查看</Link>
+                <Link to={`/review?tab=posts&user_id=${t.user.id}&post=${t.target_id}`}>在动态管理中查看</Link>
               </>
             )}
           </div>
