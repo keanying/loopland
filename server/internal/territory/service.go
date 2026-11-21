@@ -79,6 +79,12 @@ type Event struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Defense is an open 守地挑战 window.
+type Defense struct {
+	Deadline   time.Time `json:"deadline"`
+	AttackedBy *UserRef  `json:"attacked_by"`
+}
+
 // Detail is the full territory.
 type Detail struct {
 	Summary
@@ -87,6 +93,7 @@ type Detail struct {
 	StationSlots int         `json:"station_slots"`
 	Stationed    []Stationed `json:"stationed"`
 	CapturedAt   time.Time   `json:"captured_at"`
+	Defense      *Defense    `json:"defense"`
 	Events       []Event     `json:"events"`
 }
 
@@ -182,6 +189,16 @@ func (s *Service) Get(ctx context.Context, q db.Querier, id, viewer int64, viewe
 	}
 	d.Summary = sm
 	if err := q.QueryRow(ctx, `SELECT captured_at FROM territories WHERE id=$1`, id).Scan(&d.CapturedAt); err != nil {
+		return d, err
+	}
+	var dl time.Time
+	var att *int64
+	var attNick *string
+	err = q.QueryRow(ctx, `SELECT d.deadline, d.attacker_id, u.nickname FROM territory_defenses d LEFT JOIN users u ON u.id=d.attacker_id
+		WHERE d.territory_id=$1 AND d.deadline > now()`, id).Scan(&dl, &att, &attNick)
+	if err == nil {
+		d.Defense = &Defense{Deadline: dl, AttackedBy: ref(att, attNick)}
+	} else if !db.IsNoRows(err) {
 		return d, err
 	}
 	cfgUser := viewer
@@ -347,7 +364,11 @@ func (s *Service) Build(ctx context.Context, user int64, id int64, slot int, key
 			return err
 		}
 		t := gameplay.Territory{Buildings: keysOf(buildings), Stationed: rolesOf(stationed)}
-		cost, err := cfg.CheckBuild(t, key, cfg.Level(earned), energy)
+		var blueprint bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM codex_items WHERE user_id=$1 AND kind='blueprint' AND item=$2)`, user, key).Scan(&blueprint); err != nil {
+			return err
+		}
+		cost, err := cfg.CheckBuildWith(t, key, cfg.Level(earned), energy, blueprint)
 		switch {
 		case errors.Is(err, gameplay.ErrUnknownBuilding):
 			return httpx.BadRequest("unknown_building", "没有这种建筑")

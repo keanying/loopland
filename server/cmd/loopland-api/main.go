@@ -49,6 +49,7 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	go a.Config.Watch(ctx, 30*time.Second)
+	go a.Hub.Run(ctx)
 	if !cfg.JobsOff {
 		go a.Jobs.Run(ctx, time.Minute)
 	}

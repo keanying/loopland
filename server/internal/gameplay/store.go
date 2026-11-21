@@ -93,6 +93,7 @@ func scanVersion(row pgx.CollectableRow) (Version, error) {
 	if err := json.Unmarshal(body, &v.Body); err != nil {
 		return v, err
 	}
+	v.Body.Normalize()
 	v.Body.Version = v.Version
 	return v, nil
 }

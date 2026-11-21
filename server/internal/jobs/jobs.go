@@ -21,6 +21,8 @@ type Runner struct {
 	Billing *billing.Service
 	Config  *gameplay.Store
 	Log     *slog.Logger
+	// Extra jobs contributed by other modules (V2 gameplay).
+	Extra map[string]func(context.Context) error
 }
 
 const lockKey = 7310002
@@ -51,13 +53,17 @@ func (r *Runner) Tick(ctx context.Context) {
 		return
 	}
 	defer conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, lockKey) //nolint:errcheck
-	for name, job := range map[string]func(context.Context) error{
+	all := map[string]func(context.Context) error{
 		"renewals":         r.Billing.RunRenewals,
 		"renewal_reminder": r.Billing.RunReminders,
 		"close_orders":     r.Billing.CloseStale,
 		"territory_yield":  r.TerritoryYield,
 		"purge_deleted":    r.PurgeDeleted,
-	} {
+	}
+	for k, v := range r.Extra {
+		all[k] = v
+	}
+	for name, job := range all {
 		if err := job(ctx); err != nil {
 			r.Log.Error("job failed", "job", name, "err", err)
 		}
@@ -75,9 +81,12 @@ func (r *Runner) TerritoryYield(ctx context.Context) error {
 		if err != nil || tag.RowsAffected() == 0 {
 			return err // already done today
 		}
+		// Territories inside an active monster's range produce less (城市怪兽).
 		rows, err := tx.Query(ctx, `SELECT t.owner_user_id,
 				COALESCE((SELECT array_agg(building) FROM territory_buildings b WHERE b.territory_id=t.id), '{}'),
-				COALESCE((SELECT array_agg(role) FROM territory_stationed s WHERE s.territory_id=t.id), '{}')
+				COALESCE((SELECT array_agg(role) FROM territory_stationed s WHERE s.territory_id=t.id), '{}'),
+				EXISTS (SELECT 1 FROM bosses m WHERE m.status='active'
+				        AND ST_DWithin(ST_PointOnSurface(t.geom)::geography, m.center::geography, m.radius_m))
 			FROM territories t JOIN users u ON u.id=t.owner_user_id
 			WHERE NOT t.frozen AND u.status='active'`)
 		if err != nil {
@@ -87,11 +96,17 @@ func (r *Runner) TerritoryYield(ctx context.Context) error {
 		for rows.Next() {
 			var owner int64
 			var buildings, roles []string
-			if err := rows.Scan(&owner, &buildings, &roles); err != nil {
+			var penalized bool
+			if err := rows.Scan(&owner, &buildings, &roles, &penalized); err != nil {
 				rows.Close()
 				return err
 			}
-			perUser[owner] += r.Config.For(owner).DailyEnergy(gameplay.Territory{Buildings: buildings, Stationed: roles})
+			cfg := r.Config.For(owner)
+			y := cfg.DailyEnergy(gameplay.Territory{Buildings: buildings, Stationed: roles})
+			if penalized {
+				y = int(float64(y) * (1 - cfg.Boss.YieldPenaltyPct/100))
+			}
+			perUser[owner] += y
 		}
 		rows.Close()
 		for u, e := range perUser {

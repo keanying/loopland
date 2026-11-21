@@ -26,6 +26,7 @@ require (
 	github.com/aliyun/credentials-go v1.4.5 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.7.0 // indirect
+	github.com/coder/websocket v1.8.15 // indirect
 	github.com/go-pay/crypto v0.0.3 // indirect
 	github.com/go-pay/errgroup v0.0.3 // indirect
 	github.com/go-pay/smap v0.0.2 // indirect

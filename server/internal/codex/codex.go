@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -134,23 +135,85 @@ func AfterActivity(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int
 		p.Eggs = append(p.Eggs, Egg{Key: c.Key, Name: c.Name, HatchKm: c.HatchKm})
 	}
 
-	var totalDist float64
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0) FROM user_sport_totals WHERE user_id=$1`, user).Scan(&totalDist); err != nil {
+	medals, err := AwardMedals(ctx, tx, cfg, user)
+	if err != nil {
 		return p, err
 	}
+	p.Medals = append(p.Medals, medals...)
+	return p, nil
+}
+
+// Stat counter keys (user_stats). distance_km is derived from sport totals.
+const (
+	StatDefends     = "defends"
+	StatLoopsSingle = "loops_single" // best number of loops in one activity
+	StatBossDefeats = "boss_defeats"
+	StatChests      = "chests"
+	StatRoutes      = "routes"
+)
+
+// IncStat adds delta to a counter.
+func IncStat(ctx context.Context, q db.Querier, user int64, key string, delta float64) error {
+	_, err := q.Exec(ctx, `INSERT INTO user_stats (user_id, key, value) VALUES ($1,$2,$3)
+		ON CONFLICT (user_id, key) DO UPDATE SET value = user_stats.value + EXCLUDED.value`, user, key, delta)
+	return err
+}
+
+// MaxStat raises a counter to v if it is higher.
+func MaxStat(ctx context.Context, q db.Querier, user int64, key string, v float64) error {
+	_, err := q.Exec(ctx, `INSERT INTO user_stats (user_id, key, value) VALUES ($1,$2,$3)
+		ON CONFLICT (user_id, key) DO UPDATE SET value = GREATEST(user_stats.value, EXCLUDED.value)`, user, key, v)
+	return err
+}
+
+// medalValues returns the current value of every medal type.
+func medalValues(ctx context.Context, q db.Querier, user int64) (map[string]float64, error) {
+	vals := map[string]float64{}
+	var dist float64
+	if err := q.QueryRow(ctx, `SELECT COALESCE(sum(distance_m),0) FROM user_sport_totals WHERE user_id=$1`, user).Scan(&dist); err != nil {
+		return nil, err
+	}
+	vals[gameplay.MedalDistanceKm] = dist / 1000
+	rows, err := q.Query(ctx, `SELECT key, value FROM user_stats WHERE user_id=$1`, user)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var k string
+		var v float64
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, err
+		}
+		vals[k] = v
+	}
+	return vals, rows.Err()
+}
+
+// AwardMedals grants every configured medal whose target is reached and
+// returns the newly awarded ones.
+func AwardMedals(ctx context.Context, tx pgx.Tx, cfg gameplay.Config, user int64) ([]MedalRef, error) {
+	vals, err := medalValues(ctx, tx, user)
+	if err != nil {
+		return nil, err
+	}
+	out := []MedalRef{}
 	for _, m := range cfg.Medals {
-		if totalDist/1000 < m.DistanceKm {
+		if vals[m.Type] < m.Target {
 			continue
 		}
 		tag, err := tx.Exec(ctx, `INSERT INTO codex_items (user_id, kind, item) VALUES ($1,'medal',$2) ON CONFLICT DO NOTHING`, user, m.Key)
 		if err != nil {
-			return p, err
+			return nil, err
 		}
 		if tag.RowsAffected() == 1 {
-			p.Medals = append(p.Medals, MedalRef{Key: m.Key, Name: m.Name})
+			out = append(out, MedalRef{Key: m.Key, Name: m.Name})
+			if err := inbox.Notify(ctx, tx, user, inbox.System, "获得新奖牌", fmt.Sprintf("恭喜获得奖牌「%s」！", m.Name), map[string]any{"medal": m.Key}); err != nil {
+				return nil, err
+			}
 		}
 	}
-	return p, nil
+	return out, nil
 }
 
 // View is GET /v1/codex.
@@ -160,6 +223,17 @@ type View struct {
 	Buildings  []BuildingCard    `json:"buildings"`
 	Companions []CompanionCard   `json:"companions"`
 	Medals     []MedalCard       `json:"medals"`
+	Monsters   []MonsterCard     `json:"monsters"`
+}
+
+// MonsterCard is a city monster the user has (or hasn't) fought.
+type MonsterCard struct {
+	Key      string `json:"key"`
+	Name     string `json:"name"`
+	Strikes  int    `json:"strikes"`
+	Defeats  int    `json:"defeats"`
+	BestRank *int   `json:"best_rank"`
+	Seen     bool   `json:"seen"`
 }
 
 // RoleCard is a character in the codex.
@@ -185,6 +259,8 @@ type BuildingCard struct {
 	Cost        int    `json:"cost"`
 	Guard       int    `json:"guard"`
 	DailyEnergy int    `json:"daily_energy"`
+	// Blueprint: the user owns this building's blueprint (boss drop).
+	Blueprint bool `json:"blueprint"`
 }
 
 // CompanionCard is a running partner.
@@ -195,12 +271,19 @@ type CompanionCard struct {
 	ProgressKm float64 `json:"progress_km"`
 	HatchKm    float64 `json:"hatch_km"`
 	Escort     bool    `json:"escort"`
+	Level      int     `json:"level"`
+	Exp        int     `json:"exp"`
+	ExpToNext  int     `json:"exp_to_next"`
+	Meters     float64 `json:"meters"`
 }
 
 // MedalCard is a medal.
 type MedalCard struct {
 	Key        string     `json:"key"`
 	Name       string     `json:"name"`
+	Type       string     `json:"type"`
+	Progress   float64    `json:"progress"`
+	Target     float64    `json:"target"`
 	Obtained   bool       `json:"obtained"`
 	ObtainedAt *time.Time `json:"obtained_at"`
 }
@@ -283,7 +366,9 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 
 	n = 0
 	for _, b := range cfg.Buildings {
-		c := BuildingCard{Key: b.Key, Name: b.Name, UnlockLevel: b.UnlockLevel, Unlocked: level >= b.UnlockLevel, Cost: b.Cost, Guard: b.Guard, DailyEnergy: b.DailyEnergy}
+		_, bp := have["blueprint:"+b.Key]
+		c := BuildingCard{Key: b.Key, Name: b.Name, UnlockLevel: b.UnlockLevel, Unlocked: level >= b.UnlockLevel || (bp && b.BlueprintBypassLevel),
+			Cost: b.Cost, Guard: b.Guard, DailyEnergy: b.DailyEnergy, Blueprint: bp}
 		if c.Unlocked {
 			n++
 		}
@@ -292,8 +377,28 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 	v.Progress["buildings"] = fmt.Sprintf("%d/%d", n, len(cfg.Buildings))
 
 	n = 0
+	growth := map[string][2]float64{}
+	rows, err = q.Query(ctx, `SELECT companion, exp, meters FROM companion_growth WHERE user_id=$1`, user)
+	if err != nil {
+		return v, err
+	}
+	for rows.Next() {
+		var k string
+		var exp int
+		var m float64
+		if err := rows.Scan(&k, &exp, &m); err != nil {
+			rows.Close()
+			return v, err
+		}
+		growth[k] = [2]float64{float64(exp), m}
+	}
+	rows.Close()
 	for _, cp := range cfg.Companions {
 		c := CompanionCard{Key: cp.Key, Name: cp.Name, State: "none", HatchKm: cp.HatchKm}
+		g := growth[cp.Key]
+		c.Exp, c.Meters = int(g[0]), g[1]
+		c.Level = cfg.CompanionLevel(c.Exp)
+		c.ExpToNext = c.Level*cfg.Pet.ExpPerLevel - c.Exp
 		if it, ok := have["egg:"+cp.Key]; ok {
 			c.State, c.ProgressKm = "egg", it.progress
 		}
@@ -307,15 +412,60 @@ func Load(ctx context.Context, q db.Querier, cfg gameplay.Config, user int64) (V
 	v.Progress["companions"] = fmt.Sprintf("%d/%d", n, len(cfg.Companions))
 
 	n = 0
+	vals, err := medalValues(ctx, q, user)
+	if err != nil {
+		return v, err
+	}
 	for _, m := range cfg.Medals {
-		c := MedalCard{Key: m.Key, Name: m.Name}
+		c := MedalCard{Key: m.Key, Name: m.Name, Type: m.Type, Target: m.Target, Progress: min(vals[m.Type], m.Target)}
 		if it, ok := have["medal:"+m.Key]; ok {
 			c.Obtained, c.ObtainedAt = true, &it.at
+			c.Progress = m.Target
 			n++
 		}
 		v.Medals = append(v.Medals, c)
 	}
-	v.Progress["medals"] = fmt.Sprintf("%d/%d", n, len(cfg.Medals))
+	// Season medals are awarded at settlement and named after the season.
+	for _, it := range items {
+		if it.kind == "medal" && strings.HasPrefix(it.key, "season:") {
+			at := it.at
+			v.Medals = append(v.Medals, MedalCard{Key: it.key, Name: strings.TrimPrefix(it.key, "season:"), Type: "season", Progress: 1, Target: 1, Obtained: true, ObtainedAt: &at})
+			n++
+		}
+	}
+	v.Progress["medals"] = fmt.Sprintf("%d/%d", n, len(v.Medals))
+
+	type mon struct {
+		strikes, defeats int
+		best             *int
+	}
+	mons := map[string]mon{}
+	rows, err = q.Query(ctx, `SELECT kind, strikes, defeats, best_rank FROM user_monsters WHERE user_id=$1`, user)
+	if err != nil {
+		return v, err
+	}
+	for rows.Next() {
+		var k string
+		var m mon
+		if err := rows.Scan(&k, &m.strikes, &m.defeats, &m.best); err != nil {
+			rows.Close()
+			return v, err
+		}
+		mons[k] = m
+	}
+	rows.Close()
+	seen := 0
+	for _, b := range cfg.Bosses {
+		m, ok := mons[b.Key]
+		v.Monsters = append(v.Monsters, MonsterCard{Key: b.Key, Name: b.Name, Strikes: m.strikes, Defeats: m.defeats, BestRank: m.best, Seen: ok})
+		if ok {
+			seen++
+		}
+	}
+	if v.Monsters == nil {
+		v.Monsters = []MonsterCard{}
+	}
+	v.Progress["monsters"] = fmt.Sprintf("%d/%d", seen, len(cfg.Bosses))
 	return v, nil
 }
 

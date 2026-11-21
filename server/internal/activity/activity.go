@@ -75,6 +75,109 @@ type Settlement struct {
 	Medals        []codex.MedalRef      `json:"medals"`
 	LevelUp       *int                  `json:"level_up"`
 	Flags         []anticheat.Flag      `json:"flags"`
+	Extra
+}
+
+// Extra holds the V2 gameplay blocks (docs/api/v2-1-玩法.md), filled by
+// the Hook.
+type Extra struct {
+	BossDamage []BossHit      `json:"boss_damage"`
+	Chests     []ChestOpen    `json:"chests"`
+	Defended   []Defended     `json:"defended"`
+	Routes     []RouteStep    `json:"routes"`
+	Campaigns  []CampaignDone `json:"campaigns"`
+	Tasks      []TaskProgress `json:"tasks"`
+	Companion  *CompanionGain `json:"companion"`
+	Relay      *RelayLeg      `json:"relay"`
+}
+
+// BossHit is damage dealt to a city monster.
+type BossHit struct {
+	BossID   int64  `json:"boss_id"`
+	Name     string `json:"name"`
+	Damage   int    `json:"damage"`
+	Defeated bool   `json:"defeated"`
+}
+
+// ChestOpen is a chest opened on the way.
+type ChestOpen struct {
+	ChestID int64 `json:"chest_id"`
+	Energy  int   `json:"energy"`
+}
+
+// Defended is a reinforced territory (守地挑战).
+type Defended struct {
+	TerritoryID int64 `json:"territory_id"`
+	GuardBefore int   `json:"guard_before"`
+	GuardAfter  int   `json:"guard_after"`
+}
+
+// RouteStep is orienteering progress.
+type RouteStep struct {
+	RouteID   int64    `json:"route_id"`
+	Name      string   `json:"name"`
+	Reached   []string `json:"reached"`
+	Completed bool     `json:"completed"`
+}
+
+// CampaignDone is a completed limited-time campaign.
+type CampaignDone struct {
+	CampaignID   int64  `json:"campaign_id"`
+	Title        string `json:"title"`
+	RewardEnergy int    `json:"reward_energy"`
+}
+
+// TaskProgress is a season task's progress after this activity.
+type TaskProgress struct {
+	Key          string  `json:"key"`
+	Name         string  `json:"name"`
+	Progress     float64 `json:"progress"`
+	Target       float64 `json:"target"`
+	Completed    bool    `json:"completed"`
+	RewardEnergy int     `json:"reward_energy"`
+}
+
+// CompanionGain is the escort companion's growth.
+type CompanionGain struct {
+	Key     string `json:"key"`
+	Exp     int    `json:"exp"`
+	Level   int    `json:"level"`
+	LevelUp bool   `json:"level_up"`
+}
+
+// RelayLeg is a leg run for the crew relay.
+type RelayLeg struct {
+	RelayID   int64 `json:"relay_id"`
+	Leg       int   `json:"leg"`
+	Legs      int   `json:"legs"`
+	Completed bool  `json:"completed"`
+}
+
+// HookInput is what the gameplay hook needs about a settled activity.
+type HookInput struct {
+	Config     gameplay.Config
+	ActivityID int64
+	UserID     int64
+	CrewID     *int64
+	Sport      gameplay.Sport
+	Amount     float64
+	DistanceM  float64
+	DurationS  int
+	StartedAt  time.Time
+	Points     []geo.LatLng
+	EnergyRaw  int
+	Claims     []territory.ClaimRef
+	Attacks    []territory.AttackRef
+}
+
+// Hook runs V2 gameplay inside the settlement transaction. The returned
+// function (may be nil) runs after commit, e.g. to publish realtime events.
+type Hook interface {
+	AfterSettle(ctx context.Context, tx pgx.Tx, in HookInput) (Extra, func(context.Context), error)
+}
+
+func emptyExtra() Extra {
+	return Extra{BossDamage: []BossHit{}, Chests: []ChestOpen{}, Defended: []Defended{}, Routes: []RouteStep{}, Campaigns: []CampaignDone{}, Tasks: []TaskProgress{}}
 }
 
 func emptySettlement(status string, flags []anticheat.Flag) Settlement {
@@ -82,7 +185,7 @@ func emptySettlement(status string, flags []anticheat.Flag) Settlement {
 		flags = []anticheat.Flag{}
 	}
 	return Settlement{Status: status, Claims: []territory.ClaimRef{}, Attacks: []territory.AttackRef{},
-		Recruits: []codex.Recruit{}, Eggs: []codex.Egg{}, Medals: []codex.MedalRef{}, Flags: flags}
+		Recruits: []codex.Recruit{}, Eggs: []codex.Egg{}, Medals: []codex.MedalRef{}, Flags: flags, Extra: emptyExtra()}
 }
 
 // View is the Activity object.
@@ -112,6 +215,7 @@ type Result struct {
 type Service struct {
 	Pool   *pgxpool.Pool
 	Config *gameplay.Store
+	Hook   Hook // optional V2 gameplay
 }
 
 func badRequest(msg string) error { return httpx.BadRequest("invalid_body", msg) }
@@ -229,6 +333,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 	verdict := anticheat.Evaluate(rules, anticheat.Input{Sport: u.Sport, Points: u.Points, DistanceM: dist, Device: u.Device, SameDeviceAccounts: sameDevice})
 
 	var res Result
+	var after func(context.Context)
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		goal, _ := json.Marshal(u.Goal)
 		device, _ := json.Marshal(u.Device)
@@ -286,7 +391,7 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 		var st Settlement
 		switch verdict.Verdict {
 		case anticheat.Pass:
-			st, err = s.settle(ctx, tx, id)
+			st, after, err = s.settle(ctx, tx, id)
 			if err != nil {
 				return err
 			}
@@ -312,6 +417,9 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 	if err == errDuplicate {
 		r, _, err := s.existing(ctx, user, u.ClientID)
 		return r, err
+	}
+	if err == nil && after != nil {
+		after(ctx)
 	}
 	return res, err
 }
@@ -378,12 +486,16 @@ func EarnedToday(ctx context.Context, q db.Querier, user int64) (int, error) {
 
 // settle runs a stored activity through energy, claims and codex. The caller
 // saves the result.
-func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, error) {
+func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, func(context.Context), error) {
+	var after func(context.Context)
 	var user int64
 	var sport string
 	var dist, amount float64
-	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount FROM activities WHERE id=$1`, id).Scan(&user, &sport, &dist, &amount); err != nil {
-		return Settlement{}, err
+	var durationS int
+	var startedAt time.Time
+	if err := tx.QueryRow(ctx, `SELECT user_id, sport, distance_m, amount, duration_s, started_at FROM activities WHERE id=$1`, id).
+		Scan(&user, &sport, &dist, &amount, &durationS, &startedAt); err != nil {
+		return Settlement{}, nil, err
 	}
 	cfg := s.Config.For(user)
 	st := emptySettlement("settled", nil)
@@ -391,45 +503,46 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	var energy int
 	var earned int64
 	if err := tx.QueryRow(ctx, `SELECT energy, energy_earned_total FROM users WHERE id=$1 FOR UPDATE`, user).Scan(&energy, &earned); err != nil {
-		return st, err
+		return st, nil, err
 	}
 	raw, err := cfg.RawEnergy(gameplay.Sport(sport), amount)
 	if err != nil {
-		return st, err
+		return st, nil, err
 	}
 	today, err := EarnedToday(ctx, tx, user)
 	if err != nil {
-		return st, err
+		return st, nil, err
 	}
 	st.EnergyRaw = raw
 	st.EnergyGranted = cfg.Grant(raw, today)
 	st.EnergyCapped = st.EnergyGranted < raw
 
+	var crew *int64
+	err = tx.QueryRow(ctx, `SELECT crew_id FROM crew_members WHERE user_id=$1`, user).Scan(&crew)
+	if err != nil && !db.IsNoRows(err) {
+		return st, nil, err
+	}
+	var pts []geo.LatLng
 	if gameplay.GPSSports[gameplay.Sport(sport)] {
 		rows, err := tx.Query(ctx, `SELECT lat, lng FROM track_points WHERE activity_id=$1 ORDER BY seq`, id)
 		if err != nil {
-			return st, err
+			return st, nil, err
 		}
-		pts, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (geo.LatLng, error) {
+		pts, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (geo.LatLng, error) {
 			var p geo.LatLng
 			return p, r.Scan(&p.Lat, &p.Lng)
 		})
 		if err != nil {
-			return st, err
-		}
-		var crew *int64
-		err = tx.QueryRow(ctx, `SELECT crew_id FROM crew_members WHERE user_id=$1`, user).Scan(&crew)
-		if err != nil && !db.IsNoRows(err) {
-			return st, err
+			return st, nil, err
 		}
 		det := claim.Detect(pts, claim.Options{MinAreaM2: cfg.MinClaimAreaM2})
 		for _, l := range det.Loops {
 			// Attack strength is the activity's own energy before the daily
 			// cap: the cap limits what you bank, not how hard you ran.
 			out, err := territory.Claim(ctx, tx, territory.ClaimInput{UserID: user, CrewID: crew, ActivityID: id, Ring: l.Ring,
-				AttackEnergy: raw, MinAreaM2: cfg.MinClaimAreaM2})
+				AttackEnergy: raw, MinAreaM2: cfg.MinClaimAreaM2, DefenseWindowH: cfg.Defense.WindowH})
 			if err != nil {
-				return st, err
+				return st, nil, err
 			}
 			st.Claims = append(st.Claims, out.Claims...)
 			st.Attacks = append(st.Attacks, out.Attacks...)
@@ -438,11 +551,11 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 
 	if st.EnergyGranted > 0 {
 		if _, err := tx.Exec(ctx, `UPDATE users SET energy=energy+$2, energy_earned_total=energy_earned_total+$2 WHERE id=$1`, user, st.EnergyGranted); err != nil {
-			return st, err
+			return st, nil, err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO energy_ledger (user_id, day, delta, reason, ref_id) VALUES ($1,$2,$3,'activity',$4)`,
 			user, clock.Today(), st.EnergyGranted, id); err != nil {
-			return st, err
+			return st, nil, err
 		}
 	}
 	if before, after := cfg.Level(earned), cfg.Level(earned+int64(st.EnergyGranted)); after > before {
@@ -450,10 +563,26 @@ func (s *Service) settle(ctx context.Context, tx pgx.Tx, id int64) (Settlement, 
 	}
 	p, err := codex.AfterActivity(ctx, tx, cfg, user, gameplay.Sport(sport), amount, dist, len(st.Claims) > 0)
 	if err != nil {
-		return st, err
+		return st, nil, err
 	}
 	st.Recruits, st.Eggs, st.Medals = p.Recruits, p.Eggs, p.Medals
-	return st, nil
+	if s.Hook != nil {
+		extra, cb, err := s.Hook.AfterSettle(ctx, tx, HookInput{Config: cfg, ActivityID: id, UserID: user, CrewID: crew,
+			Sport: gameplay.Sport(sport), Amount: amount, DistanceM: dist, DurationS: durationS, StartedAt: startedAt, Points: pts,
+			EnergyRaw: raw, Claims: st.Claims, Attacks: st.Attacks})
+		if err != nil {
+			return st, nil, err
+		}
+		st.Extra = extra
+		after = cb
+		// The hook may have raised counters for more medals (defends, chests, …).
+		more, err := codex.AwardMedals(ctx, tx, cfg, user)
+		if err != nil {
+			return st, nil, err
+		}
+		st.Medals = append(st.Medals, more...)
+	}
+	return st, after, nil
 }
 
 // SettleReviewed settles an activity a reviewer released as a false positive.
@@ -466,9 +595,12 @@ func (s *Service) SettleReviewed(ctx context.Context, tx pgx.Tx, id int64) error
 	if status != "review" && status != "voided" {
 		return nil
 	}
-	st, err := s.settle(ctx, tx, id)
+	st, after, err := s.settle(ctx, tx, id)
 	if err != nil {
 		return err
+	}
+	if after != nil {
+		defer after(ctx) // best effort: may run just before the caller commits
 	}
 	if err := saveResult(ctx, tx, id, st); err != nil {
 		return err

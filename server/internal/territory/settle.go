@@ -50,6 +50,9 @@ type ClaimInput struct {
 	Ring         []geo.LatLng // closed ring
 	AttackEnergy int
 	MinAreaM2    float64
+	// DefenseWindowH opens a 守地挑战 window on every attacked territory
+	// that keeps its owner (0 disables it).
+	DefenseWindowH float64
 }
 
 // Outcome is the result of settling one or more loops.
@@ -197,6 +200,16 @@ func Claim(ctx context.Context, tx pgx.Tx, in ClaimInput) (Outcome, error) {
 				return out, err
 			}
 			out.Claims = append(out.Claims, ClaimRef{TerritoryID: id, Kind: "capture", AreaM2: area})
+		}
+		// The victim keeps the territory after a weaken or a cut: give the
+		// owner a window to reinforce it.
+		if v.ownerID != nil && in.DefenseWindowH > 0 && (!res.Captured || v.remainderM2 >= in.MinAreaM2) {
+			if _, err := tx.Exec(ctx, `INSERT INTO territory_defenses (territory_id, attacker_id, deadline)
+				VALUES ($1, $2, now() + make_interval(secs => $3))
+				ON CONFLICT (territory_id) DO UPDATE SET attacker_id=EXCLUDED.attacker_id, opened_at=now(), deadline=EXCLUDED.deadline`,
+				v.id, in.UserID, in.DefenseWindowH*3600); err != nil {
+				return out, err
+			}
 		}
 		out.Attacks = append(out.Attacks, ref)
 		if v.ownerID != nil {
@@ -455,4 +468,26 @@ func Rollback(ctx context.Context, tx pgx.Tx, activityID int64) error {
 		}
 	}
 	return nil
+}
+
+// Reinforce adds energy to a defended territory's guard (守地挑战), capped
+// at maxGuard, and closes its defense window. It returns the guard before
+// and after.
+func Reinforce(ctx context.Context, tx pgx.Tx, territoryID, user, activityID int64, energy, maxGuard int) (int, int, error) {
+	var before int
+	if err := tx.QueryRow(ctx, `SELECT guard FROM territories WHERE id=$1 FOR UPDATE`, territoryID).Scan(&before); err != nil {
+		return 0, 0, err
+	}
+	after := min(maxGuard, before+max(0, energy))
+	if after < before {
+		after = before // already above the cap: never lower it
+	}
+	if _, err := tx.Exec(ctx, `UPDATE territories SET guard=$2, updated_at=now() WHERE id=$1`, territoryID, after); err != nil {
+		return 0, 0, err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM territory_defenses WHERE territory_id=$1`, territoryID); err != nil {
+		return 0, 0, err
+	}
+	return before, after, event(ctx, tx, eventRow{territoryID: territoryID, activityID: &activityID, kind: "reinforce", actor: &user,
+		prevOwner: &user, newOwner: &user, prevGuard: &before, newGuard: &after})
 }

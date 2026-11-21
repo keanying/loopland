@@ -69,6 +69,16 @@ func (a *API) guard(allowed ...string) func(httpx.HandlerFunc) http.Handler {
 	}
 }
 
+// Guard exposes the role guard to other modules' admin routes.
+func (a *API) Guard(allowed ...string) func(httpx.HandlerFunc) http.Handler {
+	return a.guard(allowed...)
+}
+
+// Audit exposes the audit logger to other modules.
+func Audit(ctx context.Context, q db.Querier, action, target string, detail map[string]any) error {
+	return audit(ctx, q, action, target, detail)
+}
+
 // audit records an admin action.
 func audit(ctx context.Context, q db.Querier, action, target string, detail map[string]any) error {
 	ad, _ := httpx.AdminFrom(ctx)

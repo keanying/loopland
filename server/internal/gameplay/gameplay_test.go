@@ -1,7 +1,9 @@
 package gameplay
 
 import (
+	"encoding/json"
 	"errors"
+	"math"
 	"testing"
 )
 
@@ -130,5 +132,52 @@ func TestLevelAndStationSlots(t *testing.T) {
 	}
 	if n := c.StationSlots([]string{"tent", "house", "campfire"}); n != 4 {
 		t.Fatalf("station slots = %d, want 4", n)
+	}
+}
+
+func TestTiers(t *testing.T) {
+	c := Default()
+	cases := []struct {
+		area                float64
+		name, level, nn, nl string
+		need                float64
+	}{
+		{0, "青铜", "III", "青铜", "II", 0.5e6 / 3},
+		{2.36e6, "白银", "II", "白银", "I", 0.5e6 + 3.1e6*2/3 - 2.36e6},
+		{3.0e6, "白银", "I", "黄金", "III", 0.6e6},
+		{20e6, "钻石", "I", "", "", 0},
+	}
+	for _, tc := range cases {
+		n, l, nn, nl, need := c.TierFor(tc.area)
+		if n != tc.name || l != tc.level || nn != tc.nn || nl != tc.nl || math.Abs(need-tc.need) > 1 {
+			t.Errorf("TierFor(%v) = %s %s → %s %s need %.0f; want %s %s → %s %s need %.0f", tc.area, n, l, nn, nl, need, tc.name, tc.level, tc.nn, tc.nl, tc.need)
+		}
+	}
+}
+
+func TestBlueprintBypass(t *testing.T) {
+	c := Default()
+	if _, err := c.CheckBuildWith(Territory{}, "tower", 1, 1000, false); !errors.Is(err, ErrLevelTooLow) {
+		t.Fatal(err)
+	}
+	if _, err := c.CheckBuildWith(Territory{}, "tower", 1, 1000, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.CheckBuildWith(Territory{}, "house", 1, 1000, true); !errors.Is(err, ErrLevelTooLow) {
+		t.Fatal("house has no bypass")
+	}
+}
+
+func TestNormalizeOldConfig(t *testing.T) {
+	var c Config
+	if err := json.Unmarshal([]byte(`{"medals":[{"key":"distance_100","name":"百公里","distance_km":100}]}`), &c); err != nil {
+		t.Fatal(err)
+	}
+	c.Normalize()
+	if c.Medals[0].Type != MedalDistanceKm || c.Medals[0].Target != 100 || c.Boss.StrikeCost != 100 || len(c.Season.Tiers) != 5 {
+		t.Fatalf("%+v", c.Medals[0])
+	}
+	if got := Default().BossDamageFor(SportRun, 5.3); got != 530 {
+		t.Fatal(got)
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,7 +20,10 @@ import (
 	"github.com/keanying/loopland/server/internal/geo"
 )
 
-var api = flag.String("api", "http://localhost:8080", "backend base URL (dev mode)")
+var (
+	api      = flag.String("api", "http://localhost:8080", "backend base URL (dev mode)")
+	adminCrd = flag.String("admin", "admin:admin-password-1", "admin username:password for V2 gameplay seed data (empty to skip)")
+)
 
 type client struct{ token string }
 
@@ -140,5 +144,54 @@ func main() {
 	if ord.Order.OrderNo != "" {
 		users[0].do("POST", "/v1/dev/orders/"+ord.Order.OrderNo+"/pay", nil, nil)
 	}
+	if *adminCrd != "" {
+		seedPlay()
+	}
 	fmt.Println("seed done")
+}
+
+// seedPlay adds a season, a campaign, a route, monsters and chests (V2).
+func seedPlay() {
+	user, pass, _ := strings.Cut(*adminCrd, ":")
+	ad := &client{}
+	var login struct {
+		Token string `json:"token"`
+	}
+	ad.do("POST", "/admin/v1/login", map[string]string{"username": user, "password": pass}, &login)
+	if login.Token == "" {
+		log.Print("admin login failed; skipping V2 seed data")
+		return
+	}
+	ad.token = login.Token
+	now := time.Now()
+	proj := geo.NewProjection(origin)
+	at := func(x, y float64) geo.LatLng { return proj.Inverse(geo.Point{X: x, Y: y}) }
+	ad.do("POST", "/admin/v1/seasons", map[string]any{"name": "S1 冬季赛", "starts_at": now.AddDate(0, 0, -20), "ends_at": now.AddDate(0, 0, 40)}, nil)
+	ad.do("POST", "/admin/v1/campaigns", map[string]any{"title": "夜跑专场", "type": "night_run", "description": "19 点到 23 点开跑 5 km",
+		"rules": map[string]any{"min_distance_km": 5, "start_hour_from": 19, "start_hour_to": 23}, "starts_at": now.AddDate(0, 0, -1),
+		"ends_at": now.AddDate(0, 0, 14), "reward_energy": 100, "reward_medal_name": "夜行者"}, nil)
+	ad.do("POST", "/admin/v1/campaigns", map[string]any{"title": "配速挑战", "type": "pace", "description": "5 km 配速快于 6 分",
+		"rules": map[string]any{"min_distance_km": 5, "max_pace_s_per_km": 360}, "starts_at": now.AddDate(0, 0, -1),
+		"ends_at": now.AddDate(0, 0, 7), "reward_energy": 80}, nil)
+	var cps []map[string]any
+	for i, xy := range [][2]float64{{-600, 400}, {-200, 700}, {300, 600}, {700, 200}, {500, -300}} {
+		p := at(xy[0], xy[1])
+		cps = append(cps, map[string]any{"name": []string{"拱桥", "老街口", "滨江码头", "城南体育场", "终点站"}[i], "lat": p.Lat, "lng": p.Lng, "radius_m": 60})
+	}
+	ad.do("POST", "/admin/v1/routes", map[string]any{"name": "城南线", "description": "按顺序经过 5 个点", "checkpoints": cps,
+		"reward_energy": 150, "starts_at": now.AddDate(0, 0, -1), "ends_at": now.AddDate(0, 0, 30)}, nil)
+	for i, b := range []struct {
+		kind, place string
+		x, y        float64
+		hp          int
+	}{{"sofa", "人民广场一带", 200, 100, 10000}, {"bat", "外滩一带", 1500, 300, 6000}, {"sugar", "新天地一带", -500, -1200, 8000}} {
+		p := at(b.x, b.y)
+		ad.do("POST", "/admin/v1/bosses", map[string]any{"kind": b.kind, "lat": p.Lat, "lng": p.Lng, "location_name": b.place, "hp": b.hp, "level": 8 + i*2}, nil)
+	}
+	sw, ne := at(-2500, -2500), at(2500, 2500)
+	ad.do("POST", "/admin/v1/chests/scatter", map[string]any{"bbox": fmt.Sprintf("%f,%f,%f,%f", sw.Lng, sw.Lat, ne.Lng, ne.Lat), "count": 12}, nil)
+	for _, xy := range [][2]float64{{100, 50}, {-300, 300}, {600, -200}} {
+		p := at(xy[0], xy[1])
+		ad.do("POST", "/admin/v1/chests", map[string]any{"lat": p.Lat, "lng": p.Lng}, nil)
+	}
 }

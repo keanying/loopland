@@ -108,3 +108,9 @@ func IsUniqueViolation(err error, constraint ...string) bool {
 	}
 	return false
 }
+
+// IsExclusionViolation reports an exclusion constraint violation (23P01).
+func IsExclusionViolation(err error) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && pg.Code == "23P01"
+}

@@ -113,6 +113,12 @@ func (c Config) BuildCost(t Territory, key string) (int, error) {
 
 // CheckBuild validates a build and returns its cost.
 func (c Config) CheckBuild(t Territory, key string, level, energy int) (int, error) {
+	return c.CheckBuildWith(t, key, level, energy, false)
+}
+
+// CheckBuildWith is CheckBuild for a player who may own the building's
+// blueprint, which lifts the level requirement for flagged buildings.
+func (c Config) CheckBuildWith(t Territory, key string, level, energy int, blueprint bool) (int, error) {
 	if len(t.Buildings) >= c.SlotsPerTerritory {
 		return 0, ErrNoFreeSlot
 	}
@@ -120,7 +126,7 @@ func (c Config) CheckBuild(t Territory, key string, level, energy int) (int, err
 	if !ok {
 		return 0, fmt.Errorf("%w: %s", ErrUnknownBuilding, key)
 	}
-	if level < b.UnlockLevel {
+	if level < b.UnlockLevel && !(blueprint && b.BlueprintBypassLevel) {
 		return 0, fmt.Errorf("%w: %s needs Lv.%d", ErrLevelTooLow, b.Name, b.UnlockLevel)
 	}
 	cost, err := c.BuildCost(t, key)

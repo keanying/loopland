@@ -3,9 +3,11 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"slices"
@@ -28,12 +30,16 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/platform/secure"
+	"github.com/keanying/loopland/server/internal/play"
+	"github.com/keanying/loopland/server/internal/realtime"
 	"github.com/keanying/loopland/server/internal/territory"
 	"github.com/keanying/loopland/server/internal/user"
 )
 
 // App is the assembled service.
 type App struct {
+	Hub     *realtime.Hub
+	Play    *play.Service
 	Handler http.Handler
 	Jobs    *jobs.Runner
 	Config  *gameplay.Store
@@ -79,7 +85,9 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		authSvc.DevCode = "000000"
 	}
 	terrSvc := &territory.Service{Pool: pool, Config: store}
-	actSvc := &activity.Service{Pool: pool, Config: store}
+	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse}
+	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log}
+	actSvc := &activity.Service{Pool: pool, Config: store, Hook: playSvc}
 	billSvc := &billing.Service{Pool: pool, Providers: opt.Payments, Apple: opt.AppleIAP, Log: log, Dev: cfg.Dev()}
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname}
 
@@ -118,11 +126,20 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return httpx.OK(w, u)
 	}
 	(&billing.Handler{Svc: billSvc}).Routes(mux, authed, meJSON)
-	(&admin.API{Pool: pool, Redis: rdb, Secret: cfg.AdminJWTSecret, Box: box, Config: store, Billing: billSvc, Territory: terrSvc, Activities: actSvc}).Routes(mux)
+	adminAPI := &admin.API{Pool: pool, Redis: rdb, Secret: cfg.AdminJWTSecret, Box: box, Config: store, Billing: billSvc, Territory: terrSvc, Activities: actSvc}
+	adminAPI.Routes(mux)
+	(&play.Handler{Svc: playSvc, Medals: func(ctx context.Context, u int64) (any, error) {
+		v, err := codex.Load(ctx, pool, store.For(u), u)
+		return v.Medals, err
+	}}).Routes(mux, authed)
+	(&play.AdminHandler{Svc: playSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
+	mux.Handle("GET /v1/ws", hub)
 
 	return &App{
 		Handler: withMiddleware(mux, log),
-		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log},
+		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: playSvc.Jobs()},
+		Hub:     hub,
+		Play:    playSvc,
 		Config:  store, Pool: pool, Redis: rdb,
 	}, nil
 }
@@ -291,6 +308,20 @@ type statusWriter struct {
 func (s *statusWriter) WriteHeader(code int) {
 	s.status = code
 	s.ResponseWriter.WriteHeader(code)
+}
+
+// Unwrap lets http.ResponseController reach the connection (WebSocket
+// upgrade, per-request deadlines).
+func (s *statusWriter) Unwrap() http.ResponseWriter { return s.ResponseWriter }
+
+// Hijack supports the WebSocket upgrade.
+func (s *statusWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h, ok := s.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("hijack not supported")
+	}
+	s.status = http.StatusSwitchingProtocols
+	return h.Hijack()
 }
 
 func withMiddleware(next http.Handler, log *slog.Logger) http.Handler {

@@ -53,13 +53,19 @@ func newEnv(t *testing.T) *env {
 		t.Fatal(err)
 	}
 	cfg.BootstrapAdmin = "root:root-password-123"
-	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	var logOut io.Writer = io.Discard
+	if os.Getenv("LOOPLAND_TEST_LOG") == "1" {
+		logOut = os.Stderr
+	}
+	log := slog.New(slog.NewTextHandler(logOut, nil))
 	a, err := New(context.Background(), cfg, pool, rdb, log, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	srv := httptest.NewServer(a.Handler)
-	t.Cleanup(func() { srv.Close(); rdb.Close() })
+	hubCtx, stopHub := context.WithCancel(context.Background())
+	go a.Hub.Run(hubCtx)
+	t.Cleanup(func() { stopHub(); srv.Close(); rdb.Close() })
 	return &env{t: t, srv: srv, app: a}
 }
 

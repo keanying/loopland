@@ -65,6 +65,9 @@ type Building struct {
 	// StationSlots is how many extra characters this building lets the
 	// territory station (营帐 +1, 民居 +2).
 	StationSlots int `json:"station_slots"`
+	// BlueprintBypassLevel lets owners of this building's blueprint (a boss
+	// drop) build it below the unlock level.
+	BlueprintBypassLevel bool `json:"blueprint_bypass_level"`
 }
 
 // BuffKind is what a stationed character improves.
@@ -116,9 +119,13 @@ type Companion struct {
 
 // Medal is awarded for cumulative distance (里程奖牌).
 type Medal struct {
-	Key        string  `json:"key"`
-	Name       string  `json:"name"`
-	DistanceKm float64 `json:"distance_km"`
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	// Type is one of MedalTypes; Target the count (or km) to reach.
+	Type   string  `json:"type"`
+	Target float64 `json:"target"`
+	// DistanceKm is kept for configurations stored before medal types.
+	DistanceKm float64 `json:"distance_km,omitempty"`
 }
 
 // Config is the whole gameplay configuration, versioned as one unit.
@@ -136,10 +143,24 @@ type Config struct {
 	Companions        []Companion  `json:"companions"`
 	Medals            []Medal      `json:"medals"`
 	Bosses            []Boss       `json:"bosses"`
+
+	Boss        BossSettings      `json:"boss"`
+	Chest       ChestSettings     `json:"chest"`
+	Defense     DefenseSettings   `json:"defense"`
+	Season      SeasonSettings    `json:"season"`
+	SeasonTasks []SeasonTask      `json:"season_tasks"`
+	Pet         CompanionSettings `json:"companion"`
+	Relay       RelaySettings     `json:"relay"`
 }
 
 // Default returns the launch numbers from the product documents.
 func Default() Config {
+	c := defaultV1()
+	defaultPlay(&c)
+	return c
+}
+
+func defaultV1() Config {
 	return Config{
 		Version:           "v3.12",
 		SlotsPerTerritory: 6,
@@ -191,9 +212,9 @@ func Default() Config {
 			{Key: "nightnewt", Name: "夜行蝾螈", HatchKm: 30},
 		},
 		Medals: []Medal{
-			{Key: "distance_100", Name: "百公里", DistanceKm: 100},
-			{Key: "distance_500", Name: "五百公里", DistanceKm: 500},
-			{Key: "distance_1000", Name: "千公里", DistanceKm: 1000},
+			{Key: "distance_100", Name: "百公里", Type: MedalDistanceKm, Target: 100, DistanceKm: 100},
+			{Key: "distance_500", Name: "五百公里", Type: MedalDistanceKm, Target: 500, DistanceKm: 500},
+			{Key: "distance_1000", Name: "千公里", Type: MedalDistanceKm, Target: 1000, DistanceKm: 1000},
 		},
 		Bosses: []Boss{
 			{Key: "sofa", Name: "沙发怪", Drops: []Drop{
@@ -218,6 +239,9 @@ func (c Config) Validate() error {
 	}
 	if c.BossStrikeCost <= 0 {
 		return fmt.Errorf("boss_strike_cost must be > 0")
+	}
+	if err := c.validatePlay(); err != nil {
+		return err
 	}
 	if c.MinClaimAreaM2 <= 0 {
 		return fmt.Errorf("min_claim_area_m2 must be > 0")
