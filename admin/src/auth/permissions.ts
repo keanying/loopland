@@ -5,6 +5,7 @@ import type { AdminRole } from '../api/types';
  * the admin-only actions (publish gameplay, refund, manage admins); the rest
  * mirrors the server's route guards (server/internal/admin/api.go):
  *   reviewer → users list/detail/actions and risk; merchant → dashboard only (V1).
+ *   V2 玩法运营 (bosses, chests, seasons, campaigns, routes, league) → admin + ops.
  * The server stays the final judge (403 forbidden).
  */
 export type Permission =
@@ -24,6 +25,9 @@ export type Permission =
   | 'gameplay.read'
   | 'gameplay.edit'
   | 'gameplay.publish'
+  /** V2 玩法运营: bosses, chests, seasons, campaigns, routes, league. */
+  | 'ops.read'
+  | 'ops.write'
   | 'audit.read'
   | 'admins.manage';
 
@@ -42,6 +46,8 @@ const OPS: Permission[] = [
   'risk.rules',
   'gameplay.read',
   'gameplay.edit',
+  'ops.read',
+  'ops.write',
   'audit.read',
 ];
 

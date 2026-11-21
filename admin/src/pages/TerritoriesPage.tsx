@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Col, Empty, Input, InputNumber, Row, Segmented, Skeleton, Space, Switch, Table, Tag, Timeline, Tooltip } from 'antd';
-import { MinusOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { App, Button, Checkbox, Col, Empty, Input, InputNumber, Row, Segmented, Skeleton, Space, Switch, Table, Tag, Timeline, Tooltip } from 'antd';
+import { GiftOutlined, MinusOutlined, PlusOutlined, SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../api/admin';
-import type { Territory, TerritoryEvent, TerritoryListItem, TerritoryStatusFilter } from '../api/types';
+import type { LatLng, Territory, TerritoryEvent, TerritoryListItem, TerritoryStatusFilter } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useAdminNames } from '../hooks/useAdminNames';
 import TerritoryMap, { HAS_AMAP } from '../components/map';
-import { ownerColor } from '../components/map/colors';
+import { ALL_LAYERS, ownerColor, type MapLayers, type MapObjectRef } from '../components/map/colors';
+import { ChestModal, MapObjectCard, PickBanner, ScatterModal, SummonBossModal } from '../components/MapOps';
 import { PageHeader, Panel, Tile } from '../components/ui';
 import { ago, area, dt, km2 } from '../utils/format';
 import { TERRITORY_EVENT } from '../utils/labels';
@@ -54,6 +55,17 @@ export default function TerritoriesPage() {
   const [amapBox, setAmapBox] = useState<BBox | null>(null);
   const bbox: BBox = HAS_AMAP && amapBox ? clampBox(amapBox) : boxAround(center);
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const { can } = useAuth();
+  const canOps = can('ops.read');
+  const canOpsWrite = can('ops.write');
+  const [layers, setLayers] = useState<MapLayers>(ALL_LAYERS);
+  const [obj, setObj] = useState<MapObjectRef | null>(null);
+  const [viewport, setViewport] = useState<BBox | null>(null);
+  // Which form is open, and whether it is hidden while the user clicks the map for a coordinate.
+  const [dialog, setDialog] = useState<'boss' | 'chest' | 'scatter' | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [picked, setPicked] = useState<LatLng | null>(null);
+  const [formPoint, setFormPoint] = useState<LatLng | null>(null);
 
   const update = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -67,6 +79,12 @@ export default function TerritoriesPage() {
   const geo = useQuery({
     queryKey: ['territories', 'geo', bbox.map((n) => n.toFixed(3)).join(',')],
     queryFn: () => api.territoriesGeo(bbox),
+    placeholderData: (prev) => prev,
+  });
+  const objects = useQuery({
+    queryKey: ['map-objects', bbox.map((n) => n.toFixed(3)).join(',')],
+    queryFn: () => api.mapObjects(bbox),
+    enabled: canOps,
     placeholderData: (prev) => prev,
   });
   const list = useQuery({
@@ -83,12 +101,30 @@ export default function TerritoriesPage() {
   };
 
   const total = geo.data?.items.length ?? 0;
+  const ob = objects.data;
+  const selBoss = obj?.type === 'boss' ? ob?.bosses.find((b) => b.id === obj.id) : undefined;
+  const selChest = obj?.type === 'chest' ? ob?.chests.find((c) => c.id === obj.id) : undefined;
+  const openDialog = (d: 'boss' | 'chest' | 'scatter') => {
+    setPicked(null);
+    setDialog(d);
+  };
+  const pickOnMap = () => setPicking(true);
+  const layerOptions = [
+    { label: '领地', value: 'territories' },
+    ...(canOps
+      ? [
+          { label: `怪兽 ${ob?.bosses.length ?? 0}`, value: 'bosses' },
+          { label: `宝箱 ${ob?.chests.length ?? 0}`, value: 'chests' },
+          { label: `定向打卡点 ${ob?.checkpoints.length ?? 0}`, value: 'checkpoints' },
+        ]
+      : []),
+  ];
 
   return (
     <>
       <PageHeader
         title="地图与领地"
-        sub={`当前视野领地 ${total} 块 · 点选地块查看详情，按归属方着色`}
+        sub={`当前视野领地 ${total} 块${ob ? ` · 怪兽 ${ob.bosses.length} · 宝箱 ${ob.chests.length}` : ''} · 点选地块查看详情，按归属方着色`}
         extra={
           <Segmented
             value={CITIES.find((c) => c.lng === center.lng && c.lat === center.lat)?.key ?? 'custom'}
@@ -104,16 +140,67 @@ export default function TerritoriesPage() {
       />
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={15} ref={mapRef}>
-          <Panel grey>
-            {geo.data ? (
-              <TerritoryMap items={geo.data.items} selectedId={selectedId} onSelect={(id) => update({ id: String(id) })} focus={focus} onBounds={setAmapBox} />
-            ) : (
-              <Skeleton.Node active style={{ width: '100%', height: 520 }} />
-            )}
+          <Panel
+            grey
+            title={
+              <Checkbox.Group
+                aria-label="图层"
+                options={layerOptions}
+                value={(Object.keys(layers) as (keyof MapLayers)[]).filter((k) => layers[k])}
+                onChange={(v) => setLayers({ territories: v.includes('territories'), bosses: v.includes('bosses'), chests: v.includes('chests'), checkpoints: v.includes('checkpoints') })}
+              />
+            }
+            extra={
+              canOps && (
+                <Space wrap>
+                  <Tooltip title={!canOpsWrite ? '当前角色只能查看' : undefined}>
+                    <Button icon={<ThunderboltOutlined />} disabled={!canOpsWrite} onClick={() => openDialog('boss')}>
+                      召唤怪兽
+                    </Button>
+                  </Tooltip>
+                  <Button icon={<GiftOutlined />} disabled={!canOpsWrite} onClick={() => openDialog('chest')}>
+                    投放宝箱
+                  </Button>
+                  <Button disabled={!canOpsWrite} onClick={() => openDialog('scatter')}>
+                    批量撒宝箱
+                  </Button>
+                </Space>
+              )
+            }
+            style={{ display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ position: 'relative', flex: 1 }}>
+              {picking && <PickBanner text={dialog === 'boss' ? '点击地图选择怪兽中心' : '点击地图选择宝箱位置'} onCancel={() => setPicking(false)} />}
+              {geo.data ? (
+                <TerritoryMap
+                  items={geo.data.items}
+                  selectedId={obj ? null : selectedId}
+                  onSelect={(id) => {
+                    setObj(null);
+                    update({ id: String(id) });
+                  }}
+                  focus={focus}
+                  onBounds={setAmapBox}
+                  objects={ob}
+                  layers={layers}
+                  selectedObject={obj}
+                  onSelectObject={setObj}
+                  picking={picking}
+                  onPick={(p) => {
+                    setPicked(p);
+                    setPicking(false);
+                  }}
+                  pickPoint={formPoint}
+                  onViewport={setViewport}
+                />
+              ) : (
+                <Skeleton.Node active style={{ width: '100%', height: 520 }} />
+              )}
+            </div>
           </Panel>
         </Col>
         <Col xs={24} xl={9}>
-          <TerritoryDetail id={selectedId} />
+          {selBoss || selChest ? <MapObjectCard boss={selBoss} chest={selChest} onClose={() => setObj(null)} /> : <TerritoryDetail id={selectedId} />}
         </Col>
       </Row>
 
@@ -202,6 +289,24 @@ export default function TerritoriesPage() {
           ]}
         />
       </Panel>
+
+      {canOps && (
+        <>
+          <SummonBossModal
+            open={dialog === 'boss' && !picking}
+            onClose={() => setDialog(null)}
+            onPickOnMap={pickOnMap}
+            picked={picked}
+            onPointChange={setFormPoint}
+            onCreated={(id, c) => {
+              setObj({ type: 'boss', id });
+              setFocus({ ...c, n: Date.now() });
+            }}
+          />
+          <ChestModal open={dialog === 'chest' && !picking} onClose={() => setDialog(null)} onPickOnMap={pickOnMap} picked={picked} onPointChange={setFormPoint} />
+          <ScatterModal open={dialog === 'scatter'} onClose={() => setDialog(null)} viewport={HAS_AMAP ? amapBox : viewport} />
+        </>
+      )}
     </>
   );
 }

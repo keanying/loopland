@@ -8,6 +8,7 @@ import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../play/companion_card.dart';
 
 /// One card in the codex grid, normalised across categories.
 class CodexCardData {
@@ -21,6 +22,7 @@ class CodexCardData {
     this.progress,
     this.medal = false,
     this.companion,
+    this.monster,
   });
   final String art;
   final String title;
@@ -31,6 +33,7 @@ class CodexCardData {
   final double? progress;
   final bool medal;
   final CodexCompanion? companion;
+  final CodexMonster? monster;
 }
 
 List<CodexCardData> roleCards(Codex c) => [
@@ -66,7 +69,7 @@ List<CodexCardData> companionCards(Codex c) => [
           art: p.key,
           title: p.hatched ? p.name : (p.isEgg ? '神秘蛋' : '???'),
           sub: p.hatched
-              ? (p.escort ? '陪跑中' : '已孵化')
+              ? '${p.escort ? '陪跑中' : '已孵化'} · Lv.${p.level}'
               : p.isEgg
                   ? '还差 ${(p.hatchKm - p.progressKm).clamp(0, 9999).toStringAsFixed(1)} km 孵化'
                   : '跑步或打怪兽获得蛋',
@@ -74,9 +77,26 @@ List<CodexCardData> companionCards(Codex c) => [
           detailSource: p.isEgg
               ? '蛋要跑够 ${p.hatchKm.toStringAsFixed(0)} km 才能孵化'
               : '新用户第一次圈地送一颗蛋，其他蛋来自城市怪兽掉落',
-          detailEffect: '孵化后可设为陪跑，跑步时出现在屏幕上。伙伴不提供对抗加成。',
+          detailEffect: '孵化后可设为陪跑，每跑 100 米涨经验，也可以喂能量升级。伙伴不提供对抗加成。',
           progress: p.isEgg && p.hatchKm > 0 ? p.progressKm / p.hatchKm : null,
           companion: p,
+        ),
+    ];
+
+List<CodexCardData> monsterCards(Codex c) => [
+      for (final m in c.monsters)
+        CodexCardData(
+          art: m.key,
+          title: m.seen ? m.name : '???',
+          sub: m.seen
+              ? (m.defeats > 0 ? '击退 ${m.defeats} 次${m.bestRank == null ? '' : ' · 最佳第 ${m.bestRank}'}' : '出手 ${m.strikes} 次')
+              : '还没遇到',
+          obtained: m.seen,
+          detailSource: '城市怪兽由系统或运营投放，限时出现。跑步经过它的范围、或在范围内投入能量合击都能造成伤害。',
+          detailEffect: m.seen
+              ? '合击 ${m.strikes} 次 · 参与击退 ${m.defeats} 次${m.bestRank == null ? '' : ' · 最佳伤害排名第 ${m.bestRank}'}'
+              : '在地图上找到它，出手一次就能点亮',
+          monster: m,
         ),
     ];
 
@@ -106,7 +126,7 @@ class _CodexPageState extends ConsumerState<CodexPage> {
     '不同运动招募不同角色。角色可以派去驻守领地，提供加成。',
     '基础建筑按等级解锁，高级建筑的图纸靠打怪兽掉落。',
     '先拿到蛋，跑够距离就能孵化。孵化后可以设为陪跑。',
-    '',
+    '沙发怪、熬夜蝠、雾霾怪、糖分怪会在城市里限时出现。和附近的人一起合击，点亮怪兽图鉴。',
     '里程奖牌：100 / 500 / 1000 km。赛季奖牌随赛季开放。',
   ];
 
@@ -132,13 +152,14 @@ class _CodexPageState extends ConsumerState<CodexPage> {
       prog('roles', c.roles.where((r) => r.obtained).length, c.roles.length),
       prog('buildings', c.buildings.where((b) => b.unlocked).length, c.buildings.length),
       prog('companions', c.companions.where((p) => p.hatched).length, c.companions.length),
-      '',
+      prog('monsters', c.monsters.where((m) => m.seen).length, c.monsters.length),
       prog('medals', c.medals.where((m) => m.obtained).length, c.medals.length),
     ];
     final cards = switch (_tab) {
       0 => roleCards(c),
       1 => buildingCards(c),
       2 => companionCards(c),
+      3 => monsterCards(c),
       4 => medalCards(c),
       _ => <CodexCardData>[],
     };
@@ -151,7 +172,7 @@ class _CodexPageState extends ConsumerState<CodexPage> {
           const Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('图鉴', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-              Text('运动招募角色 · 领地盖建筑 · 里程孵伙伴', style: TextStyle(color: LL.text2, fontSize: 13)),
+              Text('运动招募角色 · 领地盖建筑 · 里程孵伙伴 · 合力打怪兽', style: TextStyle(color: LL.text2, fontSize: 13)),
             ]),
           ),
           Text.rich(TextSpan(children: [
@@ -164,7 +185,7 @@ class _CodexPageState extends ConsumerState<CodexPage> {
         const SizedBox(height: 16),
         ChipTabs(labels: tabs, trailing: counts, index: _tab, onChanged: (i) => setState(() => _tab = i)),
         const SizedBox(height: 14),
-        if (_tab == 3)
+        if (_tab == 3 && c.monsters.isEmpty)
           const _MonstersSoon()
         else ...[
           LLCard(
@@ -270,9 +291,9 @@ class _MonstersSoon extends StatelessWidget {
             Padding(padding: const EdgeInsets.all(4), child: CardArt(artKey: k, locked: true, width: 64)),
         ]),
         const SizedBox(height: 16),
-        const Text('城市怪兽 · 即将开放', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+        const Text('城市怪兽', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
-        const Text('沙发怪、熬夜蝠、雾霾怪、糖分怪正在路上。和附近的人一起合击，点亮怪兽图鉴。',
+        const Text('沙发怪、熬夜蝠、雾霾怪、糖分怪会在城市里限时出现。在地图上找到它们，和附近的人一起合击，点亮怪兽图鉴。',
             textAlign: TextAlign.center, style: TextStyle(color: LL.text2, height: 1.5)),
       ]),
     );
@@ -307,7 +328,7 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
     final d = widget.data;
     final comp = d.companion;
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           d.medal ? MedalArt(obtained: d.obtained, width: 160) : CardArt(artKey: d.art, locked: !d.obtained, width: 160),
@@ -323,7 +344,9 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
           if (d.detailSource.isNotEmpty) _row(Icons.explore_outlined, '来源', d.detailSource),
           if (d.detailEffect.isNotEmpty) _row(Icons.auto_awesome_outlined, '效果', d.detailEffect),
           if (comp != null && comp.hatched) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            CompanionCard(companion: comp),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -331,6 +354,16 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
                 child: Text(comp.escort ? '陪跑中' : '设为陪跑'),
               ),
             ),
+          ],
+          if (d.monster != null && d.monster!.seen) ...[
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: LLCard(child: StatBox(value: '${d.monster!.strikes}', label: '出手'))),
+              const SizedBox(width: 8),
+              Expanded(child: LLCard(child: StatBox(value: '${d.monster!.defeats}', label: '击退'))),
+              const SizedBox(width: 8),
+              Expanded(child: LLCard(child: StatBox(value: d.monster!.bestRank == null ? '-' : '#${d.monster!.bestRank}', label: '最佳排名'))),
+            ]),
           ],
         ]),
       ),

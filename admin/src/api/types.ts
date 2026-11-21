@@ -370,6 +370,8 @@ export interface BuildingConf {
   daily_energy: number;
   unlock_level: number;
   station_slots?: number;
+  /** V2: owning this building's blueprint (boss drop) lets the player build it regardless of level. */
+  blueprint_bypass_level?: boolean;
 }
 
 export interface RoleConf {
@@ -411,9 +413,96 @@ export interface Config {
   buildings: BuildingConf[];
   roles: RoleConf[];
   companions?: { key: string; name: string; hatch_km: number }[];
-  medals?: { key: string; name: string; distance_km: number }[];
+  medals?: MedalConf[];
   bosses: BossConf[];
+  // ---- V2 batch 1 (docs/api/v2-1-玩法.md); absent on configs published before V2 ----
+  boss?: BossRules;
+  chest?: ChestRules;
+  defense?: DefenseRules;
+  season?: { tiers: SeasonTier[] };
+  season_tasks?: SeasonTaskConf[];
+  companion?: CompanionRules;
+  relay?: RelayRules;
   [extra: string]: unknown;
+}
+
+export interface BossDamageRule {
+  sport: string;
+  per: number;
+  unit: string;
+  damage: number;
+}
+
+export interface BossRules {
+  strike_cost: number;
+  strike_damage: number;
+  strike_cooldown_s: number;
+  combo_window_s: number;
+  combo_pct: number;
+  combo_max_pct: number;
+  damage: BossDamageRule[];
+  default_hp: number;
+  radius_m: number;
+  duration_h: number;
+  auto_spawn_max: number;
+  engage_h: number;
+  expire_refund_pct: number;
+  top_extra_rolls: number;
+  drop_energy: number;
+  yield_penalty_pct: number;
+}
+
+export interface ChestRules {
+  energy_min: number;
+  energy_max: number;
+  radius_m: number;
+  daily_spawn: number;
+  duration_h: number;
+}
+
+export interface DefenseRules {
+  window_h: number;
+  max_guard: number;
+}
+
+export interface SeasonTier {
+  name: string;
+  min_km2: number;
+}
+
+export type SeasonTaskType = 'weekly_count' | 'weekly_area_m2' | 'weekly_distance_km' | 'new_sport';
+
+export interface SeasonTaskConf {
+  key: string;
+  name: string;
+  type: SeasonTaskType;
+  target: number;
+  reward_energy: number;
+}
+
+export type MedalType = 'distance_km' | 'defends' | 'loops_single' | 'boss_defeats' | 'chests' | 'routes';
+
+/** V1 medals only had `distance_km`; V2 adds type + target (distance_km kept for compatibility). */
+export interface MedalConf {
+  key: string;
+  name: string;
+  type?: MedalType;
+  target?: number;
+  distance_km?: number;
+}
+
+export interface CompanionRules {
+  feed_cost: number;
+  feed_exp: number;
+  exp_per_100m: number;
+  exp_per_level: number;
+}
+
+export interface RelayRules {
+  default_legs: number;
+  leg_km: number;
+  duration_h: number;
+  reward_energy: number;
 }
 
 /** Server sends the admin id (null for the seed version); a username string is accepted too. */
@@ -446,6 +535,264 @@ export interface PublishRequest {
   body: Config;
   note: string;
   rollout_pct: number;
+}
+
+// ---------- V2 玩法运营 (docs/api/v2-1-玩法.md 「管理端」) ----------
+
+export type BossKind = 'sofa' | 'bat' | 'smog' | 'sugar';
+export type BossStatus = 'active' | 'defeated' | 'expired';
+
+export interface MapBoss {
+  id: number;
+  kind: BossKind | string;
+  name: string;
+  level: number;
+  center: LatLng;
+  radius_m: number;
+  hp: number;
+  hp_max: number;
+  expires_at: string;
+  location_name: string;
+}
+
+export interface MapChest {
+  id: number;
+  center: LatLng;
+  radius_m: number;
+  expires_at: string;
+}
+
+export interface MapCheckpoint {
+  route_id: number;
+  index: number;
+  name: string;
+  center: LatLng;
+  radius_m: number;
+  /** App only; the admin view is not per-user. */
+  state?: 'next' | 'done' | 'todo';
+}
+
+export interface MapObjects {
+  bosses: MapBoss[];
+  chests: MapChest[];
+  checkpoints: MapCheckpoint[];
+}
+
+export interface BossListItem {
+  id: number;
+  kind: BossKind | string;
+  name: string;
+  level: number;
+  location_name: string;
+  hp: number;
+  hp_max: number;
+  participants: number;
+  /** Admin id, or null when spawned by the system job. */
+  spawned_by: number | null;
+  spawned_at: string;
+  expires_at: string;
+  status?: BossStatus;
+  center?: LatLng;
+  radius_m?: number;
+  defeated_at?: string | null;
+}
+
+export interface BossRankRow {
+  rank: number;
+  user: UserRef;
+  damage: number;
+}
+
+/** A dropped item; the contract leaves the admin `rewards[].items` shape open, so strings are accepted too. */
+export interface RewardItem {
+  item: string;
+  kind?: string;
+  name?: string;
+  converted_energy?: number | null;
+  energy?: number | null;
+}
+
+export interface BossReward {
+  user: UserRef;
+  rank: number;
+  items: (RewardItem | string)[];
+  damage?: number;
+  /** Energy credited with the rewards (drop energy / expiry refund); server field, not in the contract. */
+  energy?: number | null;
+  /** Mock-only alias of `energy` for expiry refunds. */
+  refund_energy?: number | null;
+}
+
+export interface BossDetail {
+  id: number;
+  kind: BossKind | string;
+  name: string;
+  level: number;
+  description?: string;
+  location_name: string;
+  center: LatLng;
+  radius_m: number;
+  hp: number;
+  hp_max: number;
+  status: BossStatus;
+  spawned_at: string;
+  expires_at: string;
+  defeated_at: string | null;
+  spawned_by?: number | null;
+  occupied_territories?: number;
+  effect_text?: string;
+  damage_rules?: (BossDamageRule & { label?: string })[];
+  strike?: { cost: number; damage: number; cooldown_s: number };
+  participants: number;
+  rank: BossRankRow[];
+  drops: { item: string; kind: string; name?: string; percent: number }[];
+  rewards?: BossReward[];
+}
+
+export interface BossCreate {
+  kind: BossKind;
+  lat: number;
+  lng: number;
+  location_name: string;
+  level?: number;
+  hp?: number;
+  radius_m?: number;
+  duration_h?: number;
+}
+
+export type ChestStatus = 'active' | 'opened_out' | 'expired';
+
+/** Contract: 「位置、能量范围、开启人数、来源」; exact field names are not fixed, so most are optional. */
+export interface ChestListItem {
+  id: number;
+  center: LatLng;
+  radius_m?: number;
+  energy_min: number;
+  energy_max: number;
+  /** Server field name; `opened_count` accepted too. */
+  opens?: number;
+  opened_count?: number;
+  /** system (daily refresh) | scatter | admin — or an admin id. */
+  source?: string | number | null;
+  /** removed = 下架 (mock only; the server may simply drop it from the list). */
+  status?: ChestStatus | 'removed';
+  created_at?: string;
+  expires_at?: string;
+  [extra: string]: unknown;
+}
+
+export interface ChestCreate {
+  lat: number;
+  lng: number;
+  energy_min: number;
+  energy_max: number;
+  duration_h: number;
+  radius_m: number;
+}
+
+export interface ChestScatter {
+  /** "minLng,minLat,maxLng,maxLat", same format as the bbox query parameter (server decodes a string). */
+  bbox: string;
+  count: number;
+  duration_h: number;
+}
+
+export interface Season {
+  id: number;
+  name: string;
+  starts_at: string;
+  ends_at: string;
+  /** Not in the contract; derived from the dates / settled_at when absent. */
+  status?: 'upcoming' | 'active' | 'ended' | 'settled';
+  settled_at?: string | null;
+}
+
+export interface SeasonInput {
+  name: string;
+  starts_at: string;
+  ends_at: string;
+}
+
+export type CampaignType = 'pace' | 'night_run' | 'distance';
+
+export interface CampaignRules {
+  min_distance_km?: number;
+  max_pace_s_per_km?: number;
+  start_hour_from?: number;
+  start_hour_to?: number;
+}
+
+export interface Campaign {
+  id: number;
+  title: string;
+  type: CampaignType;
+  description: string;
+  rules: CampaignRules;
+  starts_at: string;
+  ends_at: string;
+  reward_energy: number;
+  reward_medal: { key: string; name: string } | null;
+  reward_medal_name?: string | null;
+  participants?: number;
+  completed_count?: number;
+}
+
+export interface CampaignInput {
+  title: string;
+  type: CampaignType;
+  description: string;
+  rules: CampaignRules;
+  starts_at: string;
+  ends_at: string;
+  reward_energy: number;
+  reward_medal_name: string | null;
+}
+
+/** Admin writes checkpoints flat ({name, lat, lng, radius_m}); App reads them with `center`. Both are accepted. */
+export interface RouteCheckpoint {
+  index?: number;
+  name: string;
+  lat?: number;
+  lng?: number;
+  center?: LatLng;
+  radius_m: number;
+}
+
+export interface OrienteeringRoute {
+  id: number;
+  name: string;
+  description: string;
+  checkpoints: RouteCheckpoint[];
+  reward_energy: number;
+  starts_at: string;
+  ends_at: string;
+  /** Number of users who completed the route (server: `finishers`). */
+  finishers?: number;
+  completed_count?: number;
+}
+
+export interface RouteInput {
+  name: string;
+  description: string;
+  checkpoints: { name: string; lat: number; lng: number; radius_m: number }[];
+  reward_energy: number;
+  starts_at: string;
+  ends_at: string;
+}
+
+export interface LeagueRow {
+  rank: number;
+  crew: CrewRef;
+  score_m2: number;
+  active_members: number;
+}
+
+export interface League {
+  week_start: string;
+  district: string;
+  standings: LeagueRow[];
+  /** Not in the contract; used for the district selector when the server sends it. */
+  districts?: string[];
 }
 
 // ---------- audit & admins ----------

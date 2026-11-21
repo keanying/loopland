@@ -9,6 +9,7 @@ import '../api/models.dart';
 import '../claim/geo.dart';
 import '../core/sdk_config.dart';
 import '../core/theme.dart';
+import '../widgets/monster_art.dart';
 import 'territory_map.dart';
 
 /// AMap (高德) implementation. Coordinates are GCJ-02 end to end, so no
@@ -28,6 +29,7 @@ class AmapTerritoryMap extends StatefulWidget {
     required this.initialZoom,
     this.onTerritoryTap,
     this.onBoundsChanged,
+    this.onObjectTap,
     this.interactive = true,
   });
 
@@ -37,6 +39,7 @@ class AmapTerritoryMap extends StatefulWidget {
   final double initialZoom;
   final ValueChanged<TerritorySummary?>? onTerritoryTap;
   final ValueChanged<MapBounds>? onBoundsChanged;
+  final ValueChanged<MapObjectHit>? onObjectTap;
   final bool interactive;
 
   /// Called only after the user accepted the in-app privacy dialog (see
@@ -89,9 +92,39 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
 
   amap.CustomStyleOptions? _style = AmapTerritoryMap._style;
 
+  /// Marker bitmaps by key (rendered asynchronously, see [MarkerBitmaps]).
+  final _icons = <String, amap.BitmapDescriptor>{};
+
+  static String _bossKey(MapBoss b) => 'boss:${b.kind}:${bossLabel(b)}';
+
+  void _loadIcons() {
+    final o = widget.layers.objects;
+    void need(String key, Future<Uint8List> Function() f) {
+      if (_icons.containsKey(key)) return;
+      f().then((bytes) {
+        if (mounted) setState(() => _icons[key] = amap.BitmapDescriptor.fromBytes(bytes));
+      }).ignore();
+    }
+
+    for (final b in o.bosses) {
+      need(_bossKey(b), () => MarkerBitmaps.boss(b.kind, bossLabel(b)));
+    }
+    if (o.chests.isNotEmpty) need('chest', MarkerBitmaps.chest);
+    for (final c in o.checkpoints) {
+      need('cp:${c.index}:${c.state}', () => MarkerBitmaps.checkpoint(c.index, c.state));
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AmapTerritoryMap old) {
+    super.didUpdateWidget(old);
+    if (old.layers.objects != widget.layers.objects) _loadIcons();
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadIcons();
     _zoom = widget.initialZoom;
     widget.controller?.attach(this);
     if (!AmapTerritoryMap._styleLoaded) {
@@ -160,6 +193,15 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
         ));
       }
     }
+    for (final b in widget.layers.objects.bosses) {
+      final color = monsterColor(b.kind);
+      out.add(amap.Polygon(
+        points: [for (final p in circleRing(b.center, b.radiusM)) _ll(p)],
+        strokeWidth: 3,
+        strokeColor: color.withValues(alpha: 0.8),
+        fillColor: color.withValues(alpha: 0.12),
+      ));
+    }
     for (final ring in widget.layers.loops) {
       if (ring.length < 3) continue;
       out.add(amap.Polygon(
@@ -178,10 +220,54 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
     if (t.length >= 2) {
       out.add(amap.Polyline(points: [for (final p in t) _ll(p)], width: 10, color: LL.lime, capType: amap.CapType.round));
     }
+    final route = widget.layers.routePath;
+    if (route.length >= 2) {
+      out.add(amap.Polyline(
+          points: [for (final p in route) _ll(p)], width: 6, color: LL.sky, dashLineType: amap.DashLineType.square));
+    }
     final a = widget.layers.hintFrom, b = widget.layers.hintTarget;
     if (a != null && b != null) {
       out.add(amap.Polyline(
           points: [_ll(a), _ll(b)], width: 6, color: LL.lavender, dashLineType: amap.DashLineType.square));
+    }
+    return out;
+  }
+
+  Set<amap.Marker> _markers() {
+    final out = <amap.Marker>{};
+    final o = widget.layers.objects;
+    final tap = widget.onObjectTap;
+    for (final c in o.checkpoints) {
+      final icon = _icons['cp:${c.index}:${c.state}'];
+      if (icon == null) continue;
+      out.add(amap.Marker(
+          position: _ll(c.center),
+          icon: icon,
+          anchor: const Offset(0.5, 0.5),
+          infoWindowEnable: false,
+          onTap: (_) => tap?.call(CheckpointHit(c))));
+    }
+    final chest = _icons['chest'];
+    if (chest != null) {
+      for (final c in o.chests) {
+        out.add(amap.Marker(
+            position: _ll(c.center),
+            icon: chest,
+            anchor: const Offset(0.5, 0.5),
+            infoWindowEnable: false,
+            onTap: (_) => tap?.call(ChestHit(c))));
+      }
+    }
+    for (final b in o.bosses) {
+      final icon = _icons[_bossKey(b)];
+      if (icon == null) continue;
+      out.add(amap.Marker(
+          position: _ll(b.center),
+          icon: icon,
+          anchor: const Offset(0.5, 0.3),
+          zIndex: 2,
+          infoWindowEnable: false,
+          onTap: (_) => tap?.call(BossHit(b))));
     }
     return out;
   }
@@ -206,6 +292,7 @@ class _AmapTerritoryMapState extends State<AmapTerritoryMap> implements MapDeleg
         myLocationStyleOptions: amap.MyLocationStyleOptions(widget.layers.myLocation != null),
         polygons: _polygons(),
         polylines: _polylines(),
+        markers: _markers(),
         onMapCreated: (ctrl) {
           _ctrl = ctrl;
           _reportBounds();

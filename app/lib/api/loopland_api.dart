@@ -189,6 +189,56 @@ class LooplandApi {
   /// Dev only: simulate the payment callback.
   Future<Order> devPay(String orderNo) async => Order.fromJson(_j(await c.post('/v1/dev/orders/$orderNo/pay')));
 
+  // ── V2 玩法 ──
+  static String _bbox(double minLng, double minLat, double maxLng, double maxLat) =>
+      [minLng, minLat, maxLng, maxLat].map((v) => v.toStringAsFixed(6)).join(',');
+
+  /// Bosses, chests (not yet opened by me) and route checkpoints in the bbox.
+  Future<MapObjects> mapObjects(
+          {required double minLng, required double minLat, required double maxLng, required double maxLat}) async =>
+      MapObjects.fromJson(_j(await c.get('/v1/map/objects', query: {'bbox': _bbox(minLng, minLat, maxLng, maxLat)})));
+
+  Future<Boss> boss(int id) async => Boss.fromJson(_j(await c.get('/v1/bosses/$id')));
+
+  /// Errors: `out_of_range`, `not_enough_energy`, `cooldown` (429, `retry_after_s`), `boss_not_active`.
+  Future<StrikeResult> strike(int id, LatLng at) async =>
+      StrikeResult.fromJson(_j(await c.post('/v1/bosses/$id/strike', at.toJson())));
+
+  /// Returns `engaged_until`.
+  Future<DateTime?> engage(int id, LatLng at) async =>
+      DateTime.tryParse('${_j(await c.post('/v1/bosses/$id/engage', at.toJson()))['engaged_until']}');
+
+  /// Errors: `out_of_range`, `already_opened`, `chest_expired`.
+  Future<ChestOpenResult> openChest(int id, LatLng at) async =>
+      ChestOpenResult.fromJson(_j(await c.post('/v1/chests/$id/open', at.toJson())));
+
+  Future<SeasonOverview> season() async => SeasonOverview.fromJson(_j(await c.get('/v1/season')));
+
+  Future<League> league({String? district}) async => League.fromJson(_j(await c.get('/v1/league', query: {
+        if (district != null && district.isNotEmpty) 'district': district,
+      })));
+
+  Future<List<Campaign>> campaigns() async =>
+      Paged.fromJson(_j(await c.get('/v1/campaigns')), Campaign.fromJson).items;
+
+  Future<List<CityRoute>> routes() async => Paged.fromJson(_j(await c.get('/v1/routes')), CityRoute.fromJson).items;
+
+  Future<CityRoute> route(int id) async => CityRoute.fromJson(_j(await c.get('/v1/routes/$id')));
+
+  /// Errors: `companion_not_hatched`, `not_enough_energy`.
+  Future<Codex> feedCompanion(String key) async =>
+      Codex.fromJson(_j(await c.post('/v1/codex/companions/$key/feed')));
+
+  /// Leader only; 409 `relay_running` when one is in progress.
+  Future<Relay> startRelay(int crewId, {required int legs, required double legKm}) async =>
+      Relay.fromJson(_j(await c.post('/v1/crews/$crewId/relays', {'legs': legs, 'leg_km': legKm})));
+
+  /// The running (or last) relay, or null.
+  Future<Relay?> currentRelay(int crewId) async {
+    final r = await c.get('/v1/crews/$crewId/relays/current');
+    return r is Map && r.isNotEmpty ? Relay.fromJson(_j(r)) : null;
+  }
+
   // ── 消息 ──
   Future<InboxPage> inbox({String category = 'all', int page = 1}) async =>
       InboxPage.fromJson(_j(await c.get('/v1/inbox', query: {'category': category, 'page': page})));

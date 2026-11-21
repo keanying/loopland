@@ -120,6 +120,76 @@ export const AUDIT_ACTION: Record<string, string> = {
   'gameplay.rollback': '玩法配置回滚',
   'admin.create': '新建后台账号',
   'admin.update': '修改后台账号',
+  'boss.create': '召唤怪兽',
+  'boss.spawn': '召唤怪兽',
+  'chest.place': '投放宝箱',
+  'chest.remove': '下架宝箱',
+  'boss.end': '提前结束怪兽',
+  'chest.create': '投放宝箱',
+  'chest.scatter': '批量撒宝箱',
+  'chest.delete': '下架宝箱',
+  'season.create': '新建赛季',
+  'season.update': '修改赛季',
+  'season.settle': '结算赛季',
+  'campaign.create': '新建限时活动',
+  'campaign.update': '修改限时活动',
+  'campaign.delete': '删除限时活动',
+  'route.create': '新建定向路线',
+  'route.update': '修改定向路线',
+  'route.delete': '删除定向路线',
 };
 
 export const TODO_TYPE: Record<string, string> = { risk: '风控', refund: '会员退款', renew_failed: '续费失败' };
+
+// ---------- V2 玩法 ----------
+
+export const BOSS_KIND: Record<string, { name: string; color: string; hint: string }> = {
+  sofa: { name: '沙发怪', color: '#B4A3F5', hint: '代表「懒得动」' },
+  bat: { name: '熬夜蝠', color: '#7CC6F2', hint: '代表「熬夜不睡」' },
+  smog: { name: '雾霾怪', color: '#A0A0A8', hint: '代表「闷在室内」' },
+  sugar: { name: '糖分怪', color: '#F27CA8', hint: '代表「控不住嘴」' },
+};
+
+export const BOSS_STATUS: Record<string, { text: string; color: string }> = {
+  active: { text: '进行中', color: 'red' },
+  defeated: { text: '已击败', color: 'success' },
+  expired: { text: '已到期', color: 'default' },
+};
+
+export const CHEST_STATUS: Record<string, { text: string; color: string }> = {
+  active: { text: '可开启', color: 'gold' },
+  opened_out: { text: '已开完', color: 'default' },
+  expired: { text: '已过期', color: 'default' },
+  removed: { text: '已下架', color: 'default' },
+};
+
+export const CHEST_SOURCE: Record<string, string> = { system: '系统每日刷新', daily: '系统每日刷新', scatter: '批量撒', admin: '运营投放', manual: '运营投放' };
+
+export const SEASON_STATUS: Record<string, { text: string; color: string }> = {
+  upcoming: { text: '未开始', color: 'blue' },
+  active: { text: '进行中', color: 'green' },
+  ended: { text: '待结算', color: 'gold' },
+  settled: { text: '已结算', color: 'default' },
+};
+
+export const CAMPAIGN_TYPE: Record<string, { text: string; color: string }> = {
+  pace: { text: '配速挑战', color: 'purple' },
+  night_run: { text: '夜跑专场', color: 'geekblue' },
+  distance: { text: '距离挑战', color: 'cyan' },
+};
+
+export const SEASON_TASK_TYPE: Record<string, { text: string; unit: string }> = {
+  weekly_count: { text: '本周运动次数', unit: '次' },
+  weekly_area_m2: { text: '本周圈地面积', unit: 'm²' },
+  weekly_distance_km: { text: '本周距离', unit: 'km' },
+  new_sport: { text: '尝试新运动', unit: '项' },
+};
+
+export const MEDAL_TYPE: Record<string, { text: string; unit: string }> = {
+  distance_km: { text: '累计里程', unit: 'km' },
+  defends: { text: '守地成功', unit: '次' },
+  loops_single: { text: '单次圈地块数', unit: '块' },
+  boss_defeats: { text: '参与击败怪兽', unit: '次' },
+  chests: { text: '开宝箱', unit: '个' },
+  routes: { text: '完成定向路线', unit: '条' },
+};

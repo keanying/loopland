@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import '../api/models.dart';
 import '../claim/geo.dart';
 import '../core/theme.dart';
+import '../widgets/monster_art.dart';
 import 'territory_map.dart';
 
 const double _ky = earthRadiusM * math.pi / 180; // metres per degree latitude
@@ -51,6 +52,7 @@ class FallbackTerritoryMap extends StatefulWidget {
     required this.initialZoom,
     this.onTerritoryTap,
     this.onBoundsChanged,
+    this.onObjectTap,
     this.interactive = true,
   });
 
@@ -60,6 +62,7 @@ class FallbackTerritoryMap extends StatefulWidget {
   final double initialZoom;
   final ValueChanged<TerritorySummary?>? onTerritoryTap;
   final ValueChanged<MapBounds>? onBoundsChanged;
+  final ValueChanged<MapObjectHit>? onObjectTap;
   final bool interactive;
 
   @override
@@ -160,6 +163,11 @@ class _FallbackTerritoryMapState extends State<FallbackTerritoryMap> implements 
   }
 
   void _onTapUp(TapUpDetails d) {
+    final hit = hitTestObjects(_view, widget.layers.objects, d.localPosition);
+    if (hit != null && widget.onObjectTap != null) {
+      widget.onObjectTap!(hit);
+      return;
+    }
     final ll = _view.fromScreen(d.localPosition);
     widget.onTerritoryTap?.call(hitTest(widget.layers.territories, ll));
   }
@@ -217,15 +225,73 @@ class TerritoryPainter extends CustomPainter {
     for (final t in layers.territories) {
       _paintTerritory(canvas, t, selected: t.id == layers.selectedId);
     }
+    for (final b in layers.objects.bosses) {
+      _paintBossArea(canvas, b);
+    }
     for (final l in layers.loops) {
       _paintLoop(canvas, l);
     }
+    _paintRoute(canvas);
     _paintTrack(canvas);
     _paintHint(canvas);
     for (final t in layers.territories) {
       _paintLabel(canvas, size, t);
     }
+    _paintObjects(canvas, size);
     if (layers.myLocation != null) _paintMe(canvas, view.toScreen(layers.myLocation!));
+  }
+
+  // ── V2 gameplay objects ──
+  void _paintBossArea(Canvas canvas, MapBoss b) {
+    final c = view.toScreen(b.center);
+    final r = b.radiusM / view.mpp;
+    final color = monsterColor(b.kind);
+    canvas.drawCircle(c, r, Paint()..color = color.withValues(alpha: 0.12));
+    _dashed(
+        canvas,
+        Path()..addOval(Rect.fromCircle(center: c, radius: r)),
+        Paint()
+          ..color = color.withValues(alpha: 0.8)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+        dash: 10,
+        gap: 7);
+  }
+
+  void _paintRoute(Canvas canvas) {
+    final pts = layers.routePath;
+    if (pts.length < 2) return;
+    final path = Path();
+    for (var i = 0; i < pts.length; i++) {
+      final o = view.toScreen(pts[i]);
+      i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
+    }
+    _dashed(
+        canvas,
+        path,
+        Paint()
+          ..color = LL.sky
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round);
+  }
+
+  void _paintObjects(Canvas canvas, Size size) {
+    final area = (Offset.zero & size).inflate(60);
+    for (final c in layers.objects.checkpoints) {
+      final o = view.toScreen(c.center);
+      if (area.contains(o)) paintCheckpoint(canvas, o, c.index, c.state);
+    }
+    for (final c in layers.objects.chests) {
+      final o = view.toScreen(c.center);
+      if (area.contains(o)) paintChest(canvas, o, 14);
+    }
+    for (final b in layers.objects.bosses) {
+      final o = view.toScreen(b.center);
+      if (!area.contains(o)) continue;
+      paintMonsterBadge(canvas, Rect.fromCenter(center: o, width: 56, height: 56), b.kind);
+      paintPill(canvas, o + const Offset(0, 46), bossLabel(b), monsterColor(b.kind));
+    }
   }
 
   // ── stylised city: deterministic jittered street grid + a river ──
@@ -438,4 +504,22 @@ class TerritoryPainter extends CustomPainter {
       old.view.zoom != view.zoom ||
       old.view.size != view.size ||
       old.layers != layers;
+}
+
+/// Gameplay object under a screen point (bosses first, then chests, then
+/// checkpoints), using the marker sizes drawn by [TerritoryPainter].
+MapObjectHit? hitTestObjects(MapView view, MapObjects objects, Offset p) {
+  for (final b in objects.bosses) {
+    final o = view.toScreen(b.center);
+    if ((Rect.fromCenter(center: o, width: 60, height: 60).inflate(4)).contains(p) || (o + const Offset(0, 46) - p).distance < 22) {
+      return BossHit(b);
+    }
+  }
+  for (final c in objects.chests) {
+    if ((view.toScreen(c.center) - p).distance < 24) return ChestHit(c);
+  }
+  for (final c in objects.checkpoints) {
+    if ((view.toScreen(c.center) - p).distance < 22) return CheckpointHit(c);
+  }
+  return null;
 }

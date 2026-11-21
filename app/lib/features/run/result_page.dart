@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/monster_art.dart';
 
 class ResultArgs {
   const ResultArgs({required this.result, this.localTrack = const []});
@@ -169,6 +170,7 @@ class ResultPage extends ConsumerWidget {
                 Column(children: [MedalArt(obtained: true, width: 80, label: m.name), const SizedBox(height: 4), Text(m.name)]),
             ]),
           ],
+          if (s.status != 'voided') ..._v2Blocks(context, s, cfg?.companion.expPerLevel ?? 100),
           const SizedBox(height: 24),
           FilledButton(onPressed: () => context.go('/map'), child: const Text('查看我的领地')),
           const SizedBox(height: 10),
@@ -176,6 +178,99 @@ class ResultPage extends ConsumerWidget {
         ]),
       ),
     );
+  }
+
+  /// V2 settlement blocks: boss damage, chests, defended territories, routes,
+  /// campaigns, season tasks, companion, crew relay.
+  List<Widget> _v2Blocks(BuildContext context, Settlement s, int expPerLevel) {
+    final bonus = s.chests.fold(0, (a, c) => a + c.energy) +
+        s.campaigns.fold(0, (a, c) => a + c.rewardEnergy) +
+        s.tasks.where((t) => t.completed).fold(0, (a, t) => a + t.rewardEnergy);
+    return [
+      if (s.bossDamage.isNotEmpty) ...[
+        const _Section('怪兽伤害'),
+        for (final b in s.bossDamage)
+          _Row(
+            leading: _MonsterDot(name: b.name),
+            icon: Icons.whatshot_rounded,
+            color: b.defeated ? LL.lime : LL.orange,
+            title: '对${b.name}造成 ${Fmt.thousands(b.damage)} 伤害',
+            subtitle: b.defeated ? '最后一击！怪兽被击退，掉落已发放' : '血量实时更新，叫上团友一起合击',
+            trailing: b.defeated ? '击退' : '-${Fmt.thousands(b.damage)}',
+            onTap: () => context.push('/bosses/${b.bossId}'),
+          ),
+      ],
+      if (s.chests.isNotEmpty) ...[
+        const _Section('能量宝箱'),
+        for (final c in s.chests)
+          _Row(icon: Icons.inventory_2_rounded, color: LL.yellow, title: '路过开启宝箱 #${c.chestId}', trailing: '+${c.energy}'),
+      ],
+      if (s.defended.isNotEmpty) ...[
+        const _Section('守地成功'),
+        for (final d in s.defended)
+          _Row(
+            icon: Icons.shield_rounded,
+            color: LL.lime,
+            title: '加固 领地 #${d.territoryId}',
+            subtitle: '守卫 ${d.guardBefore} → ${d.guardAfter}',
+            trailing: '+${d.guardAfter - d.guardBefore}',
+            onTap: () => context.push('/city/${d.territoryId}'),
+          ),
+      ],
+      if (s.routes.isNotEmpty) ...[
+        const _Section('城市定向'),
+        for (final r in s.routes)
+          _Row(
+            icon: r.completed ? Icons.emoji_events_rounded : Icons.explore_rounded,
+            color: LL.sky,
+            title: r.completed ? '${r.name} 全线完成！' : r.name,
+            subtitle: r.reached.isEmpty ? '这次没有到达新的打卡点' : '打卡 ${r.reached.join('、')}',
+            trailing: r.completed ? '完成' : '+${r.reached.length} 站',
+            onTap: () => context.push('/routes/${r.routeId}'),
+          ),
+      ],
+      if (s.campaigns.isNotEmpty) ...[
+        const _Section('限时活动'),
+        for (final c in s.campaigns)
+          _Row(icon: Icons.local_fire_department_rounded, color: LL.orange, title: '完成「${c.title}」', trailing: '+${c.rewardEnergy}'),
+      ],
+      if (s.tasks.isNotEmpty) ...[
+        const _Section('赛季任务'),
+        for (final t in s.tasks)
+          _TaskRow(
+            title: t.completed ? '${t.name} · 已完成' : t.name,
+            value: t.completed ? 1 : t.fraction,
+            text: '${t.progressText}${t.completed ? ' · +${t.rewardEnergy} 能量' : ''}',
+            done: t.completed,
+          ),
+      ],
+      if (s.companion != null) ...[
+        const _Section('陪跑伙伴'),
+        _ProgressRow(
+          art: s.companion!.key,
+          title: s.companion!.levelUp ? '升级到 Lv.${s.companion!.level}！' : '伙伴 Lv.${s.companion!.level}',
+          value: expPerLevel <= 0 ? 0 : (s.companion!.exp % expPerLevel) / expPerLevel,
+          text: '经验 ${s.companion!.exp % expPerLevel} / $expPerLevel',
+          done: s.companion!.levelUp,
+          color: LL.pink,
+        ),
+      ],
+      if (s.relay != null) ...[
+        const _Section('跑团接力'),
+        _TaskRow(
+          title: s.relay!.completed ? '接力完成！全员得奖励' : '你跑了第 ${s.relay!.leg} 棒',
+          value: s.relay!.legs == 0 ? 0 : (s.relay!.completed ? 1 : s.relay!.leg / s.relay!.legs),
+          text: '${s.relay!.leg} / ${s.relay!.legs} 棒',
+          done: s.relay!.completed,
+          color: LL.lavender,
+        ),
+      ],
+      if (bonus > 0)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text('宝箱、活动、任务另得 $bonus 能量，不计入每日上限', style: const TextStyle(color: LL.text3, fontSize: 12)),
+        ),
+    ];
   }
 
   String _title(Settlement s) => switch (s.status) {
@@ -275,7 +370,8 @@ class _Section extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.color, required this.title, this.subtitle, required this.trailing, this.onTap});
+  const _Row({required this.icon, required this.color, required this.title, this.subtitle, required this.trailing, this.onTap, this.leading});
+  final Widget? leading;
   final IconData icon;
   final Color color;
   final String title;
@@ -290,12 +386,13 @@ class _Row extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         onTap: onTap,
         child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: LL.ink, size: 22),
-          ),
+          leading ??
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: Icon(icon, color: LL.ink, size: 22),
+              ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -346,4 +443,43 @@ class _ProgressRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Monster badge by name (the settlement only carries the name).
+class _MonsterDot extends StatelessWidget {
+  const _MonsterDot({required this.name});
+  final String name;
+  @override
+  Widget build(BuildContext context) {
+    final kind = monsterNames.entries.where((e) => e.value == name).firstOrNull?.key ?? 'sofa';
+    return MonsterArt(kind: kind, size: 40, badge: true);
+  }
+}
+
+class _TaskRow extends StatelessWidget {
+  const _TaskRow({required this.title, required this.value, required this.text, required this.done, this.color = LL.lime});
+  final String title, text;
+  final double value;
+  final bool done;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: LLCard(
+          padding: const EdgeInsets.all(12),
+          child: Row(children: [
+            Icon(done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: done ? color : LL.text3),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w800, color: done ? color : LL.text)),
+                const SizedBox(height: 6),
+                LLProgress(value: value, color: color),
+                const SizedBox(height: 4),
+                Text(text, style: const TextStyle(color: LL.text2, fontSize: 12)),
+              ]),
+            ),
+          ]),
+        ),
+      );
 }

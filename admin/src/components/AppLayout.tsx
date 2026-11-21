@@ -12,6 +12,7 @@ import {
   SafetyOutlined,
   ShopOutlined,
   TeamOutlined,
+  ThunderboltOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
@@ -34,6 +35,7 @@ const MENU: MenuItem[] = [
   { to: '/review', label: '内容审核（V2）', icon: <FileDoneOutlined />, v2: true },
   { to: '/risk', label: '风控防作弊', icon: <SafetyOutlined />, perm: 'risk.read' },
   { to: '/merchants', label: '商户与活动（V2）', icon: <ShopOutlined />, v2: true },
+  { to: '/operations', label: '玩法运营', icon: <ThunderboltOutlined />, perm: 'ops.read' },
   { to: '/gameplay', label: '玩法配置', icon: <ControlOutlined />, perm: 'gameplay.read' },
   { to: '/audit', label: '审计日志', icon: <AuditOutlined />, perm: 'audit.read' },
   { to: '/admins', label: '后台账号', icon: <UserSwitchOutlined />, perm: 'admins.manage' },

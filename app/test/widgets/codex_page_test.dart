@@ -50,12 +50,12 @@ void main() {
     await t.tap(find.text('伙伴'));
     await t.pump();
     expect(find.text('神秘蛋 · 孵化中'), findsOneWidget);
-    expect(find.text('陪跑中'), findsOneWidget);
+    expect(find.text('陪跑中 · Lv.1'), findsOneWidget);
 
-    // Monsters are V2.
+    // No monsters in a V1 payload: the intro card is shown.
     await t.tap(find.text('怪兽'));
     await t.pump();
-    expect(find.text('城市怪兽 · 即将开放'), findsOneWidget);
+    expect(find.text('城市怪兽'), findsOneWidget);
     await settle(t);
   });
 }

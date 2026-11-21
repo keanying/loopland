@@ -4,6 +4,11 @@ import type {
   AdminAccount,
   AdminOrder,
   AuditItem,
+  BossDetail,
+  Campaign,
+  ChestListItem,
+  OrienteeringRoute,
+  Season,
   Config,
   Entitlement,
   GameplayState,
@@ -358,14 +363,14 @@ export const gameplayConfig: Config = {
     { sport: 'hiit', name: 'HIIT', unit: 'min', per: 10, energy: 5, pending: true },
   ],
   buildings: [
-    { key: 'campfire', name: '营火', note: '基础', cost: 80, guard: 50, daily_energy: 10, unlock_level: 1, station_slots: 0 },
-    { key: 'tent', name: '营帐', note: '扩充驻扎', cost: 120, guard: 80, daily_energy: 15, unlock_level: 1, station_slots: 1 },
-    { key: 'well', name: '水井', note: '恢复体力', cost: 150, guard: 60, daily_energy: 25, unlock_level: 2, station_slots: 0 },
-    { key: 'mill', name: '磨坊', note: '能量产出', cost: 200, guard: 40, daily_energy: 40, unlock_level: 2, station_slots: 0 },
-    { key: 'house', name: '民居', note: '驻扎 +2 角色', cost: 180, guard: 100, daily_energy: 20, unlock_level: 3, station_slots: 2 },
-    { key: 'forge', name: '铁匠铺', note: '角色升级', cost: 260, guard: 150, daily_energy: 30, unlock_level: 4, station_slots: 0 },
-    { key: 'tower', name: '箭塔', note: '防守主力', cost: 320, guard: 300, daily_energy: 10, unlock_level: 5, station_slots: 0 },
-    { key: 'chapel', name: '礼拜堂', note: '跑团加成', cost: 400, guard: 200, daily_energy: 50, unlock_level: 6, station_slots: 0 },
+    { key: 'campfire', name: '营火', note: '基础', cost: 80, guard: 50, daily_energy: 10, unlock_level: 1, station_slots: 0, blueprint_bypass_level: false },
+    { key: 'tent', name: '营帐', note: '扩充驻扎', cost: 120, guard: 80, daily_energy: 15, unlock_level: 1, station_slots: 1, blueprint_bypass_level: true },
+    { key: 'well', name: '水井', note: '恢复体力', cost: 150, guard: 60, daily_energy: 25, unlock_level: 2, station_slots: 0, blueprint_bypass_level: true },
+    { key: 'mill', name: '磨坊', note: '能量产出', cost: 200, guard: 40, daily_energy: 40, unlock_level: 2, station_slots: 0, blueprint_bypass_level: true },
+    { key: 'house', name: '民居', note: '驻扎 +2 角色', cost: 180, guard: 100, daily_energy: 20, unlock_level: 3, station_slots: 2, blueprint_bypass_level: true },
+    { key: 'forge', name: '铁匠铺', note: '角色升级', cost: 260, guard: 150, daily_energy: 30, unlock_level: 4, station_slots: 0, blueprint_bypass_level: false },
+    { key: 'tower', name: '箭塔', note: '防守主力', cost: 320, guard: 300, daily_energy: 10, unlock_level: 5, station_slots: 0, blueprint_bypass_level: true },
+    { key: 'chapel', name: '礼拜堂', note: '跑团加成', cost: 400, guard: 200, daily_energy: 50, unlock_level: 6, station_slots: 0, blueprint_bypass_level: false },
   ],
   roles: [
     { key: 'archer', name: '弓箭手', sport: 'run', threshold: 30, unit: 'km', buff: 'guard_pct', buff_value: 5, buff_text: '领地守卫 +5%' },
@@ -378,7 +383,47 @@ export const gameplayConfig: Config = {
     { key: 'farmer', name: '农夫', sport: 'walk', threshold: 15, unit: 'km', buff: 'mill_yield_pct', buff_value: 12, buff_text: '磨坊产出 +12%' },
   ],
   companions: [{ key: 'gecko', name: '闪电壁虎', hatch_km: 10 }],
-  medals: [{ key: 'distance_100', name: '百公里', distance_km: 100 }],
+  medals: [
+    { key: 'distance_100', name: '百公里', type: 'distance_km', target: 100, distance_km: 100 },
+    { key: 'guardian', name: '守护者', type: 'defends', target: 5 },
+    { key: 'ten_loops', name: '一夜十圈', type: 'loops_single', target: 10 },
+    { key: 'monster_hunter', name: '怪兽猎人', type: 'boss_defeats', target: 5 },
+    { key: 'treasure', name: '寻宝人', type: 'chests', target: 20 },
+    { key: 'orienteer', name: '城市定向家', type: 'routes', target: 3 },
+  ],
+  boss: {
+    strike_cost: 100, strike_damage: 40, strike_cooldown_s: 30,
+    combo_window_s: 300, combo_pct: 10, combo_max_pct: 50,
+    damage: [
+      { sport: 'run', per: 1, unit: 'km', damage: 100 },
+      { sport: 'ride', per: 1, unit: 'km', damage: 100 },
+      { sport: 'hike', per: 1, unit: 'km', damage: 100 },
+      { sport: 'walk', per: 1, unit: 'km', damage: 100 },
+      { sport: 'rope', per: 100, unit: 'count', damage: 30 },
+      { sport: 'strength', per: 10, unit: 'min', damage: 30 },
+      { sport: 'yoga', per: 10, unit: 'min', damage: 30 },
+      { sport: 'hiit', per: 10, unit: 'min', damage: 30 },
+    ],
+    default_hp: 10000, radius_m: 1000, duration_h: 48, auto_spawn_max: 3,
+    engage_h: 6, expire_refund_pct: 20, top_extra_rolls: 3, drop_energy: 200,
+    yield_penalty_pct: 50,
+  },
+  chest: { energy_min: 20, energy_max: 60, radius_m: 50, daily_spawn: 20, duration_h: 24 },
+  defense: { window_h: 24, max_guard: 2000 },
+  season: {
+    tiers: [
+      { name: '青铜', min_km2: 0 }, { name: '白银', min_km2: 0.5 }, { name: '黄金', min_km2: 3.6 },
+      { name: '铂金', min_km2: 8 }, { name: '钻石', min_km2: 15 },
+    ],
+  },
+  season_tasks: [
+    { key: 'weekly_runs', name: '本周运动 3 次', type: 'weekly_count', target: 3, reward_energy: 60 },
+    { key: 'weekly_area', name: '本周圈地 2 万 m²', type: 'weekly_area_m2', target: 20000, reward_energy: 80 },
+    { key: 'weekly_distance', name: '本周跑够 15 km', type: 'weekly_distance_km', target: 15, reward_energy: 80 },
+    { key: 'new_sport', name: '尝试一项本赛季没做过的运动', type: 'new_sport', target: 1, reward_energy: 50 },
+  ],
+  companion: { feed_cost: 50, feed_exp: 10, exp_per_100m: 1, exp_per_level: 100 },
+  relay: { default_legs: 6, leg_km: 3, duration_h: 168, reward_energy: 100 },
   bosses: [
     { key: 'sofa', name: '沙发怪', drops: [ { item: 'banner', kind: 'role', percent: 35 }, { item: 'knight', kind: 'role', percent: 20 }, { item: 'tent', kind: 'blueprint', percent: 10 }, { item: 'firetail', kind: 'egg', percent: 5 }, { item: 'energy', kind: 'energy', percent: 30 } ] },
     { key: 'bat', name: '熬夜蝠', drops: [ { item: 'scout', kind: 'role', percent: 30 }, { item: 'archer', kind: 'role', percent: 25 }, { item: 'tower', kind: 'blueprint', percent: 8 }, { item: 'nightnewt', kind: 'egg', percent: 4 }, { item: 'energy', kind: 'energy', percent: 33 } ] },
@@ -433,3 +478,144 @@ export const trend = (() => {
   }
   return { days, active_users: active, distance_km: dist, new_territories: newT };
 })();
+
+// ---------------- V2 玩法运营 ----------------
+
+const BOSS_SEED: { kind: string; name: string; level: number; loc: string; dlng: number; dlat: number; hp: number; max: number; status: BossDetail['status']; spawnedAgo: number; by: number | null; people: number }[] = [
+  { kind: 'sofa', name: '沙发怪', level: 12, loc: '滨江公园一带', dlng: -0.018, dlat: 0.012, hp: 3800, max: 10000, status: 'active', spawnedAgo: 20 * HOUR, by: null, people: 23 },
+  { kind: 'bat', name: '熬夜蝠', level: 8, loc: '陆家嘴环路', dlng: 0.012, dlat: -0.004, hp: 7600, max: 8000, status: 'active', spawnedAgo: 3 * HOUR, by: 2, people: 6 },
+  { kind: 'sugar', name: '糖分怪', level: 15, loc: '世博文化公园', dlng: -0.004, dlat: -0.022, hp: 1200, max: 12000, status: 'active', spawnedAgo: 40 * HOUR, by: null, people: 41 },
+  { kind: 'smog', name: '雾霾怪', level: 10, loc: '前滩公园', dlng: 0.02, dlat: -0.03, hp: 0, max: 10000, status: 'defeated', spawnedAgo: 3 * DAY, by: 1, people: 35 },
+  { kind: 'sofa', name: '沙发怪', level: 6, loc: '源深体育场', dlng: 0.03, dlat: 0.01, hp: 0, max: 6000, status: 'defeated', spawnedAgo: 6 * DAY, by: null, people: 18 },
+  { kind: 'bat', name: '熬夜蝠', level: 9, loc: '老白渡', dlng: -0.026, dlat: -0.012, hp: 2900, max: 9000, status: 'expired', spawnedAgo: 5 * DAY, by: null, people: 12 },
+];
+
+const DROP_NAMES: Record<string, string> = {
+  banner: '旗手卡', knight: '骑士卡', tent: '营帐图纸', firetail: '火尾蜥蛋', energy: '能量', scout: '斥候卡', archer: '弓箭手卡',
+  tower: '箭塔图纸', nightnewt: '夜行蝾螈蛋', monk: '修士卡', well: '水井图纸', chapel: '礼拜堂图纸', axolotl: '六角龙蛋',
+  farmer: '农夫卡', mill: '磨坊图纸', house: '民居图纸', frog: '雨蛙蛋',
+};
+
+export const bosses: BossDetail[] = BOSS_SEED.map((b, i) => {
+  const conf = gameplayConfig.bosses.find((x) => x.key === b.kind)!;
+  const spawned = NOW - b.spawnedAgo;
+  const expires = spawned + 48 * HOUR;
+  const dealt = b.max - b.hp;
+  // Split the damage dealt across participants with a long tail.
+  const weights = Array.from({ length: b.people }, (_, k) => 1 / (k + 1.6) + rand() * 0.05);
+  const wsum = weights.reduce((x, y) => x + y, 0);
+  let left = dealt;
+  const rank = weights.map((w, k) => {
+    const u = users[(i * 7 + k * 3) % users.length];
+    const dmg = k === b.people - 1 ? left : Math.max(1, Math.round((dealt * w) / wsum));
+    left -= dmg;
+    return { rank: k + 1, user: { id: u.id, nickname: u.nickname, avatar_url: null }, damage: Math.max(dmg, 1) };
+  }).sort((a, c) => c.damage - a.damage).map((r, k) => ({ ...r, rank: k + 1 }));
+  const rewards =
+    b.status === 'defeated'
+      ? rank.map((r) => {
+          const rolls = r.rank <= 3 ? 2 : 1;
+          const items = Array.from({ length: rolls }, (_, k) => {
+            const d = conf.drops[(r.user.id + i + k * 3) % conf.drops.length];
+            return { item: d.item, kind: d.kind, name: DROP_NAMES[d.item] ?? d.item, converted_energy: d.kind === 'energy' ? 200 : (r.user.id + k) % 4 === 0 ? 50 : null };
+          });
+          return { user: r.user, rank: r.rank, damage: r.damage, items };
+        })
+      : b.status === 'expired'
+        ? rank.map((r) => ({ user: r.user, rank: r.rank, damage: r.damage, items: [], energy: Math.round(((r.user.id % 5) + 1) * 100 * 0.2) }))
+        : [];
+  return {
+    id: 3 + i,
+    kind: b.kind,
+    name: b.name,
+    level: b.level,
+    description: '它代表「懒得动」，越久没人来跑，它越壮。',
+    location_name: b.loc,
+    center: { lat: +(CENTER.lat + b.dlat).toFixed(6), lng: +(CENTER.lng + b.dlng).toFixed(6) },
+    radius_m: i === 1 ? 600 : 1000,
+    hp: b.hp,
+    hp_max: b.max,
+    status: b.status,
+    spawned_at: iso(spawned),
+    expires_at: iso(expires),
+    defeated_at: b.status === 'defeated' ? iso(spawned + 30 * HOUR) : null,
+    spawned_by: b.by,
+    occupied_territories: 2 + (i % 4),
+    effect_text: '范围内领地每日能量产出减半',
+    damage_rules: gameplayConfig.boss!.damage.map((d) => ({ ...d, label: { run: '跑步', ride: '骑行', hike: '徒步', walk: '健走', rope: '跳绳', strength: '力量', yoga: '瑜伽', hiit: 'HIIT' }[d.sport] ?? d.sport })),
+    strike: { cost: 100, damage: 40, cooldown_s: 30 },
+    participants: b.people,
+    rank,
+    drops: conf.drops.map((d) => ({ ...d, name: DROP_NAMES[d.item] ?? d.item })),
+    rewards,
+  };
+});
+
+export const chests: ChestListItem[] = Array.from({ length: 26 }, (_, i) => {
+  const status = i < 18 ? 'active' : i < 23 ? 'opened_out' : 'expired';
+  const created = NOW - (i < 18 ? int(1, 18) : int(24, 70)) * HOUR;
+  const source = i % 5 === 0 ? 'admin' : i % 3 === 0 ? 'scatter' : 'system';
+  return {
+    id: 900 + i,
+    center: { lat: +(CENTER.lat + 0.02 - rand() * 0.055).toFixed(6), lng: +(CENTER.lng - 0.034 + rand() * 0.07).toFixed(6) },
+    radius_m: 50,
+    energy_min: source === 'admin' ? 50 : 20,
+    energy_max: source === 'admin' ? 100 : 60,
+    opens: status === 'active' ? int(0, 12) : int(5, 40),
+    source,
+    status,
+    created_at: iso(created),
+    expires_at: iso(created + 24 * HOUR),
+  };
+});
+
+const dayStart = (ms: number) => {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+export const seasons: Season[] = [
+  { id: 1, name: 'S1 春季赛', starts_at: iso(dayStart(NOW - 200 * DAY)), ends_at: iso(dayStart(NOW - 139 * DAY)), status: 'settled', settled_at: iso(dayStart(NOW - 139 * DAY) + 5 * MIN) },
+  { id: 2, name: 'S2 夏季赛', starts_at: iso(dayStart(NOW - 139 * DAY)), ends_at: iso(dayStart(NOW - 78 * DAY)), status: 'settled', settled_at: iso(dayStart(NOW - 78 * DAY) + 5 * MIN) },
+  { id: 3, name: 'S3 冬季赛', starts_at: iso(dayStart(NOW - 18 * DAY)), ends_at: iso(dayStart(NOW + 42 * DAY)), status: 'active', settled_at: null },
+  { id: 4, name: 'S4 新春赛', starts_at: iso(dayStart(NOW + 42 * DAY)), ends_at: iso(dayStart(NOW + 103 * DAY)), status: 'upcoming', settled_at: null },
+];
+
+export const campaigns: Campaign[] = [
+  { id: 5, title: '夜跑专场', type: 'night_run', description: '晚上 7 点到 11 点出发，跑满 5 km', rules: { start_hour_from: 19, start_hour_to: 23, min_distance_km: 5 }, starts_at: iso(dayStart(NOW - 3 * DAY)), ends_at: iso(dayStart(NOW + 4 * DAY)), reward_energy: 100, reward_medal: { key: 'campaign_5', name: '夜行者' }, participants: 1240, completed_count: 318 },
+  { id: 6, title: '破 6 挑战', type: 'pace', description: '5 km 配速快于 6:00', rules: { min_distance_km: 5, max_pace_s_per_km: 360 }, starts_at: iso(dayStart(NOW - 1 * DAY)), ends_at: iso(dayStart(NOW + 6 * DAY)), reward_energy: 80, reward_medal: null, participants: 860, completed_count: 92 },
+  { id: 7, title: '周末半马', type: 'distance', description: '单次跑满 21 km', rules: { min_distance_km: 21 }, starts_at: iso(dayStart(NOW + 2 * DAY)), ends_at: iso(dayStart(NOW + 4 * DAY)), reward_energy: 200, reward_medal: { key: 'campaign_7', name: '半马勋章' }, participants: 0, completed_count: 0 },
+  { id: 4, title: '国庆十公里', type: 'distance', description: '假期跑满 10 km', rules: { min_distance_km: 10 }, starts_at: iso(dayStart(NOW - 50 * DAY)), ends_at: iso(dayStart(NOW - 43 * DAY)), reward_energy: 120, reward_medal: null, participants: 5320, completed_count: 2110 },
+];
+
+const cp = (name: string, dlng: number, dlat: number, r = 60) => ({ name, lat: +(CENTER.lat + dlat).toFixed(6), lng: +(CENTER.lng + dlng).toFixed(6), radius_m: r });
+
+export const routes: OrienteeringRoute[] = [
+  {
+    id: 2, name: '城南线', description: '从老城厢一路到前滩，沿江 6 个打卡点', reward_energy: 150,
+    starts_at: iso(dayStart(NOW - 10 * DAY)), ends_at: iso(dayStart(NOW + 20 * DAY)), finishers: 88,
+    checkpoints: [cp('拱桥', -0.028, 0.004), cp('老街口', -0.02, -0.006), cp('滨江码头', -0.012, -0.014, 80), cp('船厂1862', -0.002, -0.018), cp('世博文化公园', 0.008, -0.024, 100), cp('前滩公园', 0.02, -0.03)].map((c, index) => ({ index, ...c })),
+  },
+  {
+    id: 3, name: '陆家嘴环线', description: '金融城一圈，4 个打卡点', reward_energy: 100,
+    starts_at: iso(dayStart(NOW + 5 * DAY)), ends_at: iso(dayStart(NOW + 35 * DAY)), finishers: 0,
+    checkpoints: [cp('东方明珠下', 0.004, 0.014), cp('陆家嘴环路', 0.014, 0.01), cp('源深体育场', 0.026, 0.004), cp('张家浜', 0.016, -0.004)].map((c, index) => ({ index, ...c })),
+  },
+];
+
+export const DISTRICTS = ['浦东新区', '徐汇区', '黄浦区', '静安区', '杨浦区'];
+
+/** Deterministic standings per district + week. */
+export function leagueFor(district: string, weekStart: string) {
+  let seed = 0;
+  for (const ch of district + weekStart) seed = (seed * 31 + ch.charCodeAt(0)) | 0;
+  const r = mulberry32(seed);
+  const names = ['城西跑团', '晨风跑团', '江湾骑士', '夜跑兔', '滨江慢跑', '世纪公园跑团', '张江码农跑', '前滩飞鱼', '苏河夜行', '徐汇跑鞋'];
+  const n = 6 + Math.floor(r() * 4);
+  return names
+    .slice(0, n)
+    .map((name, k) => ({ crew: { id: [3, 5, 8, 9, 11, 12, 14, 15, 17, 18][k], name }, score_m2: Math.round((200_000 + r() * 900_000) / 100) * 100, active_members: 3 + Math.floor(r() * 14) }))
+    .sort((a, b) => b.score_m2 - a.score_m2)
+    .map((x, k) => ({ rank: k + 1, ...x }));
+}

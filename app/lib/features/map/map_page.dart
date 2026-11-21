@@ -17,6 +17,9 @@ import '../../run/location_source.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../play/chest_sheet.dart';
+import '../play/defense_banner.dart';
+import '../play/play_providers.dart';
 
 /// 领地地图（App 首页）。
 class MapPage extends ConsumerStatefulWidget {
@@ -30,6 +33,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   static const _scopes = ['all', 'mine', 'crew'];
   int _scope = 0;
   List<TerritorySummary> _items = const [];
+  MapObjects _objects = const MapObjects();
   MapBounds? _bounds;
   Timer? _debounce;
   Object? _error;
@@ -62,6 +66,7 @@ class _MapPageState extends ConsumerState<MapPage> {
     if (b == null) return;
     final id = ++_req;
     setState(() => _loading = true);
+    _loadObjects(b, id);
     try {
       final items = await ref.read(apiProvider).territories(
           minLng: b.minLng, minLat: b.minLat, maxLng: b.maxLng, maxLat: b.maxLat, scope: _scopes[_scope]);
@@ -74,6 +79,34 @@ class _MapPageState extends ConsumerState<MapPage> {
       if (mounted && id == _req) setState(() => _error = e);
     } finally {
       if (mounted && id == _req) setState(() => _loading = false);
+    }
+  }
+
+  /// Bosses / chests / checkpoints; best effort (the map works without).
+  Future<void> _loadObjects(MapBounds b, int id) async {
+    try {
+      final o = await ref
+          .read(apiProvider)
+          .mapObjects(minLng: b.minLng, minLat: b.minLat, maxLng: b.maxLng, maxLat: b.maxLat);
+      if (mounted && id == _req) setState(() => _objects = o);
+    } catch (_) {}
+  }
+
+  Future<void> _openObject(MapObjectHit hit) async {
+    switch (hit) {
+      case BossHit(:final boss):
+        context.push('/bosses/${boss.id}');
+      case CheckpointHit(:final checkpoint):
+        context.push('/routes/${checkpoint.routeId}');
+      case ChestHit(:final chest):
+        final gone = await showModalBottomSheet<bool>(context: context, builder: (_) => ChestSheet(chest: chest));
+        if (gone == true && mounted) {
+          setState(() => _objects = MapObjects(
+                bosses: _objects.bosses,
+                chests: [for (final c in _objects.chests) if (c.id != chest.id) c],
+                checkpoints: _objects.checkpoints,
+              ));
+        }
     }
   }
 
@@ -123,6 +156,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final unread = ref.watch(inboxUnreadProvider).value ?? 0;
+    final season = ref.watch(seasonProvider).value?.season;
     final top = MediaQuery.paddingOf(context).top;
     final bottom = NavShell.bottomInset(context);
     return Scaffold(
@@ -131,9 +165,10 @@ class _MapPageState extends ConsumerState<MapPage> {
           child: TerritoryMapView(
             controller: _map,
             initialCenter: _me ?? const LatLng(31.2304, 121.4737),
-            layers: MapLayers(territories: _items, myLocation: _me, selectedId: _selected),
+            layers: MapLayers(territories: _items, objects: _objects, myLocation: _me, selectedId: _selected),
             onBoundsChanged: _onBounds,
             onTerritoryTap: _openTerritory,
+            onObjectTap: _openObject,
           ),
         ),
         // Header
@@ -179,7 +214,28 @@ class _MapPageState extends ConsumerState<MapPage> {
               ),
               const Spacer(),
               if (_loading)
-                const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                const Padding(
+                  padding: EdgeInsets.only(right: 8),
+                  child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+              if (season != null)
+                Semantics(
+                  button: true,
+                  label: '赛季',
+                  child: GestureDetector(
+                    onTap: () => context.push('/season'),
+                    child: Container(
+                      height: 50,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: LL.card.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(25)),
+                      child: Text.rich(TextSpan(children: [
+                        TextSpan(text: season.shortName, style: const TextStyle(color: LL.lime, fontWeight: FontWeight.w900)),
+                        TextSpan(text: ' 剩 ${season.daysLeft} 天', style: const TextStyle(fontWeight: FontWeight.w700)),
+                      ]), style: const TextStyle(fontSize: 15)),
+                    ),
+                  ),
+                ),
             ]),
             if (_error != null)
               Padding(
@@ -199,6 +255,9 @@ class _MapPageState extends ConsumerState<MapPage> {
           top: top + 150,
           child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             _SideButton(icon: Icons.castle_outlined, label: '建城', color: LL.lime, fg: LL.ink, onTap: _goCity),
+            const SizedBox(height: 10),
+            _SideButton(
+                icon: Icons.sports_esports_outlined, label: '玩法', color: LL.card, fg: LL.text, onTap: () => context.push('/games')),
           ]),
         ),
         Positioned(
@@ -343,6 +402,21 @@ class TerritorySheet extends ConsumerWidget {
             const SizedBox(width: 10),
             Expanded(child: LLCard(child: StatBox(value: '${t.guard}', label: '守卫值'))),
           ]),
+          if (t.isMine)
+            Consumer(builder: (context, ref, _) {
+              final d = ref.watch(territoryProvider(t.id)).value?.defense;
+              if (d == null) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: DefenseBanner(
+                  defense: d,
+                  onGo: () {
+                    Navigator.pop(context);
+                    context.push('/start/gps?sport=run');
+                  },
+                ),
+              );
+            }),
           const SizedBox(height: 18),
           if (t.isMine)
             FilledButton.icon(

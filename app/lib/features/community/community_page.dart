@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../play/relay_card.dart';
 
 final crewProvider = FutureProvider.autoDispose.family<Crew, int>((ref, id) => ref.watch(apiProvider).crew(id));
 final crewMembersProvider =
@@ -49,7 +50,10 @@ class CommunityPage extends ConsumerWidget {
                 return AsyncBody<Crew>(
                   value: async,
                   onRetry: () => ref.invalidate(crewProvider(crewRef.id)),
-                  data: (c) => CrewCard(crew: c),
+                  data: (c) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    CrewCard(crew: c),
+                    if (c.isMember) ...[const SizedBox(height: 10), RelayCard(crew: c)],
+                  ]),
                 );
               }),
             const SizedBox(height: 14),
@@ -60,6 +64,7 @@ class CommunityPage extends ConsumerWidget {
             ]),
             const SizedBox(height: 10),
             LLCard(
+              onTap: () => context.push('/league'),
               child: Row(children: [
                 Container(
                   width: 48,
@@ -71,10 +76,10 @@ class CommunityPage extends ConsumerWidget {
                 const Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('赛事 · 城区联赛', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                    Text('线上赛、线下赛报名', style: TextStyle(color: LL.text2, fontSize: 13)),
+                    Text('同城区跑团每周比拼新圈面积', style: TextStyle(color: LL.text2, fontSize: 13)),
                   ]),
                 ),
-                const ComingSoon(),
+                const Icon(Icons.chevron_right_rounded, color: LL.text3),
               ]),
             ),
             const SizedBox(height: 10),

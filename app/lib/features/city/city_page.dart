@@ -10,6 +10,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../play/defense_banner.dart';
 
 /// 建城：6 个建造位、建筑选择、角色驻扎，实时显示守卫值和每日能量。
 class CityPage extends ConsumerStatefulWidget {
@@ -133,6 +134,8 @@ class _CityPageState extends ConsumerState<CityPage> {
             ]),
           ]),
         ),
+        if (mine && t.defense != null)
+          Padding(padding: const EdgeInsets.only(top: 12), child: DefenseBanner(defense: t.defense!)),
         if (!mine)
           const Padding(
             padding: EdgeInsets.only(top: 12),
@@ -293,6 +296,13 @@ class BuildingPicker extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final level = user?.level ?? 1;
     final energy = user?.energy ?? 0;
+    // V2: a blueprint (boss drop) lifts the level requirement. Codex
+    // buildings may carry `blueprint: true`; otherwise the server's
+    // level_too_low error is the source of truth.
+    final blueprints = {
+      for (final b in ref.watch(codexProvider).value?.buildings ?? const <CodexBuilding>[])
+        if (b.blueprint) b.key,
+    };
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.75,
@@ -314,7 +324,8 @@ class BuildingPicker extends ConsumerWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: _BuildingRow(
                 b: b,
-                locked: b.unlockLevel > level,
+                blueprint: blueprints.contains(b.key) && b.unlockLevel > level,
+                locked: b.unlockLevel > level && !blueprints.contains(b.key),
                 affordable: energy >= b.cost,
                 onTap: () => Navigator.pop(context, b.key),
               ),
@@ -326,9 +337,12 @@ class BuildingPicker extends ConsumerWidget {
 }
 
 class _BuildingRow extends StatelessWidget {
-  const _BuildingRow({required this.b, required this.locked, required this.affordable, required this.onTap});
+  const _BuildingRow({required this.b, required this.locked, required this.affordable, required this.onTap, this.blueprint = false});
   final BuildingDef b;
   final bool locked, affordable;
+
+  /// Above my level but buildable thanks to a blueprint.
+  final bool blueprint;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) {
@@ -348,6 +362,14 @@ class _BuildingRow extends StatelessWidget {
                 Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
                 const SizedBox(width: 8),
                 if (b.note.isNotEmpty) Text(b.note, style: const TextStyle(color: LL.text3, fontSize: 12)),
+                if (blueprint) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: LL.sky, borderRadius: BorderRadius.circular(8)),
+                    child: const Text('图纸可建', style: TextStyle(color: LL.ink, fontSize: 11, fontWeight: FontWeight.w900)),
+                  ),
+                ],
               ]),
               const SizedBox(height: 4),
               Wrap(spacing: 10, children: [

@@ -127,3 +127,24 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
   .side-spacer { display: none; }
 }
 .ant-table .num { white-space: nowrap; }
+
+/* V2 玩法 */
+.hp-track { background: #ececef; border-radius: 99px; overflow: hidden; border: 1px solid #d9d9de; }
+.hp-fill { height: 100%; border-radius: 99px; transition: width .3s; }
+.pick-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 3; background: var(--ink); color: #fff; border-radius: 999px; padding: 6px 8px 6px 16px; display: flex; gap: 10px; align-items: center; font-size: 13px; box-shadow: 0 2px 10px rgba(0,0,0,.2); white-space: nowrap; }
+.map-layers { position: absolute; left: 12px; top: 12px; z-index: 2; background: #fff; border-radius: 14px; padding: 6px 10px; font-size: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); display: flex; gap: 10px; flex-wrap: wrap; max-width: calc(100% - 80px); }
+.cp-row { display: grid; grid-template-columns: 28px minmax(90px, 1.4fr) minmax(96px, 1fr) minmax(96px, 1fr) 84px auto; gap: 6px; align-items: center; padding: 4px 0; }
+.boss-card { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid #f0f0f2; }
+.boss-card:first-child { border-top: 0; }
+/* AMap marker contents (only with VITE_AMAP_KEY) */
+.amap-boss { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.amap-boss-label { background: var(--ink); color: #fff; border-radius: 8px; padding: 3px 8px 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.amap-boss-hp { height: 5px; background: #4a4a50; border-radius: 3px; margin-top: 3px; overflow: hidden; }
+.amap-boss-hp i { display: block; height: 100%; }
+.amap-boss-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; }
+.amap-boss.sel .amap-boss-dot { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--ink); }
+.amap-chest { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid var(--ink); cursor: pointer; }
+.amap-chest.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ink); }
+.amap-cp { width: 20px; height: 20px; border-radius: 50%; border: 2px solid; background: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.amap-pick { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--red); background: rgba(217,58,43,.15); }
+.route-preview .map-wrap { min-height: 420px; height: 420px; }

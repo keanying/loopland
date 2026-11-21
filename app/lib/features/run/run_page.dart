@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../api/errors.dart';
+import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/claim.dart';
 import '../../claim/geo.dart';
@@ -15,6 +17,7 @@ import '../../map/territory_map.dart';
 import '../../run/run_controller.dart';
 import '../../run/uploader.dart';
 import '../../widgets/common.dart';
+import '../../widgets/monster_art.dart';
 import 'result_page.dart';
 
 /// 运动中：倒计时、实时轨迹 + 圈地预览、「还差 X 米可闭合」、暂停 / 继续、长按结束。
@@ -31,6 +34,75 @@ class _RunPageState extends ConsumerState<RunPage> {
   bool _goalToastShown = false;
   int _lastLoopCount = 0;
 
+  // V2: bosses / chests / checkpoints around the runner.
+  MapObjects _nearby = const MapObjects();
+  LatLng? _nearbyAt;
+  DateTime? _nearbyTime;
+  bool _nearbyLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _maybeLoadNearby(ref.read(runControllerProvider).position);
+    });
+  }
+
+  /// Reloads objects within ~1.5 km when the runner moved 400 m or every 2 min.
+  Future<void> _maybeLoadNearby(LatLng? pos) async {
+    if (pos == null || _nearbyLoading) return;
+    final at = _nearbyAt, t = _nearbyTime;
+    if (at != null && t != null && haversine(at, pos) < 400 && DateTime.now().difference(t) < const Duration(minutes: 2)) {
+      return;
+    }
+    _nearbyLoading = true;
+    try {
+      const dLat = 0.0135;
+      final dLng = dLat / math.cos(pos.lat * math.pi / 180);
+      final o = await ref
+          .read(apiProvider)
+          .mapObjects(minLng: pos.lng - dLng, minLat: pos.lat - dLat, maxLng: pos.lng + dLng, maxLat: pos.lat + dLat);
+      if (!mounted) return;
+      setState(() {
+        _nearby = o;
+        _nearbyAt = pos;
+        _nearbyTime = DateTime.now();
+      });
+    } catch (_) {
+      // Best effort; the server settles damage / chests from the track anyway.
+      _nearbyAt = pos;
+      _nearbyTime = DateTime.now();
+    } finally {
+      _nearbyLoading = false;
+    }
+  }
+
+  /// Live hints for objects whose range the runner is inside.
+  List<Widget> _objectHints(LatLng? pos) {
+    if (pos == null) return const [];
+    final out = <Widget>[];
+    for (final b in _nearby.bosses) {
+      if (haversine(pos, b.center) <= b.radiusM) {
+        out.add(_HintChip(
+          leading: MonsterArt(kind: b.kind, size: 30, badge: true),
+          text: '正在对${b.name}造成伤害',
+          color: monsterColor(b.kind),
+        ));
+      }
+    }
+    for (final c in _nearby.chests) {
+      if (haversine(pos, c.center) <= c.radiusM) {
+        out.add(const _HintChip(icon: Icons.inventory_2_rounded, text: '经过能量宝箱，结算时自动开启', color: LL.yellow));
+      }
+    }
+    for (final c in _nearby.checkpoints) {
+      if (c.isNext && haversine(pos, c.center) <= c.radiusM) {
+        out.add(_HintChip(icon: Icons.explore_rounded, text: '到达打卡点「${c.name}」', color: LL.sky));
+      }
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(runControllerProvider);
@@ -38,6 +110,7 @@ class _RunPageState extends ConsumerState<RunPage> {
     ref.listen<RunState>(runControllerProvider, (prev, next) {
       final pos = next.position;
       if (_follow && pos != null && pos != prev?.position) _map.moveTo(pos);
+      if (pos != prev?.position) _maybeLoadNearby(pos);
       if (next.loops.length > _lastLoopCount) {
         final added = next.loops.length - _lastLoopCount;
         _lastLoopCount = next.loops.length;
@@ -78,6 +151,7 @@ class _RunPageState extends ConsumerState<RunPage> {
                 initialCenter: s.position ?? const LatLng(31.2304, 121.4737),
                 initialZoom: 16.5,
                 layers: MapLayers(
+                  objects: _nearby,
                   track: s.track,
                   loops: [for (final l in s.loops) l.ring],
                   hintFrom: hint == null ? null : s.position,
@@ -115,17 +189,20 @@ class _RunPageState extends ConsumerState<RunPage> {
                 ),
             ]),
           ),
-          if (s.mockDetected)
-            Positioned(
-              left: 16,
-              right: 16,
-              top: top + 64,
-              child: const LLCard(
-                color: Color(0xFF3A1D22),
-                padding: EdgeInsets.all(12),
-                child: Text('检测到模拟定位，本次记录可能会被风控作废。', style: TextStyle(color: LL.text)),
-              ),
-            ),
+          Positioned(
+            left: 16,
+            right: 16,
+            top: top + 64,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (s.mockDetected)
+                const LLCard(
+                  color: Color(0xFF3A1D22),
+                  padding: EdgeInsets.all(12),
+                  child: Text('检测到模拟定位，本次记录可能会被风控作废。', style: TextStyle(color: LL.text)),
+                ),
+              for (final h in _objectHints(s.position)) Padding(padding: const EdgeInsets.only(top: 8), child: h),
+            ]),
+          ),
           Positioned(left: 0, right: 0, bottom: 0, child: _panel(s, now, hint)),
           if (s.phase == RunPhase.countdown) _Countdown(n: s.countdown),
           if (_finishing)
@@ -404,4 +481,26 @@ class _Countdown extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HintChip extends StatelessWidget {
+  const _HintChip({this.leading, this.icon, required this.text, required this.color});
+  final Widget? leading;
+  final IconData? icon;
+  final String text;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(8, 6, 14, 6),
+        decoration: BoxDecoration(
+          color: LL.night.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: color, width: 1.5),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          leading ?? Icon(icon, color: color, size: 22),
+          const SizedBox(width: 8),
+          Flexible(child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14))),
+        ]),
+      );
 }

@@ -2,6 +2,8 @@
 // is tolerant: unknown fields are ignored, missing optional fields default.
 import '../claim/geo.dart';
 
+part 'models_v2.dart';
+
 typedef Json = Map<String, dynamic>;
 
 double _d(Object? v, [double def = 0]) => v is num ? v.toDouble() : def;
@@ -290,6 +292,7 @@ class BuildingDef {
     required this.dailyEnergy,
     required this.unlockLevel,
     this.stationSlots = 0,
+    this.blueprintBypassLevel = false,
   });
   final String key;
   final String name;
@@ -300,6 +303,9 @@ class BuildingDef {
   final int unlockLevel;
   final int stationSlots;
 
+  /// V2: owning this building's blueprint lifts the level requirement.
+  final bool blueprintBypassLevel;
+
   factory BuildingDef.fromJson(Json j) => BuildingDef(
         key: _s(j['key']),
         name: _s(j['name']),
@@ -309,6 +315,7 @@ class BuildingDef {
         dailyEnergy: _i(j['daily_energy']),
         unlockLevel: _i(j['unlock_level'], 1),
         stationSlots: _i(j['station_slots']),
+        blueprintBypassLevel: _b(j['blueprint_bypass_level']),
       );
 }
 
@@ -354,12 +361,20 @@ class CompanionDef {
 }
 
 class MedalDef {
-  const MedalDef({required this.key, required this.name, this.distanceKm});
+  const MedalDef({required this.key, required this.name, this.distanceKm, this.type = 'distance_km', this.target});
   final String key;
   final String name;
   final double? distanceKm;
-  factory MedalDef.fromJson(Json j) =>
-      MedalDef(key: _s(j['key']), name: _s(j['name']), distanceKm: _dn(j['distance_km']));
+
+  /// V2: `distance_km | defends | loops_single | boss_defeats | chests | routes`.
+  final String type;
+  final double? target;
+  factory MedalDef.fromJson(Json j) => MedalDef(
+      key: _s(j['key']),
+      name: _s(j['name']),
+      distanceKm: _dn(j['distance_km']),
+      type: _s(j['type'], 'distance_km'),
+      target: _dn(j['target']) ?? _dn(j['distance_km']));
 }
 
 class GameConfig {
@@ -375,6 +390,13 @@ class GameConfig {
     this.roles = const [],
     this.companions = const [],
     this.medals = const [],
+    this.boss = const BossConfig(),
+    this.chest = const ChestConfig(),
+    this.defense = const DefenseConfig(),
+    this.seasonTiers = const [],
+    this.seasonTasks = const [],
+    this.companion = const CompanionConfig(),
+    this.relay = const RelayConfig(),
   });
   final String version;
   final int slotsPerTerritory;
@@ -387,6 +409,13 @@ class GameConfig {
   final List<RoleDef> roles;
   final List<CompanionDef> companions;
   final List<MedalDef> medals;
+  final BossConfig boss;
+  final ChestConfig chest;
+  final DefenseConfig defense;
+  final List<TierDef> seasonTiers;
+  final List<SeasonTaskDef> seasonTasks;
+  final CompanionConfig companion;
+  final RelayConfig relay;
 
   factory GameConfig.fromJson(Json j) => GameConfig(
         version: _s(j['version']),
@@ -402,6 +431,13 @@ class GameConfig {
         roles: _l(j['roles'], RoleDef.fromJson),
         companions: _l(j['companions'], CompanionDef.fromJson),
         medals: _l(j['medals'], MedalDef.fromJson),
+        boss: BossConfig.fromJson(_m(j['boss'])),
+        chest: ChestConfig.fromJson(_m(j['chest'])),
+        defense: DefenseConfig.fromJson(_m(j['defense'])),
+        seasonTiers: _l(_m(j['season'])['tiers'], TierDef.fromJson),
+        seasonTasks: _l(j['season_tasks'], SeasonTaskDef.fromJson),
+        companion: CompanionConfig.fromJson(_m(j['companion'])),
+        relay: RelayConfig.fromJson(_m(j['relay'])),
       );
 
   EnergyRule? energyFor(String sport) {
@@ -716,6 +752,14 @@ class Settlement {
     this.medals = const [],
     this.levelUp,
     this.flags = const [],
+    this.bossDamage = const [],
+    this.chests = const [],
+    this.defended = const [],
+    this.routes = const [],
+    this.campaigns = const [],
+    this.tasks = const [],
+    this.companion,
+    this.relay,
   });
 
   /// `settled | review | voided`.
@@ -731,6 +775,16 @@ class Settlement {
   final LevelUp? levelUp;
   final List<RiskFlag> flags;
 
+  // V2 blocks.
+  final List<BossDamageRecord> bossDamage;
+  final List<ChestRecord> chests;
+  final List<DefendedRecord> defended;
+  final List<RouteRecord> routes;
+  final List<CampaignRecord> campaigns;
+  final List<SeasonTask> tasks;
+  final CompanionRecord? companion;
+  final RelayRecord? relay;
+
   double get claimedAreaM2 => claims.fold(0.0, (s, c) => s + c.areaM2);
 
   factory Settlement.fromJson(Json j) => Settlement(
@@ -745,6 +799,14 @@ class Settlement {
         medals: _l(j['medals'], MedalRef.fromJson),
         levelUp: LevelUp.parse(j['level_up']),
         flags: _l(j['flags'], RiskFlag.fromJson),
+        bossDamage: _l(j['boss_damage'], BossDamageRecord.fromJson),
+        chests: _l(j['chests'], ChestRecord.fromJson),
+        defended: _l(j['defended'], DefendedRecord.fromJson),
+        routes: _l(j['routes'], RouteRecord.fromJson),
+        campaigns: _l(j['campaigns'], CampaignRecord.fromJson),
+        tasks: _l(j['tasks'], SeasonTask.fromJson),
+        companion: CompanionRecord.parse(j['companion']),
+        relay: RelayRecord.parse(j['relay']),
       );
 }
 
@@ -957,6 +1019,7 @@ class Territory {
     this.stationed = const [],
     this.capturedAt,
     this.events = const [],
+    this.defense,
   });
   final TerritorySummary summary;
   final int dailyEnergy;
@@ -965,6 +1028,9 @@ class Territory {
   final List<Stationed> stationed;
   final DateTime? capturedAt;
   final List<TerritoryEvent> events;
+
+  /// V2 守地挑战: set while the owner can still reinforce after an attack.
+  final TerritoryDefense? defense;
 
   int get id => summary.id;
   int get builtCount => slots.where((s) => !s.empty).length;
@@ -977,6 +1043,7 @@ class Territory {
         stationed: _l(j['stationed'], Stationed.fromJson),
         capturedAt: _dt(j['captured_at']),
         events: _l(j['events'], TerritoryEvent.fromJson),
+        defense: TerritoryDefense.parse(j['defense']),
       );
 }
 
@@ -1042,11 +1109,16 @@ class CodexBuilding {
     this.cost = 0,
     this.guard = 0,
     this.dailyEnergy = 0,
+    this.blueprint = false,
   });
   final String key;
   final String name;
   final int unlockLevel;
   final bool unlocked;
+
+  /// V2: the user owns this building's blueprint (boss drop) and may build
+  /// it regardless of level. Not in the contract yet; accepted when present.
+  final bool blueprint;
   final int cost;
   final int guard;
   final int dailyEnergy;
@@ -1058,6 +1130,7 @@ class CodexBuilding {
         cost: _i(j['cost']),
         guard: _i(j['guard']),
         dailyEnergy: _i(j['daily_energy']),
+        blueprint: _b(j['blueprint']),
       );
 }
 
@@ -1069,6 +1142,10 @@ class CodexCompanion {
     this.progressKm = 0,
     this.hatchKm = 10,
     this.escort = false,
+    this.level = 1,
+    this.exp = 0,
+    this.expToNext = 100,
+    this.meters = 0,
   });
   final String key;
   final String name;
@@ -1078,6 +1155,14 @@ class CodexCompanion {
   final double progressKm;
   final double hatchKm;
   final bool escort;
+
+  // V2 养成.
+  final int level;
+  final int exp;
+  final int expToNext;
+
+  /// Total metres run together.
+  final double meters;
   bool get hatched => state == 'hatched';
   bool get isEgg => state == 'egg';
   factory CodexCompanion.fromJson(Json j) => CodexCompanion(
@@ -1087,6 +1172,10 @@ class CodexCompanion {
         progressKm: _d(j['progress_km']),
         hatchKm: _d(j['hatch_km'], 10),
         escort: _b(j['escort']),
+        level: _i(j['level'], 1),
+        exp: _i(j['exp']),
+        expToNext: _i(j['exp_to_next'], 100),
+        meters: _d(j['meters']),
       );
 }
 
@@ -1107,6 +1196,7 @@ class Codex {
     this.buildings = const [],
     this.companions = const [],
     this.medals = const [],
+    this.monsters = const [],
   });
 
   /// e.g. {"roles": "2/8"}.
@@ -1115,14 +1205,16 @@ class Codex {
   final List<CodexBuilding> buildings;
   final List<CodexCompanion> companions;
   final List<CodexMedal> medals;
+  final List<CodexMonster> monsters;
 
   int get obtainedCount =>
       roles.where((r) => r.obtained).length +
       buildings.where((b) => b.unlocked).length +
       companions.where((c) => c.hatched).length +
-      medals.where((m) => m.obtained).length;
+      medals.where((m) => m.obtained).length +
+      monsters.where((m) => m.seen).length;
 
-  int get totalCount => roles.length + buildings.length + companions.length + medals.length;
+  int get totalCount => roles.length + buildings.length + companions.length + medals.length + monsters.length;
 
   factory Codex.fromJson(Json j) => Codex(
         progress: {for (final e in _m(j['progress']).entries) e.key: _s(e.value)},
@@ -1130,6 +1222,7 @@ class Codex {
         buildings: _l(j['buildings'], CodexBuilding.fromJson),
         companions: _l(j['companions'], CodexCompanion.fromJson),
         medals: _l(j['medals'], CodexMedal.fromJson),
+        monsters: _l(j['monsters'], CodexMonster.fromJson),
       );
 }
 

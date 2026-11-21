@@ -12,6 +12,7 @@ import PlansPage from './pages/PlansPage';
 import TerritoriesPage from './pages/TerritoriesPage';
 import RiskPage from './pages/RiskPage';
 import GameplayPage from './pages/GameplayPage';
+import OperationsPage from './pages/OperationsPage';
 import AuditPage from './pages/AuditPage';
 import AdminsPage from './pages/AdminsPage';
 
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="territories" element={<RequirePerm perm="territories.read"><TerritoriesPage /></RequirePerm>} />
         <Route path="map" element={<Navigate to="/territories" replace />} />
         <Route path="risk" element={<RequirePerm perm="risk.read"><RiskPage /></RequirePerm>} />
+        <Route path="operations" element={<RequirePerm perm="ops.read"><OperationsPage /></RequirePerm>} />
         <Route path="gameplay" element={<RequirePerm perm="gameplay.read"><GameplayPage /></RequirePerm>} />
         <Route
           path="audit"

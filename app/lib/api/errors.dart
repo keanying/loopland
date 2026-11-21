@@ -46,6 +46,16 @@ const errorMessages = <String, String>{
   'minor_blocked': '未成年账号暂不支持购买会员',
   'plan_off_sale': '该套餐已下架，请选择其他套餐',
   'manage_in_app_store': 'Apple 订阅请在系统设置 › Apple ID › 订阅 中管理自动续费',
+  // V2 玩法
+  'out_of_range': '离得太远了，走近一点再试',
+  'cooldown': '合击冷却中，稍等一下',
+  'boss_not_active': '这只怪兽已经被击退或离开了',
+  'already_opened': '这个宝箱你已经开过了',
+  'chest_expired': '宝箱已经消失了，明天再来看看',
+  'companion_not_hatched': '伙伴还没孵化，先跑够里程孵化它',
+  'relay_running': '已经有一场接力在进行中',
+  'not_leader': '只有团长可以发起接力',
+  'not_in_crew': '先加入一个跑团',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',
@@ -68,6 +78,12 @@ class ApiException implements Exception {
       serverMessage.isNotEmpty ? serverMessage : (errorMessages[code] ?? errorMessages['unknown']!);
 
   bool get isNetwork => code == 'network' || code == 'timeout';
+
+  /// `cooldown` carries `retry_after_s`.
+  int? get retryAfterS {
+    final v = data['retry_after_s'];
+    return v is num ? v.toInt() : null;
+  }
 
   /// `account_banned` may carry `banned_until`.
   DateTime? get bannedUntil {

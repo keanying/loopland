@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -48,9 +50,45 @@ Color relationColor(String relation) => switch (relation) {
       _ => LL.text3,
     };
 
+/// A tapped gameplay object (V2).
+sealed class MapObjectHit {
+  const MapObjectHit();
+}
+
+class BossHit extends MapObjectHit {
+  const BossHit(this.boss);
+  final MapBoss boss;
+}
+
+class ChestHit extends MapObjectHit {
+  const ChestHit(this.chest);
+  final MapChest chest;
+}
+
+class CheckpointHit extends MapObjectHit {
+  const CheckpointHit(this.checkpoint);
+  final MapCheckpoint checkpoint;
+}
+
+/// "沙发怪 · 38%" (remaining HP).
+String bossLabel(MapBoss b) => '${b.name} · ${(b.hpFraction * 100).round()}%';
+
+/// Polygon approximating a circle of [radiusM] (AMap has no circle overlay
+/// in this plugin version).
+List<LatLng> circleRing(LatLng c, double radiusM, {int n = 48}) {
+  final dLat = radiusM / 111320;
+  final dLng = radiusM / (111320 * math.cos(c.lat * math.pi / 180));
+  return [
+    for (var i = 0; i <= n; i++)
+      LatLng(c.lat + dLat * math.sin(i / n * 2 * math.pi), c.lng + dLng * math.cos(i / n * 2 * math.pi)),
+  ];
+}
+
 /// Everything a map draws. Shared by the AMap and the fallback renderer.
 class MapLayers {
   const MapLayers({
+    this.objects = const MapObjects(),
+    this.routePath = const [],
     this.territories = const [],
     this.track = const [],
     this.loops = const [],
@@ -60,6 +98,12 @@ class MapLayers {
     this.selectedId,
   });
   final List<TerritorySummary> territories;
+
+  /// V2: bosses, chests and route checkpoints.
+  final MapObjects objects;
+
+  /// V2: ordered checkpoints of a route (drawn as a dashed line).
+  final List<LatLng> routePath;
   final List<LatLng> track;
 
   /// Closed loops of the current run (preview).
@@ -82,6 +126,7 @@ class TerritoryMapView extends StatelessWidget {
     this.initialZoom = 15,
     this.onTerritoryTap,
     this.onBoundsChanged,
+    this.onObjectTap,
     this.interactive = true,
   });
 
@@ -91,6 +136,9 @@ class TerritoryMapView extends StatelessWidget {
   final double initialZoom;
   final ValueChanged<TerritorySummary?>? onTerritoryTap;
   final ValueChanged<MapBounds>? onBoundsChanged;
+
+  /// Taps on bosses / chests / checkpoints (checked before territories).
+  final ValueChanged<MapObjectHit>? onObjectTap;
   final bool interactive;
 
   /// Tests and screenshots force the fallback.
@@ -115,6 +163,7 @@ class TerritoryMapView extends StatelessWidget {
         initialZoom: initialZoom,
         onTerritoryTap: onTerritoryTap,
         onBoundsChanged: onBoundsChanged,
+        onObjectTap: onObjectTap,
         interactive: interactive,
       );
     }
@@ -125,6 +174,7 @@ class TerritoryMapView extends StatelessWidget {
       initialZoom: initialZoom,
       onTerritoryTap: onTerritoryTap,
       onBoundsChanged: onBoundsChanged,
+      onObjectTap: onObjectTap,
       interactive: interactive,
     );
   }

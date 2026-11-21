@@ -23,6 +23,10 @@ import 'features/me/activity_pages.dart';
 import 'features/me/me_page.dart';
 import 'features/me/membership_page.dart';
 import 'features/me/settings_page.dart';
+import 'features/play/boss_page.dart';
+import 'features/play/games_page.dart';
+import 'features/play/routes_pages.dart';
+import 'features/play/season_page.dart';
 import 'features/run/home_training_page.dart';
 import 'features/run/result_page.dart';
 import 'features/run/run_page.dart';
@@ -32,6 +36,7 @@ import 'run/run_controller.dart';
 import 'run/uploader.dart';
 import 'widgets/card_art.dart';
 import 'widgets/common.dart';
+import 'realtime/realtime_banner.dart';
 import 'widgets/nav_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -109,6 +114,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crews/new', builder: (_, _) => const CrewCreatePage()),
       GoRoute(path: '/crews/:id', builder: (_, s) => CrewDetailPage(crewId: id(s) ?? 0)),
       GoRoute(path: '/crews/:id/manage', builder: (_, s) => CrewManagePage(crewId: id(s) ?? 0)),
+      // V2 玩法
+      GoRoute(path: '/bosses/:id', builder: (_, s) => BossPage(bossId: id(s) ?? 0)),
+      GoRoute(path: '/games', builder: (_, s) => GamesPage(initial: s.uri.queryParameters['game'] ?? 'war')),
+      GoRoute(path: '/season', builder: (_, _) => const SeasonPage()),
+      GoRoute(path: '/league', builder: (_, s) => LeaguePage(district: s.uri.queryParameters['district'] ?? '')),
+      GoRoute(path: '/routes', builder: (_, _) => const RoutesPage()),
+      GoRoute(path: '/routes/:id', builder: (_, s) => RouteDetailPage(routeId: id(s) ?? 0)),
+      GoRoute(path: '/campaigns', builder: (_, _) => const CampaignsPage()),
     ],
   );
 });
@@ -136,6 +149,11 @@ class _LooplandAppState extends ConsumerState<LooplandApp> {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       routerConfig: ref.watch(routerProvider),
+      // In-app banners for WebSocket pushes (领地被攻击 / 合击召集).
+      builder: (context, child) => RealtimeBannerHost(
+        onOpen: (path) => ref.read(routerProvider).push(path),
+        child: child ?? const SizedBox.shrink(),
+      ),
     );
   }
 }

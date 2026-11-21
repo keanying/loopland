@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../play/relay_card.dart';
 import 'community_page.dart';
 
 /// 找跑团。
@@ -267,6 +268,10 @@ class CrewDetailPage extends ConsumerWidget {
                     child: Text('团长需要先转让团长才能退出；只剩你一人时退出即解散。',
                         textAlign: TextAlign.center, style: TextStyle(color: LL.text3, fontSize: 12)),
                   ),
+                if (c.isMember) ...[
+                  const SizedBox(height: 14),
+                  RelayCard(crew: c),
+                ],
                 const SizedBox(height: 20),
                 const Text('成员', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 8),
