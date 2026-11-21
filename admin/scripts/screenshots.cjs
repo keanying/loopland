@@ -1,9 +1,9 @@
-// Loads every page of the admin console (run it against `npm run dev:mock`)
+// Loads every page of the admin console (run it against `pnpm run dev:mock`)
 // and saves full-page PNGs into ./screenshots. Fails if the browser console
 // reports errors.
 //
-//   npm run dev:mock            # in one terminal
-//   npm run screenshots            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
+//   pnpm run dev:mock            # in one terminal
+//   pnpm run screenshots            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');

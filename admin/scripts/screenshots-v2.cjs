@@ -1,8 +1,8 @@
 // V2 batch 1「玩法深化」screenshots (mock mode): every new page / tab / drawer
 // into ./screenshots/v2. Fails if the browser console reports errors or warnings.
 //
-//   npm run dev:mock
-//   npm run screenshots:v2            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
+//   pnpm run dev:mock
+//   pnpm run screenshots:v2            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');

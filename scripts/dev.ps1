@@ -64,7 +64,7 @@ function Wait-Api {
 }
 
 function Cmd-Check {
-    foreach ($t in 'go', 'node', 'npm', 'flutter', 'docker', 'psql') {
+    foreach ($t in 'go', 'node', 'pnpm', 'flutter', 'docker', 'psql') {
         if (Have $t) {
             $v = (& $t --version 2>$null | Select-Object -First 1)
             Write-Host ("  ✓ {0,-8} {1}" -f $t, $v)
@@ -110,31 +110,31 @@ SELECT 'CREATE DATABASE loopland OWNER loopland' WHERE NOT EXISTS (SELECT 1 FROM
 function Cmd-Api {
     Say "启动后端 http://localhost:$ApiPort （管理员 $(($env:LOOPLAND_BOOTSTRAP_ADMIN -split ':')[0])）"
     Set-Location (Join-Path $Root 'server')
-    Invoke-Checked 'go' @('run', './cmd/loopland-api')
+    Invoke-Checked 'go' @('run', '.')
 }
 
 function Cmd-Seed {
     Wait-Api
     Say '灌演示数据'
     Set-Location (Join-Path $Root 'server')
-    Invoke-Checked 'go' @('run', './cmd/loopland-seed', '-api', "http://localhost:$ApiPort", '-admin', $env:LOOPLAND_BOOTSTRAP_ADMIN)
+    Invoke-Checked 'go' @('run', '.', 'seed', '-api', "http://localhost:$ApiPort", '-admin', $env:LOOPLAND_BOOTSTRAP_ADMIN)
 }
 
 function Npm-Ready {
     Set-Location (Join-Path $Root 'admin')
-    if (-not (Test-Path 'node_modules')) { Say '安装管理端依赖'; Invoke-Checked 'npm' @('ci') }
+    if (-not (Test-Path 'node_modules')) { Say '安装管理端依赖'; Invoke-Checked 'pnpm' @('install', '--frozen-lockfile') }
 }
 
 function Cmd-Admin {
     Npm-Ready
     Say '启动管理端（端口、后端地址等见 admin\config.yaml，本机覆盖写 admin\config.local.yaml）'
-    Invoke-Checked 'npm' @('run', 'dev')
+    Invoke-Checked 'pnpm' @('run', 'dev')
 }
 
 function Cmd-AdminMock {
     Npm-Ready
     Say '启动管理端（模拟数据，不需要后端）http://localhost:5173'
-    Invoke-Checked 'npm' @('run', 'dev:mock')
+    Invoke-Checked 'pnpm' @('run', 'dev:mock')
 }
 
 function Cmd-App {
@@ -155,7 +155,7 @@ function Cmd-App {
 
 function Cmd-Doctor {
     Set-Location (Join-Path $Root 'server')
-    Invoke-Checked 'go' @('run', './cmd/loopland-doctor')
+    Invoke-Checked 'go' @('run', '.', 'doctor')
 }
 
 function Cmd-Test {
@@ -165,8 +165,8 @@ function Cmd-Test {
     Invoke-Checked 'go' @('test', './...')
     Say '管理端检查'
     Npm-Ready
-    Invoke-Checked 'npm' @('run', 'lint')
-    Invoke-Checked 'npm' @('run', 'build')
+    Invoke-Checked 'pnpm' @('run', 'lint')
+    Invoke-Checked 'pnpm' @('run', 'build')
     if (Have 'flutter') {
         Say 'App 检查'
         Set-Location (Join-Path $Root 'app')

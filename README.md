@@ -45,7 +45,7 @@ dev 模式下：短信验证码固定 `000000`；一键登录 token 写 `dev:138
 
 ```bash
 make test                                      # 后端：单元 + PostGIS 集成 + 端到端（需要本机 PostgreSQL、Redis）
-cd admin && npm run lint && npm run build      # 管理端
+cd admin && pnpm run lint && pnpm run build      # 管理端
 cd app && flutter analyze && flutter test      # App
 LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live   # App 接真实后端联调
 ```

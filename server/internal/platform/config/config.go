@@ -165,7 +165,12 @@ func Load() (Config, error) {
 	}
 	fileValues, Source = nil, p
 	if p != "" {
-		if fileValues, err = readFile(p); err != nil {
+		files := []string{p}
+		if l := localFile(p); l != "" {
+			files = append(files, l)
+			Source = p + " + " + l
+		}
+		if fileValues, err = readFile(files...); err != nil {
 			return Config{}, err
 		}
 	}

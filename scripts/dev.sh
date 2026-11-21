@@ -42,7 +42,7 @@ wait_api() {
 
 cmd_check() {
   local ok=1
-  for t in go node npm flutter docker psql curl; do
+  for t in go node pnpm flutter docker psql curl; do
     if have "$t"; then printf '  ✓ %-8s %s\n' "$t" "$("$t" --version 2>/dev/null | head -1)"
     else printf '  ✗ %-8s 未安装\n' "$t"; ok=0; fi
   done
@@ -78,30 +78,30 @@ SQL
 
 cmd_api() {
   say "启动后端 http://localhost:$API_PORT （管理员 ${LOOPLAND_BOOTSTRAP_ADMIN%%:*}）"
-  cd "$ROOT/server" && exec go run ./cmd/loopland-api
+  cd "$ROOT/server" && exec go run .
 }
 
 cmd_seed() {
   wait_api
   say "灌演示数据"
-  cd "$ROOT/server" && go run ./cmd/loopland-seed -api "http://localhost:$API_PORT" -admin "$LOOPLAND_BOOTSTRAP_ADMIN"
+  cd "$ROOT/server" && go run . seed -api "http://localhost:$API_PORT" -admin "$LOOPLAND_BOOTSTRAP_ADMIN"
 }
 
 npm_ready() {
   cd "$ROOT/admin"
-  [ -d node_modules ] || { say "安装管理端依赖"; npm ci; }
+  [ -d node_modules ] || { say "安装管理端依赖"; pnpm install --frozen-lockfile; }
 }
 
 cmd_admin() {
   npm_ready
   say "启动管理端（端口、后端地址等见 admin/config.yaml，本机覆盖写 admin/config.local.yaml）"
-  exec npm run dev
+  exec pnpm run dev
 }
 
 cmd_admin_mock() {
   npm_ready
   say "启动管理端（模拟数据，不需要后端）http://localhost:5173"
-  exec npm run dev:mock
+  exec pnpm run dev:mock
 }
 
 cmd_app() {
@@ -119,14 +119,14 @@ cmd_app() {
   exec flutter run "${args[@]}"
 }
 
-cmd_doctor() { cd "$ROOT/server" && go run ./cmd/loopland-doctor; }
+cmd_doctor() { cd "$ROOT/server" && go run . doctor; }
 
 cmd_test() {
   say "后端测试（需要 PostgreSQL 和 Redis）"
   (cd "$ROOT/server" && go vet ./... && go test ./...)
   say "管理端检查"
   npm_ready
-  (cd "$ROOT/admin" && npm run lint && npm run build)
+  (cd "$ROOT/admin" && pnpm run lint && pnpm run build)
   if have flutter; then
     say "App 检查"
     (cd "$ROOT/app" && flutter pub get && flutter analyze && flutter test)
@@ -138,7 +138,7 @@ cmd_test() {
 cmd_all() {
   cmd_deps
   say "后台启动后端，日志写到 server/api.log"
-  (cd "$ROOT/server" && nohup go run ./cmd/loopland-api >api.log 2>&1 &)
+  (cd "$ROOT/server" && nohup go run . >api.log 2>&1 &)
   cmd_seed
   cmd_admin
 }

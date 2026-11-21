@@ -7,14 +7,14 @@
 
 ```bash
 cd admin
-npm ci
+pnpm install --frozen-lockfile
 
-npm run dev            # 连真实后端：按 config.yaml 把 /admin/v1、/v1、/v1/ws 代理到 backend.url（默认 http://localhost:8080）
-npm run dev:mock       # 假数据模式，不需要后端（--mode mock 叠加 config.mock.yaml）；账号 admin / xiaolin / amei / shop，密码任意（"wrong" 会失败）
+pnpm run dev            # 连真实后端：按 config.yaml 把 /admin/v1、/v1、/v1/ws 代理到 backend.url（默认 http://localhost:8080）
+pnpm run dev:mock       # 假数据模式，不需要后端（--mode mock 叠加 config.mock.yaml）；账号 admin / xiaolin / amei / shop，密码任意（"wrong" 会失败）
 
-npm run build          # 先 tsc --noEmit，再 vite build，产物在 dist/
-npm run preview        # 本地预览 dist/（同样代理 API）
-npm run lint           # eslint，0 warning
+pnpm run build          # 先 tsc --noEmit，再 vite build，产物在 dist/
+pnpm run preview        # 本地预览 dist/（同样代理 API）
+pnpm run lint           # eslint，0 warning
 ```
 
 后端本地启动（见 `../server`）：`LOOPLAND_ENV=dev LOOPLAND_BOOTSTRAP_ADMIN='admin:admin-password-1' go run ./cmd/loopland-api`，然后用 admin / admin-password-1 登录。
@@ -23,11 +23,11 @@ npm run lint           # eslint，0 warning
 ### 截图
 
 ```bash
-npm run dev:mock          # 终端 1
-npm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
+pnpm run dev:mock          # 终端 1
+pnpm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
 ```
 
-V2 页面另有一套：`npm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
+V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
 
 `scripts/screenshots.cjs` 用 Playwright 依次打开所有页面（管理员、运营、审核员三种视角和窄屏），把整页 PNG 存到 `screenshots/`；浏览器控制台有 error / warning 时脚本以非 0 退出。`screenshots/real/` 是连真实后端时的截图。
 
@@ -50,7 +50,7 @@ admin 配置有误：
 
 1. `config.yaml`：全部键的默认值（必需）
 2. `config.local.yaml`：本机覆盖（可选，已 gitignore；示例见 `config.local.example.yaml`）
-3. `config.<mode>.yaml`：按 Vite mode 叠加（可选）。`npm run dev:mock` / `build:mock` 用 `--mode mock`，读 `config.mock.yaml`（`app.mock: true`）
+3. `config.<mode>.yaml`：按 Vite mode 叠加（可选）。`pnpm run dev:mock` / `build:mock` 用 `--mode mock`，读 `config.mock.yaml`（`app.mock: true`）
 4. 环境变量 `LOOPLAND_ADMIN_CONFIG=<文件路径>`：优先级最高（相对路径以 `admin/` 为准）。**设置后不再读 `config.local.yaml`**，构建结果不受开发者本机文件影响，适合测试服 / 生产构建
 
 不再使用 `.env*` / `VITE_*` 变量（原来的 `VITE_MOCK`、`VITE_AMAP_KEY`、`VITE_AMAP_SECURITY_CODE`、`VITE_API_BASE`、`LOOPLAND_API` 分别对应 `app.mock`、`amap.key`、`amap.security_code`、`api.base_path`、`backend.url`）。
@@ -63,7 +63,7 @@ admin 配置有误：
 | `dev_server.port` | `5173` | 开发服务器端口（1–65535 整数） |
 | `dev_server.strict_port` | `false` | `true`：端口被占用直接报错；`false`：自动换下一个空闲端口 |
 | `dev_server.open` | `false` | 启动后自动打开浏览器 |
-| `preview.host` / `preview.port` | `localhost` / `4173` | `npm run preview` 的监听地址和端口 |
+| `preview.host` / `preview.port` | `localhost` / `4173` | `pnpm run preview` 的监听地址和端口 |
 | `backend.url` | `http://localhost:8080` | 后端地址。dev / preview 把 `api.admin_prefix`、`api.app_prefix`、`api.ws_path`（WebSocket）代理到这里；必须是 http(s):// |
 | `api.base_path` | `""` | 浏览器请求前缀。`""` = 同源（开发走代理，生产由 nginx 转发）；也可以是 `/prefix` 或 `https://api.example.com`（跨域时后端需允许 CORS） |
 | `api.admin_prefix` | `/admin/v1` | 管理端接口前缀（请求和假数据路由都基于它） |
@@ -79,7 +79,7 @@ admin 配置有误：
 
 ### 示例
 
-**本机开发**：后端跑在默认的 8080 时什么都不用改，直接 `npm run dev`。后端在别的端口、或要打开高德底图时，新建 `config.local.yaml`：
+**本机开发**：后端跑在默认的 8080 时什么都不用改，直接 `pnpm run dev`。后端在别的端口、或要打开高德底图时，新建 `config.local.yaml`：
 
 ```yaml
 backend:
@@ -92,13 +92,13 @@ amap:
 ```bash
 # Linux / macOS
 cp config.local.example.yaml config.local.yaml
-npm run dev
+pnpm run dev
 ```
 
 ```powershell
 # Windows PowerShell
 Copy-Item config.local.example.yaml config.local.yaml
-npm run dev
+pnpm run dev
 ```
 
 **连远程测试服**：页面仍由本机 Vite 提供，API 经代理转到测试服（同源，不需要 CORS）。写一个 `config.staging.yaml`：
@@ -110,12 +110,12 @@ backend:
 
 ```bash
 # Linux / macOS
-LOOPLAND_ADMIN_CONFIG=config.staging.yaml npm run dev
+LOOPLAND_ADMIN_CONFIG=config.staging.yaml pnpm run dev
 ```
 
 ```powershell
 # Windows PowerShell
-$env:LOOPLAND_ADMIN_CONFIG = "config.staging.yaml"; npm run dev
+$env:LOOPLAND_ADMIN_CONFIG = "config.staging.yaml"; pnpm run dev
 Remove-Item Env:LOOPLAND_ADMIN_CONFIG   # 用完清掉，否则同一窗口里后续命令都会用它
 ```
 
@@ -132,15 +132,15 @@ amap:
 
 ```bash
 # Linux / macOS
-LOOPLAND_ADMIN_CONFIG=config.prod.yaml npm run build
+LOOPLAND_ADMIN_CONFIG=config.prod.yaml pnpm run build
 ```
 
 ```powershell
 # Windows PowerShell
-$env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; npm run build; Remove-Item Env:LOOPLAND_ADMIN_CONFIG
+$env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env:LOOPLAND_ADMIN_CONFIG
 ```
 
-注意：名为 `config.production.yaml` 的文件即使不设环境变量也会在 `npm run build`（mode = production）时自动叠加（第 3 层）；不想这样就换个名字。
+注意：名为 `config.production.yaml` 的文件即使不设环境变量也会在 `pnpm run build`（mode = production）时自动叠加（第 3 层）；不想这样就换个名字。
 
 ## 页面
 

@@ -174,18 +174,57 @@ func findFile() (string, error) {
 }
 
 // readFile parses a config file strictly: unknown keys are errors, so a
-// typo cannot silently fall back to a default.
-func readFile(p string) (map[string]string, error) {
-	raw, err := os.ReadFile(p)
-	if err != nil {
+// typo cannot silently fall back to a default. Later files (the local
+// override) are deep-merged over earlier ones key by key.
+func readFile(paths ...string) (map[string]string, error) {
+	merged := map[string]any{}
+	for _, p := range paths {
+		raw, err := os.ReadFile(p)
+		if err != nil {
+			return nil, err
+		}
+		var m map[string]any
+		if err := yaml.Unmarshal(raw, &m); err != nil {
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+		// Validate each file on its own so errors name the right file.
+		var f File
+		dec := yaml.NewDecoder(bytes.NewReader(raw))
+		dec.KnownFields(true)
+		if err := dec.Decode(&f); err != nil && err.Error() != "EOF" {
+			return nil, fmt.Errorf("%s: %w", p, err)
+		}
+		deepMerge(merged, m)
+	}
+	raw, _ := yaml.Marshal(merged)
+	var f File
+	if err := yaml.Unmarshal(raw, &f); err != nil {
 		return nil, err
 	}
-	var f File
-	dec := yaml.NewDecoder(bytes.NewReader(raw))
-	dec.KnownFields(true)
-	if err := dec.Decode(&f); err != nil && err.Error() != "EOF" {
-		return nil, fmt.Errorf("%s: %w", p, err)
-	}
-	abs, _ := filepath.Abs(p)
+	abs, _ := filepath.Abs(paths[0])
 	return f.env(filepath.Dir(abs)), nil
+}
+
+func deepMerge(dst, src map[string]any) {
+	for k, v := range src {
+		if sm, ok := v.(map[string]any); ok {
+			if dm, ok := dst[k].(map[string]any); ok {
+				deepMerge(dm, sm)
+				continue
+			}
+		}
+		dst[k] = v
+	}
+}
+
+// localFile is the gitignored per-machine override next to config.yaml.
+func localFile(p string) string {
+	if os.Getenv("LOOPLAND_CONFIG") != "" {
+		return "" // an explicit file is used as is
+	}
+	l := filepath.Join(filepath.Dir(p), "config.local.yaml")
+	if _, err := os.Stat(l); err != nil {
+		return ""
+	}
+	return l
 }

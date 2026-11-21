@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="管理端 dev（模拟数据）" type="js.build_tools.npm" folderName="管理端">
+    <package-json value="$PROJECT_DIR$/admin/package.json" />
+    <command value="run" />
+    <scripts>
+      <script value="dev:mock" />
+    </scripts>
+    <node-interpreter value="project" />
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

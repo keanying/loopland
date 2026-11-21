@@ -107,3 +107,22 @@ func TestCommittedConfigFilesParse(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalOverride(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("http:\n  addr: \":8080\"\n  public_base_url: http://localhost:8080\njobs:\n  enabled: false\n"), 0o600)
+	os.WriteFile(filepath.Join(dir, "config.local.yaml"), []byte("http:\n  addr: \":9090\"\n"), 0o600)
+	t.Chdir(dir)
+	t.Setenv("LOOPLAND_CONFIG", "")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.HTTPAddr != ":9090" || c.PublicBaseURL != "http://localhost:8080" || !c.JobsOff {
+		t.Fatalf("merge: addr=%s base=%s jobsOff=%v", c.HTTPAddr, c.PublicBaseURL, c.JobsOff)
+	}
+	os.WriteFile(filepath.Join(dir, "config.local.yaml"), []byte("http:\n  adr: \":9090\"\n"), 0o600)
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "config.local.yaml") {
+		t.Fatalf("typo in local file: %v", err)
+	}
+}

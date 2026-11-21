@@ -16,5 +16,6 @@
   - 第三方服务（短信、验证码、一键登录、实名、微信、支付宝、Apple、AI、邮件、地图等）的 Key 在**管理端「系统配置」页面**维护，加密存库，不写进代码和配置文件（后端 `server/internal/providers`，接口 `docs/api/系统配置.md`；新增第三方服务就在 `providers/defs.go` 加一项）。`server/config.yaml` 里的第三方段落只是没在管理端保存过时的兼容引导值。App 编译进安装包的 SDK 标识（高德 App Key、微信 AppID、一键登录方案秘钥等）属于 App 配置，放 `app/config/app.yaml`/`app.local.yaml`。
 - **接口约定**：`docs/api/*.md` 是前后端共同的契约；改接口要同步改文档。JSON 字段名与数据库字段名相互独立。
 - **密钥**：不提交到仓库，不发到聊天里。
-- **测试**：后端 `cd server && go test ./...`（需要本机 PostgreSQL+PostGIS 和 Redis）；管理端 `npm run lint && npm run build`；App `flutter analyze && flutter test`。
+- **测试**：后端 `cd server && go test ./...`（需要本机 PostgreSQL+PostGIS 和 Redis）；管理端 `pnpm run lint && pnpm run build`；App `flutter analyze && flutter test`。
+- **启动入口**：后端只有一个入口 `server/main.go`（`go run .` 启动 API，`go run . seed|doctor|help`），`server/internal/cmd/*` 放各子命令；IDE 运行配置在 `.run/`（IDEA/GoLand）和 `.vscode/`，新增子命令要同步。管理端用 **pnpm**（不要提交 package-lock.json）。
 - 本地启动见 `docs/本地启动.md`（Linux / Windows），上线接入见 `docs/上线接入清单.md`。

@@ -1,0 +1,61 @@
+{
+  // 圈圈 Loopland 调试配置（VS Code）。IntelliJ IDEA / GoLand 用仓库根目录的 .run/。
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "后端 API",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/server/main.go",
+      "cwd": "${workspaceFolder}/server"
+    },
+    {
+      "name": "后端 写演示数据",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/server/main.go",
+      "cwd": "${workspaceFolder}/server",
+      "args": ["seed", "-admin", "admin:admin-password-1"]
+    },
+    {
+      "name": "后端 配置自检",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/server/main.go",
+      "cwd": "${workspaceFolder}/server",
+      "args": ["doctor"]
+    },
+    {
+      "name": "管理端 dev（连后端）",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "pnpm run dev",
+      "cwd": "${workspaceFolder}/admin"
+    },
+    {
+      "name": "管理端 浏览器调试",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/admin"
+    },
+    {
+      "name": "App（dev）",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/app",
+      "args": ["--dart-define-from-file=config/dev.json"],
+      "preLaunchTask": "App 生成配置（dev）"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "后端 + 管理端",
+      "configurations": ["后端 API", "管理端 dev（连后端）"]
+    }
+  ]
+}

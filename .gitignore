@@ -53,3 +53,6 @@ app/ios/Flutter/flutter_export_environment.sh
 
 # Redis snapshots
 dump.rdb
+
+# Per-machine backend overrides
+server/config.local.yaml

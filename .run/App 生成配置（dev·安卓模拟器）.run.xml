@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="App 生成配置（dev·安卓模拟器）" type="DartCommandLineRunConfigurationType" factoryName="Dart Command Line Application" folderName="App">
+    <option name="arguments" value="--profile dev --api-base http://10.0.2.2:8080" />
+    <option name="filePath" value="$PROJECT_DIR$/app/tool/gen_config.dart" />
+    <option name="workingDirectory" value="$PROJECT_DIR$/app" />
+    <method v="2" />
+  </configuration>
+</component>
