@@ -188,7 +188,7 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Text(r.medal!.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                               const SizedBox(height: 4),
-                              Text((r.myEntry?.finished ?? false) ? '已获得，可在图鉴 › 奖牌查看' : '完赛后自动发放到图鉴 › 奖牌',
+                              Text((r.myEntry?.finished ?? false) ? '已获得，可在图鉴的奖牌页查看' : '完赛后自动发放到图鉴的奖牌页',
                                   style: const TextStyle(color: LL.text2, fontSize: 13)),
                             ]),
                           ),

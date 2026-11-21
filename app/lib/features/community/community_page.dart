@@ -201,7 +201,7 @@ class _HomeCrewCard extends StatelessWidget {
         decoration: BoxDecoration(color: LL.lavender, borderRadius: BorderRadius.circular(32)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            PersonAvatar(name: c.name, url: c.avatarUrl, size: 60, color: LL.ink),
+            _CrewBadge(name: c.name, url: c.avatarUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -224,7 +224,10 @@ class _HomeCrewCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(color: const Color(0x22000000), borderRadius: BorderRadius.circular(16)),
-              child: const Text('集结跑 · 接力 ›', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w800)),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Text('集结跑 · 接力', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w800)),
+                Icon(Icons.chevron_right_rounded, color: LL.ink, size: 18),
+              ]),
             ),
           ]),
         ]),
@@ -308,7 +311,7 @@ class CrewCard extends StatelessWidget {
         decoration: BoxDecoration(color: LL.lavender, borderRadius: BorderRadius.circular(32)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Avatar(name: c.name, size: 60, color: LL.ink),
+            _CrewBadge(name: c.name, url: c.avatarUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -352,5 +355,25 @@ class CrewCard extends StatelessWidget {
         ]),
       ),
     );
+  }
+}
+
+/// Crew avatar on the lavender card: photo, or the first character in
+/// lavender on ink (prototype「兔」badge).
+class _CrewBadge extends StatelessWidget {
+  const _CrewBadge({required this.name, this.url});
+  final String name;
+  final String? url;
+  @override
+  Widget build(BuildContext context) {
+    final letter = Container(
+      width: 60,
+      height: 60,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: LL.ink, shape: BoxShape.circle),
+      child: Text(name.isEmpty ? '?' : String.fromCharCodes(name.runes.take(1)),
+          style: const TextStyle(color: LL.lavender, fontWeight: FontWeight.w900, fontSize: 26)),
+    );
+    return url == null ? letter : PersonAvatar(name: name, url: url, size: 60, color: LL.ink);
   }
 }
