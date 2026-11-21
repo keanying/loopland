@@ -15,6 +15,7 @@ flutter test             # 单元测试 + 组件测试
 LOOPLAND_SCREENSHOTS=1 flutter test test/widgets   # 顺便把截图写到 screenshots/（V2 页面在 screenshots/v2/）
 # 联调：后端以 LOOPLAND_ENV=dev 运行（V2 测试还需要管理员 admin:admin-password-1 来投放怪兽 / 宝箱）
 LOOPLAND_LIVE_API=http://localhost:8082 flutter test integration_live
+# AI（ai_live_test.dart）：开发环境没配 AI 时后端用内置模拟 AI，含真实 SSE 流式
 ```
 
 ## 配置（config/app.yaml）
@@ -174,6 +175,13 @@ screenshots/  组件测试生成的界面截图
   - 集结跑：跑团页里发起、报名、到场签到（离集合点 300 m 内），签到满 2 人有加成，结算页显示「集结跑加成」。
   - 赛事（`/races`）：线上赛 / 线下赛报名、排行榜、完赛奖牌（结算页「赛事完赛」）。
   - 跑团：邀请码（生成、分享、`/crews/join-code` 加入）、编辑跑团（名称、头像、城区、加入方式，先生效后审核）。
+- **AI 助手 / 路线 / 战报（V2 第三批 E-08、A-04、C-04、C-05 / D-05，接口 `docs/api/v2-3-AI.md`）**：`GET /v1/config/features` 的 `ai=false`（或请求失败 / 旧后端没有该字段）时下面所有入口都隐藏。代码在 `lib/api/ai_api.dart`、`ai_models.dart`、`lib/features/ai/`。
+  - AI 助手圈圈（`/ai`，设计稿 12_AI_助手）：入口在地图右侧「AI」、我的「AI 助手圈圈」、他人领地弹层和怪兽页的「问 AI」（`/ai?context=territory|boss&id=&name=`，预填问题并显示「关于领地「xx」」，只随下一条消息发送 `context`）。顶部公示模型名称 + 备案号（点开「关于 AI 助手」：免责声明、图片识别、额度、180 天保存说明）和本周剩余次数（会员显示「不限次数」）；开场白 + 快捷问题；历史倒序分页（`before=`，滚到顶加载更早的）；菜单「清空对话」。
+  - 流式回答：`POST /v1/ai/chat` 带 `Accept: text/event-stream`，dio `ResponseType.stream` + 自写 SSE 解析（`parseSse`：`event:` / 多行 `data:` / 注释 / CRLF / 任意切块），`delta` 实时追加（等待首字时显示三点动画，生成中有光标），`card` 立即渲染，`done.message` 为准（输出被拦截时替换文字、去掉卡片），`event: error` 显示在回答气泡里并可重试；流在第一个事件前就失败（网络 / 代理）时自动改用 JSON 请求，后端直接回 JSON 也能处理。每条 AI 回答下方都有「内容由 AI 生成」。
+  - 卡片：路线卡（缩略轨迹、距离 / 可圈面积 / 用时、理由、「一键开跑」→ 开跑页预选该路线并自动开始）、领地卡（→ 地图定位并高亮，`mapFocusProvider`）、怪兽卡（→ 怪兽页）。
+  - 拍照 / 相册（`purpose=chat` 上传），`vision=false` 时不显示相机按钮，`ai_image_unsupported` 后也隐藏；`ai_quota_exceeded` 弹「开通会员」→ 会员页（之后本地记为用完，直接弹窗不再请求）；`content_blocked` / `rate_limited` 退回草稿；`ai_unavailable`（信息接口 503 或 `enabled=false`）整页提示不可用。
+  - 开跑页「本次目标」：自由圈地之后是 `GET /v1/ai/routes` 的 AI 推荐闭环 / 夺回 xx / 守卫 xx / 顺路打怪兽（定位中 / 加载中 / 空 / 失败可重试 / 「刷新 AI 路线」），选中后展开距离·用时·面积、理由（`ai_generated` 时标「内容由 AI 生成」）、途经目标，闭环可选 3 / 5 / 10 km；预览地图画路线虚线和编号目标并自动取景。开跑时 `goal = {type: ai_route, route_id, route_type}`，运动页沿用城市定向的路线虚线层画引导线 + 编号目标，接近目标时提示（引导线不写入断点续跑快照）。
+  - 结算页 AI 战报：结算后请求 `POST /v1/activities/{id}/ai-report`，柠檬绿卡片逐字打出、标「内容由 AI 生成 · 模型名」，「换一换 · 剩 N 次」（用完显示「已换完」，409 `regenerate_limit` 提示）；「一键带上战报发动态」把战报带进发布页，作为单独的「AI 战报」块（可移除，不计入 500 字），发布时 `ai_report: true`。发布页也可以对选中的运动「AI 写战报 / 换一篇」，换运动时自动移除。动态卡片和详情把 `post.ai_report` 显示为单独的「AI 战报」块并标注 AI 生成。
 - **AI 跟练（V2 第三批 C-09，接口 `docs/api/v2-3-AI.md`「App · AI 跟练」）**：
   - 入口：开始页「居家跟练」→「AI 跟练」（`/coach?sport=`），原来的自由计时 / 计数保留为「手动记录」（`/train/:sport`）。课程列表按 跳绳 / HIIT / 普拉提 / 力量 分页签，来自 `GET /v1/ai/workouts`；接口 503 `ai_unavailable`、断网或返回空时用内置课程（`lib/coach/workout.dart` 的 `builtinWorkouts`，与服务端默认 `workouts` 一致）。姿态计次在端上完成、不调大模型，所以 `features.ai=false` 时也不隐藏。
   - 跟练页（`/coach/:key`，设计稿 11_AI_跟练）：前置摄像头预览 + 骨架叠加（CustomPainter）、「AI 自动计数」大数字、组数条、提示气泡、底部面板（已用时 / 倒计时或 次数/目标 / 组数 / 开始·暂停·继续 / 预计能量）；5 秒准备倒计时，按动作 `count`（到目标次数自动完成本组）或 `time` 计时，组间 / 动作间休息（显示「下一个」，可跳过），暂停 / 继续、完成本组、跳过动作、结束训练，结束后显示小结再「领取能量」。
