@@ -50,6 +50,10 @@ cd app && flutter analyze && flutter test      # App
 LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live   # App 接真实后端联调
 ```
 
+## 接入真实服务
+
+见 **`docs/上线接入清单.md`**：每家服务去哪申请、拿到什么、填到哪里。后端变量模板 `server/.env.example`；配好后运行 `make doctor`（或部署环境里的 `loopland-doctor`）逐项验证密钥。正式环境缺配置会拒绝启动并列出缺项。
+
 ## 上线前需要准备
 
 - 微信开放平台（App 登录 + 微信支付 V3）、支付宝 App 支付、Apple（登录 + 内购 + 服务器通知）、阿里云短信与号码认证、高德地图 key：代码已接好，只缺商户资质和密钥（环境变量见 `server/internal/platform/config`）。

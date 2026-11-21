@@ -1,4 +1,4 @@
-.PHONY: test vet fmt run seed dev-up dev-down
+.PHONY: test vet fmt run seed doctor dev-up dev-down
 
 test:
 	cd server && go test ./...
@@ -21,3 +21,6 @@ dev-up:
 
 dev-down:
 	docker compose -f deploy/docker-compose.yml down
+
+doctor:
+	cd server && go run ./cmd/loopland-doctor

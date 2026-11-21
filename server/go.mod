@@ -17,6 +17,8 @@ require (
 
 require (
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
+	github.com/alibabacloud-go/captcha-20230305 v1.1.3 // indirect
+	github.com/alibabacloud-go/cloudauth-20190307/v4 v4.14.2 // indirect
 	github.com/alibabacloud-go/debug v1.0.1 // indirect
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
 	github.com/alibabacloud-go/openapi-util v0.1.1 // indirect

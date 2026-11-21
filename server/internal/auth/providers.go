@@ -24,7 +24,9 @@ import (
 	"sync"
 	"time"
 
+	captcha "github.com/alibabacloud-go/captcha-20230305/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
+	openapiutil "github.com/alibabacloud-go/darabonba-openapi/v2/utils"
 	dypns "github.com/alibabacloud-go/dypnsapi-20170525/v2/client"
 	dysms "github.com/alibabacloud-go/dysmsapi-20170525/v4/client"
 	"github.com/alibabacloud-go/tea/tea"
@@ -341,3 +343,40 @@ func (d Disabled) Exchange(context.Context, string) (WeChatIdentity, error) {
 
 // Verify implements Apple.
 func (d Disabled) Verify(context.Context, string) (string, error) { return "", d.err() }
+
+// ---------------------------------------------------------------- captcha
+
+// AliyunCaptcha verifies 阿里云验证码 2.0 (智能验证) on the server with
+// VerifyIntelligentCaptcha. The app obtains captchaVerifyParam from the
+// captcha widget and sends it as captcha_token.
+type AliyunCaptcha struct {
+	cli     *captcha.Client
+	sceneID string
+}
+
+// NewAliyunCaptcha builds the verifier.
+func NewAliyunCaptcha(ak, sk, sceneID string) (*AliyunCaptcha, error) {
+	cli, err := captcha.NewClient(&openapiutil.Config{AccessKeyId: tea.String(ak), AccessKeySecret: tea.String(sk),
+		Endpoint: tea.String("captcha.cn-shanghai.aliyuncs.com")})
+	if err != nil {
+		return nil, err
+	}
+	return &AliyunCaptcha{cli: cli, sceneID: sceneID}, nil
+}
+
+// Verify implements Captcha. If Aliyun itself is unreachable we fail closed:
+// SMS costs money and is the main abuse target.
+func (a *AliyunCaptcha) Verify(_ context.Context, token, _ string) error {
+	if token == "" {
+		return errors.New("captcha token missing")
+	}
+	resp, err := a.cli.VerifyIntelligentCaptcha(&captcha.VerifyIntelligentCaptchaRequest{
+		CaptchaVerifyParam: tea.String(token), SceneId: tea.String(a.sceneID)})
+	if err != nil {
+		return fmt.Errorf("%w: captcha: %v", ErrProvider, err)
+	}
+	if resp.Body == nil || resp.Body.Result == nil || !tea.BoolValue(resp.Body.Result.VerifyResult) {
+		return errors.New("captcha rejected")
+	}
+	return nil
+}

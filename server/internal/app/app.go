@@ -4,9 +4,11 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"time"
 
@@ -45,6 +47,7 @@ type Options struct {
 	OneClick auth.OneClick
 	WeChat   auth.WeChat
 	Apple    auth.Apple
+	Captcha  auth.Captcha
 	Realname user.Realname
 	Payments map[string]billing.Provider
 	AppleIAP *billing.AppleStore
@@ -66,10 +69,12 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 			return nil, err
 		}
 	}
-	providers(cfg, log, &opt)
+	if err := providers(cfg, log, &opt); err != nil {
+		return nil, err
+	}
 
 	authSvc := &auth.Service{Pool: pool, Redis: rdb, Box: box, Config: store, SMS: opt.SMS, OneTap: opt.OneClick, WeChat: opt.WeChat,
-		Apple: opt.Apple, Captcha: auth.NoCaptcha{}, JWTSecret: cfg.JWTSecret, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL}
+		Apple: opt.Apple, Captcha: opt.Captcha, JWTSecret: cfg.JWTSecret, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL}
 	if cfg.Dev() {
 		authSvc.DevCode = "000000"
 	}
@@ -93,6 +98,10 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 			uid, _ = authSvc.Parse(tok)
 		}
 		return httpx.OK(w, store.For(uid))
+	}))
+	features := enabledFeatures(cfg, opt)
+	mux.Handle("GET /v1/config/features", httpx.Wrap(func(w http.ResponseWriter, r *http.Request) error {
+		return httpx.OK(w, features)
 	}))
 	(&auth.Handler{Svc: authSvc}).Routes(mux)
 	userH.Routes(mux, authed, authAny)
@@ -118,41 +127,60 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	}, nil
 }
 
-// providers fills in external services from configuration: real ones when
-// credentials exist, dev fakes in dev, and "disabled" otherwise.
-func providers(cfg config.Config, log *slog.Logger, opt *Options) {
+// providers fills in external services from configuration: the real
+// provider when credentials exist, dev fakes in dev, and "disabled"
+// otherwise. Production start-up refuses incomplete configuration before
+// this runs (see config.ValidateProd), so "disabled" in prod only happens
+// for features listed in LOOPLAND_DISABLE.
+func providers(cfg config.Config, log *slog.Logger, opt *Options) error {
 	al := cfg.Aliyun
+	on := cfg.Enabled
+	fail := func(what string, err error) error { return fmt.Errorf("%s: %w", what, err) }
+
 	if opt.SMS == nil {
 		switch {
-		case al.AccessKeyID != "" && al.SMSSignName != "":
-			if s, err := auth.NewAliyunSMS(al.AccessKeyID, al.AccessKeySecret, al.SMSSignName, al.SMSTemplateCode); err == nil {
-				opt.SMS = s
-			} else {
-				log.Error("aliyun sms", "err", err)
+		case on("sms") && al.AccessKeyID != "" && al.SMSSignName != "":
+			s, err := auth.NewAliyunSMS(al.AccessKeyID, al.AccessKeySecret, al.SMSSignName, al.SMSTemplateCode)
+			if err != nil {
+				return fail("aliyun sms", err)
 			}
+			opt.SMS = s
 		case cfg.Dev():
 			opt.SMS = auth.LogSMS{Log: log}
-		}
-		if opt.SMS == nil {
+		default:
 			opt.SMS = auth.Disabled{Name: "sms"}
+		}
+	}
+	if opt.Captcha == nil {
+		switch {
+		case on("captcha") && al.AccessKeyID != "" && al.CaptchaSceneID != "":
+			c, err := auth.NewAliyunCaptcha(al.AccessKeyID, al.AccessKeySecret, al.CaptchaSceneID)
+			if err != nil {
+				return fail("aliyun captcha", err)
+			}
+			opt.Captcha = c
+		default:
+			// dev, or explicitly disabled: rate limits still apply.
+			opt.Captcha = auth.NoCaptcha{}
 		}
 	}
 	if opt.OneClick == nil {
 		switch {
-		case al.AccessKeyID != "":
-			if c, err := auth.NewAliyunOneClick(al.AccessKeyID, al.AccessKeySecret); err == nil {
-				opt.OneClick = c
+		case on("oneclick") && al.AccessKeyID != "":
+			c, err := auth.NewAliyunOneClick(al.AccessKeyID, al.AccessKeySecret)
+			if err != nil {
+				return fail("aliyun one-click", err)
 			}
+			opt.OneClick = c
 		case cfg.Dev():
 			opt.OneClick = auth.DevOneClick{}
-		}
-		if opt.OneClick == nil {
+		default:
 			opt.OneClick = auth.Disabled{Name: "oneclick"}
 		}
 	}
 	if opt.WeChat == nil {
 		switch {
-		case cfg.WeChat.AppID != "" && cfg.WeChat.AppSecret != "":
+		case on("wechat_login") && cfg.WeChat.AppID != "" && cfg.WeChat.AppSecret != "":
 			opt.WeChat = &auth.WeChatOpen{AppID: cfg.WeChat.AppID, Secret: cfg.WeChat.AppSecret}
 		case cfg.Dev():
 			opt.WeChat = auth.DevWeChat{}
@@ -161,50 +189,85 @@ func providers(cfg config.Config, log *slog.Logger, opt *Options) {
 		}
 	}
 	if opt.Apple == nil {
-		if cfg.Dev() {
-			opt.Apple = devOrReal{dev: auth.DevApple{}, real: &auth.AppleJWKS{BundleID: cfg.Apple.BundleID}}
-		} else {
-			opt.Apple = &auth.AppleJWKS{BundleID: cfg.Apple.BundleID}
+		real := &auth.AppleJWKS{BundleID: cfg.Apple.BundleID}
+		switch {
+		case cfg.Dev():
+			opt.Apple = devOrReal{dev: auth.DevApple{}, real: real}
+		case on("apple_login"):
+			opt.Apple = real
+		default:
+			opt.Apple = auth.Disabled{Name: "apple"}
 		}
 	}
 	if opt.Realname == nil {
-		if cfg.Dev() {
+		switch {
+		case on("realname") && al.AccessKeyID != "":
+			r, err := user.NewAliyunRealname(al.AccessKeyID, al.AccessKeySecret)
+			if err != nil {
+				return fail("aliyun realname", err)
+			}
+			opt.Realname = r
+		case cfg.Dev():
 			opt.Realname = user.ChecksumRealname{}
-		} else {
+		default:
 			opt.Realname = user.UnconfiguredRealname{}
 		}
 	}
 	if opt.Payments == nil {
 		opt.Payments = map[string]billing.Provider{}
 		wc := cfg.WeChat
-		if wc.MchID != "" && wc.MchPrivateKey != "" {
+		if on("wechat_pay") && wc.MchID != "" && wc.MchPrivateKey != "" {
 			p, err := billing.NewWeChatPay(wc.AppID, wc.MchID, wc.MchSerialNo, wc.APIv3Key, wc.MchPrivateKey, wc.PlatformPubKey, wc.PlatformPubKeyID,
 				cfg.PublicBaseURL+"/v1/pay/notify/wechat")
 			if err != nil {
-				log.Error("wechat pay", "err", err)
-			} else {
-				opt.Payments[billing.WeChatApp] = p
+				return fail("wechat pay", err)
 			}
+			opt.Payments[billing.WeChatApp] = p
 		}
 		ap := cfg.Alipay
-		if ap.AppID != "" && ap.PrivateKey != "" {
+		if on("alipay") && ap.AppID != "" && ap.PrivateKey != "" {
 			p, err := billing.NewAlipay(ap.AppID, ap.PrivateKey, ap.PublicKey, cfg.PublicBaseURL+"/v1/pay/notify/alipay", ap.Sandbox)
 			if err != nil {
-				log.Error("alipay", "err", err)
-			} else {
-				opt.Payments[billing.AlipayApp] = p
+				return fail("alipay", err)
 			}
+			opt.Payments[billing.AlipayApp] = p
 		}
 		if cfg.Dev() {
 			opt.Payments[billing.Mock] = billing.MockPay{}
 		}
 	}
-	if opt.AppleIAP == nil {
+	if opt.AppleIAP == nil && on("apple_iap") {
 		opt.AppleIAP = billing.NewAppleStore(cfg.Apple.BundleID)
 	}
-	if _, ok := opt.Payments[billing.AppleIAP]; !ok {
+	if _, ok := opt.Payments[billing.AppleIAP]; !ok && opt.AppleIAP != nil {
 		opt.Payments[billing.AppleIAP] = opt.AppleIAP
 	}
+	return nil
+}
+
+// Features tells the app which login and payment options work in this
+// deployment, so it can hide the rest.
+type Features struct {
+	Login   []string `json:"login"`
+	Pay     []string `json:"pay"`
+	Captcha bool     `json:"captcha"`
+}
+
+func enabledFeatures(cfg config.Config, opt Options) Features {
+	f := Features{Login: []string{}, Pay: []string{}}
+	_, captchaOff := opt.Captcha.(auth.NoCaptcha)
+	f.Captcha = !captchaOff
+	for name, p := range map[string]any{"sms": opt.SMS, "oneclick": opt.OneClick, "wechat": opt.WeChat, "apple": opt.Apple} {
+		if _, off := p.(auth.Disabled); !off {
+			f.Login = append(f.Login, name)
+		}
+	}
+	for ch := range opt.Payments {
+		f.Pay = append(f.Pay, ch)
+	}
+	slices.Sort(f.Login)
+	slices.Sort(f.Pay)
+	return f
 }
 
 // devOrReal accepts dev:<sub> tokens and real Apple tokens in dev.

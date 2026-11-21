@@ -29,6 +29,11 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	if !cfg.Dev() {
+		if err := cfg.ValidateProd(); err != nil {
+			return err
+		}
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

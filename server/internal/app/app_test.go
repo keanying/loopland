@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -241,6 +242,16 @@ func (e *env) sql(q string, args ...any) {
 
 func TestEndToEnd(t *testing.T) {
 	e := newEnv(t)
+
+	var feats struct {
+		Login   []string `json:"login"`
+		Pay     []string `json:"pay"`
+		Captcha bool     `json:"captcha"`
+	}
+	e.anon().must("GET", "/v1/config/features", nil, &feats)
+	if len(feats.Login) != 4 || feats.Captcha || !slices.Contains(feats.Pay, "mock") || !slices.Contains(feats.Pay, "apple_iap") {
+		t.Fatalf("features: %+v", feats)
+	}
 
 	// --- A signs up with SMS, must consent before uploading.
 	a, ares := e.smsLogin("13800000001")

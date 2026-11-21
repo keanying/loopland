@@ -6,7 +6,9 @@ package config
 import (
 	"encoding/base64"
 	"fmt"
+	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +35,69 @@ type Config struct {
 	Apple   Apple
 	Alipay  Alipay
 	JobsOff bool
+	// Disabled lists features switched off for this deployment
+	// (LOOPLAND_DISABLE=wechat_login,alipay,...). See Features.
+	Disabled []string
+}
+
+// Features that need external credentials. Production refuses to start
+// while an enabled feature lacks its configuration.
+var Features = []string{"sms", "captcha", "oneclick", "realname", "wechat_login", "apple_login", "wechat_pay", "alipay", "apple_iap"}
+
+// Enabled reports whether a feature is on.
+func (c Config) Enabled(f string) bool { return !slices.Contains(c.Disabled, f) }
+
+// Missing lists, per enabled feature, the environment variables that are
+// not set. Empty means the deployment is complete.
+func (c Config) Missing() map[string][]string {
+	need := map[string]map[string]string{
+		"sms": {"ALIYUN_ACCESS_KEY_ID": c.Aliyun.AccessKeyID, "ALIYUN_ACCESS_KEY_SECRET": c.Aliyun.AccessKeySecret,
+			"ALIYUN_SMS_SIGN_NAME": c.Aliyun.SMSSignName, "ALIYUN_SMS_TEMPLATE_CODE": c.Aliyun.SMSTemplateCode},
+		"captcha":      {"ALIYUN_ACCESS_KEY_ID": c.Aliyun.AccessKeyID, "ALIYUN_CAPTCHA_SCENE_ID": c.Aliyun.CaptchaSceneID},
+		"oneclick":     {"ALIYUN_ACCESS_KEY_ID": c.Aliyun.AccessKeyID, "ALIYUN_ACCESS_KEY_SECRET": c.Aliyun.AccessKeySecret},
+		"realname":     {"ALIYUN_ACCESS_KEY_ID": c.Aliyun.AccessKeyID, "ALIYUN_ACCESS_KEY_SECRET": c.Aliyun.AccessKeySecret},
+		"wechat_login": {"WECHAT_APP_ID": c.WeChat.AppID, "WECHAT_APP_SECRET": c.WeChat.AppSecret},
+		"apple_login":  {"APPLE_BUNDLE_ID": c.Apple.BundleID},
+		"wechat_pay": {"WECHAT_APP_ID": c.WeChat.AppID, "WECHAT_MCH_ID": c.WeChat.MchID, "WECHAT_MCH_SERIAL_NO": c.WeChat.MchSerialNo,
+			"WECHAT_MCH_PRIVATE_KEY": c.WeChat.MchPrivateKey, "WECHAT_APIV3_KEY": c.WeChat.APIv3Key,
+			"WECHAT_PAY_PUBLIC_KEY": c.WeChat.PlatformPubKey, "WECHAT_PAY_PUBLIC_KEY_ID": c.WeChat.PlatformPubKeyID},
+		"alipay":    {"ALIPAY_APP_ID": c.Alipay.AppID, "ALIPAY_PRIVATE_KEY": c.Alipay.PrivateKey, "ALIPAY_PUBLIC_KEY": c.Alipay.PublicKey},
+		"apple_iap": {"APPLE_BUNDLE_ID": c.Apple.BundleID},
+	}
+	out := map[string][]string{}
+	for _, f := range Features {
+		if !c.Enabled(f) {
+			continue
+		}
+		for k, v := range need[f] {
+			if v == "" {
+				out[f] = append(out[f], k)
+			}
+		}
+		slices.Sort(out[f])
+	}
+	return out
+}
+
+// ValidateProd checks what production needs beyond provider credentials.
+func (c Config) ValidateProd() error {
+	var problems []string
+	if u, err := url.Parse(c.PublicBaseURL); err != nil || u.Scheme != "https" || strings.Contains(u.Host, "localhost") {
+		problems = append(problems, "LOOPLAND_PUBLIC_BASE_URL must be the public https address (payment callbacks)")
+	}
+	for f, vars := range c.Missing() {
+		problems = append(problems, fmt.Sprintf("%s needs %s (or add it to LOOPLAND_DISABLE)", f, strings.Join(vars, ", ")))
+	}
+	for _, d := range c.Disabled {
+		if !slices.Contains(Features, d) {
+			problems = append(problems, "unknown feature in LOOPLAND_DISABLE: "+d)
+		}
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	slices.Sort(problems)
+	return fmt.Errorf("production configuration incomplete:\n  - %s", strings.Join(problems, "\n  - "))
 }
 
 // Aliyun covers SMS (短信) and 号码认证 (one-click login).
@@ -41,6 +106,7 @@ type Aliyun struct {
 	AccessKeySecret string
 	SMSSignName     string
 	SMSTemplateCode string
+	CaptchaSceneID  string
 }
 
 // WeChat open platform (mobile app login) and WeChat Pay V3.
@@ -90,31 +156,32 @@ func Load() (Config, error) {
 		JobsOff:        os.Getenv("LOOPLAND_JOBS_OFF") == "1",
 		Aliyun: Aliyun{
 			AccessKeyID:     os.Getenv("ALIYUN_ACCESS_KEY_ID"),
-			AccessKeySecret: os.Getenv("ALIYUN_ACCESS_KEY_SECRET"),
+			AccessKeySecret: secretEnv("ALIYUN_ACCESS_KEY_SECRET"),
 			SMSSignName:     os.Getenv("ALIYUN_SMS_SIGN_NAME"),
 			SMSTemplateCode: os.Getenv("ALIYUN_SMS_TEMPLATE_CODE"),
+			CaptchaSceneID:  os.Getenv("ALIYUN_CAPTCHA_SCENE_ID"),
 		},
 		WeChat: WeChat{
 			AppID:            os.Getenv("WECHAT_APP_ID"),
-			AppSecret:        os.Getenv("WECHAT_APP_SECRET"),
+			AppSecret:        secretEnv("WECHAT_APP_SECRET"),
 			MchID:            os.Getenv("WECHAT_MCH_ID"),
 			MchSerialNo:      os.Getenv("WECHAT_MCH_SERIAL_NO"),
-			MchPrivateKey:    os.Getenv("WECHAT_MCH_PRIVATE_KEY"),
-			APIv3Key:         os.Getenv("WECHAT_APIV3_KEY"),
-			PlatformPubKey:   os.Getenv("WECHAT_PAY_PUBLIC_KEY"),
+			MchPrivateKey:    secretEnv("WECHAT_MCH_PRIVATE_KEY"),
+			APIv3Key:         secretEnv("WECHAT_APIV3_KEY"),
+			PlatformPubKey:   secretEnv("WECHAT_PAY_PUBLIC_KEY"),
 			PlatformPubKeyID: os.Getenv("WECHAT_PAY_PUBLIC_KEY_ID"),
 		},
 		Apple: Apple{
 			BundleID:   env("APPLE_BUNDLE_ID", "com.loopland.app"),
 			IssuerID:   os.Getenv("APPLE_IAP_ISSUER_ID"),
 			KeyID:      os.Getenv("APPLE_IAP_KEY_ID"),
-			PrivateKey: os.Getenv("APPLE_IAP_PRIVATE_KEY"),
+			PrivateKey: secretEnv("APPLE_IAP_PRIVATE_KEY"),
 			Sandbox:    os.Getenv("APPLE_IAP_SANDBOX") == "1",
 		},
 		Alipay: Alipay{
 			AppID:      os.Getenv("ALIPAY_APP_ID"),
-			PrivateKey: os.Getenv("ALIPAY_PRIVATE_KEY"),
-			PublicKey:  os.Getenv("ALIPAY_PUBLIC_KEY"),
+			PrivateKey: secretEnv("ALIPAY_PRIVATE_KEY"),
+			PublicKey:  secretEnv("ALIPAY_PUBLIC_KEY"),
 			Sandbox:    os.Getenv("ALIPAY_SANDBOX") == "1",
 		},
 	}
@@ -139,7 +206,26 @@ func Load() (Config, error) {
 	if c.Env != "dev" && c.Env != "prod" {
 		return c, fmt.Errorf("LOOPLAND_ENV must be dev or prod")
 	}
+	for _, f := range strings.Split(os.Getenv("LOOPLAND_DISABLE"), ",") {
+		if f = strings.TrimSpace(f); f != "" {
+			c.Disabled = append(c.Disabled, f)
+		}
+	}
 	return c, nil
+}
+
+// secretEnv reads K, or the file named by K_FILE (Kubernetes secret mounts,
+// PEM keys). Trailing newlines from files are trimmed.
+func secretEnv(k string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	if p := os.Getenv(k + "_FILE"); p != "" {
+		if b, err := os.ReadFile(p); err == nil {
+			return strings.TrimRight(string(b), "\r\n")
+		}
+	}
+	return ""
 }
 
 func env(k, def string) string {
