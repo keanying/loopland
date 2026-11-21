@@ -27,7 +27,7 @@ pnpm run dev:mock          # 终端 1
 pnpm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
 ```
 
-V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
+V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分；第四批「本地生活与商户」的商户 / 场馆 / 订场 / 核销结算 / 核销记录 / 核销台 / 总览待办 / 运营视角 / 窄屏商户对接在 `scripts/screenshots-v2-merchant.cjs`，`ONLY=merchant` 只跑这部分，编号从 `MERCHANT_FROM`（默认 39）起；核销台扫码用 Chromium 假摄像头播放现生成的券二维码视频，需要 ffmpeg）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
 
 `scripts/screenshots.cjs` 用 Playwright 依次打开所有页面（管理员、运营、审核员三种视角和窄屏），把整页 PNG 存到 `screenshots/`；浏览器控制台有 error / warning 时脚本以非 0 退出。`screenshots/real/` 是连真实后端时的截图。
 
@@ -160,7 +160,20 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 | `/audit` | 审计日志 | 按操作人筛选 |
 | `/admins` | 后台账号 | 仅管理员：新建、改角色、停用、重置密码 |
 
-商户与活动还没做，左侧菜单里显示为灰色「V2」。总览增加「内容审核」卡片（`pending_reviews` 与周同比、按类型分布）和待办「内容审核」。
+**商户与活动**（V2 第四批「本地生活与商户」，`../docs/api/v2-4-本地生活与商户.md`）：左侧一个入口 `/merchant`，页面之间用页头的分段导航切换（`src/pages/merchant/navItems.ts`，按角色隐藏）：
+
+| 路由 | 页面 | 说明 |
+| --- | --- | --- |
+| `/merchant/merchants` | 商户（M-24） | 合作中 / 待签约 / 资质审核 / 暂停筛选（带数量）、搜索、今日核销；新建 / 编辑抽屉（类型、状态、联系人、联系电话（留空不改）、资质图片地址列表带预览、订场佣金 %）；详情：完整号码（仅管理员，记审计）、资质图片、场馆、投放点（只读，跳「投放」页 `/merchant/drops?merchant_id=`）、员工账号（仅管理员新建「商户对接」账号并绑定）、一键推进状态（资质审核通过 → 签约 → 暂停 / 恢复） |
+| `/merchant/venues` | 场馆 | 按商户 / 运动 / 关键词筛选；新建 / 编辑（商户可空 = 只签到、运动多选、地图选点 + 坐标、城区、地址、标签、开放预订、价格、时段长度、营业时间、场地数、馆主折扣、签到半径、停用）；详情：签到二维码（浏览器用 `qrcode` 生成，可下载带场馆名的 PNG，换码二次确认）、历任馆主 |
+| `/merchant/bookings` | 订场 | 按场馆 / 状态 / 开场日期筛选、详情；退款仅管理员、两步确认（填原因 → 再次确认金额和渠道） |
+| `/merchant/settlement` | 核销结算（M-27） | 近 7 天核销 / 风控作废 / 订场柱状图（各自一张，可切表格）、结算单（按状态 / 商户），详情明细（核销、订场、风控作废）；确认、标记已付款、手动补生成（仅管理员） |
+| `/merchant/redeem` | 核销台 | 手机优先：浏览器摄像头扫券二维码（`@zxing/browser`，按需加载，需要 HTTPS 或 localhost）或手输券码 / 扫码枪回车；成功 / 失败大卡片，把约定的错误码翻成中文；今天的核销列表。假数据模式下有测试券码 |
+| `/merchant/redemptions` | 核销记录 | 按商户、日期范围；风控作废的标灰不结算 |
+
+`/merchants`、`/venues`、`/bookings`、`/statements`、`/redemptions` 这些短链接会带着查询参数跳到对应页面。总览待办新增「商户资质」`merchant_review`、「订场退款」`booking_refund`、「结算单」`statement_confirm`。
+
+总览增加「内容审核」卡片（`pending_reviews` 与周同比、按类型分布）和待办「内容审核」。
 
 ## 权限
 
@@ -170,7 +183,8 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 - 运营：除上述三项外的全部页面和操作（含玩法运营、内容审核、组局与赛事）；敏感词与审核设置只有管理员能看能改。
 - 审核员：总览、用户（列表、详情、处置，不能看完整号码）、内容审核（队列 / 举报 / 动态）、风控；看不到玩法运营、组局与赛事、敏感词设置、AI 用量。
 - 第三批「AI」：AI 用量管理员和运营都能看（单独的左侧菜单，因为系统配置只有管理员能进）；查看用户 AI 对话只有管理员，后端记审计 `ai.messages.view`。
-- 商户对接：V1 只有总览。
+- 商户对接（`merchant`，绑定一个商户）：登录后直接进核销台，只看到核销台、核销记录、本商户的场馆预订和结算单（只读），没有总览。
+- 第四批：商户、场馆、订场列表管理员和运营都能用；完整联系电话、新建商户员工账号、订场退款、结算单（查看 / 确认 / 付款 / 生成）只有管理员；核销台管理员和运营也能代核销。
 
 后端仍是最终裁判，越权请求返回 403，前端用消息提示。
 
@@ -178,13 +192,13 @@ $env:LOOPLAND_ADMIN_CONFIG = "config.prod.yaml"; pnpm run build; Remove-Item Env
 
 ```
 src/
-  api/        类型（types.ts）、请求封装（client.ts，401 回登录页）、各接口（admin.ts）
+  api/        类型（types.ts）、请求封装（client.ts，401 回登录页）、各接口（admin.ts；第四批 merchant.ts 商户 / 场馆 / 订场 / 核销 / 结算，perks.ts 投放 / 联名活动 / 能量商城）
   config.ts   浏览器端配置（来自 config.yaml，见「配置」）；config.types.ts 配置的类型
-  mocks/      假数据和内存版接口，只在 app.mock 为 true 时按需加载；路由相对 api.admin_prefix；后端稳定后可整个删除（community.ts 社区，images.ts 内联 SVG 假图片，aiReview.ts 假 AI 审核判定 / 打码 / 预计人工量，ai.ts AI 用量、调用记录、用户 AI 对话）
+  mocks/      假数据和内存版接口，只在 app.mock 为 true 时按需加载；路由相对 api.admin_prefix；后端稳定后可整个删除（community.ts 社区，images.ts 内联 SVG 假图片，aiReview.ts 假 AI 审核判定 / 打码 / 预计人工量，ai.ts AI 用量、调用记录、用户 AI 对话；merchant.ts 商户、场馆、四周的核销和订场、结算单、核销台测试券码，投放数据取自 perks.ts）
   auth/       登录态、角色权限
   components/ 布局、卡片、图表、地图（map/AMapView.tsx、map/SvgMap.tsx，都画 V2 玩法对象）、MapOps.tsx（召唤 / 投放 / 撒宝箱弹窗）
   hooks/      useAdminNames（把后端返回的管理员 id 显示成用户名）、useGameplayDefaults
-  pages/      各页面；operations/ 玩法运营各 tab；gameplay/config.ts 玩法配置的字段、默认值、校验与 diff；review/ 内容审核各 tab（shared.tsx 风险徽标、图片预览、原因弹窗；ai.tsx AI 判定）；community/ 组局与赛事；AIUsagePage.tsx AI 用量；users/AIMessagesDrawer.tsx 用户 AI 对话
+  pages/      各页面；operations/ 玩法运营各 tab；gameplay/config.ts 玩法配置的字段、默认值、校验与 diff；review/ 内容审核各 tab（shared.tsx 风险徽标、图片预览、原因弹窗；ai.tsx AI 判定）；community/ 组局与赛事；AIUsagePage.tsx AI 用量；users/AIMessagesDrawer.tsx 用户 AI 对话；merchant/ 商户与活动（navItems.ts 分组导航）
 scripts/screenshots.cjs, scripts/screenshots-v2.cjs（devConfig.cjs 从配置里取开发服务器地址）
 config.yaml, config.mock.yaml, config.local.example.yaml, loadConfig.ts（读取、合并、校验配置）
 ```
@@ -214,6 +228,18 @@ config.yaml, config.mock.yaml, config.local.example.yaml, loadConfig.ts（读取
 - 举报处理的审计动作是 `report.handle`（`detail.action` 区分下架 / 驳回）；禁言天数后端允许 0–365。
 - `pending_reviews_wow` 是比例（0.2 = +20%），上周为 0 时是 `null`。
 - 页面上比后端更严的校验：线下赛报名截止不能晚于开赛；进行中的赛事不能改类型、运动、距离和开始时间；开赛前不能标记完赛。
+
+## V2 第四批「本地生活与商户」与约定的出入
+
+商户 / 场馆 / 订场 / 核销 / 结算部分按后端实际实现兼容（`server/internal/venue`、`server/internal/perks`）：
+
+- 约定没写查看商户完整电话的接口，前后端用的是 `POST /admin/v1/merchants/{id}/reveal-phone` → `{"phone"}`（审计 `merchant.reveal_phone`）；后端允许运营调用，页面按约定只给管理员。
+- 约定的 `Venue` 不含编辑表单要的 `slot_minutes / open_time / close_time / court_qty / is_disabled`，后端管理端列表带了这些字段（另有 `merchant_id`、`GET /admin/v1/venues/{id}`）。
+- 核销记录列表后端用 `status`（`valid` / `voided`）表示风控作废，另带 `redemption_no`、`merchant`；页面同时兼容 `voided` 布尔。
+- 结算单 `confirmed_by` 是 `{id, username}`；明细的 `user` 可能为 `null`。手动生成同一周重复调用时后端返回空列表而不是约定的 409。
+- 登录返回的 `admin` 没有 `merchant_id`（`/me` 有），商户账号登录后前端再取一次 `/me`。
+- 总览待办后端目前只有 `statement_confirm`（链接 `/merchant/settlement`）；`merchant_review`、`booking_refund` 前端已支持。约定里「订场退款申请」没有对应的订场状态，待办按「退款中」`refunding` 处理。
+- 同一商户的投放可以有不同结算方向，结算单只有一个 `redemption_direction`：按净额的方向显示。
 
 ## V2 第三批「AI」与约定的出入
 

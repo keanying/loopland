@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { Alert, Button, Collapse, Empty, Input, Space, Tag } from 'antd';
 import { CameraOutlined, CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, ReloadOutlined, StopOutlined } from '@ant-design/icons';
 import { ApiError } from '../../api/client';
-import { merchantApi, type RedeemBody, type Redemption } from '../../api/merchant';
+import { isVoided, merchantApi, type RedeemBody, type Redemption } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import { MOCK } from '../../config';
 import { PageHeader } from '../../components/ui';
@@ -240,7 +240,7 @@ export default function RedeemPage() {
           ) : (
             <ul className="redeem-list">
               {items.map((r) => (
-                <li key={r.id} className={r.voided ? 'voided' : ''}>
+                <li key={r.id} className={isVoided(r) ? 'voided' : ''}>
                   <span className="num redeem-time">{dayjs(r.created_at).format('HH:mm')}</span>
                   <span className="redeem-what">
                     <b>{r.coupon.perk.title}</b>
@@ -249,7 +249,7 @@ export default function RedeemPage() {
                       {!staff && ` · ${r.coupon.merchant.name}`}
                     </span>
                   </span>
-                  {r.voided && <Tag color="error" bordered={false}>作废</Tag>}
+                  {isVoided(r) && <Tag color="error" bordered={false}>作废</Tag>}
                 </li>
               ))}
             </ul>

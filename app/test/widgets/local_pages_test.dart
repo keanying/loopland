@@ -326,6 +326,18 @@ void main() {
     await settle(t);
   });
 
+  testWidgets('我的订场: 继续支付 for a pending booking (mock channel)', (t) async {
+    await phone(t, size: const Size(390, 1100));
+    final start = DateTime.now().add(const Duration(days: 1));
+    local.bookings.add(local.pendingBooking(40, start));
+    await t.pumpWidget(app('/me/bookings/40', overrides()));
+    await idle(t);
+    expect(find.byKey(const Key('booking_repay')), findsOneWidget);
+    await tapIdle(t, find.byKey(const Key('booking_repay')));
+    expect(local.calls, contains('POST /v1/bookings/40/pay'));
+    await settle(t);
+  });
+
   testWidgets('开始页 场馆球类: nearby venues, check in by location → energy, points, coupon; too far', (t) async {
     await phone(t, size: const Size(390, 1600));
     await t.pumpWidget(app('/start', overrides()));

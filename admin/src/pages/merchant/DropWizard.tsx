@@ -135,6 +135,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
         settle_direction: editing.settle_direction,
       });
     } else {
+      // separate dayjs instances: derived ones share a config object that the form's deep compare flags as circular
       const start = dayjs().add(1, 'hour').startOf('hour');
       form.setFieldsValue({
         type: 'supply',
@@ -143,7 +144,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
         radius_m: DEFAULT_RADIUS.supply,
         perk: { title: '', value_text: '', description: '', valid_days: 7, rules: RULES_DEFAULT },
         daily_cap: 200,
-        range: [start, start.add(30, 'day').endOf('day').second(0)],
+        range: [start, dayjs(start.add(30, 'day').endOf('day').second(0).toDate())],
         settle_price: 2,
         settle_direction: 'merchant_pays',
       });
@@ -156,11 +157,15 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per open
   }, [value]);
 
+  // setFieldsValue, not setFieldValue: the latter resets the field's meta in a way antd's deep compare
+  // reports as "There may be circular references".
+  const setPerk = (patch: Partial<FormValues['perk']>) => form.setFieldsValue({ perk: { ...form.getFieldValue('perk'), ...patch } });
+
   const pickType = (t: DropType) => {
     if (editing) return;
     const prevRules = form.getFieldValue(['perk', 'rules']);
     form.setFieldsValue({ type: t, radius_m: DEFAULT_RADIUS[t] });
-    if (prevRules === RULES_DEFAULT || prevRules === RULES_STRONGHOLD) form.setFieldValue(['perk', 'rules'], t === 'stronghold' ? RULES_STRONGHOLD : RULES_DEFAULT);
+    if (prevRules === RULES_DEFAULT || prevRules === RULES_STRONGHOLD) setPerk({ rules: t === 'stronghold' ? RULES_STRONGHOLD : RULES_DEFAULT });
     if (t !== 'stronghold' && form.getFieldValue('venue_id')) form.setFieldsValue({ venue_id: undefined, place: '' });
   };
 
@@ -261,7 +266,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
         <Form<FormValues> form={form} layout="vertical" requiredMark={false} preserve>
           {/* ---- 1 类型与商户 ---- */}
           <div style={shown(0)}>
-            <Form.Item name="type" hidden rules={[{ required: true }]}>
+            <Form.Item name="type" hidden>
               <Input />
             </Form.Item>
             <Form.Item label="投放类型" required extra={editing ? '类型创建后不能修改' : undefined}>
@@ -318,7 +323,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
                     allowClear
                     placeholder={merchantId ? (merchantCampaigns.length ? '不挂活动' : '这个商户没有未结束的联名活动') : '先选商户'}
                     disabled={!merchantId}
-                    onClear={() => form.setFieldValue('campaign_id', null)}
+                    onClear={() => form.setFieldsValue({ campaign_id: null })}
                     options={merchantCampaigns.map((c) => ({ value: c.id, label: `${c.title}（${CAMPAIGN_STATUS[c.status].text}）` }))}
                   />
                 </Form.Item>
@@ -440,7 +445,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
             </Form.Item>
             <Space size={6} style={{ margin: '-14px 0 16px' }}>
               {[3, 7, 14, 30].map((d) => (
-                <Tag.CheckableTag key={d} checked={perk.valid_days === d} onChange={() => form.setFieldValue(['perk', 'valid_days'], d)}>
+                <Tag.CheckableTag key={d} checked={perk.valid_days === d} onChange={() => setPerk({ valid_days: d })}>
                   {d} 天
                 </Tag.CheckableTag>
               ))}
@@ -457,11 +462,11 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
           <div style={shown(3)}>
             <Form.Item label="每日核销上限" required extra="每天最多发出的券数；发完当天不再发，地图上不显示，App 显示「今日已领完」">
               <div className="cap-stepper">
-                <Button shape="circle" icon={<MinusOutlined />} aria-label="减少 10" onClick={() => form.setFieldValue('daily_cap', Math.max(1, (dailyCap ?? 0) - 10))} />
+                <Button shape="circle" icon={<MinusOutlined />} aria-label="减少 10" onClick={() => form.setFieldsValue({ daily_cap: Math.max(1, (dailyCap ?? 0) - 10) })} />
                 <Form.Item name="daily_cap" noStyle rules={[{ required: true, message: '请填写每日上限' }]}>
                   <InputNumber className="num" min={1} max={100000} aria-label="每日核销上限" />
                 </Form.Item>
-                <Button shape="circle" icon={<PlusOutlined />} aria-label="增加 10" onClick={() => form.setFieldValue('daily_cap', Math.min(100000, (dailyCap ?? 0) + 10))} />
+                <Button shape="circle" icon={<PlusOutlined />} aria-label="增加 10" onClick={() => form.setFieldsValue({ daily_cap: Math.min(100000, (dailyCap ?? 0) + 10) })} />
                 <span className="muted">张 / 天</span>
               </div>
             </Form.Item>

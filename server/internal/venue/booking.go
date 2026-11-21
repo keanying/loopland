@@ -3,6 +3,7 @@ package venue
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -427,6 +428,63 @@ func (s *Service) Cancel(ctx context.Context, user, id int64) (Booking, error) {
 		}
 	}
 	return s.Booking(ctx, s.Pool, user, id)
+}
+
+// CancelMeetupBookings runs after a meetup is cancelled: bookings made for
+// it are cancelled like a user cancel (unpaid closed, paid refunded). A paid
+// booking inside the no-free-cancel window is kept and the booker is told.
+func (s *Service) CancelMeetupBookings(ctx context.Context, meetupID int64) {
+	rows, err := s.Pool.Query(ctx, `SELECT id, user_id FROM src.src_ord_loop_booking WHERE meetup_id=$1 AND booking_status IN ('pending_pay','paid')`, meetupID)
+	if err != nil {
+		s.Log.Error("meetup bookings", "meetup", meetupID, "err", err)
+		return
+	}
+	type bk struct{ id, user int64 }
+	var list []bk
+	for rows.Next() {
+		var b bk
+		if err := rows.Scan(&b.id, &b.user); err == nil {
+			list = append(list, b)
+		}
+	}
+	rows.Close()
+	for _, b := range list {
+		if _, err := s.Cancel(ctx, b.user, b.id); err != nil {
+			var he *httpx.Error
+			if errors.As(err, &he) && he.Code == "cancel_too_late" {
+				_ = inbox.Notify(ctx, s.Pool, b.user, inbox.System, "订场仍然保留",
+					"组局已取消，但离开场不足免费取消时间，场地仍为你保留；如需退款请联系客服。", map[string]any{"type": "booking_kept", "booking_id": b.id})
+				continue
+			}
+			s.Log.Error("cancel meetup booking", "booking", b.id, "err", err)
+		}
+	}
+}
+
+// Repay is POST /v1/bookings/{id}/pay: the payment parameters again for a
+// booking still waiting for payment (e.g. the app was closed mid-payment).
+// The original order and its expiry are kept.
+func (s *Service) Repay(ctx context.Context, user, id int64, ip string) (Booking, map[string]any, error) {
+	b, err := s.Booking(ctx, s.Pool, user, id)
+	if err != nil {
+		return Booking{}, nil, err
+	}
+	if b.Status != "pending_pay" || b.Pay == nil || b.Pay.OrderNo == "" {
+		return Booking{}, nil, httpx.Conflict("invalid_status", "这个订场不在待支付状态")
+	}
+	o, err := s.Billing.GetOrder(ctx, s.Pool, b.Pay.OrderNo, user)
+	if err != nil {
+		return Booking{}, nil, err
+	}
+	if o.Status != "created" {
+		return Booking{}, nil, httpx.Conflict("invalid_status", "这个订单已经关闭，请重新下单")
+	}
+	params, err := s.Billing.PayParams(ctx, o, ip)
+	if err != nil {
+		_, _ = s.Pool.Exec(ctx, `UPDATE src.src_ord_loop_booking SET booking_status='cancelled', update_time=now() WHERE id=$1 AND booking_status='pending_pay'`, id)
+		return Booking{}, nil, err
+	}
+	return b, params, nil
 }
 
 func (s *Service) markRefunding(ctx context.Context, tx pgx.Tx, id int64, orderNo *string, reason string) error {

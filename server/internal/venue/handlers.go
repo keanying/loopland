@@ -24,6 +24,7 @@ func (h *Handler) Routes(mux *http.ServeMux, auth func(httpx.HandlerFunc) http.H
 	mux.Handle("GET /v1/me/bookings", auth(h.myBookings))
 	mux.Handle("GET /v1/bookings/{id}", auth(h.booking))
 	mux.Handle("POST /v1/bookings/{id}/cancel", auth(h.cancel))
+	mux.Handle("POST /v1/bookings/{id}/pay", auth(h.repay))
 }
 
 func uid(r *http.Request) int64 { return httpx.UserID(r.Context()) }
@@ -141,6 +142,18 @@ func (h *Handler) booking(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return httpx.OK(w, b)
+}
+
+func (h *Handler) repay(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	b, params, err := h.Svc.Repay(r.Context(), uid(r), id, httpx.ClientIP(r))
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, map[string]any{"booking": b, "pay_params": params})
 }
 
 func (h *Handler) cancel(w http.ResponseWriter, r *http.Request) error {

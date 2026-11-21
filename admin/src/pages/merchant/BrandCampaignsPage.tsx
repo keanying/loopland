@@ -193,7 +193,9 @@ export default function BrandCampaignsPage() {
           </Button>
         }
       >
-        <Segmented style={{ marginBottom: 14 }} value={status} onChange={(v) => set({ status: String(v), page: null })} options={STATUS_TABS} />
+        <div style={{ overflowX: 'auto', maxWidth: '100%', marginBottom: 14 }}>
+          <Segmented value={status} onChange={(v) => set({ status: String(v), page: null })} options={STATUS_TABS} />
+        </div>
         {list.isLoading ? (
           <Skeleton active />
         ) : items.length === 0 ? (
@@ -294,12 +296,12 @@ function CampaignDetail({
               <Tile v={costPer !== null ? `¥ ${(costPer / 100).toFixed(2)}` : '—'} l="每次核销的商户投入" />
             </Col>
           </Row>
-          <Panel grey style={{ marginBottom: 14 }}>
+          <div className="field-cell" style={{ marginBottom: 14, height: 'auto' }}>
             <Goal c={c} />
             <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
               已核销 <span className="num">{num(s!.redeemed)}</span> / 目标 <span className="num">{num(c.target_redemptions)}</span>；拉新 = 活动期间注册、并在注册后 7 天内领到本活动券的用户数
             </div>
-          </Panel>
+          </div>
           <div className="panel-head" style={{ marginBottom: 8 }}>
             <h2 className="panel-title">活动下的投放</h2>
             <Link to={`/merchant/drops?merchant_id=${c.merchant.id}`}>去投放页管理 →</Link>
@@ -423,7 +425,7 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
       });
     } else {
       const start = dayjs().add(1, 'day').startOf('day');
-      form.setFieldsValue({ range: [start, start.add(30, 'day').endOf('day').second(0)], store_count: 1, target_redemptions: 1000, investment_yuan: 0, drop_ids: [] });
+      form.setFieldsValue({ range: [start, dayjs(start.add(30, 'day').endOf('day').second(0).toDate())], store_count: 1, target_redemptions: 1000, investment_yuan: 0, drop_ids: [] });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- once per open
   }, [value]);

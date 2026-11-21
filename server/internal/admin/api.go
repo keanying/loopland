@@ -200,6 +200,20 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if pendingStatements > 0 {
 		todos = append(todos, todo{"statement_confirm", fmt.Sprintf("%d 张结算单待确认", pendingStatements), pendingStatements, 2, "/merchant/settlement"})
 	}
+	// 本地生活 (M-04): merchants waiting for qualification review, and
+	// booking / race-fee refunds the channel hasn't confirmed within 1 hour.
+	var reviewing, stuckRefunds int
+	if err := a.Pool.QueryRow(ctx, `SELECT (SELECT count(*) FROM src.src_mer_loop_merchant WHERE merchant_status='reviewing'),
+		(SELECT count(*) FROM src.src_ord_loop_booking WHERE booking_status='refunding' AND update_time < now() - interval '1 hour')`).
+		Scan(&reviewing, &stuckRefunds); err != nil {
+		return err
+	}
+	if reviewing > 0 {
+		todos = append(todos, todo{"merchant_review", fmt.Sprintf("%d 家商户待审核资质", reviewing), reviewing, 3, "/merchant/merchants?status=reviewing"})
+	}
+	if stuckRefunds > 0 {
+		todos = append(todos, todo{"booking_refund", fmt.Sprintf("%d 笔订场退款超过 1 小时未到账", stuckRefunds), stuckRefunds, 1, "/merchant/bookings?status=refunding"})
+	}
 	return httpx.OK(w, map[string]any{"today": t, "last_week": lw, "trend": trend, "todos": todos,
 		"pending_reviews": pendingReviews, "pending_reviews_wow": pendingWoW})
 }

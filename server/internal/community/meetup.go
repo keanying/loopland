@@ -410,6 +410,9 @@ func (s *Service) CancelMeetup(ctx context.Context, user, id int64, admin bool, 
 	if err != nil {
 		return Meetup{}, err
 	}
+	if s.MeetupCancelled != nil {
+		s.MeetupCancelled(ctx, id)
+	}
 	if admin {
 		ms, err := s.queryMeetups(ctx, s.Pool, `NULL::float8`, `m.id=$2`, int64(0), id)
 		if err != nil || len(ms) == 0 {

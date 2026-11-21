@@ -60,11 +60,9 @@ func seedPerks(users []*client, ad *client) {
 	if len(users) > 1 && supply != 0 {
 		users[1].do("POST", fmt.Sprintf("/v1/drops/%d/claim", supply), supplyAt, nil)
 	}
-	// 能量商城: cheap items so the seeded runs' energy covers them.
-	for i, key := range []string{"marker_star", "frame_runner"} {
-		if i < len(users) {
-			users[i].do("POST", "/v1/shop/items/"+key+"/buy", nil, nil)
-			users[i].do("POST", "/v1/shop/items/"+key+"/equip", nil, nil)
-		}
+	// 能量商城: the cheapest item, which the seeded runs' energy covers.
+	for _, u := range users[:min(2, len(users))] {
+		u.do("POST", "/v1/shop/items/marker_star/buy", nil, nil)
+		u.do("POST", "/v1/shop/items/marker_star/equip", nil, nil)
 	}
 }

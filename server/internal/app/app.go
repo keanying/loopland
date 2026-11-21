@@ -135,6 +135,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	venueSvc.Coupons, venueSvc.Extras = perksSvc, perksSvc // 据点发券、商户的投放和今日核销
 	billSvc.Register(billing.BizBooking, venueSvc.BookingFulfiller())
 	commSvc.Billing = billSvc
+	commSvc.MeetupCancelled = venueSvc.CancelMeetupBookings
 	billSvc.Register(billing.BizRaceFee, commSvc.RaceFeeFulfiller())
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 

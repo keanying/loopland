@@ -7,7 +7,7 @@ import '../../api/local_api.dart';
 import '../../api/local_models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
-import '../../pay/payment_service.dart' show channelNames;
+import '../../pay/payment_service.dart' show channelNames, paymentServiceProvider;
 import '../../widgets/common.dart';
 import '../community/gathering_widgets.dart' show Tag;
 import 'local_providers.dart';
@@ -118,6 +118,31 @@ class BookingDetailPage extends ConsumerStatefulWidget {
 
 class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
   bool _busy = false;
+
+  /// 继续支付: same order, fresh payment parameters (the app was closed or
+  /// the SDK was backed out of).
+  Future<void> _repay(Booking b) async {
+    setState(() => _busy = true);
+    try {
+      final r = await ref.read(localApiProvider).repayBooking(b.id);
+      final no = r.booking.orderNo ?? b.orderNo;
+      final channel = r.booking.channel ?? b.channel;
+      if (no == null || channel == null) throw ApiException(status: 0, code: 'unknown', message: '订单信息不完整，请取消后重新下单');
+      final pay = ref.read(paymentServiceProvider);
+      await pay.ensureChannelReady(channel);
+      await pay.payOrder(no, channel, r.payParams);
+      if (!mounted) return;
+      ref.invalidate(bookingProvider(widget.bookingId));
+      ref.invalidate(myBookingsProvider);
+    } catch (e) {
+      final ex = ApiException.from(e);
+      if (!mounted) return;
+      ref.invalidate(bookingProvider(widget.bookingId));
+      if (ex.code != 'cancelled') showError(context, ex);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   Future<void> _cancel(Booking b) async {
     final paid = b.isPaid;
@@ -241,6 +266,17 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                         ),
                       ),
                     const SizedBox(width: 10),
+                    if (b.status == 'pending_pay') ...[
+                      Expanded(
+                        flex: 2,
+                        child: FilledButton(
+                          key: const Key('booking_repay'),
+                          onPressed: _busy ? null : () => _repay(b),
+                          child: const Text('继续支付'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                    ],
                     Expanded(
                       flex: 2,
                       child: canCancel

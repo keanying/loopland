@@ -453,7 +453,7 @@ function StatementDrawer({ id, onClose }: { id: number | null; onClose: () => vo
               columns={[
                 { title: '类型', dataIndex: 'type', render: (v: string, l) => <>{v === 'booking' ? <Tag bordered={false} color="purple">订场</Tag> : <Tag bordered={false}>核销</Tag>}{l.voided && <Tag bordered={false} color="error">风控作废 · 不结算</Tag>}</> },
                 { title: '单号', dataIndex: 'ref_no', render: (v: string) => <span className="num">{v}</span> },
-                { title: '用户', key: 'user', render: (_, l) => l.user.nickname },
+                { title: '用户', key: 'user', render: (_, l) => l.user?.nickname ?? '—' },
                 { title: '金额', dataIndex: 'amount_amt', align: 'right', render: (v: number, l) => <span className="num">{l.voided ? <s>{yuan(v)}</s> : yuan(v)}</span> },
                 { title: '时间', dataIndex: 'created_at', render: (v: string) => <span className="num">{dt(v)}</span> },
               ]}

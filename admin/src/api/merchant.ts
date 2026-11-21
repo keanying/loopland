@@ -185,9 +185,14 @@ export interface Redemption {
   user: { id: number; nickname: string };
   store: string | null;
   created_at: string;
-  /** 风控作废了当天的运动记录 → 不结算 (list only; not in the contract's redemption shape). */
+  /** Not in the contract's redemption shape; the backend sends `status` (valid / voided) and the mock `voided`. */
   voided?: boolean;
+  status?: 'valid' | 'voided' | string;
+  redemption_no?: string;
 }
+
+/** 风控作废了当天的运动记录 → 不结算. */
+export const isVoided = (r: Pick<Redemption, 'voided' | 'status'>) => r.voided === true || r.status === 'voided';
 
 export type RedeemBody = { payload: string } | { code: string };
 
@@ -227,7 +232,7 @@ export interface Statement {
 export interface StatementLine {
   type: 'redemption' | 'booking';
   ref_no: string;
-  user: { id: number; nickname: string };
+  user: { id: number; nickname: string } | null;
   amount_amt: number;
   created_at: string;
   voided: boolean;

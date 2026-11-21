@@ -37,6 +37,9 @@ type Service struct {
 	// Billing takes race fees (docs/api/v2-4-本地生活与商户.md D-12); nil:
 	// paid races cannot be signed up for.
 	Billing *billing.Service
+	// MeetupCancelled runs after a meetup is cancelled (e.g. to cancel and
+	// refund the court booked with it). Optional.
+	MeetupCancelled func(ctx context.Context, meetupID int64)
 }
 
 // CrewRef is a compact crew.

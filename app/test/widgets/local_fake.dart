@@ -106,6 +106,10 @@ class LocalFake {
     };
   }
 
+  /// An unpaid booking on the mock channel (for 继续支付).
+  J pendingBooking(int id, DateTime start) =>
+      _booking(id, 8, start, 1, 'pending_pay', amount: 6000, original: 6000, channel: 'mock');
+
   J _venue(int id) => venues.firstWhere((v) => v['id'] == id);
 
   J _booking(int id, int venueId, DateTime start, int slots, String status,
@@ -255,6 +259,10 @@ class LocalFake {
       final b = bookings.where((x) => x['id'] == id).firstOrNull;
       if (b == null) return _err(404, 'not_found');
       if (m == 'GET' && seg.length == 4) return (200, b);
+      if (m == 'POST' && seg.length == 5 && seg[4] == 'pay') {
+        if (b['status'] != 'pending_pay') return _err(409, 'invalid_status', '这个订场不在待支付状态');
+        return (200, {'booking': b, 'pay_params': {'mock': true}});
+      }
       if (m == 'POST' && seg.length == 5 && seg[4] == 'cancel') {
         if (DateTime.parse(b['start_time'] as String).difference(DateTime.now()) < const Duration(hours: 2)) {
           return _err(409, 'cancel_too_late', '开始前 2 小时内不能自助取消，如需退款请联系客服');

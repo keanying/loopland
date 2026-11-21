@@ -2,7 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { DatePicker, Empty, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { merchantApi, type Redemption } from '../../api/merchant';
+import { isVoided, merchantApi, type Redemption } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import { PageHeader, Panel } from '../../components/ui';
 import { dt } from '../../utils/format';
@@ -66,7 +66,7 @@ export default function RedemptionsPage() {
           loading={list.isFetching}
           dataSource={list.data?.items}
           scroll={{ x: 1100 }}
-          rowClassName={(r) => (r.voided ? 'row-disabled' : '')}
+          rowClassName={(r) => (isVoided(r) ? 'row-disabled' : '')}
           locale={{ emptyText: <Empty description="没有核销记录" /> }}
           pagination={{ current: page, pageSize: PAGE, total: list.data?.total ?? 0, showSizeChanger: false, showTotal: (t) => `共 ${t} 次`, onChange: (p) => update({ page: p === 1 ? null : p }) }}
           columns={[
@@ -101,7 +101,7 @@ export default function RedemptionsPage() {
               title: '状态',
               key: 'status',
               render: (_, r) =>
-                r.voided ? (
+                isVoided(r) ? (
                   <Tooltip title="当天的运动记录被风控作废，这次核销不结算">
                     <Tag color="error" bordered={false}>
                       风控作废

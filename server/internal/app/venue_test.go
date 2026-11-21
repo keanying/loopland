@@ -501,6 +501,42 @@ func TestVenueCheckinOwnersBooking(t *testing.T) {
 		t.Fatalf("meetup shows booking: %+v", md.Booking)
 	}
 
+	// Cancelling the meetup cancels and refunds the court booked with it.
+	a.must("POST", fmt.Sprintf("/v1/meetups/%d/cancel", ball.ID), nil, nil)
+	a.must("GET", fmt.Sprintf("/v1/bookings/%d", bk.Booking.ID), nil, &got)
+	if got.Status != "refunded" || e.orderStatus(bk.Booking.Pay.OrderNo) != "refunded" {
+		t.Fatalf("meetup cancel → booking: %+v", got)
+	}
+
+	// 继续支付: an unpaid booking can get its payment parameters again.
+	var rp bookingCreated
+	a.must("POST", "/v1/bookings", book(a, va, 19, 1, nil), &bk)
+	a.must("POST", fmt.Sprintf("/v1/bookings/%d/pay", bk.Booking.ID), nil, &rp)
+	if rp.Booking.ID != bk.Booking.ID || rp.PayParams == nil || rp.Booking.Pay.OrderNo != bk.Booking.Pay.OrderNo {
+		t.Fatalf("repay: %+v", rp)
+	}
+	b.expectErr("POST", fmt.Sprintf("/v1/bookings/%d/pay", bk.Booking.ID), nil, 404, "not_found")
+	a.must("POST", "/v1/dev/orders/"+bk.Booking.Pay.OrderNo+"/pay", nil, nil)
+	a.expectErr("POST", fmt.Sprintf("/v1/bookings/%d/pay", bk.Booking.ID), nil, 409, "invalid_status")
+
+	// Dashboard todos: refunds stuck for over an hour, merchants under review.
+	e.sql(`UPDATE src.src_ord_loop_booking SET booking_status='refunding', update_time=now() - interval '2 hours' WHERE id=$1`, bk.Booking.ID)
+	ad.must("POST", "/admin/v1/merchants", map[string]any{"name": "待审核商户", "type": "store", "status": "reviewing"}, nil)
+	var dash struct {
+		Todos []struct {
+			Type  string `json:"type"`
+			Count int    `json:"count"`
+		} `json:"todos"`
+	}
+	ad.must("GET", "/admin/v1/dashboard", nil, &dash)
+	kinds := map[string]int{}
+	for _, td := range dash.Todos {
+		kinds[td.Type] = td.Count
+	}
+	if kinds["booking_refund"] != 1 || kinds["merchant_review"] < 1 {
+		t.Fatalf("todos: %+v", dash.Todos)
+	}
+
 	// A suspended merchant's venues cannot be booked.
 	ad.must("PATCH", fmt.Sprintf("/admin/v1/merchants/%d", m.ID), map[string]any{"status": "suspended"}, nil)
 	a.expectErr("POST", "/v1/bookings", book(a, va, 21, 1, nil), 409, "not_bookable")

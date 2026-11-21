@@ -71,6 +71,9 @@ class LocalApi {
 
   Future<Booking> booking(int id) async => Booking.fromJson(jm(await c.get('/v1/bookings/$id')));
 
+  /// 「继续支付」: payment parameters again for a booking still `pending_pay`.
+  Future<BookingCreated> repayBooking(int id) async => BookingCreated.fromJson(jm(await c.post('/v1/bookings/$id/pay')));
+
   /// 409 `cancel_too_late` within 2 hours of the start.
   Future<Booking> cancelBooking(int id) async => Booking.fromJson(jm(await c.post('/v1/bookings/$id/cancel')));
 }
