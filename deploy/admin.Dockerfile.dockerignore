@@ -1,4 +1,5 @@
 node_modules
 dist
 screenshots
-.env*
+config.local.yaml
+*.local.yaml

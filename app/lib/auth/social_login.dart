@@ -15,7 +15,8 @@ import '../core/sdk_config.dart';
 /// WXEntryActivity` / `WXPayEntryActivity` (activity-alias) and the
 /// `com.tencent.mm` package query. iOS: URL type = AppID and
 /// LSApplicationQueriesSchemes in Info.plist, associated domain in
-/// Runner.entitlements (both from ios/Flutter/Loopland.xcconfig).
+/// Runner.entitlements (both generated into ios/Flutter/Loopland.xcconfig
+/// from config/app.yaml by tool/gen_config.dart).
 class WeChat {
   WeChat._();
   static final fluwx = Fluwx();

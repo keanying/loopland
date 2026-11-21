@@ -252,7 +252,7 @@ void paintPill(Canvas canvas, Offset center, String text, Color color, {double f
   final tp = TextPainter(
     text: TextSpan(
         text: text,
-        style: TextStyle(color: color, fontSize: fontSize, fontWeight: FontWeight.w800, fontFamilyFallback: LL.fonts)),
+        style: TextStyle(color: color, fontSize: fontSize, fontWeight: FontWeight.w800, fontFamily: 'Roboto', fontFamilyFallback: LL.fonts)),
     textDirection: TextDirection.ltr,
     maxLines: 1,
   )..layout(maxWidth: 140);
@@ -311,11 +311,25 @@ void paintCheckpoint(Canvas canvas, Offset c, int index, String state) {
         ..color = LL.sky
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2);
+  if (done) {
+    canvas.drawPath(
+        Path()
+          ..moveTo(c.dx - 5, c.dy)
+          ..lineTo(c.dx - 1.5, c.dy + 3.5)
+          ..lineTo(c.dx + 5, c.dy - 3.5),
+        Paint()
+          ..color = LL.sky
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round);
+    return;
+  }
   final tp = TextPainter(
     text: TextSpan(
-        text: done ? '✓' : '${index + 1}',
+        text: '${index + 1}',
         style: TextStyle(
-            color: next ? _ink : LL.sky, fontSize: 12, fontWeight: FontWeight.w900, fontFamilyFallback: LL.fonts)),
+            color: next ? _ink : LL.sky, fontSize: 12, fontWeight: FontWeight.w900, fontFamily: 'Roboto', fontFamilyFallback: LL.fonts)),
     textDirection: TextDirection.ltr,
   )..layout();
   tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));

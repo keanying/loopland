@@ -79,14 +79,13 @@ func (c Config) Missing() map[string][]string {
 	return out
 }
 
-// ValidateProd checks what production needs beyond provider credentials.
+// ValidateProd checks the system-level settings production needs. Third-party
+// credentials are not checked here: they are maintained in the admin console
+// (系统配置 · 第三方服务) and a service without them is simply turned off.
 func (c Config) ValidateProd() error {
 	var problems []string
 	if u, err := url.Parse(c.PublicBaseURL); err != nil || u.Scheme != "https" || strings.Contains(u.Host, "localhost") {
 		problems = append(problems, "LOOPLAND_PUBLIC_BASE_URL must be the public https address (payment callbacks)")
-	}
-	for f, vars := range c.Missing() {
-		problems = append(problems, fmt.Sprintf("%s needs %s (or add it to LOOPLAND_DISABLE)", f, strings.Join(vars, ", ")))
 	}
 	for _, d := range c.Disabled {
 		if !slices.Contains(Features, d) {

@@ -36,7 +36,7 @@
 			<string>weixin</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- 微信 AppID，来自 Flutter/Loopland.xcconfig 的 WECHAT_APP_ID -->
+				<!-- 微信 AppID：config/app.yaml 的 wechat.app_id → Flutter/Loopland.xcconfig 的 WECHAT_APP_ID -->
 				<string>$(WECHAT_APP_ID)</string>
 			</array>
 		</dict>
@@ -47,7 +47,7 @@
 			<string>alipay</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- tobias 按 URLName=alipay 查找回调 scheme；来自 ALIPAY_URL_SCHEME -->
+				<!-- tobias 按 URLName=alipay 查找回调 scheme；config/app.yaml 的 alipay.url_scheme → ALIPAY_URL_SCHEME -->
 				<string>$(ALIPAY_URL_SCHEME)</string>
 			</array>
 		</dict>

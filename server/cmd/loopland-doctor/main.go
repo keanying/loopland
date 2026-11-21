@@ -7,29 +7,31 @@
 //	loopland-doctor                    # everything except paid calls
 //	loopland-doctor -sms-to 138xxxx    # also send a real test SMS
 //	loopland-doctor -realname '张三,110105...'   # also run one paid 实名核验
+//	loopland-doctor -mail-to ops@example.com     # also send a test email
 package main
 
 import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/keanying/loopland/server/internal/auth"
-	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/db"
-	"github.com/keanying/loopland/server/internal/user"
+	"github.com/keanying/loopland/server/internal/platform/secure"
+	"github.com/keanying/loopland/server/internal/providers"
 )
 
 var (
 	smsTo    = flag.String("sms-to", "", "send a real test SMS to this phone")
 	realname = flag.String("realname", "", "run one paid realname check: 'name,id_number'")
+	mailTo   = flag.String("mail-to", "", "send a test email to this address")
 )
 
 type result struct {
@@ -48,13 +50,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	var rs []result
-	check := func(name string, enabled bool, f func() error) {
-		if !enabled {
-			rs = append(rs, result{name: name, skip: "已在 LOOPLAND_DISABLE 中关闭"})
-			return
-		}
-		rs = append(rs, result{name: name, err: f()})
-	}
+	check := func(name string, f func() error) { rs = append(rs, result{name: name, err: f()}) }
 	checkProd := func(name string, f func() error) {
 		if cfg.Env != "prod" {
 			rs = append(rs, result{name: name, skip: "仅正式环境检查"})
@@ -70,11 +66,9 @@ func main() {
 	fmt.Printf("环境：%s\n配置文件：%s\n\n", cfg.Env, src)
 	if cfg.Env == "prod" {
 		rs = append(rs, result{name: "正式环境配置完整性", err: cfg.ValidateProd()})
-	} else if m := cfg.Missing(); len(m) > 0 {
-		rs = append(rs, result{name: "配置完整性（dev 模式下缺失项会用假实现代替）", err: fmt.Errorf("%v", m)})
 	}
 
-	check("PostgreSQL + PostGIS", true, func() error {
+	check("PostgreSQL + PostGIS", func() error {
 		pool, err := db.Open(ctx, cfg.DatabaseURL)
 		if err != nil {
 			return err
@@ -83,7 +77,7 @@ func main() {
 		var v string
 		return pool.QueryRow(ctx, `SELECT postgis_full_version()`).Scan(&v)
 	})
-	check("Redis", true, func() error {
+	check("Redis", func() error {
 		opts, err := redis.ParseURL(cfg.RedisURL)
 		if err != nil {
 			return err
@@ -104,74 +98,38 @@ func main() {
 		return nil
 	})
 
-	al := cfg.Aliyun
-	check("阿里云短信（AccessKey + 签名已审核）", cfg.Enabled("sms"), func() error {
-		s, err := auth.NewAliyunSMS(al.AccessKeyID, al.AccessKeySecret, al.SMSSignName, al.SMSTemplateCode)
-		if err != nil {
-			return err
-		}
-		if err := s.Check(ctx); err != nil {
-			return err
-		}
-		if *smsTo != "" {
-			return s.Send(ctx, *smsTo, "123456")
-		}
-		return nil
-	})
-	check("阿里云验证码 2.0", cfg.Enabled("captcha"), func() error {
-		c, err := auth.NewAliyunCaptcha(al.AccessKeyID, al.AccessKeySecret, al.CaptchaSceneID)
-		if err != nil {
-			return err
-		}
-		return c.Check(ctx)
-	})
-	check("阿里云号码认证（一键登录）", cfg.Enabled("oneclick"), func() error {
-		c, err := auth.NewAliyunOneClick(al.AccessKeyID, al.AccessKeySecret)
-		if err != nil {
-			return err
-		}
-		return c.Check(ctx)
-	})
-	if *realname != "" {
-		check("阿里云身份证二要素（付费调用 1 次）", cfg.Enabled("realname"), func() error {
-			r, err := user.NewAliyunRealname(al.AccessKeyID, al.AccessKeySecret)
-			if err != nil {
-				return err
-			}
-			name, id, _ := strings.Cut(*realname, ",")
-			_, err = r.Verify(ctx, name, id)
-			return err
-		})
+	// Third-party services: the effective configuration (admin console rows
+	// first, then config.yaml / environment), the same the API uses.
+	if pool, err := db.Open(ctx, cfg.DatabaseURL); err != nil {
+		rs = append(rs, result{name: "第三方服务", err: fmt.Errorf("连不上数据库，无法读取管理端配置：%w", err)})
 	} else {
-		rs = append(rs, result{name: "阿里云身份证二要素", skip: "每次调用收费，加 -realname '姓名,身份证号' 才会测试"})
+		defer pool.Close()
+		box, err := secure.NewBox(cfg.DataKey)
+		if err != nil {
+			rs = append(rs, result{name: "数据加密密钥", err: err})
+		} else {
+			reg := &providers.Registry{Pool: pool, Box: box, Cfg: cfg, Log: slog.New(slog.NewTextHandler(io.Discard, nil)), HTTP: &http.Client{Timeout: 15 * time.Second}}
+			if err := reg.Load(ctx); err != nil {
+				rs = append(rs, result{name: "读取第三方服务配置", err: err})
+			} else {
+				inputs := map[string]string{providers.SMS: *smsTo, providers.Realname: *realname, providers.Email: *mailTo}
+				for _, d := range providers.Defs {
+					e := reg.Current().Eff[d.Code]
+					name := fmt.Sprintf("%s（配置来源：%s）", d.Name, map[string]string{"db": "管理端", "config": "配置文件", "none": "未配置"}[e.Source])
+					switch {
+					case !e.Enabled:
+						rs = append(rs, result{name: d.Name, skip: "未启用"})
+					case d.Code == providers.Realname && *realname == "":
+						rs = append(rs, result{name: d.Name, skip: "每次调用收费，加 -realname '姓名,身份证号' 才会测试"})
+					case d.Code == providers.Email && *mailTo == "":
+						rs = append(rs, result{name: d.Name, skip: "加 -mail-to 收件邮箱 才会发送测试邮件"})
+					default:
+						rs = append(rs, result{name: name, err: reg.Check(ctx, d.Code, inputs[d.Code])})
+					}
+				}
+			}
+		}
 	}
-	check("微信开放平台（App 登录）", cfg.Enabled("wechat_login"), func() error {
-		return (&auth.WeChatOpen{AppID: cfg.WeChat.AppID, Secret: cfg.WeChat.AppSecret}).Check(ctx)
-	})
-	check("Sign in with Apple（下载 Apple 公钥）", cfg.Enabled("apple_login"), func() error {
-		return (&auth.AppleJWKS{BundleID: cfg.Apple.BundleID}).Check(ctx)
-	})
-	wc := cfg.WeChat
-	check("微信支付 V3（商户号、证书、私钥、平台公钥）", cfg.Enabled("wechat_pay"), func() error {
-		p, err := billing.NewWeChatPay(wc.AppID, wc.MchID, wc.MchSerialNo, wc.APIv3Key, wc.MchPrivateKey, wc.PlatformPubKey, wc.PlatformPubKeyID, cfg.PublicBaseURL+"/v1/pay/notify/wechat")
-		if err != nil {
-			return err
-		}
-		return p.Check(ctx)
-	})
-	check("支付宝（应用私钥、支付宝公钥）", cfg.Enabled("alipay"), func() error {
-		p, err := billing.NewAlipay(cfg.Alipay.AppID, cfg.Alipay.PrivateKey, cfg.Alipay.PublicKey, cfg.PublicBaseURL+"/v1/pay/notify/alipay", cfg.Alipay.Sandbox)
-		if err != nil {
-			return err
-		}
-		return p.Check(ctx)
-	})
-	check("Apple 内购（Bundle ID）", cfg.Enabled("apple_iap"), func() error {
-		if cfg.Apple.BundleID == "" {
-			return fmt.Errorf("APPLE_BUNDLE_ID 未设置")
-		}
-		return nil
-	})
 
 	failed := 0
 	for _, r := range rs {

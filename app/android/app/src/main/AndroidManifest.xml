@@ -49,7 +49,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- 高德 Key：android/loopland.properties 或 --dart-define 中的 AMAP_ANDROID_KEY（manifestPlaceholders） -->
+        <!-- 高德 Key：config/app.yaml 的 amap.android_key → AMAP_ANDROID_KEY（--dart-define 或生成的 android/loopland.properties，见 build.gradle.kts） -->
         <meta-data android:name="com.amap.api.v2.apikey" android:value="${AMAP_ANDROID_KEY}"/>
         <!-- 运动记录：geolocator 前台服务，类型 location（Android 14 起必须声明） -->
         <service

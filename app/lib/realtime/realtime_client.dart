@@ -5,6 +5,7 @@ import 'dart:developer' as dev;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../api/models.dart';
+import '../core/config_keys.dart';
 
 /// The bits of a WebSocket the client needs. Production wraps
 /// [WebSocketChannel]; tests use an in-memory fake.
@@ -49,6 +50,7 @@ const _authCloseCodes = {1008, 4001, 4003, 4401, 4403};
 class RealtimeClient {
   RealtimeClient({
     required this.baseUrl,
+    this.wsUrl,
     required this.token,
     this.onAuthFailure,
     ChannelFactory? connect,
@@ -56,8 +58,12 @@ class RealtimeClient {
     this.silenceTimeout = const Duration(seconds: 75),
   }) : _factory = connect ?? WebSocketRealtimeChannel.new;
 
-  /// The REST base (`http(s)://host:port`); turned into `ws(s)://…/v1/ws`.
+  /// The REST base (`http(s)://host:port`); turned into `ws(s)://…/v1/ws`
+  /// unless [wsUrl] is given.
   final String baseUrl;
+
+  /// Explicit WebSocket endpoint (`api.ws_url` in config/app.yaml → `WS_URL`).
+  final String? wsUrl;
 
   /// Current access token (null when logged out).
   final Future<String?> Function() token;
@@ -99,11 +105,11 @@ class RealtimeClient {
   /// Topics with at least one subscriber.
   Set<String> get topics => _topics.keys.toSet();
 
-  static Uri wsUri(String base, String token) {
-    final b = Uri.parse(base);
-    final scheme = b.scheme == 'https' ? 'wss' : 'ws';
-    final path = '${b.path.endsWith('/') ? b.path.substring(0, b.path.length - 1) : b.path}/v1/ws';
-    return b.replace(scheme: scheme, path: path, queryParameters: {'token': token});
+  /// `ws(s)://…/v1/ws?token=…`: [wsUrl] if non-empty, else derived from the
+  /// REST [base] (http→ws, https→wss, same host / port / path).
+  static Uri wsUri(String base, String token, {String? wsUrl}) {
+    final endpoint = Uri.parse(wsUrl != null && wsUrl.isNotEmpty ? wsUrl : deriveWsUrl(base));
+    return endpoint.replace(queryParameters: {...endpoint.queryParameters, 'token': token});
   }
 
   /// Connects (after login). Idempotent.
@@ -174,7 +180,7 @@ class RealtimeClient {
     }
     RealtimeChannel ch;
     try {
-      ch = _factory(wsUri(baseUrl, t));
+      ch = _factory(wsUri(baseUrl, t, wsUrl: wsUrl));
       await ch.ready;
     } catch (e) {
       if (!_wanted || gen != _gen) return;

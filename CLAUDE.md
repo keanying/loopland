@@ -13,7 +13,7 @@
   - 数仓分层 `src/ods/dwd/dws/ads/dim`，粒度后缀 `_di/_df/_wk/...`，分区字段 `sport_date`（YYYYMMDD）。
 - **配置**：
   - 系统级配置（端口、数据库、缓存、JWT、数据加密密钥）放 `server/config.yaml`；`admin/config.yaml`、`app/config/app.yaml` 放前端的域名、端口、API 地址。
-  - 第三方服务（短信、验证码、一键登录、实名、微信、支付宝、Apple、AI、邮件、地图等）的 Key 在**管理端「系统配置」页面**维护，加密存库，不写进代码和配置文件。
+  - 第三方服务（短信、验证码、一键登录、实名、微信、支付宝、Apple、AI、邮件、地图等）的 Key 在**管理端「系统配置」页面**维护，加密存库，不写进代码和配置文件（后端 `server/internal/providers`，接口 `docs/api/系统配置.md`；新增第三方服务就在 `providers/defs.go` 加一项）。`server/config.yaml` 里的第三方段落只是没在管理端保存过时的兼容引导值。App 编译进安装包的 SDK 标识（高德 App Key、微信 AppID、一键登录方案秘钥等）属于 App 配置，放 `app/config/app.yaml`/`app.local.yaml`。
 - **接口约定**：`docs/api/*.md` 是前后端共同的契约；改接口要同步改文档。JSON 字段名与数据库字段名相互独立。
 - **密钥**：不提交到仓库，不发到聊天里。
 - **测试**：后端 `cd server && go test ./...`（需要本机 PostgreSQL+PostGIS 和 Redis）；管理端 `npm run lint && npm run build`；App `flutter analyze && flutter test`。

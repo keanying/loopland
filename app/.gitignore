@@ -50,12 +50,16 @@ app.*.map.json
 # Gradle output of the root android project
 /android/build/
 
-# 圈圈：真实密钥只放在本地（模板是 *.example）
+# 圈圈：配置唯一来源是 config/app.yaml（已提交，无密钥）。
+# 本机覆盖（真实 Key、局域网 IP）：
+/config/app.local.yaml
+# tool/gen_config.dart 生成的文件（勿手改）：
 /config/*.json
-/android/key.properties
 /android/loopland.properties
+/ios/Flutter/Loopland.xcconfig
+# release 签名（单独的密钥文件，模板 android/key.properties.example）：
+/android/key.properties
 /android/app/*.jks
 /android/app/*.keystore
 *.jks
 *.keystore
-/ios/Flutter/Loopland.xcconfig

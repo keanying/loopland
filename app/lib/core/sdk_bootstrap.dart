@@ -14,7 +14,9 @@ class SdkBootstrap {
   static bool _done = false;
 
   static void install(ProviderContainer container) {
-    SdkConfig.current.logMissing();
+    SdkConfig.current
+      ..logSource()
+      ..logMissing();
     LaunchPrivacy.onAgreed = () => _afterPrivacy(container);
   }
 

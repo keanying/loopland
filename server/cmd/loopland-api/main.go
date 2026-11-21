@@ -50,6 +50,8 @@ func run(log *slog.Logger) error {
 	}
 	go a.Config.Watch(ctx, 30*time.Second)
 	go a.Hub.Run(ctx)
+	// Pick up 第三方服务 changes saved on another instance.
+	go a.Providers.Watch(ctx, 30*time.Second)
 	if !cfg.JobsOff {
 		go a.Jobs.Run(ctx, time.Minute)
 	}

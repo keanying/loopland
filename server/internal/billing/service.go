@@ -94,8 +94,27 @@ type Service struct {
 	Pool      *pgxpool.Pool
 	Providers map[string]Provider
 	Apple     *AppleStore
+	// PaymentFn and AppleFn, when set, return the live channels configured in
+	// the admin console (they take precedence over the static fields).
+	PaymentFn func(channel string) (Provider, bool)
+	AppleFn   func() *AppleStore
 	Log       *slog.Logger
 	Dev       bool
+}
+
+func (s *Service) provider(channel string) (Provider, bool) {
+	if s.PaymentFn != nil {
+		return s.PaymentFn(channel)
+	}
+	p, ok := s.Providers[channel]
+	return p, ok
+}
+
+func (s *Service) apple() *AppleStore {
+	if s.AppleFn != nil {
+		return s.AppleFn()
+	}
+	return s.Apple
 }
 
 const planCols = `code, name, period_type, is_auto_renew, price_amt, first_price_amt, renew_price_amt, seats, is_recommended, apple_product_id, entitlements, is_on_sale, sort`
@@ -156,7 +175,7 @@ func newOrderNo() string {
 
 // CreateOrder starts a purchase.
 func (s *Service) CreateOrder(ctx context.Context, user int64, planCode, channel, platform, ip string) (Order, map[string]any, error) {
-	prov, ok := s.Providers[channel]
+	prov, ok := s.provider(channel)
 	if !ok || (channel == Mock && !s.Dev) {
 		return Order{}, nil, httpx.BadRequest("channel_not_allowed", "不支持的支付方式")
 	}
@@ -279,7 +298,7 @@ func grant(ctx context.Context, tx pgx.Tx, user int64, plan Plan, channel string
 
 // Notify handles a WeChat or Alipay callback.
 func (s *Service) Notify(w http.ResponseWriter, r *http.Request, channel string) {
-	prov, ok := s.Providers[channel]
+	prov, ok := s.provider(channel)
 	if !ok {
 		http.NotFound(w, r)
 		return
@@ -303,15 +322,16 @@ func (s *Service) Notify(w http.ResponseWriter, r *http.Request, channel string)
 // AppleTransaction verifies a signed transaction from the device and grants
 // the membership for the matching order.
 func (s *Service) AppleTransaction(ctx context.Context, user int64, signed string) error {
-	if s.Apple == nil {
+	apple := s.apple()
+	if apple == nil {
 		return httpx.BadRequest("channel_not_allowed", "App Store 支付未开通")
 	}
 	var tx AppleTransaction
-	if err := s.Apple.Verifier.Decode(signed, &tx); err != nil {
+	if err := apple.Verifier.Decode(signed, &tx); err != nil {
 		s.Log.Warn("apple transaction rejected", "err", err)
 		return httpx.BadRequest("invalid_transaction", "交易校验失败")
 	}
-	if tx.BundleID != s.Apple.BundleID {
+	if tx.BundleID != apple.BundleID {
 		return httpx.BadRequest("invalid_transaction", "交易不属于本应用")
 	}
 	if tx.RevocationDate > 0 {
@@ -389,19 +409,20 @@ func (s *Service) applyAppleTx(ctx context.Context, dbtx pgx.Tx, user int64, tx 
 
 // AppleNotification handles App Store Server Notifications V2.
 func (s *Service) AppleNotification(ctx context.Context, signedPayload string) error {
-	if s.Apple == nil {
+	apple := s.apple()
+	if apple == nil {
 		return errors.New("apple not configured")
 	}
 	var n AppleNotification
-	if err := s.Apple.Verifier.Decode(signedPayload, &n); err != nil {
+	if err := apple.Verifier.Decode(signedPayload, &n); err != nil {
 		return err
 	}
-	if n.Data.BundleID != s.Apple.BundleID {
+	if n.Data.BundleID != apple.BundleID {
 		return fmt.Errorf("bundle mismatch %q", n.Data.BundleID)
 	}
 	var tx AppleTransaction
 	if n.Data.SignedTransactionInfo != "" {
-		if err := s.Apple.Verifier.Decode(n.Data.SignedTransactionInfo, &tx); err != nil {
+		if err := apple.Verifier.Decode(n.Data.SignedTransactionInfo, &tx); err != nil {
 			return err
 		}
 	}
@@ -415,7 +436,7 @@ func (s *Service) AppleNotification(ctx context.Context, signedPayload string) e
 		return err
 	case "DID_CHANGE_RENEWAL_STATUS":
 		var ri AppleRenewal
-		if err := s.Apple.Verifier.Decode(n.Data.SignedRenewalInfo, &ri); err != nil {
+		if err := apple.Verifier.Decode(n.Data.SignedRenewalInfo, &ri); err != nil {
 			return err
 		}
 		_, err := s.Pool.Exec(ctx, `UPDATE src.src_ord_membership SET is_auto_renew=$2, next_charge_time=CASE WHEN $2 THEN expire_time END, update_time=now()
@@ -472,7 +493,7 @@ func (s *Service) Refund(ctx context.Context, orderNo, reason string) (Order, er
 	if o.Channel == AppleIAP {
 		return o, httpx.BadRequest("manage_in_app_store", "App Store 订单需由用户向 Apple 申请退款")
 	}
-	prov, ok := s.Providers[o.Channel]
+	prov, ok := s.provider(o.Channel)
 	if !ok {
 		return o, httpx.BadRequest("channel_not_allowed", "支付渠道未配置")
 	}
@@ -576,7 +597,7 @@ func (s *Service) renew(ctx context.Context, user int64) error {
 			o.OrderNo, user, plan.Code, plan.Name, o.AmountFen, channel); err != nil {
 			return err
 		}
-		prov := s.Providers[channel]
+		prov, _ := s.provider(channel)
 		var trade string
 		if prov != nil {
 			trade, err = prov.Charge(ctx, o)

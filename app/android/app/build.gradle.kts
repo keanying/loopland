@@ -7,9 +7,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// ── 本地密钥（均已 gitignore，模板见 *.example）────────────────────────────
-// android/key.properties       release 签名（storeFile / storePassword / keyAlias / keyPassword）
-// android/loopland.properties  写进 AndroidManifest 的 SDK Key（manifestPlaceholders）
+// ── 配置（均已 gitignore）──────────────────────────────────────────────────
+// 唯一来源是 config/app.yaml（+ 本机 config/app.local.yaml），运行
+//   dart run tool/gen_config.dart --profile dev
+// 生成 android/loopland.properties（勿手改）：AMAP_ANDROID_KEY（manifestPlaceholders）、
+// LOOPLAND_PROFILE、KEY_PROPERTIES（release 签名文件路径，app.yaml 的 android.key_properties）。
+// release 签名的密码单独放在 android/key.properties（模板 key.properties.example），不进 app.yaml。
 fun loadProps(name: String): Properties {
     val p = Properties()
     val f = rootProject.file(name)
@@ -17,12 +20,13 @@ fun loadProps(name: String): Properties {
     return p
 }
 
-val keyProps = loadProps("key.properties")
 val looplandProps = loadProps("loopland.properties")
+val keyPropertiesPath = looplandProps.getProperty("KEY_PROPERTIES")?.takeIf { it.isNotBlank() } ?: "key.properties"
+val keyProps = loadProps(keyPropertiesPath)
 
 // `--dart-define` / `--dart-define-from-file` values, which Flutter hands to
-// Gradle base64-encoded in the `dart-defines` property. Used as a fallback so
-// a key only has to be written once (config/prod.json).
+// Gradle base64-encoded in the `dart-defines` property (later entries win, so
+// an explicit --dart-define beats the file — same as on the Dart side).
 val dartDefines: Map<String, String> =
     (project.findProperty("dart-defines") as String?)
         ?.split(",")
@@ -32,8 +36,20 @@ val dartDefines: Map<String, String> =
         }
         ?.toMap() ?: emptyMap()
 
+// dart-define (same source: config/<profile>.json) first, then the generated
+// loopland.properties (builds without --dart-define-from-file, e.g. Android Studio).
 fun sdkValue(key: String): String =
-    looplandProps.getProperty(key)?.takeIf { it.isNotBlank() } ?: dartDefines[key] ?: ""
+    dartDefines[key]?.takeIf { it.isNotBlank() } ?: looplandProps.getProperty(key)?.takeIf { it.isNotBlank() } ?: ""
+
+// loopland.properties holds the last generated profile; warn when it differs
+// from the --dart-define-from-file one.
+run {
+    val built = dartDefines["LOOPLAND_CONFIG_PROFILE"].orEmpty()
+    val native = looplandProps.getProperty("LOOPLAND_PROFILE").orEmpty()
+    if (built.isNotEmpty() && native.isNotEmpty() && built != native) {
+        logger.warn("圈圈: android/loopland.properties 是 profile「$native」生成的，本次构建用「$built」。请运行 dart run tool/gen_config.dart --profile $built")
+    }
+}
 
 android {
     namespace = "com.loopland.app"
@@ -91,7 +107,7 @@ android {
 gradle.taskGraph.whenReady {
     val releaseTask = allTasks.any { it.project == project && it.name.contains("Release") && (it.name.startsWith("assemble") || it.name.startsWith("bundle")) }
     if (releaseTask && keyProps.getProperty("storeFile") == null && !project.hasProperty("allowDebugSigning")) {
-        throw GradleException("缺少 android/key.properties（release 签名）。参考 android/key.properties.example；仅本地测试可加 -PallowDebugSigning")
+        throw GradleException("缺少 android/$keyPropertiesPath（release 签名，路径见 config/app.yaml 的 android.key_properties）。参考 android/key.properties.example；仅本地测试可加 -PallowDebugSigning")
     }
 }
 

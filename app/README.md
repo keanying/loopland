@@ -1,6 +1,6 @@
-# 圈圈 Loopland · App（V1）
+# 圈圈 Loopland · App（V1 + V2 第一批「玩法深化」）
 
-Flutter 3 + Riverpod 客户端。接口约定以 `docs/api/v1.md` 为准，只实现 V1 范围的功能；V2 的入口（场馆、组局、赛事、动态、怪兽图鉴等）显示「即将开放」。
+Flutter 3 + Riverpod 客户端。接口约定以 `docs/api/v1.md` 和 `docs/api/v2-1-玩法.md` 为准。V2 第一批（城市怪兽、能量宝箱、守地挑战、赛季、城区联赛、限时活动、城市定向、伙伴养成、跑团接力、WebSocket 实时推送）已实现；其余 V2 入口（场馆、组局、动态、本地生活、能量商城、AI 剧情夜跑、轨迹绘画）显示「即将开放」。
 
 ## 环境
 
@@ -12,68 +12,132 @@ cd app
 flutter pub get
 flutter analyze          # 应为 No issues found
 flutter test             # 单元测试 + 组件测试
-LOOPLAND_SCREENSHOTS=1 flutter test test/widgets   # 顺便把截图写到 screenshots/
+LOOPLAND_SCREENSHOTS=1 flutter test test/widgets   # 顺便把截图写到 screenshots/（V2 页面在 screenshots/v2/）
+# 联调：后端以 LOOPLAND_ENV=dev 运行（V2 测试还需要管理员 admin:admin-password-1 来投放怪兽 / 宝箱）
+LOOPLAND_LIVE_API=http://localhost:8082 flutter test integration_live
 ```
 
-运行（开发后端 `LOOPLAND_ENV=dev`）：
+## 配置（config/app.yaml）
+
+前端所有的域名 / 端口 / API 地址 / 协议链接 / SDK Key 都在**一个文件**：`config/app.yaml`（已提交，**不含任何真实密钥**，按 `dev` / `prod` 分档）。真实 Key、你电脑的局域网 IP 写在 `config/app.local.yaml`（已 gitignore，结构相同，深度合并覆盖 app.yaml）。生成器把它们转成各端真正读取的文件：
 
 ```bash
-flutter run --dart-define=LOOPLAND_ENV=dev --dart-define=API_BASE=http://192.168.1.10:8080
-```
-
-## 配置（dart-define）
-
-所有 Key / ID 都在构建时注入，**仓库里没有任何真实密钥**。Dart 侧用 `--dart-define-from-file`：
-
-```bash
-cp config/dev.json.example config/dev.json      # 已 gitignore
+dart run tool/gen_config.dart --profile dev        # 生成下面三个文件（都已 gitignore，勿手改）
 flutter run --dart-define-from-file=config/dev.json
-cp config/prod.json.example config/prod.json    # 已 gitignore，填真实值
-flutter build apk --release --dart-define-from-file=config/prod.json
 ```
 
-| 变量 | 说明 |
-| --- | --- |
-| `LOOPLAND_ENV` | `dev`：验证码 000000 提示、`mock` 支付、「环境检查」页；未配置 SDK 时一键登录 / 微信用开发后端的 `dev:` 凭证。默认 `prod` |
-| `API_BASE` | 后端地址。默认 Android 模拟器 `http://10.0.2.2:8080`，其他 `http://localhost:8080`（release 包只允许 HTTPS） |
-| `ALIYUN_AUTH_SECRET_ANDROID` / `_IOS` | 阿里云号码认证「方案秘钥」，两个平台各一个 |
-| `WECHAT_APP_ID` / `WECHAT_UNIVERSAL_LINK` | 微信开放平台 AppID；iOS Universal Link（`https://域名/路径/`） |
-| `ALIPAY_APP_ID` / `ALIPAY_UNIVERSAL_LINK` | 可选（支付宝风控优化 / iOS Universal Link）。支付只用服务端返回的 `order_string` |
-| `AMAP_ANDROID_KEY` / `AMAP_IOS_KEY` | 高德 Key。没有 Key 时使用纯 Flutter 备用地图 |
-| `AMAP_STYLE_DATA` / `AMAP_STYLE_EXTRA_DATA` | 高德暗色自定义样式文件的 asset 路径（如 `assets/map/style.data`），可选 |
-| `ALIYUN_CAPTCHA_PREFIX` / `ALIYUN_CAPTCHA_SCENE_ID` | 阿里云验证码 2.0 身份标与场景 ID；不配置时（开发）跳过人机验证 |
-| `USER_AGREEMENT_URL` / `PRIVACY_POLICY_URL` | 用户协议 / 隐私政策链接（启动隐私弹窗、登录页、一键登录授权页、设置页） |
-
-模板里 `<...>` 形式的占位符按「未配置」处理。原生文件需要的值另外放在：
-
-| 文件（均 gitignore） | 模板 | 内容 |
+| 生成文件 | 谁读 | 内容 |
 | --- | --- | --- |
-| `android/key.properties` | `android/key.properties.example` | release 签名：`storeFile`（相对 `android/`）、`storePassword`、`keyAlias`、`keyPassword` |
-| `android/loopland.properties` | `android/loopland.properties.example` | `AMAP_ANDROID_KEY` → manifest `com.amap.api.v2.apikey`（留空时回退到 dart-define 同名值） |
-| `ios/Flutter/Loopland.xcconfig` | `ios/Flutter/Loopland.xcconfig.example` | `WECHAT_APP_ID`（URL Type）、`ALIPAY_URL_SCHEME`（默认 `loopland-alipay`）、`LOOPLAND_ASSOCIATED_DOMAIN`（Associated Domains）、可选 `DEVELOPMENT_TEAM` |
+| `config/<profile>.json` | `flutter run/build --dart-define-from-file=` | 所有 Dart 侧配置（下表 dart-define） |
+| `android/loopland.properties` | `android/app/build.gradle.kts` | `AMAP_ANDROID_KEY`（manifestPlaceholders → `com.amap.api.v2.apikey`）、`KEY_PROPERTIES`、`LOOPLAND_PROFILE` |
+| `ios/Flutter/Loopland.xcconfig` | `Debug.xcconfig` / `Release.xcconfig`（在 `LooplandDefaults.xcconfig` 之后 include） | `WECHAT_APP_ID`、`ALIPAY_URL_SCHEME`、`LOOPLAND_ASSOCIATED_DOMAIN`、可选 `DEVELOPMENT_TEAM` |
 
-`ios/Flutter/Debug.xcconfig` / `Release.xcconfig` 依次 include `LooplandDefaults.xcconfig`（已提交的默认值）和可选的 `Loopland.xcconfig`。注意 xcconfig 里 `//` 是注释，只写域名 / scheme。
+每个生成文件开头都有「生成文件，勿手改，来源 config/app.yaml」（JSON 没有注释，写在 `_generated` 键里，Flutter 会把它当作一个没人读的 dart-define）。原生两个文件只对应**最近一次生成的 profile**，切换 dev / prod 时重新运行生成器（Gradle 发现 profile 不一致会打印警告）。
+
+唯一单独存放的密钥文件是 release 签名 `android/key.properties`（模板 `android/key.properties.example`，`storeFile` 相对 `android/`）。它的路径可在 app.yaml 的 `android.key_properties` 改（例如 CI 的密钥目录），**密码不要写进 app.yaml**。
+
+### 配置项
+
+| app.yaml 键 | dart-define / 原生变量 | 说明 |
+| --- | --- | --- |
+| `env` | `LOOPLAND_ENV` | `dev`：验证码 000000 提示、`mock` 支付、「环境检查」页；未配置 SDK 时一键登录 / 微信用开发后端的 `dev:` 凭证。`prod`：正式 |
+| `api.base_url` | `API_BASE` | 后端 REST 地址 `scheme://host:port`。Android 模拟器 `http://10.0.2.2:8080`，iOS 模拟器 / Chrome `http://localhost:8080`，真机用电脑局域网 IP（release 包只允许 HTTPS） |
+| `api.ws_url` | `WS_URL` | 可选，完整 WebSocket 端点。**留空**时 App 运行时由 `API_BASE` 推导（http→ws、https→wss，同 host / 端口，加 `/v1/ws`），所以单独覆盖 `API_BASE` 时 WebSocket 跟着变 |
+| `links.user_agreement` / `links.privacy_policy` | `USER_AGREEMENT_URL` / `PRIVACY_POLICY_URL` | 用户协议 / 隐私政策（启动隐私弹窗、登录页、一键登录授权页、设置页） |
+| `links.universal_link_domain` | `LOOPLAND_ASSOCIATED_DOMAIN`（xcconfig） | Universal Link 域名，只写域名；Associated Domains = `applinks:<域名>` |
+| `wechat.app_id` / `wechat.universal_link` | `WECHAT_APP_ID`（Dart + xcconfig）/ `WECHAT_UNIVERSAL_LINK` | 微信开放平台 AppID；iOS Universal Link（`https://<universal_link_domain>/路径/`） |
+| `alipay.app_id` / `alipay.universal_link` | `ALIPAY_APP_ID` / `ALIPAY_UNIVERSAL_LINK` | 可选（风控优化 / iOS Universal Link）。支付只用服务端返回的 `order_string` |
+| `alipay.url_scheme` | `ALIPAY_URL_SCHEME`（xcconfig） | iOS 支付宝回调 scheme，默认 `loopland-alipay`，不能含下划线 |
+| `amap.android_key` / `amap.ios_key` | `AMAP_ANDROID_KEY`（Dart + Manifest）/ `AMAP_IOS_KEY` | 高德 Key。没有 Key 时使用纯 Flutter 备用地图 |
+| `amap.style_data` / `amap.style_extra_data` | `AMAP_STYLE_DATA` / `AMAP_STYLE_EXTRA_DATA` | 高德暗色自定义样式 asset 路径（如 `assets/map/style.data`），可选 |
+| `amap.navigation_url` | `AMAP_NAVIGATION_URL` | 高德 URI API（领地弹层「高德导航」），默认 `https://uri.amap.com/navigation` |
+| `aliyun.auth_secret_android` / `_ios` | `ALIYUN_AUTH_SECRET_ANDROID` / `_IOS` | 阿里云号码认证「方案秘钥」，两个平台各一个 |
+| `aliyun.captcha_prefix` / `captcha_scene_id` | `ALIYUN_CAPTCHA_PREFIX` / `_SCENE_ID` | 阿里云验证码 2.0 身份标与场景 ID；不配置时（开发）跳过人机验证 |
+| `aliyun.captcha_js_url` / `captcha_page_url` | `ALIYUN_CAPTCHA_JS_URL` / `_PAGE_URL` | 验证码 Web SDK 地址；WebView 页面的 origin（场景开了域名白名单时改成白名单域名） |
+| `ios.development_team` | `DEVELOPMENT_TEAM`（xcconfig） | 可选，Apple 签名团队 ID |
+| `android.key_properties` | `KEY_PROPERTIES`（loopland.properties） | release 签名配置文件路径，默认 `key.properties` |
+| `allow_empty` | — | prod 里允许留空的 SDK Key 列表，如 `[aliyun.captcha_prefix, aliyun.captcha_scene_id]` |
+
+另有 `LOOPLAND_CONFIG_PROFILE`（生成器写入的 profile 名，「环境检查」页显示「配置来源」）。`shared:` 下是所有 profile 共用的默认值。值里的 `<...>` 占位符按「未配置」处理。
+
+### 生成器 `tool/gen_config.dart`
+
+```
+dart run tool/gen_config.dart [--profile dev] [--api-base URL] [--set 键=值 ...]
+                              [--config 文件] [--local 文件 | --no-local] [--out-dir 目录]
+                              [--allow-empty-keys] [--check] [--help]
+```
+
+- 校验（出错时打印中文原因、**不写任何文件**、退出码 1）：必填项；URL 格式；未知的键（防拼写错误，会列出可用的键）；Universal Link 必须 https、以 `/` 结尾且在 `links.universal_link_domain` 下；URL Scheme 不能含下划线；微信 AppID 以 `wx` 开头；asset 路径用 `/`。`env: prod` 时还要求：全部 https / wss、不能是 localhost / 10.0.2.2 / 局域网 IP、SDK Key 不能为空（除非列进 `allow_empty` 或加 `--allow-empty-keys`，后者只用于冒烟构建）。
+- `--check` 只校验；`--out-dir` 把三个文件写到别的根目录（其下 `config/`、`android/`、`ios/Flutter/`）；内容没变的文件不会被重写（不触发 Gradle / Xcode 重新构建）。
+- Linux / macOS / Windows 行为一致：路径用 `package:path` 拼接，输出统一 UTF-8（无 BOM）+ `\n` 换行；输入接受 BOM 和 CRLF。从任意目录运行都以 `app/` 为根。
+- 逻辑在 `tool/src/app_config.dart`，单元测试 `test/tool/gen_config_test.dart`（`flutter test` 一起跑）。
+
+### 优先级（低 → 高）
+
+1. `config/app.yaml` 的 `shared`
+2. `config/app.yaml` 的 `profiles.<profile>`
+3. `config/app.local.yaml` 的 `shared`
+4. `config/app.local.yaml` 的 `profiles.<profile>`
+5. 生成器 `--set 键=值`（可重复，CI 用它从环境变量注入密钥）
+6. 生成器 `--api-base`
+7. `flutter run/build` 命令行上单独写的 `--dart-define=键=值`：实测（Flutter 3.50）会覆盖 `--dart-define-from-file` 里的同名值——flutter_tools 先放文件里的值、再追加命令行的值，后者生效。Android 的 `build.gradle.kts` 同样以 dart-define 为准，没有时才用 `android/loopland.properties`。iOS 原生变量（xcconfig）不受 `--dart-define` 影响，只能重新生成。
+
+**没运行生成器也能跑**：不带 `--dart-define-from-file` 时 App 使用内置兜底值（`lib/core/config_keys.dart` 的 `ConfigFallbacks`，与 app.yaml 的默认值一致，测试会检查）：API 在 Android 上 `http://10.0.2.2:8080`、其他平台 `http://localhost:8080`，`env` 为 `prod`，所有 SDK 未配置；启动日志（`loopland.config`）会提示先运行生成器。iOS / Android 原生变量用 `LooplandDefaults.xcconfig` / 空的高德 Key。要 dev 功能（验证码提示、mock 支付、`dev:` 登录）请按下面的方式运行。
+
+### 运行（开发后端 `LOOPLAND_ENV=dev`）
+
+`scripts/dev.sh app [设备]` / `.\scripts\dev.ps1 app [设备]` 会自动 `pub get`、生成配置并 `flutter run`（`emulator-*` 设备且没有 app.local.yaml 时自动用 `10.0.2.2`）。手动运行：
+
+| 目标 | Linux / macOS（bash） | Windows（PowerShell） |
+| --- | --- | --- |
+| Android 模拟器 | `dart run tool/gen_config.dart --profile dev --api-base http://10.0.2.2:8080`<br>`flutter run -d emulator-5554 --dart-define-from-file=config/dev.json` | `dart run tool/gen_config.dart --profile dev --api-base http://10.0.2.2:8080`<br>`flutter run -d emulator-5554 --dart-define-from-file=config/dev.json` |
+| iOS 模拟器（仅 macOS） | `dart run tool/gen_config.dart --profile dev`<br>`flutter run -d "iPhone 16" --dart-define-from-file=config/dev.json` | — |
+| 真机（Android / iPhone，同一 Wi-Fi） | 在 `config/app.local.yaml` 写 `profiles: { dev: { api: { base_url: http://192.168.1.10:8080 } } }`（电脑局域网 IP，`ip addr` 查），然后<br>`dart run tool/gen_config.dart --profile dev`<br>`flutter run -d <设备ID> --dart-define-from-file=config/dev.json` | 同左（局域网 IP 用 `ipconfig` 查），<br>`dart run tool/gen_config.dart --profile dev`<br>`flutter run -d <设备ID> --dart-define-from-file=config/dev.json` |
+| Chrome | `dart run tool/gen_config.dart --profile dev`<br>`flutter run -d chrome --dart-define-from-file=config/dev.json` | 同左 |
+| 临时换后端（不改文件） | `flutter run --dart-define-from-file=config/dev.json --dart-define=API_BASE=http://192.168.1.10:8080` | `flutter run --dart-define-from-file=config/dev.json "--dart-define=API_BASE=http://192.168.1.10:8080"` |
+
+PowerShell 里 `--set` / `--dart-define` 的值含 `=`、空格或 `,` 时整个参数加引号，如 `dart run tool/gen_config.dart --profile prod "--set=wechat.app_id=$env:WECHAT_APP_ID"`。`flutter devices` 查设备 ID。真机访问电脑的后端还要放行防火墙端口 8080。
+
+正式包（真实值放 `app.local.yaml`，或 CI 用 `--set`）：
+
+```bash
+dart run tool/gen_config.dart --profile prod
+flutter build appbundle --release --dart-define-from-file=config/prod.json
+flutter build ipa --release --dart-define-from-file=config/prod.json
+# CI 示例：密钥来自环境变量
+dart run tool/gen_config.dart --profile prod --set "amap.android_key=$AMAP_ANDROID_KEY" --set "wechat.app_id=$WECHAT_APP_ID"
+```
+
+```powershell
+dart run tool/gen_config.dart --profile prod
+flutter build appbundle --release --dart-define-from-file=config/prod.json
+dart run tool/gen_config.dart --profile prod "--set=amap.android_key=$env:AMAP_ANDROID_KEY"
+```
 
 ### 配置校验与服务端开关
 
 - 启动时 `SdkConfig.logMissing()` 记录缺少的 Key（日志名 `loopland.config`），**release 包隐藏**缺 Key 的登录 / 支付入口而不是崩溃；debug 包仍显示入口，点了给出明确提示。
 - 登录方式、支付渠道还要与服务端 `GET /v1/config/features` 取交集（会话内缓存）；请求失败时只显示短信登录，下次打开登录页重试。`captcha=true` 时发短信前显示人机验证。
-- 开发环境（`LOOPLAND_ENV=dev`）登录页右上角和「设置」里有「环境检查」页：各 SDK 是否配置、服务端 features、最终显示哪些入口、设备风控检测结果。
+- 开发环境（`LOOPLAND_ENV=dev`）登录页右上角和「设置」里有「环境检查」页：配置来源（app.yaml 的哪个 profile）、API / WebSocket 地址、各 SDK 是否配置、服务端 features、最终显示哪些入口、设备风控检测结果。
 
 ## 目录
 
 ```
+config/app.yaml  全部配置的唯一来源（app.local.yaml 本机覆盖；dev.json / prod.json 为生成文件）
+tool/gen_config.dart  配置生成器（逻辑在 tool/src/app_config.dart）
 lib/
   api/        接口模型（手写 fromJson，容错）、dio 客户端（Bearer、X-Platform、refresh token 单飞轮换）、错误码中文文案
   auth/       token 存储（flutter_secure_storage）、登录状态、一键登录（ali_auth）、人机验证（WebView）、微信、Apple
-  core/       SdkConfig（所有 Key）、/v1/config/features、启动隐私弹窗、SDK 延迟初始化、主题
+  core/       Env / SdkConfig（所有配置，键名与兜底值在 config_keys.dart）、/v1/config/features、启动隐私弹窗、SDK 延迟初始化、主题
   features/debug/  环境检查页（仅 dev）
   claim/      geo.go / claim.go 的 Dart 移植（圈地预览、「还差 X 米可闭合」），WGS-84→GCJ-02
   run/        定位源（geolocator）、运动记录状态机、离线存储与重传
-  map/        TerritoryMapView 抽象：高德实现 + 备用 CustomPainter 实现
+  map/        TerritoryMapView 抽象：高德实现 + 备用 CustomPainter 实现（V2：怪兽范围圈 + 徽章、宝箱、定向打卡点、路线虚线）
+  realtime/   WebSocket 客户端（重连 / 重订阅 / 鉴权失败刷新 token / 心跳看门狗）、Riverpod providers、站内横幅
   pay/        微信 / 支付宝 / Apple 内购 / mock，下单后轮询订单
-  features/   各页面
-test/         claim 测试（Go 测试原样移植）、接口 JSON 解析（契约示例）、客户端、运动记录、组件测试
+  features/   各页面（V2 玩法在 features/play/：怪兽、宝箱、玩法中心、赛季、联赛、定向、活动、伙伴、接力、守地）
+test/         tool/ 配置生成器测试；claim 测试（Go 测试原样移植）、接口 JSON 解析（契约示例）、客户端、运动记录、组件测试
 screenshots/  组件测试生成的界面截图
 ```
 
@@ -89,6 +153,17 @@ screenshots/  组件测试生成的界面截图
 - 结算页：圈地、攻击（守卫变化）、能量（含每日上限提示）、升级、招募进度、伙伴蛋、奖牌、复核 / 作废说明。
 - 社区（V1）：我的跑团卡片与本周排行、找跑团、创建、加入 / 申请、退出、团长管理（成员、踢人、转让、审批申请）。
 - 我的：资料与本周数据、领地、图鉴精选、待上传记录、运动记录列表与详情（轨迹）、会员（套餐、渠道、下单、轮询、自动续费开关；未成年不展示）、设置（轨迹可见范围、隐藏起终点、地图头像、个性化、授权、实名、导出数据、注销与撤回、退出）、站内消息（分类、单条 / 全部已读）。
+- **V2 · 玩法深化**（`docs/api/v2-1-玩法.md`）：
+  - 地图：按视野与领地一起（同一防抖）加载 `GET /v1/map/objects`，画怪兽范围圈 + 怪兽徽章（剩余血量 %）、金色宝箱、定向「下一站」打卡点；高德用多边形近似圆 + Marker（徽章位图由同一套 Canvas 画法渲染），备用地图直接绘制并做点击命中。点怪兽 → 怪兽页，点宝箱 → 宝箱弹层（用当前 GCJ-02 位置开箱，处理 `out_of_range` / `already_opened` / `chest_expired`），点打卡点 → 路线页。右上「S3 剩 N 天」→ 赛季页，右侧「玩法」→ 玩法中心。
+  - 怪兽来袭页（`/bosses/:id`）：倒计时、怪兽插画（沙发怪 / 熬夜蝠 / 雾霾怪 / 糖分怪；卡牌 SVG + `widgets/monster_art.dart` 的矢量画法）、等级、描述、霸占领地、血量条（WebSocket 实时）、伤害规则（相同规则合并为「跑步 / 骑行」）、「去运动出战」（范围内先 `engage`，再去开始页）、「发起合击」（带定位；显示伤害、合击加成、剩余能量、冷却倒计时，429 用 `retry_after_s`）、伤害榜、掉落概率公示（含「不支持付费抽取」）、击退 / 到期结果与 `my_rewards`（重复折算能量）。
+  - 实时：登录（且已绑手机、已授权）后连 `/v1/ws?token=`；断线按 1/2/4/8/16/30 s 退避重连并重发订阅；握手失败或鉴权类关闭码时调用一次需要登录的接口，让 ApiClient 用 refresh token 轮换（失败则退出登录、停止重连）；75 s 收不到任何消息（服务端 30 s 一次 ping）视为断线。`territory_attacked` / `rally` 在顶部弹横幅，点击进领地 / 怪兽页。
+  - 玩法中心（`/games`）：核心卡（城市争霸）+ 城区联赛、能量宝箱、城市定向、跑步伙伴（内嵌喂食卡）、跑团接力、限时活动（进行中数量）；AI 剧情夜跑、轨迹绘画「即将开放」。点选玩法切换上方大卡（同原型）。
+  - 赛季页（`/season`）：段位卡（进度条、段位条、「距 黄金 I 还差 x km²」）、我的排名 / 跑团排名、赛事中心（→ 城区联赛 `/league`）、本地生活 / 能量商城（即将开放）、奖牌（带进度环）/ 赛季任务 / 排行（个人、跑团）。
+  - 城市定向（`/routes`、`/routes/:id`）：路线列表与详情，地图上有序打卡点（已打卡 / 下一站 / 待打卡）+ 路线虚线，「去打卡」开始跑步。限时活动（`/campaigns`）：规则中文化（距离、配速、开跑时段）、时间、奖励、完成状态。
+  - 图鉴：怪兽页签（出手、击退、最佳排名，未遇到为剪影）；伙伴显示等级、经验条、陪跑米数、「喂 50 能量」。
+  - 跑团接力：跑团页 / 社区页的接力卡（各棒由谁跑、距离、截止倒计时）；团长可发起（棒数、每棒距离）。
+  - 运动中：每移动 400 m 或 2 分钟加载附近玩法对象并画在地图上；进入怪兽范围提示「正在对沙发怪造成伤害」，经过宝箱 / 到达下一站也有提示。结算页新增：怪兽伤害、能量宝箱、守地成功、城市定向、限时活动、赛季任务、陪跑伙伴、跑团接力。
+  - 守地挑战：领地弹层（自己的地）和建城页在有 `defense` 时显示截止倒计时「24 小时内跑一圈经过这里即可加固」。建筑选择：图鉴建筑 `blueprint: true` 时高于等级也显示「图纸可建」（最终以服务端 `level_too_low` 为准）。
 - 离线：进行中的运动每 5 秒和每次暂停写入 `runs/in_progress.json`（先写临时文件再改名）；结束后先写入 `runs/pending/<client_id>.json` 再上传；启动时提示恢复中断的运动并补传，补传使用相同 `client_id`（服务端幂等）。
 
 ## 坐标系
@@ -122,16 +197,16 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 ### 1. 阿里云号码认证（一键登录）— `ali_auth 1.4.0`
 
 - 申请：阿里云控制台 → 号码认证服务 → 号码认证方案管理，Android、iOS 各建一个方案，得到两个**方案秘钥**。
-- 配置：`config/prod.json` 的 `ALIYUN_AUTH_SECRET_ANDROID` / `ALIYUN_AUTH_SECRET_IOS`。
+- 配置：`config/app.yaml`（真实值写 `app.local.yaml`）的 `aliyun.auth_secret_android` / `aliyun.auth_secret_ios`。
 - 实现：`lib/auth/one_click.dart`。`initSdk(isDelay)` → 终端检查（600024）→ `login` 拉起授权页 → 600000 拿 token → `POST /v1/auth/login provider=oneclick`（绑定手机号时为 `oneclick_token`）。无 SIM、只开 Wi‑Fi、运营商维护、秘钥错误、超时等任何失败都提示原因并转到短信登录，不会崩溃。只有 `LOOPLAND_ENV=dev` 且未配置秘钥时才用 `dev:13800138000`。
-- 授权页：全屏深色 `#0E0E10`、荧光绿 `#DCF26A` 登录按钮、Logo（`assets/brand/auth_logo.png`）、slogan、「其他手机号登录」、运营商协议＋《用户协议》《隐私政策》（URL 来自 dart-define），协议**不默认勾选**，未勾选点登录时弹二次确认。
+- 授权页：全屏深色 `#0E0E10`、荧光绿 `#DCF26A` 登录按钮、Logo（`assets/brand/auth_logo.png`）、slogan、「其他手机号登录」、运营商协议＋《用户协议》《隐私政策》（URL 来自 `links.user_agreement` / `links.privacy_policy`），协议**不默认勾选**，未勾选点登录时弹二次确认。
 - 合规：插件自带的 `READ_PHONE_STATE`、`WRITE_EXTERNAL_STORAGE` 已在 manifest 中 `tools:node="remove"`；插件开启的明文流量在 release 中关闭。
 - iOS：插件 podspec 已加 `-ObjC`；**不要**再手动把 ATAuthSDK.framework 拖进工程。
 
 ### 2. 微信（登录 / 支付）— `fluwx 6.0.6`
 
 - 申请：微信开放平台 → 移动应用（Android 包名＋签名 MD5；iOS Bundle ID＋Universal Link），开通「微信登录」，商户平台开通 APP 支付并关联 AppID。
-- 配置：`config/prod.json` 的 `WECHAT_APP_ID`、`WECHAT_UNIVERSAL_LINK`；`ios/Flutter/Loopland.xcconfig` 的 `WECHAT_APP_ID`、`LOOPLAND_ASSOCIATED_DOMAIN`；服务器 `https://<域名>/.well-known/apple-app-site-association` 中加入 `<TeamID>.com.loopland.app` 和对应路径。
+- 配置：`config/app.yaml` 的 `wechat.app_id`、`wechat.universal_link`、`links.universal_link_domain`（生成器同时写进 dart-define 和 `ios/Flutter/Loopland.xcconfig`）；服务器 `https://<域名>/.well-known/apple-app-site-association` 中加入 `<TeamID>.com.loopland.app` 和对应路径。
 - Android：fluwx 的 manifest 已用 activity-alias 声明 `com.loopland.app.wxapi.WXEntryActivity` / `WXPayEntryActivity`，并有 `<queries><package com.tencent.mm/>`，无需自写 Activity。
 - iOS：Info.plist URL Type `weixin` = `$(WECHAT_APP_ID)`；`LSApplicationQueriesSchemes` 含 `weixin`、`weixinULAPI`、`weixinURLParamsAPI`；`Runner.entitlements` 的 Associated Domains = `applinks:$(LOOPLAND_ASSOCIATED_DOMAIN)`。
 - 登录用 `snsapi_userinfo`；支付把服务端 `pay_params` 的 `appid / partnerid / prepayid / package / noncestr / timestamp / sign` 原样传给 SDK（缺字段直接报错，不下发）。未安装微信时提示「未安装微信…」，且**不会先创建订单**。
@@ -139,7 +214,7 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 ### 3. 支付宝 — `tobias 6.0.0`
 
 - 申请：支付宝开放平台创建应用，开通「APP 支付」，填应用签名＋包名；密钥在服务端，App 只拿 `order_string`。
-- iOS：Info.plist URL Type `alipay` = `$(ALIPAY_URL_SCHEME)`（Loopland.xcconfig，默认 `loopland-alipay`，不能含下划线；tobias 按 URLName `alipay` 找它）；`LSApplicationQueriesSchemes` 含 `alipay`、`alipays`。（API 约定 iOS 只能用 Apple 内购，这里的配置是为以后 / 审核外渠道预留。）
+- iOS：Info.plist URL Type `alipay` = `$(ALIPAY_URL_SCHEME)`（app.yaml 的 `alipay.url_scheme`，默认 `loopland-alipay`，不能含下划线；tobias 按 URLName `alipay` 找它）；`LSApplicationQueriesSchemes` 含 `alipay`、`alipays`。（API 约定 iOS 只能用 Apple 内购，这里的配置是为以后 / 审核外渠道预留。）
 - 支付后**无论 SDK 返回什么**都会轮询 `GET /v1/orders/{no}`：9000 / 8000 / 6004 等待回调直到 `paid`；6001 取消或失败时也再查几秒，服务端说已支付就算成功。
 
 ### 4. Apple（登录 / 内购）— `sign_in_with_apple`、`in_app_purchase 3.3.1`（`in_app_purchase_storekit 0.4.17`）
@@ -152,15 +227,15 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 ### 5. 高德地图 — `amap_map 1.0.15`
 
 - 申请：高德开放平台 → 应用管理，分别添加 Android Key（包名＋发布版 / 调试版 SHA1）和 iOS Key（Bundle ID）。
-- 配置：Android Key 进 `android/loopland.properties`（或 dart-define）→ manifestPlaceholders → `com.amap.api.v2.apikey`；Dart 的 `AMAP_ANDROID_KEY` / `AMAP_IOS_KEY` 通过插件 `AMapInitializer.init(apiKey:)` 传给 SDK（iOS 只走这一路）。
+- 配置：`config/app.yaml` 的 `amap.android_key` / `amap.ios_key`。Android Key 经 dart-define（或生成的 `android/loopland.properties`）→ manifestPlaceholders → `com.amap.api.v2.apikey`；Dart 的 `AMAP_ANDROID_KEY` / `AMAP_IOS_KEY` 通过插件 `AMapInitializer.init(apiKey:)` 传给 SDK（iOS 只走这一路）。
 - 隐私合规：只有用户同意启动隐私弹窗后才调用 `AMapInitializer.updatePrivacyAgree`（插件在创建地图时转成 SDK 的 `updatePrivacyShow/updatePrivacyAgree`），之前一律显示备用地图；geolocator 同样在同意前不启动，户外运动前还要求「位置信息与行踪轨迹」授权。
-- 暗色样式：高德控制台「自定义地图」发布后下载 `style.data` / `style_extra.data`，放进 `assets/map/`，在 `config/prod.json` 设 `AMAP_STYLE_DATA=assets/map/style.data`、`AMAP_STYLE_EXTRA_DATA=assets/map/style_extra.data`，地图自动启用 `customStyleOptions`；否则用内置 `MapType.night`。
+- 暗色样式：高德控制台「自定义地图」发布后下载 `style.data` / `style_extra.data`，放进 `assets/map/`，在 `config/app.yaml` 设 `amap.style_data: assets/map/style.data`、`amap.style_extra_data: assets/map/style_extra.data`，地图自动启用 `customStyleOptions`；否则用内置 `MapType.night`。
 - iOS 需要 `pod install`。
 
 ### 6. 阿里云验证码 2.0（人机验证）— `webview_flutter`
 
 - 申请：阿里云验证码 2.0 控制台 → 新建场景（**V3 架构**，即验证参数随业务请求一起提交、由服务端 VerifyIntelligentCaptcha 校验），拿到**身份标 prefix** 和**场景 ID**。服务端配置同一场景的 AccessKey。
-- 配置：`ALIYUN_CAPTCHA_PREFIX`、`ALIYUN_CAPTCHA_SCENE_ID`。
+- 配置：`aliyun.captcha_prefix`、`aliyun.captcha_scene_id`（SDK 地址 `aliyun.captcha_js_url`、页面 origin `aliyun.captcha_page_url`）。
 - 实现：`lib/auth/captcha.dart` 在 WebView 里加载 `AliyunCaptcha.js`（`AliyunCaptchaConfig = {region: "cn", prefix}`，`initAliyunCaptcha({SceneId, mode: "embed", success})`），`success(captchaVerifyParam)` 经 JS Channel 回传，作为 `captcha_token` 调 `POST /v1/auth/sms/send`。服务端 `features.captcha=false` 时跳过；为 true 但 App 未配置时提示「人机验证未配置」，不发请求。`captcha_failed` 有中文提示。
 
 ### 7. 设备风控 — `safe_device 1.4.1`
@@ -169,11 +244,12 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 
 ### Android release 构建
 
-- `signingConfigs.release` 读 `android/key.properties`；没有该文件时 release 构建（assemble/bundle Release）直接失败，避免误传 debug 签名的包。仅本地测试可加 `-PallowDebugSigning`（`flutter build apk --release` 不能传 -P 时，用 `cd android && ./gradlew assembleRelease -PallowDebugSigning`）。
+- `signingConfigs.release` 读 `android/key.properties`（路径可由 app.yaml 的 `android.key_properties` 改）；没有该文件时 release 构建（assemble/bundle Release）直接失败，避免误传 debug 签名的包。仅本地测试可加 `-PallowDebugSigning`（`flutter build apk --release` 不能传 -P 时，用 `cd android && ./gradlew assembleRelease -PallowDebugSigning`）。
 - `isMinifyEnabled = true`、`isShrinkResources = true`，keep 规则在 `android/app/proguard-rules.pro`（微信、支付宝、高德 3D 地图 / 定位 / 搜索、阿里云号码认证、fastjson2、RootBeer，按各 SDK 官方文档）。
 - 权限：定位（含后台）、`FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_LOCATION`（geolocator 服务声明 `foregroundServiceType="location"`）、`POST_NOTIFICATIONS`、`CHANGE_NETWORK_STATE`（号码认证）。release 只允许 HTTPS，debug 允许明文。
 
 ```bash
+dart run tool/gen_config.dart --profile prod
 flutter build appbundle --release --dart-define-from-file=config/prod.json
 flutter build ipa --release --dart-define-from-file=config/prod.json
 ```
@@ -186,11 +262,11 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 
 ### 上线前检查清单
 
-- [ ] `config/prod.json` 所有 `<...>` 占位符已替换；`LOOPLAND_ENV=prod`；`API_BASE` 为 HTTPS。
+- [ ] `dart run tool/gen_config.dart --profile prod` 校验通过（无 `allow_empty` / `--allow-empty-keys`，无 example.com 占位域名警告）；`api.base_url` 为 HTTPS。
 - [ ] 用 `LOOPLAND_ENV=dev` 打一个同配置的包，打开「环境检查」确认各 SDK 显示「已配置」，服务端 features 与预期一致。
-- [ ] `android/key.properties`、release keystore 已就位并备份；`android/loopland.properties` 有高德 Key。
+- [ ] `android/key.properties`、release keystore 已就位并备份；生成的 `android/loopland.properties` 是 prod 的（有高德 Key）。
 - [ ] 用 **release 签名** 的 MD5 / SHA1 更新：微信开放平台、支付宝、高德（发布版安全码）、号码认证 Android 方案。
-- [ ] `ios/Flutter/Loopland.xcconfig` 已填；`apple-app-site-association` 已部署在 `LOOPLAND_ASSOCIATED_DOMAIN`，微信开放平台 Universal Link 与 `WECHAT_UNIVERSAL_LINK` 一致。
+- [ ] 生成的 `ios/Flutter/Loopland.xcconfig` 是 prod 的；`apple-app-site-association` 已部署在 `links.universal_link_domain`，微信开放平台 Universal Link 与 `wechat.universal_link` 一致。
 - [ ] Xcode Capabilities 已开启；App Store Connect 订阅商品与服务端 `apple_product_id` 一致；Server Notifications V2 已配置。
 - [ ] 真机验证：一键登录（移动 / 联通 / 电信各一张卡，及 Wi‑Fi only 回退短信）、微信登录与支付（含未安装微信）、支付宝支付（含取消）、Apple 内购（沙盒）与恢复购买、人机验证、高德地图与暗色样式、锁屏后台定位。
 - [ ] 首次安装：同意隐私弹窗前抓包 / 查日志，确认没有 SDK 初始化与定位请求（应用市场隐私合规检测）。
@@ -205,5 +281,7 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 - `ali_auth` 授权页的部分样式（如勾选框图片、Android 端某些字段）由 SDK 决定，按插件支持程度定制。
 - `safe_device` 依赖 `play-services-location`（未调用其定位相关能力）。
 - 支付宝 iOS 官方建议的 `NSAllowsArbitraryLoads` 未开启（审核风险），如遇支付宝 H5 收银台加载问题再按需加。
-- 怪兽、宝箱、动态、组局、赛事、场馆、AI 等 V2 功能只有占位。
+- 动态、组局、场馆、本地生活、能量商城、AI 剧情夜跑、轨迹绘画等仍只有占位。
+- 伙伴经验：`exp` 按服务端实现理解为累计经验，`exp_to_next` 为距下一级还差多少，本级进度 = `exp_per_level − exp_to_next`。
+- WebSocket 只解析 `boss` / `territory_attacked` / `rally` / `ping`；客户端不回 pong（约定未要求）。实时横幅只在 App 前台时出现，系统推送未接。
 - 语音播报、手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）。

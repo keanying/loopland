@@ -325,13 +325,16 @@ class _MedalCard extends StatelessWidget {
             Container(
               decoration: BoxDecoration(shape: BoxShape.circle, color: m.obtained ? color : color.withValues(alpha: 0.3)),
             ),
-            Padding(
-              padding: const EdgeInsets.all(9),
-              child: CircularProgressIndicator(
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: CircularProgressIndicator(
                 value: m.fraction,
                 strokeWidth: 3,
                 color: m.obtained ? LL.ink : color,
-                backgroundColor: const Color(0x33121212),
+                  strokeCap: StrokeCap.round,
+                  backgroundColor: const Color(0x33121212),
+                ),
               ),
             ),
             Container(

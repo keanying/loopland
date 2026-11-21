@@ -2,47 +2,72 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:loopland/core/config_keys.dart';
 import 'package:loopland/core/sdk_config.dart';
 
-Map<String, Object?> _example(String name) =>
-    (jsonDecode(File('config/$name').readAsStringSync()) as Map).cast<String, Object?>();
+import '../../tool/src/app_config.dart';
+
+/// `config/<profile>.json` as tool/gen_config.dart would write it from the
+/// committed config/app.yaml (no app.local.yaml).
+Map<String, Object?> _generated(String profile, {Map<String, String> sets = const {}, bool allowEmptyKeys = false}) {
+  final r = generate(
+    app: parseYaml(File('config/app.yaml').readAsStringSync()),
+    profile: profile,
+    sets: sets,
+    allowEmptyKeys: allowEmptyKeys,
+  );
+  expect(r.validation.errors, isEmpty);
+  return (jsonDecode(r.files.first.content) as Map).cast<String, Object?>();
+}
 
 void main() {
-  group('config/*.json.example', () {
-    for (final name in ['dev.json.example', 'prod.json.example']) {
-      test('$name lists exactly the known dart-defines', () {
-        expect(_example(name).keys.toSet(), SdkConfig.keys.toSet());
-      });
-    }
-
-    test('templates contain no real-looking secrets', () {
-      final prod = _example('prod.json.example');
-      for (final k in ['ALIYUN_AUTH_SECRET_ANDROID', 'ALIYUN_AUTH_SECRET_IOS', 'WECHAT_APP_ID', 'AMAP_ANDROID_KEY',
-          'AMAP_IOS_KEY', 'ALIYUN_CAPTCHA_PREFIX', 'ALIYUN_CAPTCHA_SCENE_ID']) {
-        expect('${prod[k]}', startsWith('<'), reason: k);
-      }
-      final dev = _example('dev.json.example');
-      expect(dev['ALIYUN_AUTH_SECRET_ANDROID'], '');
-      expect(dev['WECHAT_APP_ID'], '');
+  group('config/app.yaml → config/<profile>.json', () {
+    test('generated JSON lists exactly the known dart-defines', () {
+      final keys = _generated('dev').keys.where((k) => !k.startsWith('_')).toSet();
+      expect(keys, SdkConfig.keys.toSet());
     });
 
-    test('unfilled prod template parses as "nothing configured"', () {
-      final c = SdkConfig.fromMap(_example('prod.json.example'), platform: 'android', release: true);
+    test('committed prod profile has no secrets and parses as "nothing configured"', () {
+      final prod = _generated('prod', allowEmptyKeys: true);
+      for (final k in ['ALIYUN_AUTH_SECRET_ANDROID', 'ALIYUN_AUTH_SECRET_IOS', 'WECHAT_APP_ID', 'AMAP_ANDROID_KEY',
+          'AMAP_IOS_KEY', 'ALIYUN_CAPTCHA_PREFIX', 'ALIYUN_CAPTCHA_SCENE_ID']) {
+        expect(prod[k], '', reason: k);
+      }
+      final c = SdkConfig.fromMap(prod, platform: 'android', release: true);
       expect(c.env, 'prod');
+      expect(c.fromConfigFile, isTrue);
       expect(c.oneClickConfigured, isFalse);
       expect(c.wechatConfigured, isFalse);
       expect(c.amapConfigured, isFalse);
       expect(c.captchaConfigured, isFalse);
       // Non-secret values are kept.
       expect(c.privacyPolicyUrl, 'https://loopland.example.com/legal/privacy');
-      expect(c.amapStyleData, 'assets/map/style.data');
+      expect(c.captchaJsUrl, ConfigFallbacks.captchaJsUrl);
     });
 
-    test('dev template enables dev fallbacks', () {
-      final c = SdkConfig.fromMap(_example('dev.json.example'), platform: 'android');
+    test('dev profile enables dev fallbacks', () {
+      final c = SdkConfig.fromMap(_generated('dev'), platform: 'android');
       expect(c.isDev, isTrue);
+      expect(c.configProfile, 'dev');
       expect(c.oneClickDevFallback, isTrue);
       expect(c.wechatDevFallback, isTrue);
+    });
+
+    test('built-in fallbacks equal the app.yaml defaults', () {
+      final dev = _generated('dev');
+      expect(dev['API_BASE'], ConfigFallbacks.apiBase);
+      expect(dev['AMAP_NAVIGATION_URL'], ConfigFallbacks.amapNavigationUrl);
+      expect(dev['ALIYUN_CAPTCHA_JS_URL'], ConfigFallbacks.captchaJsUrl);
+      expect(dev['ALIYUN_CAPTCHA_PAGE_URL'], ConfigFallbacks.captchaPageUrl);
+      // An empty map (no --dart-define-from-file) uses the same values.
+      final none = SdkConfig.fromMap(const {});
+      expect(none.fromConfigFile, isFalse);
+      expect(none.amapNavigationUrl, ConfigFallbacks.amapNavigationUrl);
+      expect(none.captchaPageUrl, ConfigFallbacks.captchaPageUrl);
+      final logs = <String>[];
+      expect(none.logSource(log: logs.add), contains('tool/gen_config.dart'));
+      expect(SdkConfig.fromMap(dev).logSource(log: logs.add), isNull);
+      expect(logs, hasLength(1));
     });
   });
 

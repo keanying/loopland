@@ -40,10 +40,13 @@ func TestProdValidation(t *testing.T) {
 	if err == nil {
 		t.Fatal("incomplete prod config accepted")
 	}
-	for _, want := range []string{"LOOPLAND_PUBLIC_BASE_URL", "wechat_pay needs", "ALIYUN_CAPTCHA_SCENE_ID"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("error lacks %q:\n%v", want, err)
-		}
+	if !strings.Contains(err.Error(), "LOOPLAND_PUBLIC_BASE_URL") {
+		t.Errorf("error lacks LOOPLAND_PUBLIC_BASE_URL:\n%v", err)
+	}
+	// Third-party credentials are maintained in the admin console: missing
+	// ones never block start-up.
+	if strings.Contains(err.Error(), "wechat_pay") || strings.Contains(err.Error(), "ALIYUN") {
+		t.Errorf("provider credentials checked at start-up:\n%v", err)
 	}
 }
 

@@ -1,0 +1,101 @@
+# 圈圈 App 配置：域名 / 端口 / API / 协议链接 / 各 SDK Key 的唯一来源。
+#
+# - 本文件已提交到仓库，**不要写任何真实密钥**。真实 Key、你电脑的局域网 IP 写在
+#   config/app.local.yaml（已 gitignore），结构与本文件相同，会深度合并覆盖本文件。
+# - 改完运行生成器，得到各端真正读取的文件（都已 gitignore，勿手改）：
+#     dart run tool/gen_config.dart --profile dev
+#   → config/dev.json（flutter --dart-define-from-file）
+#   → android/loopland.properties（build.gradle.kts 的 manifestPlaceholders）
+#   → ios/Flutter/Loopland.xcconfig（Info.plist / entitlements 变量）
+# - 优先级（低 → 高）：shared → profiles.<p> → app.local.yaml 的 shared → app.local.yaml 的
+#   profiles.<p> → 生成器 --set 键=值 → 生成器 --api-base；生成后，flutter 命令行上单独写的
+#   --dart-define=键=值 仍会覆盖 JSON 里的同名值。
+# - 值里形如 <...> 的占位符按「未配置」处理。未知的键会报错（防拼写错误）。
+#
+# app.local.yaml 示例（只写需要覆盖的项）：
+#
+#   profiles:
+#     dev:
+#       api: { base_url: http://192.168.1.10:8080 }   # 真机：电脑的局域网 IP
+#     prod:
+#       wechat: { app_id: wx1234567890abcdef }
+#       amap: { android_key: 你的高德AndroidKey, ios_key: 你的高德iOSKey }
+#       aliyun: { auth_secret_android: ..., auth_secret_ios: ..., captcha_prefix: ..., captcha_scene_id: ... }
+#       ios: { development_team: ABCDE12345 }
+
+# 所有 profile 共用的默认值（被 profiles.<p> 覆盖）。
+shared:
+  api:
+    # 后端 REST 地址（scheme://host:port[/path]，不带结尾 /v1）。
+    #   Android 模拟器：http://10.0.2.2:8080（模拟器访问电脑本机）
+    #   iOS 模拟器 / Chrome / 桌面：http://localhost:8080
+    #   真机：电脑的局域网 IP，如 http://192.168.1.10:8080（同一 Wi-Fi）
+    base_url: http://localhost:8080
+    # WebSocket 地址（完整端点，含 /v1/ws）。留空 = 运行时由 base_url 推导：
+    # http→ws、https→wss，同 host/端口，加 /v1/ws。
+    ws_url: ""
+
+  links:
+    # 启动隐私弹窗、登录页、一键登录授权页、设置页里的协议链接。
+    user_agreement: https://loopland.example.com/legal/terms
+    privacy_policy: https://loopland.example.com/legal/privacy
+    # Universal Link 域名（只写域名）：iOS Associated Domains（applinks:<域名>），
+    # 微信 / 支付宝的 universal_link 必须在这个域名下。
+    universal_link_domain: loopland.example.com
+
+  wechat:
+    app_id: ""              # 微信开放平台 AppID（wx 开头）；同时写进 iOS URL Type「weixin」
+    universal_link: ""      # iOS Universal Link，https://<universal_link_domain>/路径/（以 / 结尾）
+
+  alipay:
+    app_id: ""              # 可选：支付宝开放平台 APPID（风控优化）。支付只用服务端返回的 order_string
+    universal_link: ""      # 可选：iOS Universal Link
+    url_scheme: loopland-alipay   # iOS 支付宝回调 URL Scheme（不能含下划线）
+
+  amap:
+    android_key: ""         # 高德 Android Key（包名 + SHA1）；同时写进 AndroidManifest
+    ios_key: ""             # 高德 iOS Key（Bundle ID）
+    style_data: ""          # 可选：暗色自定义样式 asset，如 assets/map/style.data
+    style_extra_data: ""    # 可选：如 assets/map/style_extra.data
+    # 高德 URI API（领地弹层「高德导航」），高德公开接口，一般不用改。
+    navigation_url: https://uri.amap.com/navigation
+
+  aliyun:
+    auth_secret_android: "" # 号码认证（一键登录）Android 方案秘钥
+    auth_secret_ios: ""     # 号码认证 iOS 方案秘钥
+    captcha_prefix: ""      # 验证码 2.0 身份标 prefix（不配置时开发环境跳过人机验证）
+    captcha_scene_id: ""    # 验证码 2.0 场景 ID
+    # 验证码 2.0 Web SDK，阿里云公开地址，一般不用改。
+    captcha_js_url: https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js
+    # 验证码 WebView 页面的 origin（loadHtmlString 的 baseUrl，不会真的请求）。
+    # 如果验证码场景开了域名白名单，改成白名单里的域名。
+    captcha_page_url: https://captcha.loopland.local/
+
+  ios:
+    development_team: ""    # 可选：Apple 签名团队 ID（10 位），写进 Loopland.xcconfig 的 DEVELOPMENT_TEAM
+
+  android:
+    # release 签名配置文件，相对 android/ 目录（也可写绝对路径，例如 CI 的密钥目录）。
+    # storeFile / storePassword / keyAlias / keyPassword 只写在那个文件里，**不要写进本文件**。
+    # 模板：android/key.properties.example
+    key_properties: key.properties
+
+profiles:
+  # 本地开发：配合后端 LOOPLAND_ENV=dev（验证码 000000、mock 支付、「环境检查」页，
+  # 未配置 SDK 时一键登录 / 微信用 dev: 凭证）。
+  dev:
+    env: dev
+    api:
+      base_url: http://localhost:8080
+
+  # 正式环境：必须 https；SDK Key 不能为空（真实值写在 app.local.yaml 或 CI 用 --set 传入）。
+  # 确实不用的 Key 列进 allow_empty，例如 allow_empty: [aliyun.captcha_prefix, aliyun.captcha_scene_id]
+  prod:
+    env: prod
+    api:
+      base_url: https://api.example.com
+    wechat:
+      universal_link: https://loopland.example.com/wechat/
+    alipay:
+      universal_link: https://loopland.example.com/alipay/
+    allow_empty: []

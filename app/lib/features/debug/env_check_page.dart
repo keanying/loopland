@@ -36,8 +36,10 @@ class EnvCheckPage extends ConsumerWidget {
           child: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
             const BackHeader(title: '环境检查', subtitle: '仅开发环境可见'),
             _section('构建', [
+              _kv('配置来源', c.fromConfigFile ? 'config/app.yaml · ${c.configProfile}' : '未加载（内置默认值，见 README）'),
               _kv('LOOPLAND_ENV', c.env),
               _kv('API_BASE', Env.apiBase),
+              _kv('WebSocket', Env.wsUrl),
               _kv('平台', c.platform),
               _kv('Release 构建', c.release ? '是（缺少的 Key 会隐藏入口）' : '否'),
               _kv('启动隐私弹窗', LaunchPrivacy.agreed ? '已同意' : '未同意'),

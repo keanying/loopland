@@ -2,13 +2,17 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 
-/// Every key / ID the app reads at build time.
+import 'config_keys.dart';
+
+/// Every key / ID / environment URL the app reads at build time.
 ///
-/// Values come from `--dart-define` or `--dart-define-from-file=config/prod.json`
-/// (see `config/*.json.example`). Nothing here is ever checked in with a real
-/// value. Native-only values (AMap Android meta-data, iOS URL schemes,
-/// associated domains) live in `android/loopland.properties` and
-/// `ios/Flutter/Loopland.xcconfig` instead.
+/// Single source: `config/app.yaml` (+ gitignored `config/app.local.yaml`).
+/// `dart run tool/gen_config.dart --profile <p>` turns it into
+/// `config/<p>.json` for `--dart-define-from-file`, plus the native
+/// `android/loopland.properties` / `ios/Flutter/Loopland.xcconfig` (AMap
+/// Android meta-data, iOS URL schemes, associated domains). A lone
+/// `--dart-define` still overrides the file. Nothing here is ever checked in
+/// with a real value; without any define the [ConfigFallbacks] apply.
 class SdkConfig {
   const SdkConfig({
     this.env = 'prod',
@@ -28,27 +32,14 @@ class SdkConfig {
     this.captchaSceneId = '',
     this.userAgreementUrl = '',
     this.privacyPolicyUrl = '',
+    this.amapNavigationUrl = ConfigFallbacks.amapNavigationUrl,
+    this.captchaJsUrl = ConfigFallbacks.captchaJsUrl,
+    this.captchaPageUrl = ConfigFallbacks.captchaPageUrl,
+    this.configProfile = '',
   });
 
-  /// All dart-define names, in the order of `config/*.json.example`.
-  static const keys = [
-    'LOOPLAND_ENV',
-    'API_BASE',
-    'ALIYUN_AUTH_SECRET_ANDROID',
-    'ALIYUN_AUTH_SECRET_IOS',
-    'WECHAT_APP_ID',
-    'WECHAT_UNIVERSAL_LINK',
-    'ALIPAY_APP_ID',
-    'ALIPAY_UNIVERSAL_LINK',
-    'AMAP_ANDROID_KEY',
-    'AMAP_IOS_KEY',
-    'AMAP_STYLE_DATA',
-    'AMAP_STYLE_EXTRA_DATA',
-    'ALIYUN_CAPTCHA_PREFIX',
-    'ALIYUN_CAPTCHA_SCENE_ID',
-    'USER_AGREEMENT_URL',
-    'PRIVACY_POLICY_URL',
-  ];
+  /// All dart-define names, in the order of the generated `config/<p>.json`.
+  static const keys = dartDefineKeys;
 
   /// Reads the compile-time `--dart-define`s. `String.fromEnvironment` must be
   /// called with constant names, hence the explicit list.
@@ -68,17 +59,22 @@ class SdkConfig {
         'ALIYUN_CAPTCHA_SCENE_ID': String.fromEnvironment('ALIYUN_CAPTCHA_SCENE_ID'),
         'USER_AGREEMENT_URL': String.fromEnvironment('USER_AGREEMENT_URL'),
         'PRIVACY_POLICY_URL': String.fromEnvironment('PRIVACY_POLICY_URL'),
+        'AMAP_NAVIGATION_URL': String.fromEnvironment('AMAP_NAVIGATION_URL'),
+        'ALIYUN_CAPTCHA_JS_URL': String.fromEnvironment('ALIYUN_CAPTCHA_JS_URL'),
+        'ALIYUN_CAPTCHA_PAGE_URL': String.fromEnvironment('ALIYUN_CAPTCHA_PAGE_URL'),
+        'LOOPLAND_CONFIG_PROFILE': String.fromEnvironment('LOOPLAND_CONFIG_PROFILE'),
       }, platform: currentPlatform, release: kReleaseMode);
 
-  /// Parses a `config/*.json` style map. Values are trimmed; non-string values
-  /// are stringified; unknown keys are ignored.
+  /// Parses a `config/<profile>.json` style map. Values are trimmed;
+  /// non-string values are stringified; unknown keys are ignored.
   factory SdkConfig.fromMap(Map<String, Object?> m, {String platform = 'other', bool release = false}) {
-    // Unfilled template placeholders (`<...>` in config/prod.json.example)
-    // count as missing.
+    // Unfilled placeholders (`<...>`) count as missing.
     String s(String k) {
       final v = '${m[k] ?? ''}'.trim();
       return v.startsWith('<') && v.endsWith('>') ? '' : v;
     }
+
+    String or(String k, String fallback) => s(k).isEmpty ? fallback : s(k);
 
     final env = s('LOOPLAND_ENV');
     return SdkConfig(
@@ -99,6 +95,10 @@ class SdkConfig {
       captchaSceneId: s('ALIYUN_CAPTCHA_SCENE_ID'),
       userAgreementUrl: s('USER_AGREEMENT_URL'),
       privacyPolicyUrl: s('PRIVACY_POLICY_URL'),
+      amapNavigationUrl: or('AMAP_NAVIGATION_URL', ConfigFallbacks.amapNavigationUrl),
+      captchaJsUrl: or('ALIYUN_CAPTCHA_JS_URL', ConfigFallbacks.captchaJsUrl),
+      captchaPageUrl: or('ALIYUN_CAPTCHA_PAGE_URL', ConfigFallbacks.captchaPageUrl),
+      configProfile: s('LOOPLAND_CONFIG_PROFILE'),
     );
   }
 
@@ -139,6 +139,19 @@ class SdkConfig {
   final String captchaSceneId;
   final String userAgreementUrl;
   final String privacyPolicyUrl;
+
+  /// AMap URI API base (`amap.navigation_url`).
+  final String amapNavigationUrl;
+
+  /// Aliyun captcha 2.0 web SDK (`aliyun.captcha_js_url`) and the origin the
+  /// captcha WebView page is loaded under (`aliyun.captcha_page_url`).
+  final String captchaJsUrl;
+  final String captchaPageUrl;
+
+  /// The `config/app.yaml` profile the build was generated from; empty when
+  /// built without `--dart-define-from-file` (fallback defaults).
+  final String configProfile;
+  bool get fromConfigFile => configProfile.isNotEmpty;
 
   bool get isDev => env == 'dev';
   bool get isIOS => platform == 'ios';
@@ -190,7 +203,7 @@ class SdkConfig {
             note: wechatDevFallback ? '开发环境：使用 dev:wx-demo-user' : null),
         if (isAndroid) SdkCheck('支付宝（tobias）', true, note: '无需客户端密钥；ALIPAY_APP_ID 可选（风控优化）'),
         if (isIOS)
-          const SdkCheck('支付宝 URL Scheme', true, note: '在 ios/Flutter/Loopland.xcconfig 配置 ALIPAY_URL_SCHEME'),
+          const SdkCheck('支付宝 URL Scheme', true, note: 'config/app.yaml 的 alipay.url_scheme（生成到 Loopland.xcconfig）'),
         SdkCheck('高德地图', amapConfigured,
             missing: [isIOS ? 'AMAP_IOS_KEY' : 'AMAP_ANDROID_KEY'], note: amapConfigured ? null : '使用内置备用地图'),
         SdkCheck('高德暗色自定义样式', amapStyleConfigured,
@@ -201,6 +214,19 @@ class SdkConfig {
         SdkCheck('用户协议 / 隐私政策链接', legalUrlsConfigured, missing: ['USER_AGREEMENT_URL', 'PRIVACY_POLICY_URL']),
         if (isIOS) const SdkCheck('Sign in with Apple / 内购', true, note: '需在 Xcode 打开对应 Capability'),
       ];
+
+  /// Without `--dart-define-from-file=config/<p>.json` the app still runs on
+  /// [ConfigFallbacks] (localhost / 10.0.2.2, env prod); this says how to get
+  /// the real config. Returns the message (null when a file was used).
+  String? logSource({void Function(String)? log}) {
+    if (fromConfigFile) return null;
+    const msg = '[loopland/config] 未加载 config/<profile>.json，使用内置默认值'
+        '（API http://localhost:8080，Android 模拟器 http://10.0.2.2:8080）。'
+        '请运行 dart run tool/gen_config.dart --profile dev，'
+        '再 flutter run --dart-define-from-file=config/dev.json';
+    (log ?? (m) => developer.log(m, name: 'loopland.config'))(msg);
+    return msg;
+  }
 
   /// Logs every missing required key. Called once at start; never throws.
   List<SdkCheck> logMissing({void Function(String)? log}) {

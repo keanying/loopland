@@ -235,14 +235,20 @@ class LLProgress extends StatelessWidget {
   final double height;
   @override
   Widget build(BuildContext context) {
+    // Track fills the width; the bar grows from the left.
     return ClipRRect(
       borderRadius: BorderRadius.circular(height),
-      child: SizedBox(
+      child: Container(
         height: height,
-        child: Stack(children: [
-          Positioned.fill(child: ColoredBox(color: bg)),
-          FractionallySizedBox(widthFactor: value.clamp(0.0, 1.0), child: ColoredBox(color: color, child: SizedBox(height: height))),
-        ]),
+        color: bg,
+        alignment: Alignment.centerLeft,
+        child: FractionallySizedBox(
+          widthFactor: value.isNaN ? 0 : value.clamp(0.0, 1.0),
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(height)),
+          ),
+        ),
       ),
     );
   }

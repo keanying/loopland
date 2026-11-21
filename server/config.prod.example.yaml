@@ -4,7 +4,12 @@
 #   LOOPLAND_CONFIG=/etc/loopland/config.yaml
 # 本文件和 secrets/ 目录都不要提交到仓库。
 # 相对路径的 *_file 以本文件所在目录为基准。
-# 配好后运行 loopland-doctor 逐项检查，缺项时服务会拒绝启动并列出缺什么。
+# 配好后运行 loopland-doctor 逐项检查；系统级配置缺项时服务会拒绝启动并列出缺什么。
+#
+# 第三方服务（短信、验证码、一键登录、实名、微信、支付宝、Apple、AI、邮件、高德）
+# 的 Key 请在管理端「系统配置」页面填写（加密存库，保存即生效）。
+# 下面 features 之后的第三方段落只是兼容老部署的引导值：某个服务在管理端保存过之后，
+# 这里对应的值就不再使用；新部署可以整段删掉。
 
 env: prod
 
@@ -30,7 +35,7 @@ jobs:
   enabled: true        # 多实例时可以只留一台 true
 
 features:
-  # 可选：sms, captcha, oneclick, realname, wechat_login, apple_login, wechat_pay, alipay, apple_iap
+  # 只对没在管理端保存过的服务生效（管理端有自己的启用开关）。可选：sms, captcha, oneclick, realname, wechat_login, apple_login, wechat_pay, alipay, apple_iap
   disabled: []
 
 aliyun:

@@ -1,4 +1,0 @@
-# 复制为 android/loopland.properties（已 gitignore）。
-# 写进 AndroidManifest 的原生 Key（manifestPlaceholders）。
-# 留空时回退到 --dart-define / --dart-define-from-file 中的同名值。
-AMAP_ANDROID_KEY=

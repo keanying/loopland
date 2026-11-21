@@ -10,6 +10,7 @@ import 'package:loopland/core/providers.dart';
 
 import '../api/api_client_test.dart' show FakeAdapter;
 import '../api/fixtures.dart';
+import '../api/fixtures_v2.dart';
 
 const origin = LatLng(31.2304, 121.4737);
 
@@ -88,6 +89,32 @@ List<Override> fakeBackend({User? user, Map<String, Object?> extra = const {}}) 
     if (p == '/v1/codex') return (200, j(codexJson));
     if (p == '/v1/config/gameplay') return (200, j(configJson));
     if (p.startsWith('/v1/territories/')) return (200, j(territoryJson));
+    // V2 玩法
+    if (p == '/v1/map/objects') return (200, j(mapObjectsJson));
+    if (p == '/v1/bosses/3') return (200, j(bossJson));
+    if (p == '/v1/bosses/3/strike') return (200, j(strikeJson));
+    if (p == '/v1/bosses/3/engage') return (200, {'engaged_until': '2099-11-21T20:00:00+08:00'});
+    if (p == '/v1/chests/9/open') return (200, {'energy': 40, 'bonus': true});
+    if (p == '/v1/season') return (200, j(seasonJson));
+    if (p == '/v1/league') return (200, j(leagueJson));
+    if (p == '/v1/campaigns') {
+      return (200, {
+        'items': [
+          j(campaignJson),
+          j(campaignJson)
+            ..['id'] = 6
+            ..['title'] = '十公里挑战'
+            ..['type'] = 'distance'
+            ..['rules'] = {'min_distance_km': 10}
+            ..['completed'] = true
+            ..['reward_medal'] = null,
+        ]
+      });
+    }
+    if (p == '/v1/routes') return (200, {'items': [j(routeJson)]});
+    if (p == '/v1/routes/2') return (200, j(routeJson));
+    if (p == '/v1/crews/3/relays/current') return (200, j(relayJson));
+    if (p == '/v1/codex/companions/frog/feed') return (200, j(codexJson));
     return (404, {'error': {'code': 'not_found', 'message': ''}});
   });
   final u = user ?? sampleUser();

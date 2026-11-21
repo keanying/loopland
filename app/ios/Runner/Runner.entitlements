@@ -7,7 +7,7 @@
 	<array>
 		<string>Default</string>
 	</array>
-	<!-- Universal Link（微信 / 支付宝回调）。域名来自 Flutter/Loopland.xcconfig 的 LOOPLAND_ASSOCIATED_DOMAIN -->
+	<!-- Universal Link（微信 / 支付宝回调）。域名：config/app.yaml 的 links.universal_link_domain → Flutter/Loopland.xcconfig 的 LOOPLAND_ASSOCIATED_DOMAIN -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:$(LOOPLAND_ASSOCIATED_DOMAIN)</string>

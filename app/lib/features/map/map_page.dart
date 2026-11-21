@@ -11,6 +11,7 @@ import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/sdk_config.dart';
 import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../run/location_source.dart';
@@ -367,7 +368,10 @@ class TerritorySheet extends ConsumerWidget {
     final c = centerOf(territory);
     if (c == null) return;
     // AMap URI API (works in the AMap app or the browser), GCJ-02 coordinates.
-    final uri = Uri.parse('https://uri.amap.com/navigation?to=${c.lng},${c.lat},${Uri.encodeComponent(territory.name)}'
+    // Base URL: `amap.navigation_url` in config/app.yaml.
+    final base = SdkConfig.current.amapNavigationUrl;
+    final uri = Uri.parse('$base${base.contains('?') ? '&' : '?'}'
+        'to=${c.lng},${c.lat},${Uri.encodeComponent(territory.name)}'
         '&mode=walk&coordinate=gaode&callnative=1');
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }

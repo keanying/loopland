@@ -6,6 +6,7 @@ import '../api/errors.dart';
 import '../api/loopland_api.dart';
 import '../api/models.dart';
 import '../auth/auth_controller.dart';
+import '../core/env.dart';
 import '../core/providers.dart';
 import 'realtime_client.dart';
 
@@ -18,6 +19,7 @@ final realtimeClientProvider = Provider<RealtimeClient>((ref) {
   final api = ref.watch(apiClientProvider);
   final c = RealtimeClient(
     baseUrl: api.dio.options.baseUrl,
+    wsUrl: Env.wsUrlOverride,
     token: () => api.tokens.accessToken,
     connect: ref.watch(wsChannelFactoryProvider),
     // A failed upgrade usually means an expired access token. Probing an

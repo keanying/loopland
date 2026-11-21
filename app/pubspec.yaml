@@ -49,6 +49,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: 6.0.0
+  # tool/gen_config.dart：config/app.yaml → 各端配置文件
+  path: 1.9.1
+  yaml: 3.1.4
 
 flutter:
   uses-material-design: true

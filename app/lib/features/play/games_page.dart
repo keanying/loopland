@@ -184,7 +184,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         final c = ref.watch(campaignsProvider).value;
         if (c == null) return '';
         final now = DateTime.now();
-        return '${c.where((x) => x.isLive(now)).length} 个进行中';
+        return '${c.where((x) => x.isLive(now) && !x.completed).length} 个进行中';
       case 'chest':
         return '每天 06:00 刷新';
       case 'pet':

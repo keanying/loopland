@@ -50,3 +50,6 @@ app/android/.gradle/
 app/android/local.properties
 app/ios/Flutter/Generated.xcconfig
 app/ios/Flutter/flutter_export_environment.sh
+
+# Redis snapshots
+dump.rdb

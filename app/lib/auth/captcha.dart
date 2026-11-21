@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../api/errors.dart';
+import '../core/config_keys.dart';
 import '../core/features.dart';
 import '../core/sdk_config.dart';
 import '../core/theme.dart';
@@ -69,8 +70,13 @@ class _CaptchaResult {
 String _js(String v) => jsonEncode(v).replaceAll('<', r'\u003c');
 
 /// The page hosted in the WebView. Prefix and scene id are JSON-encoded (and
-/// `<` escaped) so a config value can never break out of the script.
-String captchaHtml({required String prefix, required String sceneId}) => '''
+/// `<` escaped) so a config value can never break out of the script; the SDK
+/// URL (`aliyun.captcha_js_url`) is HTML-attribute escaped.
+String captchaHtml({
+  required String prefix,
+  required String sceneId,
+  String jsUrl = ConfigFallbacks.captchaJsUrl,
+}) => '''
 <!doctype html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8">
@@ -86,7 +92,7 @@ html,body{margin:0;background:#0E0E10;color:#F4F4F5;font-family:-apple-system,"P
 function post(m){try{LooplandCaptcha.postMessage(JSON.stringify(m));}catch(e){}}
 window.AliyunCaptchaConfig={region:"cn",prefix:${_js(prefix)}};
 </script>
-<script src="https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js" onerror="post({type:'error',message:'load'})"></script>
+<script src="${const HtmlEscape(HtmlEscapeMode.attribute).convert(jsUrl)}" onerror="post({type:'error',message:'load'})"></script>
 </head><body>
 <div id="wrap"><div id="captcha-element"></div><button id="captcha-button"></button>
 <div class="tip">完成验证后将自动发送短信验证码</div></div>
@@ -138,8 +144,13 @@ class _CaptchaPageState extends State<CaptchaPage> {
         },
       ))
       ..addJavaScriptChannel('LooplandCaptcha', onMessageReceived: _onMessage)
-      ..loadHtmlString(captchaHtml(prefix: widget.config.captchaPrefix, sceneId: widget.config.captchaSceneId),
-          baseUrl: 'https://captcha.loopland.local/');
+      ..loadHtmlString(
+          captchaHtml(
+            prefix: widget.config.captchaPrefix,
+            sceneId: widget.config.captchaSceneId,
+            jsUrl: widget.config.captchaJsUrl,
+          ),
+          baseUrl: widget.config.captchaPageUrl);
   }
 
   void _onMessage(JavaScriptMessage m) {

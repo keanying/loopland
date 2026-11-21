@@ -95,5 +95,11 @@ void main() {
     expect(html.indexOf('</script>'), greaterThan(html.indexOf('region:"cn"')), reason: 'no early </script>');
     expect(html, contains('SceneId:"scene-1"'));
     expect(html, contains('LooplandCaptcha.postMessage'));
+    expect(html, contains('src="https://o.alicdn.com/captcha-frontend/aliyunCaptcha/AliyunCaptcha.js"'));
+  });
+
+  test('captcha SDK URL comes from config and is attribute-escaped', () {
+    final html = captchaHtml(prefix: 'p', sceneId: 's', jsUrl: 'https://cdn.test/a.js?x="1"&y=2');
+    expect(html, contains('src="https://cdn.test/a.js?x=&quot;1&quot;&amp;y=2"'));
   });
 }
