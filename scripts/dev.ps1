@@ -39,6 +39,21 @@ Set-Default 'LOOPLAND_BOOTSTRAP_ADMIN' 'admin:admin-password-1'
 function Say($msg) { Write-Host "==> $msg" -ForegroundColor Green }
 function Die($msg) { Write-Host "错误：$msg" -ForegroundColor Red; exit 1 }
 function Have($tool) { [bool](Get-Command $tool -ErrorAction SilentlyContinue) }
+# 安静地运行外部命令并拿到退出码和输出：Windows PowerShell 5.1 在
+# $ErrorActionPreference = 'Stop' 时会把被重定向的 stderr 当成终止错误。
+function Invoke-Quiet {
+    param([string]$Exe, [string[]]$Arguments)
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $out = & $Exe @Arguments 2>&1 | ForEach-Object { "$_" }
+        return [pscustomobject]@{ Code = $LASTEXITCODE; Output = @($out) }
+    } catch {
+        return [pscustomobject]@{ Code = 1; Output = @("$_") }
+    } finally {
+        $ErrorActionPreference = $old
+    }
+}
 function Invoke-Checked {
     param([string]$Exe, [string[]]$Arguments)
     & $Exe @Arguments
@@ -49,8 +64,7 @@ function Compose {
     param([string[]]$Arguments)
     $file = Join-Path $Root 'deploy/docker-compose.yml'
     if (Have 'docker') {
-        & docker compose version *> $null
-        if ($LASTEXITCODE -eq 0) { Invoke-Checked 'docker' (@('compose', '-f', $file) + $Arguments); return }
+        if ((Invoke-Quiet 'docker' @('compose', 'version')).Code -eq 0) { Invoke-Checked 'docker' (@('compose', '-f', $file) + $Arguments); return }
     }
     if (Have 'docker-compose') { Invoke-Checked 'docker-compose' (@('-f', $file) + $Arguments); return }
     Die '没有找到 Docker。安装 Docker Desktop（需要 WSL2），或者自己装 PostgreSQL 16 + PostGIS 和 Redis（Memurai 或 WSL 里的 redis-server）后运行 db-init'
@@ -66,8 +80,15 @@ function Wait-Api {
 function Cmd-Check {
     foreach ($t in 'go', 'node', 'pnpm', 'flutter', 'docker', 'psql') {
         if (Have $t) {
-            $v = (& $t --version 2>$null | Select-Object -First 1)
-            Write-Host ("  ✓ {0,-8} {1}" -f $t, $v)
+            # go 用 `go version`，其他工具用 --version
+            $flag = if ($t -eq 'go') { @('version') } else { @('--version') }
+            $r = Invoke-Quiet $t $flag
+            $v = ($r.Output | Where-Object { $_.Trim() } | Select-Object -First 1)
+            if ($r.Code -eq 0) {
+                Write-Host ("  ✓ {0,-8} {1}" -f $t, $v)
+            } else {
+                Write-Host ("  ! {0,-8} 已安装，但运行出错：{1}" -f $t, $v) -ForegroundColor Yellow
+            }
         } else {
             Write-Host ("  ✗ {0,-8} 未安装" -f $t)
         }
@@ -81,8 +102,8 @@ function Cmd-Deps {
     Compose @('up', '-d', 'postgres', 'redis')
     Say '等待数据库就绪'
     for ($i = 0; $i -lt 60; $i++) {
-        & docker compose -f (Join-Path $Root 'deploy/docker-compose.yml') exec -T postgres pg_isready -U loopland *> $null
-        if ($LASTEXITCODE -eq 0) { Say '数据库就绪'; return }
+        $r = Invoke-Quiet 'docker' @('compose', '-f', (Join-Path $Root 'deploy/docker-compose.yml'), 'exec', '-T', 'postgres', 'pg_isready', '-U', 'loopland')
+        if ($r.Code -eq 0) { Say '数据库就绪'; return }
         Start-Sleep -Seconds 1
     }
     Die '数据库 60 秒内没有就绪'
