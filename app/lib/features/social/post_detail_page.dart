@@ -10,6 +10,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../ai/ai_widgets.dart';
 import 'image_viewer.dart';
 import 'post_card.dart';
 import 'report_sheet.dart';
@@ -290,6 +291,10 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       if (post.content.isNotEmpty) ...[
         const SizedBox(height: 12),
         PostText(text: post.content, fontSize: 17),
+      ],
+      if (post.aiReport != null) ...[
+        const SizedBox(height: 12),
+        AIReportBlock(text: post.aiReport!.text, aiGenerated: post.aiReport!.aiGenerated),
       ],
       if (post.images.isNotEmpty) ...[
         const SizedBox(height: 12),

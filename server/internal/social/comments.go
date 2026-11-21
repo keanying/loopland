@@ -204,6 +204,9 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	uid := httpx.UserID(ctx)
 	s := h.Svc
+	// AI scoring is slow: done before the transaction, applied inside it.
+	sc := s.Mod.Review(ctx, moderation.Content{Target: moderation.Comment, UserID: uid, Text: req.Content})
+	outcome := s.Mod.Outcome(ctx, sc)
 	var id int64
 	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var postAuthor int64
@@ -259,20 +262,19 @@ func (h *Handler) createComment(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		sc := s.Mod.Check(ctx, req.Content, false)
 		if sc.Blocked {
 			return moderation.ErrBlocked
 		}
-		pending := s.Mod.NeedsReview(ctx, sc)
 		if err := tx.QueryRow(ctx, `INSERT INTO src.src_soc_loop_comment (post_id, user_id, parent_id, reply_to_user_id, content_text, review_status)
 			VALUES ($1,$2,$3,$4,$5,'pending') RETURNING id`, postID, uid, req.ParentID, req.ReplyToUserID, req.Content).Scan(&id); err != nil {
 			return err
 		}
-		if pending {
-			_, err := moderation.Submit(ctx, tx, moderation.Comment, id, uid, req.Content, nil, sc)
-			return err
+		if outcome == moderation.OutcomeApprove {
+			if err := approveComment(ctx, tx, id); err != nil {
+				return err
+			}
 		}
-		return approveComment(ctx, tx, id)
+		return s.Mod.File(ctx, tx, moderation.Comment, id, uid, req.Content, nil, sc, outcome)
 	})
 	if err != nil {
 		return err

@@ -46,6 +46,10 @@ dependencies:
   image_picker: 1.2.4
   url_launcher: 6.3.3
   intl: 0.20.3
+  # AI 跟练（C-09）：前置摄像头 + 端上姿态识别（画面只在本机处理，不上传、不保存）、语音提示
+  camera: 0.12.2
+  google_mlkit_pose_detection: 0.16.1
+  flutter_tts: 4.2.5
 
 dev_dependencies:
   flutter_test:

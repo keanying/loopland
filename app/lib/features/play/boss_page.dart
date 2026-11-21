@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../api/ai_models.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
@@ -14,6 +15,7 @@ import '../../realtime/realtime_providers.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/monster_art.dart';
+import '../ai/ai_widgets.dart';
 import 'locate.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
@@ -167,7 +169,12 @@ class _BossPageState extends ConsumerState<BossPage> {
                 maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 13)),
           ]),
         ),
-        if (b.isActive) TimerPill(until: b.expiresAt),
+        if (b.isActive) ...[
+          // A-04「问 AI」: how to beat it (hidden when AI is off).
+          AskAIButton(aiContext: AIContext(type: 'boss', id: b.id, name: b.name), compact: true),
+          const SizedBox(width: 8),
+          TimerPill(until: b.expiresAt),
+        ],
       ]),
       const SizedBox(height: 14),
       _MonsterCard(boss: b, live: live && b.isActive),

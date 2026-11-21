@@ -8,7 +8,10 @@ import 'core/format.dart';
 import 'core/privacy.dart';
 import 'core/providers.dart';
 import 'core/theme.dart';
+import 'features/ai/ai_providers.dart';
+import 'features/ai/ai_routes.dart';
 import 'features/city/city_page.dart';
+import 'features/coach/coach_routes.dart';
 import 'features/codex/codex_page.dart';
 import 'features/community/community_page.dart';
 import 'features/community/crew_pages.dart';
@@ -95,10 +98,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           sport: s.uri.queryParameters['sport'] ?? 'run',
           targetId: int.tryParse(s.uri.queryParameters['target'] ?? ''),
           targetName: s.uri.queryParameters['name'],
+          // V2 AI: a route from the assistant (「一键开跑」).
+          aiRoute: s.extra is AIRouteLaunch ? (s.extra! as AIRouteLaunch).route : null,
+          autostart: s.extra is AIRouteLaunch && (s.extra! as AIRouteLaunch).autostart,
         ),
       ),
       GoRoute(path: '/run', builder: (_, _) => const RunPage()),
       GoRoute(path: '/train/:sport', builder: (_, s) => HomeTrainingPage(sport: s.pathParameters['sport']!)),
+      // V2 AI 跟练（features/coach/coach_routes.dart）
+      ...coachRoutes(),
       GoRoute(
         path: '/result',
         builder: (_, s) => s.extra is ResultArgs
@@ -128,6 +136,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/campaigns', builder: (_, _) => const CampaignsPage()),
       // V2 社区 · 动态 / 评论 / 主页 / 回放（features/social/social_routes.dart）
       ...socialRoutes(),
+      // V2 AI · 助手 / 问 AI（features/ai/ai_routes.dart）
+      ...aiRoutes(),
     ],
   );
 });

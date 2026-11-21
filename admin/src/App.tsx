@@ -18,6 +18,7 @@ import AdminsPage from './pages/AdminsPage';
 import ProvidersPage from './pages/ProvidersPage';
 import ReviewPage from './pages/ReviewPage';
 import CommunityPage from './pages/CommunityPage';
+import AIUsagePage from './pages/AIUsagePage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { admin, loading } = useAuth();
@@ -97,6 +98,8 @@ export default function App() {
             </RequirePerm>
           }
         />
+        <Route path="ai-usage" element={<RequirePerm perm="ai.usage"><AIUsagePage /></RequirePerm>} />
+        <Route path="settings/ai-usage" element={<Navigate to="/ai-usage" replace />} />
         <Route path="*" element={<Result status="404" title="页面不存在" />} />
       </Route>
     </Routes>

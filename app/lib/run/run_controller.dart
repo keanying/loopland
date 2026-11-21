@@ -20,9 +20,30 @@ final clockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
 enum RunPhase { idle, countdown, running, paused, finished }
 
 class RunConfig {
-  const RunConfig({required this.sport, this.goal = const Goal()});
+  const RunConfig({required this.sport, this.goal = const Goal(), this.guide});
   final String sport;
   final Goal goal;
+
+  /// Optional route drawn as a guide line (AI 路线建议).
+  final RunGuide? guide;
+}
+
+/// A suggested route shown while running: dashed line + target markers.
+/// Only a visual aid — claiming rules do not change.
+class RunGuide {
+  const RunGuide({required this.title, this.path = const [], this.targets = const []});
+  final String title;
+  final List<LatLng> path;
+  final List<GuideTarget> targets;
+}
+
+class GuideTarget {
+  const GuideTarget({required this.name, required this.center, this.type = 'territory'});
+  final String name;
+  final LatLng center;
+
+  /// `territory | boss | chest`.
+  final String type;
 }
 
 /// Points worse than this are recorded (the server decides) but not used for
@@ -50,6 +71,7 @@ class RunState {
     this.mockDetected = false,
     this.tick = 0,
     this.minClaimAreaM2 = 500,
+    this.guide,
   });
 
   final RunPhase phase;
@@ -76,6 +98,9 @@ class RunState {
   /// Bumped every second so the UI refreshes the clock.
   final int tick;
   final double minClaimAreaM2;
+
+  /// Route guide chosen before the start (not persisted across restarts).
+  final RunGuide? guide;
 
   int elapsedMs(DateTime now) =>
       activeMs + (resumedAt == null ? 0 : now.difference(resumedAt!).inMilliseconds.clamp(0, 1 << 40));
@@ -130,6 +155,7 @@ class RunState {
         mockDetected: mockDetected ?? this.mockDetected,
         tick: tick ?? this.tick,
         minClaimAreaM2: minClaimAreaM2 ?? this.minClaimAreaM2,
+        guide: guide,
       );
 }
 
@@ -177,6 +203,7 @@ class RunController extends Notifier<RunState> {
       goal: cfg.goal,
       clientId: const Uuid().v4(),
       minClaimAreaM2: minClaimAreaM2,
+      guide: cfg.guide,
     );
     if (countdownFrom <= 0) {
       _begin();

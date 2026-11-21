@@ -227,12 +227,13 @@ func (s *Service) CreateMeetup(ctx context.Context, user int64, in MeetupInput) 
 		return Meetup{}, errMuted
 	}
 	text := in.Title + "\n" + in.Description + "\n" + in.Requirement
-	sc := s.Mod.Check(ctx, text, false)
+	sc := s.Mod.Review(ctx, moderation.Content{Target: moderation.Meetup, UserID: user, Text: text})
 	if sc.Blocked {
 		return Meetup{}, moderation.ErrBlocked
 	}
+	outcome := s.Mod.Outcome(ctx, sc)
 	review := "approved"
-	if s.Mod.NeedsReview(ctx, sc) {
+	if outcome != moderation.OutcomeApprove {
 		review = "pending"
 	}
 	var id int64
@@ -254,10 +255,7 @@ func (s *Service) CreateMeetup(ctx context.Context, user int64, in MeetupInput) 
 		if _, err := tx.Exec(ctx, `INSERT INTO src.src_soc_loop_meetup_join (meetup_id, user_id) VALUES ($1,$2)`, id, user); err != nil {
 			return err
 		}
-		if review == "pending" {
-			_, err = moderation.Submit(ctx, tx, moderation.Meetup, id, user, text, nil, sc)
-		}
-		return err
+		return s.Mod.File(ctx, tx, moderation.Meetup, id, user, text, nil, sc, outcome)
 	})
 	if err != nil {
 		return Meetup{}, err
@@ -451,6 +449,20 @@ func (s *Service) MeetupApplier() moderation.Applier {
 			}
 			return inbox.Notify(ctx, tx, creator, inbox.Interaction, "组局未通过审核",
 				fmt.Sprintf("你发起的组局「%s」未通过审核：%s", title, reason), map[string]any{"type": "review_rejected", "meetup_id": id})
+		},
+		Pend: func(ctx context.Context, tx pgx.Tx, id int64) error {
+			_, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_meetup SET review_status='pending', update_time=now() WHERE id=$1 AND review_status='approved'`, id)
+			return err
+		},
+		Mask: func(ctx context.Context, tx pgx.Tx, id int64, mask func(string) string, _ []string) error {
+			var title, desc, req string
+			if err := tx.QueryRow(ctx, `SELECT title, COALESCE(description, ''), COALESCE(requirement, '') FROM src.src_soc_loop_meetup WHERE id=$1 FOR UPDATE`, id).
+				Scan(&title, &desc, &req); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_meetup SET title=$2, description=$3, requirement=$4, update_time=now() WHERE id=$1`,
+				id, mask(title), mask(desc), mask(req))
+			return err
 		},
 	}
 }

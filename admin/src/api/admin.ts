@@ -1,9 +1,15 @@
-// One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md, v2-1-玩法.md, v2-2-社区.md).
+// One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md, v2-1-玩法.md, v2-2-社区.md, v2-3-AI.md).
 import { ADMIN_PREFIX } from '../config';
 import { http } from './client';
 import type {
   AdminPost,
   AdminReport,
+  AICall,
+  AIMessage,
+  AIUsage,
+  ModerationEstimate,
+  ReviewDecide,
+  ReviewDecideResult,
   Meetup,
   MeetupStatus,
   MeetupType,
@@ -186,6 +192,16 @@ export const api = {
     http.get<Paged<RaceEntry>>(`${A}/races/${id}/entries`, { page_size: PAGE_SIZE, ...p }),
   finishRaceEntry: (id: number, userId: number, result_sec: number) =>
     http.post<Record<string, never>>(`${A}/races/${id}/entries/${userId}/finish`, { result_sec }),
+
+  // V2 第三批「AI」(docs/api/v2-3-AI.md 「内容审核升级」「管理端 · AI 用量」)
+  /** `targetType` narrows the returned `next` to the same 对象类型 (the queue's type filter). */
+  decideReview: (id: number, body: ReviewDecide, targetType?: string) =>
+    http.post<ReviewDecideResult>(`${A}/reviews/${id}/decide${targetType ? `?target_type=${encodeURIComponent(targetType)}` : ''}`, body),
+  moderationEstimate: (p: { auto_approve_below: number; auto_reject_above: number }) => http.get<ModerationEstimate>(`${A}/moderation/estimate`, p),
+  aiUsage: (days: number) => http.get<AIUsage>(`${A}/ai/usage`, { days }),
+  aiCalls: (p: { feature?: string; status?: string; page?: number; page_size?: number }) =>
+    http.get<Paged<AICall>>(`${A}/ai/calls`, { page_size: PAGE_SIZE, ...p }),
+  userAiMessages: (id: number, page: number) => http.get<Paged<AIMessage>>(`${A}/users/${id}/ai-messages`, { page, page_size: PAGE_SIZE }),
 
   // audit & admins
   audit: (p: { admin_id?: number; page?: number; page_size?: number }) =>

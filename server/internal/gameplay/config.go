@@ -154,6 +154,10 @@ type Config struct {
 
 	Community CommunitySettings `json:"community"`
 	Rally     RallySettings     `json:"rally"`
+
+	// AI follow-along routines and AI settings (docs/api/v2-3-AI.md).
+	Workouts []Workout  `json:"workouts"`
+	AI       AISettings `json:"ai"`
 }
 
 // Default returns the launch numbers from the product documents.
@@ -162,6 +166,7 @@ func Default() Config {
 	defaultPlay(&c)
 	defaultCommunity(&c)
 	c.Rally = defaultRally()
+	c.Workouts, c.AI = DefaultWorkouts(), defaultAI()
 	return c
 }
 
@@ -252,6 +257,9 @@ func (c Config) Validate() error {
 		return err
 	}
 	if err := c.Rally.validate(); err != nil {
+		return err
+	}
+	if err := c.validateAI(); err != nil {
 		return err
 	}
 	if c.MinClaimAreaM2 <= 0 {

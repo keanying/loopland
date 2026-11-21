@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, Drawer, Empty, Form, Input, InputNumber, Modal, Row, Segmented, Select, Skeleton, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import type { Rule } from 'antd/es/form';
@@ -380,6 +380,11 @@ function ProviderCard(props: {
         <Button icon={<ApiOutlined />} loading={testing} onClick={props.onTest}>
           测试连接
         </Button>
+        {p.code === 'ai' && (
+          <Link to="/ai-usage" style={{ alignSelf: 'center', marginLeft: 4 }}>
+            查看 AI 用量
+          </Link>
+        )}
       </div>
     </div>
   );

@@ -9,14 +9,14 @@ import 'sdk_config.dart';
 /// ```json
 /// {"login": ["apple","oneclick","sms","wechat"],
 ///  "pay": ["alipay_app","apple_iap","mock","wechat_app"],
-///  "captcha": true}
+///  "captcha": true, "ai": true}
 /// ```
 class ServerFeatures {
-  const ServerFeatures({required this.login, required this.pay, required this.captcha, this.fetched = true});
+  const ServerFeatures({required this.login, required this.pay, required this.captcha, this.ai = false, this.fetched = true});
 
   factory ServerFeatures.fromJson(Map<String, dynamic> j) {
     Set<String> set(Object? v) => v is List ? {for (final e in v) '$e'} : <String>{};
-    return ServerFeatures(login: set(j['login']), pay: set(j['pay']), captcha: j['captcha'] == true);
+    return ServerFeatures(login: set(j['login']), pay: set(j['pay']), captcha: j['captcha'] == true, ai: j['ai'] == true);
   }
 
   /// Used when the request failed: SMS login only. [captcha] then follows the
@@ -26,11 +26,16 @@ class ServerFeatures {
   const ServerFeatures.unreachable({this.captcha = false})
       : login = const {'sms'},
         pay = const {},
+        ai = false,
         fetched = false;
 
   final Set<String> login;
   final Set<String> pay;
   final bool captcha;
+
+  /// V2 batch 3: AI (assistant, routes, reports, coach) is configured. When
+  /// false (or the server predates the flag) every AI entry is hidden.
+  final bool ai;
 
   /// False for [ServerFeatures.unreachable].
   final bool fetched;
@@ -47,6 +52,9 @@ final featuresProvider = FutureProvider<ServerFeatures>((ref) async {
     return ServerFeatures.unreachable(captcha: SdkConfig.current.captchaConfigured);
   }
 });
+
+/// Show AI entries (assistant, 问 AI, AI routes / reports).
+final aiEnabledProvider = Provider<bool>((ref) => ref.watch(featuresProvider).value?.ai ?? false);
 
 void refreshFeaturesIfUnreachable(WidgetRef ref) {
   final v = ref.read(featuresProvider).value;

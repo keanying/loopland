@@ -36,6 +36,7 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, reviewers, adminOnly func(http
 	mux.Handle("POST /admin/v1/reviews/batch", reviewers(h.reviewBatch))
 	mux.Handle("POST /admin/v1/reviews/{id}/approve", reviewers(h.approve))
 	mux.Handle("POST /admin/v1/reviews/{id}/reject", reviewers(h.reject))
+	mux.Handle("POST /admin/v1/reviews/{id}/decide", reviewers(h.decideAction))
 
 	mux.Handle("GET /admin/v1/reports", reviewers(h.reports))
 	mux.Handle("POST /admin/v1/reports/{id}/handle", reviewers(h.handleReport))
@@ -45,6 +46,7 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, reviewers, adminOnly func(http
 
 	mux.Handle("GET /admin/v1/moderation/settings", adminOnly(h.settings))
 	mux.Handle("PUT /admin/v1/moderation/settings", adminOnly(h.saveSettings))
+	mux.Handle("GET /admin/v1/moderation/estimate", adminOnly(h.estimate))
 }
 
 // UserRef is {id, nickname}.
@@ -75,10 +77,32 @@ type ReviewTask struct {
 	Reviewer     *AdminRef  `json:"reviewer"`
 	ReviewedAt   *time.Time `json:"reviewed_at"`
 	CreatedAt    time.Time  `json:"created_at"`
+	// AI is the model's judgment (null without one, docs/api/v2-3-AI.md).
+	AI *ReviewAI `json:"ai"`
+	// UserViolationCount is how often the author's content was rejected or
+	// taken down before.
+	UserViolationCount int `json:"user_violation_count"`
+	// HasActivity marks posts with an activity (approve_hide_endpoints).
+	HasActivity bool `json:"has_activity"`
+}
+
+// ReviewAI is the AI part of a review task.
+type ReviewAI struct {
+	RiskScore  int      `json:"risk_score"`
+	Labels     []string `json:"labels"`
+	Reason     string   `json:"reason"`
+	Confidence float64  `json:"confidence"`
+	Suggestion string   `json:"suggestion"`
+	ModelName  string   `json:"model_name"`
 }
 
 const taskCols = `t.id, t.target_type, t.target_id, u.id, u.nickname, COALESCE(t.content_text, ''), t.images_json, t.risk_score, t.risk_reasons_json,
-	t.report_qty, t.review_status, t.reject_reason, a.id, a.username, t.review_time, t.create_time`
+	t.report_qty, t.review_status, t.reject_reason, a.id, a.username, t.review_time, t.create_time,
+	t.ai_score, t.ai_labels_json, COALESCE(t.ai_reason, ''), COALESCE(t.ai_confidence_rate, 0), COALESCE(t.ai_suggestion_type, ''), COALESCE(t.ai_model, ''),
+	(SELECT count(*) FROM src.src_cnt_loop_review_task v WHERE v.user_id=t.user_id AND v.review_status='rejected')
+	  + (SELECT count(*) FROM src.src_soc_loop_post dp WHERE dp.user_id=t.user_id AND dp.delete_reason IS NOT NULL
+	     AND NOT EXISTS (SELECT 1 FROM src.src_cnt_loop_review_task v2 WHERE v2.target_type='post' AND v2.target_id=dp.id AND v2.review_status='rejected')),
+	t.target_type='post' AND EXISTS (SELECT 1 FROM src.src_soc_loop_post hp WHERE hp.id=t.target_id AND hp.activity_id IS NOT NULL)`
 
 const taskFrom = ` FROM src.src_cnt_loop_review_task t
 	LEFT JOIN src.src_usr_loop_user u ON u.id=t.user_id
@@ -88,9 +112,20 @@ func scanTask(r pgx.CollectableRow) (ReviewTask, error) {
 	var t ReviewTask
 	var uid, aid *int64
 	var nick, uname *string
-	var imgs, reasons []byte
+	var imgs, reasons, labels []byte
+	var ai ReviewAI
+	var aiScore *int
 	err := r.Scan(&t.ID, &t.TargetType, &t.TargetID, &uid, &nick, &t.Text, &imgs, &t.RiskScore, &reasons,
-		&t.ReportCount, &t.Status, &t.RejectReason, &aid, &uname, &t.ReviewedAt, &t.CreatedAt)
+		&t.ReportCount, &t.Status, &t.RejectReason, &aid, &uname, &t.ReviewedAt, &t.CreatedAt,
+		&aiScore, &labels, &ai.Reason, &ai.Confidence, &ai.Suggestion, &ai.ModelName, &t.UserViolationCount, &t.HasActivity)
+	if aiScore != nil {
+		ai.RiskScore = *aiScore
+		_ = json.Unmarshal(labels, &ai.Labels)
+		if ai.Labels == nil {
+			ai.Labels = []string{}
+		}
+		t.AI = &ai
+	}
 	if uid != nil {
 		t.User = &UserRef{ID: *uid, Nickname: *nick}
 	}
@@ -136,16 +171,22 @@ func (h *AdminHandler) reviews(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("invalid_body", "status 取值错误")
 	}
 	typ := r.URL.Query().Get("target_type")
-	where := ` WHERE t.review_status=$1 AND ($2='' OR t.target_type=$2)`
+	// decision filters decided tasks: manual | auto (auto_approve / auto_reject).
+	decision := r.URL.Query().Get("decision")
+	if decision != "" && decision != "manual" && decision != "auto" {
+		return httpx.BadRequest("invalid_body", "decision 只能是 manual 或 auto")
+	}
+	where := ` WHERE t.review_status=$1 AND ($2='' OR t.target_type=$2) AND ($5='' OR ($5='manual' AND t.decision_type IS DISTINCT FROM 'auto_approve' AND t.decision_type IS DISTINCT FROM 'auto_reject')
+		OR ($5='auto' AND t.decision_type IN ('auto_approve', 'auto_reject')))`
 	var total int
-	if err := h.Svc.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_cnt_loop_review_task t`+where, status, typ).Scan(&total); err != nil {
+	if err := h.Svc.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_cnt_loop_review_task t`+where+` AND $3::int IS NOT NULL AND $4::int IS NOT NULL`, status, typ, 0, 0, decision).Scan(&total); err != nil {
 		return err
 	}
 	order := ` ORDER BY t.risk_score DESC, t.create_time, t.id`
 	if status != "pending" {
 		order = ` ORDER BY t.review_time DESC NULLS LAST, t.id DESC`
 	}
-	rows, err := h.Svc.Pool.Query(ctx, `SELECT `+taskCols+taskFrom+where+order+` LIMIT $3 OFFSET $4`, status, typ, p.Size, p.Offset())
+	rows, err := h.Svc.Pool.Query(ctx, `SELECT `+taskCols+taskFrom+where+order+` LIMIT $3 OFFSET $4`, status, typ, p.Size, p.Offset(), decision)
 	if err != nil {
 		return err
 	}
@@ -186,6 +227,53 @@ func (h *AdminHandler) decide(w http.ResponseWriter, r *http.Request, approve bo
 		return err
 	}
 	return httpx.OK(w, t)
+}
+
+// decideAction is POST /admin/v1/reviews/{id}/decide (M-18): the task
+// after the action and the next pending one (optionally of ?target_type=).
+func (h *AdminHandler) decideAction(w http.ResponseWriter, r *http.Request) error {
+	id, err := pathID(r)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Action   string `json:"action"`
+		Reason   string `json:"reason"`
+		MuteDays int    `json:"mute_days"`
+	}
+	if err := httpx.Decode(r, &req); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	ad, _ := httpx.AdminFrom(ctx)
+	if err := h.Svc.Mod.Act(ctx, id, ad.ID, moderation.Action{Kind: req.Action, Reason: req.Reason, MuteDays: req.MuteDays}); err != nil {
+		return err
+	}
+	t, err := h.task(ctx, id)
+	if err != nil {
+		return err
+	}
+	detail := map[string]any{"task_id": id, "reason": req.Reason}
+	if req.Action == moderation.ActRejectMute {
+		detail["mute_days"] = max(req.MuteDays, 0)
+	}
+	if err := h.Audit(ctx, h.Svc.Pool, "review."+req.Action, t.TargetType+":"+strconv.FormatInt(t.TargetID, 10), detail); err != nil {
+		return err
+	}
+	rows, err := h.Svc.Pool.Query(ctx, `SELECT `+taskCols+taskFrom+` WHERE t.review_status='pending' AND t.id<>$1 AND ($2='' OR t.target_type=$2)
+		ORDER BY t.risk_score DESC, t.create_time, t.id LIMIT 1`, id, r.URL.Query().Get("target_type"))
+	if err != nil {
+		return err
+	}
+	next, err := pgx.CollectRows(rows, scanTask)
+	if err != nil {
+		return err
+	}
+	var nt *ReviewTask
+	if len(next) > 0 {
+		nt = &next[0]
+	}
+	return httpx.OK(w, map[string]any{"task": t, "next": nt})
 }
 
 func (h *AdminHandler) approve(w http.ResponseWriter, r *http.Request) error {
@@ -233,7 +321,7 @@ func (h *AdminHandler) reviewBatch(w http.ResponseWriter, r *http.Request) error
 func (h *AdminHandler) reviewStats(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 	var pending, today int
-	if err := h.Svc.Pool.QueryRow(ctx, `SELECT count(*) FILTER (WHERE review_status='pending'), count(*) FILTER (WHERE review_status<>'pending' AND review_time >= $1)
+	if err := h.Svc.Pool.QueryRow(ctx, `SELECT count(*) FILTER (WHERE review_status='pending'), count(*) FILTER (WHERE review_status<>'pending' AND review_time >= $1 AND decision_type IS DISTINCT FROM 'auto_approve' AND decision_type IS DISTINCT FROM 'auto_reject')
 		FROM src.src_cnt_loop_review_task`, clock.Today()).Scan(&pending, &today); err != nil {
 		return err
 	}
@@ -581,18 +669,83 @@ func (h *AdminHandler) settings(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *AdminHandler) saveSettings(w http.ResponseWriter, r *http.Request) error {
-	var in moderation.Settings
-	if err := httpx.Decode(r, &in); err != nil {
+	// Fields left out keep their value (clients from before 第三批 do not
+	// send auto_reject_above / ai_enabled).
+	var req struct {
+		BlockWords       *[]string `json:"block_words"`
+		ReviewWords      *[]string `json:"review_words"`
+		AutoApproveBelow *int      `json:"auto_approve_below"`
+		AutoRejectAbove  *int      `json:"auto_reject_above"`
+		AIEnabled        *bool     `json:"ai_enabled"`
+		ReportAutoHide   *int      `json:"report_auto_hide"`
+	}
+	if err := httpx.Decode(r, &req); err != nil {
 		return err
 	}
 	ctx := r.Context()
+	in := h.Svc.Mod.Settings(ctx)
+	if req.BlockWords != nil {
+		in.BlockWords = *req.BlockWords
+	}
+	if req.ReviewWords != nil {
+		in.ReviewWords = *req.ReviewWords
+	}
+	if req.AutoApproveBelow != nil {
+		in.AutoApproveBelow = *req.AutoApproveBelow
+	}
+	if req.AutoRejectAbove != nil {
+		in.AutoRejectAbove = *req.AutoRejectAbove
+		if in.AutoRejectAbove == 0 {
+			return httpx.BadRequest("invalid_body", "自动拦截线应在 1–100 之间，且高于自动放行线")
+		}
+	}
+	if req.AIEnabled != nil {
+		in.AIEnabled = *req.AIEnabled
+	}
+	if req.ReportAutoHide != nil {
+		in.ReportAutoHide = *req.ReportAutoHide
+	}
 	out, err := h.Svc.Mod.SaveSettings(ctx, in)
 	if err != nil {
 		return err
 	}
 	if err := h.Audit(ctx, h.Svc.Pool, "moderation.settings", "moderation", map[string]any{
-		"block_words": len(out.BlockWords), "review_words": len(out.ReviewWords), "auto_approve_below": out.AutoApproveBelow, "report_auto_hide": out.ReportAutoHide}); err != nil {
+		"block_words": len(out.BlockWords), "review_words": len(out.ReviewWords), "auto_approve_below": out.AutoApproveBelow,
+		"auto_reject_above": out.AutoRejectAbove, "ai_enabled": out.AIEnabled, "report_auto_hide": out.ReportAutoHide}); err != nil {
 		return err
 	}
 	return httpx.OK(w, out)
+}
+
+// estimate is GET /admin/v1/moderation/estimate (M-19).
+func (h *AdminHandler) estimate(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
+	cur := h.Svc.Mod.Settings(ctx)
+	get := func(key string, def int) (int, error) {
+		v := r.URL.Query().Get(key)
+		if v == "" {
+			return def, nil
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 || n > 101 {
+			return 0, httpx.BadRequest("invalid_body", key+" 应在 0–100 之间")
+		}
+		return n, nil
+	}
+	ap, err := get("auto_approve_below", cur.AutoApproveBelow)
+	if err != nil {
+		return err
+	}
+	rj, err := get("auto_reject_above", cur.AutoRejectAbove)
+	if err != nil {
+		return err
+	}
+	if rj <= ap {
+		return httpx.BadRequest("invalid_body", "自动拦截线应高于自动放行线")
+	}
+	est, err := h.Svc.Mod.Estimate(ctx, ap, rj)
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, est)
 }

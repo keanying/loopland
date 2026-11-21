@@ -284,6 +284,16 @@ func seedCommunity(users []*client, crewID int64, ad *client) {
 		body := map[string]any{"content": texts[i], "visibility": "public"}
 		if runs := myRuns(u); len(runs) > 0 {
 			body["activity_id"] = runs[0]
+			// 阿青 posts with an AI battle report (第三批; the dev mock writes it).
+			if i == 0 {
+				var rep struct {
+					Text string `json:"text"`
+				}
+				u.do("POST", fmt.Sprintf("/v1/activities/%d/ai-report", runs[0]), nil, &rep)
+				if rep.Text != "" {
+					body["ai_report"] = true
+				}
+			}
 		}
 		var p struct {
 			ID int64 `json:"id"`
@@ -309,6 +319,8 @@ func seedCommunity(users []*client, crewID int64, ad *client) {
 		}
 		users[3].do("POST", fmt.Sprintf("/v1/posts/%d/collect", first), nil, nil)
 	}
+	// A question for the AI assistant 圈圈 (dev mock unless a model is configured).
+	users[0].do("POST", "/v1/ai/chat", map[string]any{"content": "今晚去哪抢地？", "lat": origin.Lat, "lng": origin.Lng}, nil)
 	// Content for the review queue: contact details in a post and a comment.
 	users[4].do("POST", "/v1/posts", map[string]any{"content": "代跑接单，加微信 run_helper888 详聊", "visibility": "public"}, nil)
 	if len(postIDs) > 1 {

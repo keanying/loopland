@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../api/ai_models.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
+import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/sdk_config.dart';
@@ -18,6 +20,8 @@ import '../../run/location_source.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../ai/ai_providers.dart';
+import '../ai/ai_widgets.dart';
 import '../play/chest_sheet.dart';
 import '../play/defense_banner.dart';
 import '../play/play_providers.dart';
@@ -47,7 +51,20 @@ class _MapPageState extends ConsumerState<MapPage> {
   void initState() {
     super.initState();
     final u = ref.read(userProvider);
-    if (u?.consents.location == true) _locate(move: true, ask: false);
+    final focus = ref.read(mapFocusProvider);
+    if (focus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _focus(focus));
+    } else if (u?.consents.location == true) {
+      _locate(move: true, ask: false);
+    }
+  }
+
+  /// Centres a territory picked in the AI assistant.
+  void _focus(MapFocus f) {
+    if (!mounted) return;
+    ref.read(mapFocusProvider.notifier).clear();
+    setState(() => _selected = f.territoryId);
+    _map.moveTo(f.center, zoom: 16.5);
   }
 
   @override
@@ -160,6 +177,10 @@ class _MapPageState extends ConsumerState<MapPage> {
     final season = ref.watch(seasonProvider).value?.season;
     final top = MediaQuery.paddingOf(context).top;
     final bottom = NavShell.bottomInset(context);
+    final ai = ref.watch(aiEnabledProvider);
+    ref.listen<MapFocus?>(mapFocusProvider, (_, f) {
+      if (f != null) _focus(f);
+    });
     return Scaffold(
       body: Stack(children: [
         Positioned.fill(
@@ -259,6 +280,10 @@ class _MapPageState extends ConsumerState<MapPage> {
             const SizedBox(height: 10),
             _SideButton(
                 icon: Icons.sports_esports_outlined, label: '玩法', color: LL.card, fg: LL.text, onTap: () => context.push('/games')),
+            if (ai) ...[
+              const SizedBox(height: 10),
+              _SideButton(icon: Icons.auto_awesome_rounded, label: 'AI', color: LL.lavender, fg: LL.ink, onTap: () => context.push('/ai')),
+            ],
           ]),
         ),
         Positioned(
@@ -389,6 +414,14 @@ class TerritorySheet extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(_relationText, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
             if (t.frozen) ...[const SizedBox(width: 8), const ComingSoon(text: '已冻结')],
+            const Spacer(),
+            // A-04「问 AI」 on others' territories (hidden when AI is off).
+            if (!t.isMine)
+              AskAIButton(
+                aiContext: AIContext(type: 'territory', id: t.id, name: t.name),
+                compact: true,
+                beforeOpen: () => Navigator.pop(context),
+              ),
           ]),
           const SizedBox(height: 8),
           Text(t.name, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),

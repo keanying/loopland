@@ -95,6 +95,11 @@ type AIConfig struct {
 	RegistrationNo  string `json:"registration_no"`
 	WeeklyFreeQuota int    `json:"weekly_free_quota"`
 	TimeoutS        int    `json:"timeout_s"`
+	// VisionModel reads images; empty means images are not supported.
+	VisionModel string `json:"vision_model"`
+	// Prices per million tokens in fen (0 = not set), for cost estimates.
+	PriceInputPerMTokFen  int `json:"price_input_per_mtok_fen"`
+	PriceOutputPerMTokFen int `json:"price_output_per_mtok_fen"`
 }
 
 // Endpoint returns the effective base URL.

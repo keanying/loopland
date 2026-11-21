@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Col, Drawer, Empty, Input, Modal, Row, Segmented, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import { EyeOutlined, RobotOutlined, SearchOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { UserAction, UserDetail, UserFilter, UserListItem } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -10,6 +10,7 @@ import { Avatar, PageHeader, Panel, Stat, Tile } from '../components/ui';
 import { ago, bigNumber, date, dt, km, num, pct } from '../utils/format';
 import { RISK_TYPE, SOURCE_LABEL, USER_STATUS } from '../utils/labels';
 import { toastOk } from '../utils/notify';
+import AIMessagesDrawer from './users/AIMessagesDrawer';
 
 function StatusTag({ status, deleteAfter }: { status: UserListItem['status']; deleteAfter?: string | null }) {
   const s = USER_STATUS[status] ?? { text: status, color: 'default' };
@@ -235,6 +236,16 @@ function UserDrawer({ id, onClose }: { id: number | null; onClose: () => void })
   };
 
   const revealed = phone && u && phone.id === u.id ? phone.phone : null;
+  const [aiOpen, setAiOpen] = useState(false);
+  useEffect(() => setAiOpen(false), [id]);
+  const viewAI = () =>
+    modal.confirm({
+      title: `查看 ${u?.nickname ?? ''} 的 AI 对话？`,
+      content: '仅用于处理投诉核查。查看会记入审计日志（谁、什么时候、看了哪个用户）。',
+      okText: '确认查看',
+      cancelText: '取消',
+      onOk: () => setAiOpen(true),
+    });
 
   return (
     <Drawer open={id !== null} onClose={onClose} width={480} title="用户详情" destroyOnHidden>
@@ -356,6 +367,18 @@ function UserDrawer({ id, onClose }: { id: number | null; onClose: () => void })
             )}
           </div>
 
+          {can('user.ai_messages') && (
+            <div className="tile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 700 }}>AI 助手对话</div>
+                <div className="tile-l">投诉核查用，仅管理员可看，查看记审计</div>
+              </div>
+              <Button icon={<RobotOutlined />} onClick={viewAI}>
+                查看 AI 对话
+              </Button>
+            </div>
+          )}
+
           {canWrite ? (
             <Space wrap>
               <Button type="primary" onClick={() => confirm('gift_member_7d', '赠送 7 天会员？', `给 ${u.nickname} 赠送 7 天会员，已是会员则顺延 7 天。`)}>
@@ -382,6 +405,7 @@ function UserDrawer({ id, onClose }: { id: number | null; onClose: () => void })
           )}
         </div>
       )}
+      <AIMessagesDrawer user={u ? { id: u.id, nickname: u.nickname } : null} open={aiOpen && !!u} onClose={() => setAiOpen(false)} />
     </Drawer>
   );
 }

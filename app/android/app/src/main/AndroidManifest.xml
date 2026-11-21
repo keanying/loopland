@@ -19,6 +19,13 @@
     <!-- 合规：ali_auth 插件声明了以下权限，一键登录并不需要，移除 -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" tools:node="remove"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove"/>
+    <!-- AI 跟练：前置摄像头 + 端上姿态识别（ML Kit，画面只在本机处理，不上传、不保存）。
+         没有摄像头的设备也能安装（只计时 + 手动计数） -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
+    <!-- 合规：camera 插件声明了录音权限，AI 跟练不录音（enableAudio: false），移除 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <!-- release 只允许 HTTPS（ali_auth 插件默认打开了明文流量，这里覆盖）；
          debug 包在 src/debug/AndroidManifest.xml 里放开，方便连局域网开发后端 -->
     <application

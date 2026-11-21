@@ -33,3 +33,65 @@ func TestCheck(t *testing.T) {
 		t.Error("threshold")
 	}
 }
+
+func TestMaskAndOutcome(t *testing.T) {
+	got := Mask("加我微信 wxid_abc12345，电话13812345678，代跑便宜", []string{"代跑"})
+	if got != "加我****************，电话***********，**便宜" {
+		t.Fatalf("mask: %q", got)
+	}
+	m := &Moderator{settings: DefaultSettings, loaded: time.Now().Add(time.Hour)}
+	ctx := context.Background()
+	for score, want := range map[int]string{0: OutcomeApprove, 19: OutcomeApprove, 20: OutcomeReview, 89: OutcomeReview, 90: OutcomeReject, 100: OutcomeReject} {
+		if o := m.Outcome(ctx, Score{Value: score}); o != want {
+			t.Errorf("outcome(%d) = %s, want %s", score, o, want)
+		}
+	}
+	v := Verdict{RiskScore: 130, Labels: []string{"ad", "bogus", "ad"}, Confidence: 3, Suggestion: "nope"}
+	v.Normalize()
+	if v.RiskScore != 100 || len(v.Labels) != 1 || v.Confidence != 1 || v.Suggestion != "reject" {
+		t.Fatalf("normalize: %+v", v)
+	}
+}
+
+type fakeClassifier struct {
+	v   *Verdict
+	err error
+}
+
+func (f fakeClassifier) Classify(ctx context.Context, c Content) (*Verdict, error) {
+	return f.v, f.err
+}
+
+func TestReviewWithAI(t *testing.T) {
+	ctx := context.Background()
+	m := &Moderator{settings: DefaultSettings, loaded: time.Now().Add(time.Hour), AITimeout: 50 * time.Millisecond}
+	m.AI = fakeClassifier{v: &Verdict{RiskScore: 85, Labels: []string{"ad"}, Suggestion: "reject"}}
+	sc := m.Review(ctx, Content{Target: Post, Text: "加我微信 wxid_abc12345"})
+	if sc.Rule != 50 || sc.Value != 85 || sc.AI == nil || sc.AIRetry {
+		t.Fatalf("ai score: %+v", sc)
+	}
+	m.AI = fakeClassifier{v: &Verdict{RiskScore: 5}}
+	if sc := m.Review(ctx, Content{Target: Post, Text: "加我微信 wxid_abc12345"}); sc.Value != 50 {
+		t.Fatalf("max(rule, ai): %+v", sc)
+	}
+	m.AI = slowClassifier{}
+	if sc := m.Review(ctx, Content{Target: Post, Text: "你好"}); !sc.AIRetry || sc.AI != nil || sc.Value != 0 {
+		t.Fatalf("timeout: %+v", sc)
+	}
+	m.AI = fakeClassifier{err: ErrNoAI}
+	if sc := m.Review(ctx, Content{Target: Post, Text: "你好"}); sc.AIRetry || sc.AI != nil {
+		t.Fatalf("no ai: %+v", sc)
+	}
+	m.settings.AIEnabled = false
+	m.AI = fakeClassifier{v: &Verdict{RiskScore: 99}}
+	if sc := m.Review(ctx, Content{Target: Post, Text: "你好"}); sc.AI != nil {
+		t.Fatalf("ai disabled: %+v", sc)
+	}
+}
+
+type slowClassifier struct{}
+
+func (slowClassifier) Classify(ctx context.Context, c Content) (*Verdict, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}

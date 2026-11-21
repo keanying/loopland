@@ -304,6 +304,31 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 	}
 	uid := httpx.UserID(r.Context())
 	ctx := r.Context()
+	// Score changed fields first (the AI classifier may take seconds), so
+	// the transaction below does not wait on it.
+	pre := map[string]moderation.Score{}
+	if h.Mod != nil {
+		var nick, bio string
+		var av *string
+		if err := h.Pool.QueryRow(ctx, `SELECT nickname, COALESCE(bio, ''), avatar_url FROM src.src_usr_loop_user WHERE id=$1`, uid).Scan(&nick, &bio, &av); err != nil {
+			return err
+		}
+		if req.Nickname != nil {
+			if n := strings.TrimSpace(*req.Nickname); n != nick && utf8.RuneCountInString(n) >= 2 && utf8.RuneCountInString(n) <= 16 {
+				pre[moderation.Nickname] = h.Mod.Review(ctx, moderation.Content{Target: moderation.Nickname, UserID: uid, Text: n})
+			}
+		}
+		if req.Bio != nil {
+			if b := strings.TrimSpace(*req.Bio); b != "" && b != bio && utf8.RuneCountInString(b) <= 60 {
+				pre[moderation.Bio] = h.Mod.Review(ctx, moderation.Content{Target: moderation.Bio, UserID: uid, Text: b})
+			}
+		}
+		if req.AvatarID != nil {
+			if ims, err := media.Owned(ctx, h.Pool, uid, []int64{*req.AvatarID}); err == nil && (av == nil || *av != ims[0].URL) {
+				pre[moderation.Avatar] = h.Mod.Review(ctx, moderation.Content{Target: moderation.Avatar, UserID: uid, Images: []string{ims[0].URL}})
+			}
+		}
+	}
 	err := pgx.BeginFunc(ctx, h.Pool, func(tx pgx.Tx) error {
 		var muted bool
 		var curNick, curBio string
@@ -317,12 +342,17 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 			if h.Mod == nil {
 				return nil
 			}
-			sc := moderation.Score{Reasons: []string{}}
-			if text != "" {
-				sc = h.Mod.Check(ctx, text, false)
-				if sc.Blocked {
-					return moderation.ErrBlocked
+			sc, ok := pre[target]
+			if !ok {
+				sc = moderation.Score{Reasons: []string{}}
+				if text != "" {
+					sc = h.Mod.Check(ctx, text, false)
 				}
+			}
+			// Live before review: content at the auto-reject line is refused
+			// right away instead.
+			if sc.Blocked || h.Mod.Outcome(ctx, sc) == moderation.OutcomeReject {
+				return moderation.ErrBlocked
 			}
 			_, err := moderation.Submit(ctx, tx, target, uid, uid, text, images, sc)
 			return err

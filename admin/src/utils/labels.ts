@@ -142,6 +142,10 @@ export const AUDIT_ACTION: Record<string, string> = {
   'review.approve': '审核通过',
   'review.reject': '审核拒绝',
   'review.batch': '批量审核',
+  'review.approve_masked': '审核打码后通过',
+  'review.approve_hide_endpoints': '审核隐藏起终点后通过',
+  'review.reject_mute': '审核驳回并禁言',
+  'ai.messages.view': '查看用户 AI 对话',
   'report.remove': '举报处理：下架',
   'report.dismiss': '举报处理：驳回',
   'report.handle': '处理举报',
@@ -324,3 +328,63 @@ export const RACE_ENTRY_STATUS: Record<string, { text: string; color: string }> 
 
 /** Sports a race can be for (the GPS sports, server gameplay.GPSSports). */
 export const RACE_SPORTS = ['run', 'ride', 'hike', 'walk'];
+
+// ---------- V2 第三批「AI」 ----------
+
+/** AI moderation labels (docs/api/v2-3-AI.md 「AI 打分」). */
+export const AI_LABEL: Record<string, string> = {
+  ad: '广告引流',
+  contact: '联系方式',
+  porn: '色情',
+  politics: '涉政',
+  abuse: '辱骂',
+  fraud: '诈骗',
+  illegal: '违法',
+  privacy: '隐私泄露',
+  minor: '未成年人',
+  other: '其他',
+};
+
+export const AI_SUGGESTION: Record<string, { text: string; color: string }> = {
+  reject: { text: '建议拒绝', color: 'red' },
+  review: { text: '建议人工复核', color: 'gold' },
+  approve: { text: '建议通过', color: 'green' },
+  mask: { text: '建议打码后通过', color: 'cyan' },
+  hide_endpoints: { text: '建议隐藏起终点', color: 'purple' },
+};
+
+/** The decision button an AI suggestion points at ("review" points at none). */
+export const SUGGESTED_ACTION: Record<string, string | undefined> = {
+  approve: 'approve',
+  mask: 'approve_masked',
+  hide_endpoints: 'approve_hide_endpoints',
+  reject: 'reject',
+};
+
+/** Review decisions (POST /admin/v1/reviews/{id}/decide). */
+export const REVIEW_DECISION: Record<string, string> = {
+  approve: '通过',
+  approve_masked: '打码后通过',
+  approve_hide_endpoints: '隐藏起终点后通过',
+  reject: '驳回',
+  reject_mute: '驳回并禁言',
+};
+
+export const AI_FEATURE: Record<string, { text: string; hint: string }> = {
+  chat: { text: '助手对话', hint: 'AI 助手圈圈、问 AI；免费用户每周限次' },
+  route: { text: '路线建议', hint: '开跑页「本次目标」的一句话解释' },
+  report: { text: '运动战报', hint: '运动结算后生成，可带进动态' },
+  moderation: { text: '内容审核', hint: '动态、评论、资料、组局送审打分' },
+  workout: { text: 'AI 跟练', hint: '跟练语音提示与总结' },
+};
+export const AI_FEATURE_ORDER = ['chat', 'route', 'report', 'moderation', 'workout'] as const;
+
+export const WORKOUT_SPORTS = ['rope', 'hiit', 'yoga', 'strength'];
+export const WORKOUT_LEVEL: Record<string, string> = { beginner: '入门', intermediate: '进阶', advanced: '高阶' };
+export const WORKOUT_POSE: Record<string, { text: string; hint: string }> = {
+  jump: { text: '跳跃', hint: '跳绳 / 开合跳：髋部上下周期' },
+  squat: { text: '深蹲', hint: '膝角' },
+  pushup: { text: '俯卧撑', hint: '肘角' },
+  crunch: { text: '卷腹', hint: '躯干角' },
+  none: { text: '不识别', hint: '只计时 / 手动计次' },
+};

@@ -53,6 +53,7 @@ class EnvCheckPage extends ConsumerWidget {
                 _kv('login', f.login.join(', ')),
                 _kv('pay', f.pay.join(', ')),
                 _kv('captcha', '${f.captcha}'),
+                _kv('ai', '${f.ai}'),
               ],
             ]),
             _section('最终显示', [

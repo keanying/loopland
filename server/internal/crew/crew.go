@@ -168,18 +168,25 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("invalid_body", "join_mode 取值错误")
 	}
 	uid := httpx.UserID(r.Context())
+	// Scored before the transaction: the AI classifier may take seconds.
+	sc, err := h.score(r.Context(), uid, req.Name)
+	if err != nil {
+		return err
+	}
+	var avatarScore moderation.Score
+	if av, err := ownedAvatar(r.Context(), h.Pool, uid, req.AvatarID, req.AvatarURL); err == nil && av != nil {
+		if avatarScore, err = h.scoreAvatar(r.Context(), uid, *av); err != nil {
+			return err
+		}
+	}
 	var id int64
-	err := pgx.BeginFunc(r.Context(), h.Pool, func(tx pgx.Tx) error {
+	err = pgx.BeginFunc(r.Context(), h.Pool, func(tx pgx.Tx) error {
 		if c, err := Of(r.Context(), tx, uid); err != nil {
 			return err
 		} else if c != nil {
 			return httpx.Conflict("already_in_crew", "你已经在一个跑团里了")
 		}
 		avatar, err := ownedAvatar(r.Context(), tx, uid, req.AvatarID, req.AvatarURL)
-		if err != nil {
-			return err
-		}
-		sc, err := h.score(r.Context(), req.Name)
 		if err != nil {
 			return err
 		}
@@ -199,7 +206,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if avatar != nil {
-			if _, err := moderation.Submit(r.Context(), tx, moderation.CrewAvatar, id, uid, "", []string{*avatar}, moderation.Score{}); err != nil {
+			if _, err := moderation.Submit(r.Context(), tx, moderation.CrewAvatar, id, uid, "", []string{*avatar}, avatarScore); err != nil {
 				return err
 			}
 		}
@@ -550,13 +557,26 @@ func nameTaken(ctx context.Context, q db.Querier, name string, except int64) (bo
 	return taken, err
 }
 
-// score checks a crew name; blocked words are refused outright.
-func (h *Handler) score(ctx context.Context, name string) (moderation.Score, error) {
+// score checks a crew name (rules and AI); blocked words and scores at
+// the auto-reject line are refused outright.
+func (h *Handler) score(ctx context.Context, uid int64, name string) (moderation.Score, error) {
 	if h.Mod == nil {
 		return moderation.Score{Reasons: []string{}}, nil
 	}
-	sc := h.Mod.Check(ctx, name, false)
-	if sc.Blocked {
+	sc := h.Mod.Review(ctx, moderation.Content{Target: moderation.CrewName, UserID: uid, Text: name})
+	if sc.Blocked || h.Mod.Outcome(ctx, sc) == moderation.OutcomeReject {
+		return sc, moderation.ErrBlocked
+	}
+	return sc, nil
+}
+
+// scoreAvatar scores a crew avatar (vision model when configured).
+func (h *Handler) scoreAvatar(ctx context.Context, uid int64, url string) (moderation.Score, error) {
+	if h.Mod == nil {
+		return moderation.Score{Reasons: []string{}}, nil
+	}
+	sc := h.Mod.Review(ctx, moderation.Content{Target: moderation.CrewAvatar, UserID: uid, Images: []string{url}})
+	if h.Mod.Outcome(ctx, sc) == moderation.OutcomeReject {
 		return sc, moderation.ErrBlocked
 	}
 	return sc, nil
@@ -598,6 +618,33 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	uid := httpx.UserID(ctx)
+	// Score the changes before the transaction (the AI may take seconds).
+	var nameScore, avatarScore *moderation.Score
+	{
+		var curName string
+		var curAvatar *string
+		if err := h.Pool.QueryRow(ctx, `SELECT name, avatar_url FROM src.src_soc_loop_crew WHERE id=$1`, id).Scan(&curName, &curAvatar); err != nil && !db.IsNoRows(err) {
+			return err
+		}
+		if req.Name != nil {
+			if name := strings.TrimSpace(*req.Name); name != curName && validName(name) == nil {
+				sc, err := h.score(ctx, uid, name)
+				if err != nil {
+					return err
+				}
+				nameScore = &sc
+			}
+		}
+		if req.AvatarID != nil {
+			if url, err := ownedAvatar(ctx, h.Pool, uid, req.AvatarID, nil); err == nil && url != nil && (curAvatar == nil || *curAvatar != *url) {
+				sc, err := h.scoreAvatar(ctx, uid, *url)
+				if err != nil {
+					return err
+				}
+				avatarScore = &sc
+			}
+		}
+	}
 	err = pgx.BeginFunc(ctx, h.Pool, func(tx pgx.Tx) error {
 		var curName string
 		var curAvatar *string
@@ -617,8 +664,10 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 			if name != curName {
-				sc, err := h.score(ctx, name)
-				if err != nil {
+				var sc moderation.Score
+				if nameScore != nil {
+					sc = *nameScore
+				} else if sc, err = h.score(ctx, uid, name); err != nil {
 					return err
 				}
 				if taken, err := nameTaken(ctx, tx, name, id); err != nil {
@@ -643,7 +692,11 @@ func (h *Handler) patch(w http.ResponseWriter, r *http.Request) error {
 				if _, err := tx.Exec(ctx, `UPDATE src.src_soc_loop_crew SET avatar_url=$2 WHERE id=$1`, id, *url); err != nil {
 					return err
 				}
-				if _, err := moderation.Submit(ctx, tx, moderation.CrewAvatar, id, uid, "", []string{*url}, moderation.Score{}); err != nil {
+				sc := moderation.Score{}
+				if avatarScore != nil {
+					sc = *avatarScore
+				}
+				if _, err := moderation.Submit(ctx, tx, moderation.CrewAvatar, id, uid, "", []string{*url}, sc); err != nil {
 					return err
 				}
 			}

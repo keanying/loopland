@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Badge, Button, Checkbox, Col, Empty, Input, InputNumber, Row, Segmented, Select, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { CheckCircleOutlined, DeleteOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, DeleteOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import { api } from '../api/admin';
-import type { BuildingConf, Config, EnergyRule, GameplayState, MedalConf, MedalType, RoleConf, SeasonTaskConf, SeasonTaskType } from '../api/types';
+import type { BuildingConf, Config, EnergyRule, GameplayState, MedalConf, MedalType, RoleConf, SeasonTaskConf, SeasonTaskType, WorkoutConf } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useAdminNames } from '../hooks/useAdminNames';
 import { PageHeader, Panel } from '../components/ui';
 import { dt } from '../utils/format';
-import { DROP_KIND, MEDAL_TYPE, SEASON_TASK_TYPE, SPORT_LABEL, UNIT_LABEL } from '../utils/labels';
+import { DROP_KIND, MEDAL_TYPE, SEASON_TASK_TYPE, SPORT_LABEL, UNIT_LABEL, WORKOUT_LEVEL, WORKOUT_POSE, WORKOUT_SPORTS } from '../utils/labels';
 import {
+  AI_FIELDS,
   BOSS_GROUPS,
   BUILDING_FIELDS,
   CHEST_FIELDS,
@@ -25,6 +27,7 @@ import {
   RELAY_FIELDS,
   TABS,
   validate,
+  workoutMinutes,
   type NumField,
   type Tab,
 } from './gameplay/config';
@@ -696,6 +699,82 @@ export default function GameplayPage() {
             />
           </Panel>
         ),
+
+    workouts: !draft.workouts
+      ? missing('AI 跟练', () => set((c) => (c.workouts = clone(DEFAULTS.workouts))))
+      : (
+          <Panel
+            title="AI 跟练动作库"
+            extra={
+              <Space>
+                <span className="panel-hint">App 端姿态识别计次，画面不上传；只换能量、不圈地</span>
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  disabled={!canEdit || draft.workouts.length >= 30}
+                  onClick={() =>
+                    set((c) =>
+                      c.workouts!.push({ key: '', name: '', sport: 'rope', level: 'beginner', cover_url: null, est_minutes: 10, camera: true, steps: [{ key: 'step_1', name: '', mode: 'count', target: 20, sets: 3, rest_sec: 30, pose: 'jump', cue: '', demo_url: null }] }),
+                    )
+                  }
+                >
+                  添加一套
+                </Button>
+              </Space>
+            }
+          >
+            {draft.workouts.length === 0 && (
+              <Empty description="动作库是空的，App 里不会显示跟练入口">
+                <Button disabled={!canEdit} onClick={() => set((c) => (c.workouts = clone(DEFAULTS.workouts)))}>
+                  按默认值添加
+                </Button>
+              </Empty>
+            )}
+            {draft.workouts.map((w, wi) => (
+              <WorkoutCard
+                key={wi}
+                w={w}
+                wi={wi}
+                canEdit={canEdit}
+                changed={changed}
+                cell={cell}
+                onChange={(fn) => set((c) => fn(c.workouts![wi]))}
+                onDelete={() =>
+                  modal.confirm({
+                    title: `删除「${w.name || w.key || '未命名'}」？`,
+                    content: '发布后 App 里不再显示这套跟练；已完成的训练记录不受影响。',
+                    okText: '删除',
+                    okButtonProps: { danger: true },
+                    cancelText: '取消',
+                    onOk: () => set((c) => c.workouts!.splice(wi, 1)),
+                  })
+                }
+              />
+            ))}
+            <div className="muted" style={{ fontSize: 12, marginTop: 12 }}>
+              按次数的动作由摄像头姿态识别自动计次（跳跃 / 深蹲 / 俯卧撑 / 卷腹），识别不稳或没给摄像头权限时退回手动计次；按时长的动作目标单位是秒。上报次数比识别次数多 20% 以上进入风控复核。key 是稳定标识，上线后不要改。
+            </div>
+          </Panel>
+        ),
+
+    ai: !draft.ai
+      ? missing('AI', () => set((c) => (c.ai = clone(DEFAULTS.ai))))
+      : (
+          <Panel title="AI" extra={<span className="panel-hint">模型、Key、单价、免费次数在「系统配置 → AI 大模型」</span>}>
+            {fieldGrid('ai', draft.ai as unknown as Record<string, number>, AI_FIELDS, (k, v) => set((c) => ((c.ai as unknown as Record<string, number>)[k] = v)))}
+            <Alert
+              style={{ marginTop: 16 }}
+              type="info"
+              showIcon={false}
+              message={
+                <span>
+                  助手每次带最近 <b className="num">{draft.ai.chat_history_turns}</b> 轮对话；路线建议不超过 <b className="num">{draft.ai.route_max_km}</b> km；战报不超过{' '}
+                  <b className="num">{draft.ai.report_max_chars}</b> 字。各功能的调用量和费用见 <Link to="/ai-usage">AI 用量</Link>。
+                </span>
+              }
+            />
+          </Panel>
+        ),
   };
 
   return (
@@ -865,5 +944,160 @@ export default function GameplayPage() {
         </Col>
       </Row>
     </>
+  );
+}
+
+type CellFn = (path: string, value: number, onChange: (v: number) => void, opts?: { min?: number; max?: number; step?: number; precision?: number; width?: number }) => ReactNode;
+
+/** One workout of the AI 跟练 library: header fields + its steps. */
+function WorkoutCard({
+  w,
+  wi,
+  canEdit,
+  changed,
+  cell,
+  onChange,
+  onDelete,
+}: {
+  w: WorkoutConf;
+  wi: number;
+  canEdit: boolean;
+  changed: Set<string>;
+  cell: CellFn;
+  onChange: (fn: (w: WorkoutConf) => void) => void;
+  onDelete: () => void;
+}) {
+  const wk = w.key || `#${wi}`;
+  const cls = (path: string) => (changed.has(path) ? 'cell-changed' : undefined);
+  const isNew = changed.has(`workouts.${wk}`);
+  const est = workoutMinutes(w);
+  const keyBad = (k: string) => !/^[a-z][a-z0-9_]*$/.test(k);
+  const move = (i: number, d: -1 | 1) =>
+    onChange((x) => {
+      const [s] = x.steps.splice(i, 1);
+      x.steps.splice(i + d, 0, s);
+    });
+  return (
+    <div className="wk-card" data-workout={w.key} style={isNew ? { background: '#f4fbd2' } : undefined}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label className="wk-field">
+          <span>key</span>
+          <Input disabled={!canEdit} value={w.key} placeholder="rope_basic" style={{ width: 140, fontFamily: 'monospace' }} status={keyBad(w.key) ? 'error' : undefined} onChange={(e) => onChange((x) => (x.key = e.target.value.trim()))} aria-label="跟练 key" />
+        </label>
+        <label className="wk-field">
+          <span>名称（App 展示）</span>
+          <Input disabled={!canEdit} value={w.name} maxLength={12} style={{ width: 150 }} className={cls(`workouts.${wk}.name`)} status={!w.name.trim() ? 'error' : undefined} onChange={(e) => onChange((x) => (x.name = e.target.value))} aria-label="跟练名称" />
+        </label>
+        <label className="wk-field">
+          <span>运动</span>
+          <Select disabled={!canEdit} value={w.sport} style={{ width: 100 }} className={cls(`workouts.${wk}.sport`)} options={WORKOUT_SPORTS.map((x) => ({ value: x, label: x === 'yoga' ? '普拉提·瑜伽' : SPORT_LABEL[x] ?? x }))} onChange={(v) => onChange((x) => (x.sport = v))} popupMatchSelectWidth={false} />
+        </label>
+        <label className="wk-field">
+          <span>难度</span>
+          <Select disabled={!canEdit} value={w.level} style={{ width: 86 }} className={cls(`workouts.${wk}.level`)} options={Object.entries(WORKOUT_LEVEL).map(([k, v]) => ({ value: k, label: v }))} onChange={(v) => onChange((x) => (x.level = v))} />
+        </label>
+        <label className="wk-field">
+          <span>预计时长</span>
+          <Space size={4}>
+            {cell(`workouts.${wk}.est_minutes`, w.est_minutes, (v) => onChange((x) => (x.est_minutes = v)), { min: 1, max: 180, width: 72 })}
+            <span className="muted">分钟</span>
+          </Space>
+        </label>
+        <span className={changed.has(`workouts.${wk}.camera`) ? 'check-changed' : undefined} style={{ paddingBottom: 7 }}>
+          <Checkbox disabled={!canEdit} checked={w.camera} onChange={(e) => onChange((x) => (x.camera = e.target.checked))}>
+            摄像头计次
+          </Checkbox>
+        </span>
+        <span style={{ flex: 1 }} />
+        <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={!canEdit} onClick={onDelete} aria-label={`删除跟练 ${w.name}`} style={{ marginBottom: 6 }}>
+          删除
+        </Button>
+      </div>
+      <div className="muted" style={{ fontSize: 12, margin: '6px 0 8px' }}>
+        {w.steps.length} 个动作 · 动作本身约 {est} 分钟（不含热身和转换）
+        {!w.camera && ' · 关闭后全部手动计次 / 只计时'}
+      </div>
+      <div className="wk-steps">
+        {w.steps.map((x, i) => {
+          const sp = `workouts.${wk}.steps.${x.key}`;
+          return (
+            <div className={`wk-step${changed.has(sp) ? ' added' : ''}`} key={i} data-step={x.key}>
+              <span className="wk-no num">{i + 1}</span>
+              <div className="wk-row">
+                <Input size="small" disabled={!canEdit} value={x.name} maxLength={12} placeholder="动作名称" style={{ width: 120 }} className={cls(`${sp}.name`)} status={!x.name.trim() ? 'error' : undefined} onChange={(e) => onChange((y) => (y.steps[i].name = e.target.value))} aria-label="动作名称" />
+                <Select
+                  size="small"
+                  disabled={!canEdit}
+                  value={x.mode}
+                  style={{ width: 70 }}
+                  className={cls(`${sp}.mode`)}
+                  options={[
+                    { value: 'count', label: '计次' },
+                    { value: 'time', label: '计时' },
+                  ]}
+                  onChange={(v) =>
+                    onChange((y) => {
+                      const st = y.steps[i];
+                      st.mode = v;
+                      if (v === 'time' && st.pose !== 'none' && st.pose !== 'jump') st.pose = 'none';
+                    })
+                  }
+                  aria-label="方式"
+                />
+                <Space size={4}>
+                  {cell(`${sp}.target`, x.target, (v) => onChange((y) => (y.steps[i].target = v)), { min: 1, max: 3600, width: 70, step: x.mode === 'time' ? 5 : 1 })}
+                  <span className="muted">{x.mode === 'time' ? '秒' : '次'} ×</span>
+                  {cell(`${sp}.sets`, x.sets, (v) => onChange((y) => (y.steps[i].sets = v)), { min: 1, max: 20, width: 56 })}
+                  <span className="muted">组</span>
+                </Space>
+                <Space size={4}>
+                  <span className="muted">组间休息</span>
+                  {cell(`${sp}.rest_sec`, x.rest_sec, (v) => onChange((y) => (y.steps[i].rest_sec = v)), { min: 0, max: 600, step: 5, width: 64 })}
+                  <span className="muted">秒</span>
+                </Space>
+              </div>
+              <div className="wk-row">
+                <Input size="small" disabled={!canEdit} value={x.key} placeholder="step_key" style={{ width: 120, fontFamily: 'monospace' }} status={keyBad(x.key) ? 'error' : undefined} onChange={(e) => onChange((y) => (y.steps[i].key = e.target.value.trim()))} aria-label="动作 key" />
+                <Tooltip title={WORKOUT_POSE[x.pose]?.hint ?? 'App 用哪种姿态规则自动计次'}>
+                  <Select
+                    size="small"
+                    disabled={!canEdit || !w.camera}
+                    value={x.pose}
+                    style={{ width: 136 }}
+                    className={cls(`${sp}.pose`)}
+                    popupMatchSelectWidth={false}
+                    options={Object.entries(WORKOUT_POSE).map(([k, v]) => ({ value: k, label: `识别：${v.text}` }))}
+                    onChange={(v) => onChange((y) => (y.steps[i].pose = v))}
+                    aria-label="姿态识别"
+                  />
+                </Tooltip>
+                <Input size="small" disabled={!canEdit} value={x.cue} maxLength={40} placeholder="语音提示，跟练时播报" style={{ flex: 1, minWidth: 160 }} className={cls(`${sp}.cue`)} onChange={(e) => onChange((y) => (y.steps[i].cue = e.target.value))} aria-label="语音提示" />
+              </div>
+              <Space size={0} className="wk-ops">
+                <Button size="small" type="text" icon={<ArrowUpOutlined />} aria-label="上移" disabled={!canEdit || i === 0} onClick={() => move(i, -1)} />
+                <Button size="small" type="text" icon={<ArrowDownOutlined />} aria-label="下移" disabled={!canEdit || i === w.steps.length - 1} onClick={() => move(i, 1)} />
+                <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除动作" disabled={!canEdit || w.steps.length <= 1} onClick={() => onChange((y) => y.steps.splice(i, 1))} />
+              </Space>
+            </div>
+          );
+        })}
+      </div>
+      <Button
+        size="small"
+        type="dashed"
+        icon={<PlusOutlined />}
+        style={{ marginTop: 8 }}
+        disabled={!canEdit || w.steps.length >= 20}
+        onClick={() =>
+          onChange((y) => {
+            let n = y.steps.length + 1;
+            while (y.steps.some((x) => x.key === `step_${n}`)) n++;
+            y.steps.push({ key: `step_${n}`, name: '', mode: 'count', target: 20, sets: 3, rest_sec: 30, pose: y.camera ? 'squat' : 'none', cue: '', demo_url: null });
+          })
+        }
+      >
+        添加动作
+      </Button>
+    </div>
   );
 }

@@ -25,6 +25,7 @@ import type {
 import * as db from './data';
 import { listProviders, saveProvider, testProvider } from './providers';
 import { communityRoutes, pendingReviews } from './community';
+import { aiRoutes } from './ai';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -172,6 +173,14 @@ function validateConfig(c: Config) {
   for (let i = 1; i < tiers.length; i++) if (!(tiers[i].min_km2 > tiers[i - 1].min_km2)) fail(400, 'invalid_config', `段位 ${tiers[i].name} 的最低面积必须大于 ${tiers[i - 1].name}`);
   if (c.boss && c.boss.strike_cost <= 0) fail(400, 'invalid_config', '合击消耗能量必须大于 0');
   if (c.chest && c.chest.energy_min > c.chest.energy_max) fail(400, 'invalid_config', '宝箱能量下限不能大于上限');
+  const keys = new Set<string>();
+  for (const w of c.workouts ?? []) {
+    if (!w.key || keys.has(w.key)) fail(400, 'invalid_config', `跟练 key「${w.key}」为空或重复`);
+    keys.add(w.key);
+    if (!w.steps?.length) fail(400, 'invalid_config', `跟练「${w.name}」至少要有 1 个动作`);
+    for (const st of w.steps) if (!['jump', 'squat', 'pushup', 'crunch', 'none'].includes(String(st.pose))) fail(400, 'invalid_config', `跟练「${w.name}」动作「${st.name}」的 pose 无效`);
+  }
+  if (c.ai && !(c.ai.route_max_km > 0 && c.ai.report_max_chars > 0 && c.ai.chat_history_turns >= 0)) fail(400, 'invalid_config', 'AI 配置数值无效');
 }
 
 // ---------- V2 helpers ----------
@@ -812,6 +821,9 @@ const routes: [string, RegExp, Handler][] = [
 
   // V2 第二批「社区」(docs/api/v2-2-社区.md 「管理端」)
   ...communityRoutes(log),
+
+  // V2 第三批「AI」(docs/api/v2-3-AI.md 「管理端 · AI 用量」)
+  ...aiRoutes(log),
 ];
 
 export async function mockFetch(method: string, url: string, body: unknown, token: string | null): Promise<unknown> {

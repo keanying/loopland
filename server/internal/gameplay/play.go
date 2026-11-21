@@ -176,6 +176,7 @@ func (c *Config) Normalize() {
 	if c.Rally.MinCheckins == 0 {
 		c.Rally = defaultRally()
 	}
+	c.normalizeAI()
 }
 
 func (c Config) validatePlay() error {

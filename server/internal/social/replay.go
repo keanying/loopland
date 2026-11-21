@@ -35,8 +35,9 @@ type Replay struct {
 	Liked     bool           `json:"liked"`
 }
 
-// replay builds the replay of an activity (any status but voided).
-func (s *Service) replay(ctx context.Context, q db.Querier, activityID int64) (Replay, error) {
+// replay builds the replay of an activity (any status but voided);
+// hideM, when set, is the radius of the post it is shown with.
+func (s *Service) replay(ctx context.Context, q db.Querier, activityID int64, hideM *float64) (Replay, error) {
 	var rp Replay
 	var owner int64
 	var hide bool
@@ -64,7 +65,11 @@ func (s *Service) replay(ctx context.Context, q db.Querier, activityID int64) (R
 	if err := rows.Err(); err != nil {
 		return rp, err
 	}
-	pts = Simplify(HideEndpoints(pts, s.hideRadius(owner, hide)), ReplayTrackMax)
+	radius := s.hideRadius(owner, hide)
+	if hideM != nil {
+		radius = *hideM
+	}
+	pts = Simplify(HideEndpoints(pts, radius), ReplayTrackMax)
 	rp.Points = make([]ReplayPoint, 0, len(pts))
 	for _, p := range pts {
 		rp.Points = append(rp.Points, ReplayPoint{Lng: round6(p.Lng), Lat: round6(p.Lat), T: int(p.T - pts[0].T + 0.5)})
@@ -95,7 +100,7 @@ func (h *Handler) replays(w http.ResponseWriter, r *http.Request) error {
 		if p.activityID == nil {
 			continue
 		}
-		rp, err := h.Svc.replay(ctx, h.Svc.Pool, *p.activityID)
+		rp, err := h.Svc.replay(ctx, h.Svc.Pool, *p.activityID, p.hideM)
 		if err != nil {
 			if isNotFound(err) {
 				continue
@@ -130,7 +135,11 @@ func (h *Handler) activityReplay(w http.ResponseWriter, r *http.Request) error {
 	if owner != uid && len(posts) == 0 {
 		return httpx.NotFound("运动记录")
 	}
-	rp, err := s.replay(ctx, s.Pool, id)
+	var hideM *float64
+	if len(posts) > 0 {
+		hideM = posts[0].hideM
+	}
+	rp, err := s.replay(ctx, s.Pool, id, hideM)
 	if err != nil {
 		return err
 	}

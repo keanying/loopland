@@ -1,10 +1,12 @@
-// 内容审核 · 敏感词与审核设置 (admin only): GET / PUT /admin/v1/moderation/settings.
+// 内容审核 · 敏感词与审核设置 (admin only): GET / PUT /admin/v1/moderation/settings,
+// V2 第三批: 自动放行线 / 自动拦截线, AI 审核开关, GET /admin/v1/moderation/estimate.
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Col, Empty, Input, InputNumber, Modal, Row, Skeleton, Slider, Space, Tag } from 'antd';
-import { PlusOutlined, SnippetsOutlined } from '@ant-design/icons';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Alert, Button, Col, Empty, Input, InputNumber, Modal, Row, Skeleton, Slider, Space, Spin, Switch, Tag } from 'antd';
+import { PlusOutlined, RobotOutlined, SnippetsOutlined } from '@ant-design/icons';
 import { api } from '../../api/admin';
 import type { ModerationSettings } from '../../api/types';
+import { num } from '../../utils/format';
 import { Panel } from '../../components/ui';
 import { toastOk } from '../../utils/notify';
 import { RiskBadge } from './shared';
@@ -171,9 +173,101 @@ function WordEditor({
   );
 }
 
+/** Contract defaults (docs/api/v2-3-AI.md 「阈值」) for servers that do not send the new fields yet. */
+const DEFAULT_REJECT = 90;
+
+function withDefaults(s: ModerationSettings): ModerationSettings {
+  return { ...s, auto_reject_above: s.auto_reject_above ?? DEFAULT_REJECT, ai_enabled: s.ai_enabled ?? true };
+}
+
+function useDebounced<T>(v: T, ms: number): T {
+  const [d, setD] = useState(v);
+  useEffect(() => {
+    const t = setTimeout(() => setD(v), ms);
+    return () => clearTimeout(t);
+  }, [v, ms]);
+  return d;
+}
+
+const ZONE = {
+  approve: { text: '自动放行', color: '#3d8b2f', bg: '#e9f5e6' },
+  manual: { text: '人工审核', color: '#8a6a00', bg: '#fff3c4' },
+  reject: { text: '自动拦截', color: '#d93a2b', bg: '#fdeeec' },
+};
+
+/** 「预计每天人工量」 from the last days' risk-score distribution, refetched (debounced) while the sliders move. */
+function EstimatePanel({ approve, reject }: { approve: number; reject: number }) {
+  const a = useDebounced(approve, 350);
+  const r = useDebounced(reject, 350);
+  const settled = a === approve && r === reject;
+  const q = useQuery({
+    queryKey: ['moderation', 'estimate', a, r],
+    queryFn: () => api.moderationEstimate({ auto_approve_below: a, auto_reject_above: r }),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+  const e = q.data;
+  const total = e ? e.per_day_auto_approve + e.per_day_manual + e.per_day_auto_reject : 0;
+  const rows = e
+    ? [
+        { k: 'approve' as const, v: e.per_day_auto_approve, l: `风险分 < ${a}，直接发布` },
+        { k: 'manual' as const, v: e.per_day_manual, l: `${a} ≤ 风险分 < ${r}，进审核队列` },
+        { k: 'reject' as const, v: e.per_day_auto_reject, l: `风险分 ≥ ${r}，直接拒绝并通知作者` },
+      ]
+    : [];
+  return (
+    <div className="rule-card" style={{ height: 'auto', marginTop: 12 }} aria-label="预计每天人工量">
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <b style={{ fontSize: 13 }}>预计每天人工量</b>
+        <span className="muted" style={{ fontSize: 12 }}>
+          {e ? `按最近 ${e.days} 天的风险分分布估算` : '按最近 7 天的风险分分布估算'}
+        </span>
+        {(q.isFetching || !settled) && <Spin size="small" />}
+      </div>
+      {q.isError && !e ? (
+        <div className="danger-text" style={{ fontSize: 12, marginTop: 8 }}>
+          估算失败：{(q.error as Error).message}
+        </div>
+      ) : !e ? (
+        <Skeleton active paragraph={{ rows: 2 }} title={false} />
+      ) : (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '6px 0 8px' }}>
+            <span className="num" style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }} data-testid="est-manual">
+              {num(e.per_day_manual, 1)}
+            </span>
+            <span className="muted">条 / 天进人工</span>
+            <span className="muted" style={{ marginLeft: 'auto', fontSize: 12 }}>
+              共约 {num(total, 0)} 条 / 天
+            </span>
+          </div>
+          <div className="thr-track" role="img" aria-label="每天内容去向">
+            {rows.map((x) =>
+              total > 0 && x.v > 0 ? (
+                <span key={x.k} style={{ flex: `${x.v} 0 0`, minWidth: 3, background: ZONE[x.k].color, marginRight: 2 }} title={`${ZONE[x.k].text} ${num(x.v, 1)} 条/天`} />
+              ) : null,
+            )}
+          </div>
+          {rows.map((x) => (
+            <div className="est-row" key={x.k}>
+              <span className="est-dot" style={{ background: ZONE[x.k].color }} />
+              <span>
+                <b>{ZONE[x.k].text}</b> <span className="muted" style={{ fontSize: 12 }}>{x.l}</span>
+              </span>
+              <span className="num">
+                <b>{num(x.v, 1)}</b> <span className="muted">条/天{total ? ` · ${((x.v / total) * 100).toFixed(1)}%` : ''}</span>
+              </span>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsTab() {
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ['moderation', 'settings'], queryFn: api.moderationSettings });
+  const q = useQuery({ queryKey: ['moderation', 'settings'], queryFn: () => api.moderationSettings().then(withDefaults) });
   const [draft, setDraft] = useState<ModerationSettings | null>(null);
   const [probe, setProbe] = useState('加我微信 run_lulu88 一起代跑');
   useEffect(() => {
@@ -182,8 +276,8 @@ export default function SettingsTab() {
   const save = useMutation({
     mutationFn: (s: ModerationSettings) => api.saveModerationSettings(s),
     onSuccess: (s) => {
-      qc.setQueryData(['moderation', 'settings'], s);
-      setDraft(s);
+      qc.setQueryData(['moderation', 'settings'], withDefaults(s));
+      setDraft(withDefaults(s));
       toastOk('已保存，立即对新发布的内容生效');
     },
   });
@@ -192,7 +286,10 @@ export default function SettingsTab() {
   const saved = q.data;
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const t = draft.auto_approve_below;
-  const verdict = (v: number) => (v >= 100 ? <Tag color="red" bordered={false}>直接拒绝</Tag> : v >= t ? <Tag color="gold" bordered={false}>进入审核</Tag> : <Tag color="green" bordered={false}>直接通过</Tag>);
+  const r = draft.auto_reject_above ?? DEFAULT_REJECT;
+  const badThreshold = t >= r; // the server wants 拦截线 > 放行线
+  const verdict = (v: number) =>
+    v >= r ? <Tag color="red" bordered={false}>{v >= 100 ? '直接拒绝' : '自动拦截'}</Tag> : v >= t ? <Tag color="gold" bordered={false}>进入审核</Tag> : <Tag color="green" bordered={false}>直接通过</Tag>;
   const p = score(probe, draft);
 
   return (
@@ -209,7 +306,7 @@ export default function SettingsTab() {
           <Button disabled={!dirty} onClick={() => setDraft(saved)}>
             撤销
           </Button>
-          <Button type="primary" disabled={!dirty} loading={save.isPending} onClick={() => save.mutate(draft)}>
+          <Button type="primary" disabled={!dirty || badThreshold} loading={save.isPending} onClick={() => save.mutate(draft)}>
             保存设置
           </Button>
         </div>
@@ -240,19 +337,60 @@ export default function SettingsTab() {
         </Col>
 
         <Col xs={24} xl={12}>
-          <Panel title="审核阈值">
-            <div className="rule-card" style={{ height: 'auto', ...(draft.auto_approve_below !== saved.auto_approve_below ? { background: '#f4fbd2' } : {}) }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 13 }}>
-                  风险分低于这个值的动态、评论<b>直接通过</b>
-                </span>
-                <InputNumber className="num" min={0} max={100} precision={0} value={draft.auto_approve_below} onChange={(v) => setDraft({ ...draft, auto_approve_below: v ?? 0 })} style={{ width: 90 }} aria-label="自动通过阈值" />
+          <Panel
+            title="审核阈值"
+            extra={
+              <Space size={6}>
+                <RobotOutlined />
+                <span style={{ fontSize: 13 }}>AI 审核</span>
+                <Switch checked={!!draft.ai_enabled} onChange={(v) => setDraft({ ...draft, ai_enabled: v })} aria-label="AI 审核" />
+              </Space>
+            }
+          >
+            <div className="rule-card" style={{ height: 'auto', ...(draft.auto_approve_below !== saved.auto_approve_below || draft.auto_reject_above !== saved.auto_reject_above ? { background: '#f4fbd2' } : {}) }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <Space size={6}>
+                  <span style={{ fontSize: 13 }}>自动放行线</span>
+                  <InputNumber className="num" min={0} max={100} precision={0} value={t} status={badThreshold ? 'error' : undefined} onChange={(v) => setDraft({ ...draft, auto_approve_below: v ?? 0 })} style={{ width: 80 }} aria-label="自动放行线" />
+                </Space>
+                <Space size={6}>
+                  <span style={{ fontSize: 13 }}>自动拦截线</span>
+                  <InputNumber className="num" min={1} max={100} precision={0} value={r} status={badThreshold ? 'error' : undefined} onChange={(v) => setDraft({ ...draft, auto_reject_above: v ?? DEFAULT_REJECT })} style={{ width: 80 }} aria-label="自动拦截线" />
+                </Space>
               </div>
-              <Slider min={0} max={100} step={5} value={draft.auto_approve_below} onChange={(v) => setDraft({ ...draft, auto_approve_below: v })} marks={{ 0: '0', 30: '30 默认', 50: '50', 70: '70', 100: '100' }} />
-              <div className="muted" style={{ fontSize: 12 }}>
-                {t === 0 ? '设为 0：所有动态、评论都要人工审核。' : t > 70 ? '高于 70：命中审核词的内容也会直接发布，请谨慎。' : '昵称、头像、跑团名称和头像、简介不受阈值影响，全部先生效后审核。'}
+              <Slider
+                range
+                min={0}
+                max={100}
+                step={1}
+                value={[t, r]}
+                onChange={(v) => {
+                  const lo = Math.min(v[0], v[1], 99);
+                  setDraft({ ...draft, auto_approve_below: lo, auto_reject_above: Math.max(v[0], v[1], lo + 1) });
+                }}
+                marks={{ 0: '0', 20: '20 默认', 50: '50', 70: '70', 90: '90 默认', 100: '100' }}
+                styles={{ track: { background: '#d99a0b' }, rail: { background: `linear-gradient(90deg, ${ZONE.approve.color} 0 ${t}%, #e2e2e6 ${t}% ${r}%, ${ZONE.reject.color} ${r}% 100%)` } }}
+                ariaLabelForHandle={['自动放行线滑块', '自动拦截线滑块']}
+              />
+              <div className="thr-track" aria-hidden>
+                <span style={{ width: `${t}%`, background: ZONE.approve.bg, color: ZONE.approve.color }}>{t >= 12 ? '自动放行' : ''}</span>
+                <span style={{ width: `${Math.max(0, r - t)}%`, background: ZONE.manual.bg, color: ZONE.manual.color }}>{r - t >= 12 ? '人工审核' : ''}</span>
+                <span style={{ width: `${100 - r}%`, background: ZONE.reject.bg, color: ZONE.reject.color }}>{100 - r >= 10 ? '自动拦截' : ''}</span>
+              </div>
+              <div className={badThreshold ? 'danger-text' : 'muted'} style={{ fontSize: 12, marginTop: 8 }}>
+                {badThreshold
+                  ? '自动拦截线必须高于自动放行线'
+                  : t === 0 && r === 100
+                    ? '放行线 0、拦截线 100：除拦截词外全部人工审核。'
+                    : t > 70
+                      ? '放行线高于 70：命中审核词的内容也会直接发布，请谨慎。'
+                      : r < 70
+                        ? '拦截线低于 70：命中审核词的内容会直接被拒绝，作者只能重新编辑发布。'
+                        : '最终风险分 = max(规则分, AI 分)。昵称、头像、跑团名称和头像、简介不受阈值影响，全部先生效后审核。'}
               </div>
             </div>
+            {!badThreshold && <EstimatePanel approve={t} reject={r} />}
+            {!draft.ai_enabled && <Alert style={{ marginTop: 12 }} type="warning" showIcon message="AI 审核已关闭：只按敏感词和规则打分，估算仍按历史风险分计算。" />}
             <div className="rule-card" style={{ height: 'auto', marginTop: 12, ...(draft.report_auto_hide !== saved.report_auto_hide ? { background: '#f4fbd2' } : {}) }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 13 }}>被几个不同用户举报后，动态 / 评论自动转为待审核（对他人隐藏）</span>
@@ -262,27 +400,38 @@ export default function SettingsTab() {
           </Panel>
         </Col>
         <Col xs={24} xl={12}>
-          <Panel title="打分规则与结果" extra={<span className="panel-hint">按当前阈值 {t}</span>}>
+          <Panel title="打分规则与结果" extra={<span className="panel-hint">按当前阈值 {t} / {r}</span>}>
             {[
               { l: '命中拦截词', v: 100 },
               { l: '命中审核词', v: 70 },
               { l: '手机号、微信号、QQ 号、网址等联系方式', v: 50 },
               { l: '注册不满 24 小时的新用户发带图动态', v: 20, plus: true },
               { l: '其他', v: 0 },
-            ].map((r) => (
-              <div className="score-row" key={r.l}>
-                <span>{r.l}</span>
+            ].map((x) => (
+              <div className="score-row" key={x.l}>
+                <span>{x.l}</span>
                 <span className="num" style={{ textAlign: 'right' }}>
-                  {r.plus ? '+' : ''}
-                  {r.v}
+                  {x.plus ? '+' : ''}
+                  {x.v}
                 </span>
-                <span style={{ textAlign: 'right' }}>{r.plus ? <span className="muted" style={{ fontSize: 12 }}>叠加</span> : verdict(r.v)}</span>
+                <span style={{ textAlign: 'right' }}>{x.plus ? <span className="muted" style={{ fontSize: 12 }}>叠加</span> : verdict(x.v)}</span>
               </div>
             ))}
+            <div className="score-row">
+              <span>
+                <RobotOutlined /> AI 判定分（{draft.ai_enabled ? '已开启' : '已关闭'}）
+              </span>
+              <span className="num muted" style={{ textAlign: 'right' }}>
+                0–100
+              </span>
+              <span style={{ textAlign: 'right' }}>
+                <span className="muted" style={{ fontSize: 12 }}>与规则分取高</span>
+              </span>
+            </div>
             <div style={{ marginTop: 14 }}>
               <b style={{ fontSize: 13 }}>试一试</b>
               <span className="muted" style={{ fontSize: 12, marginLeft: 6 }}>
-                用未保存的词表在本地估算，最终以服务端为准
+                用未保存的词表在本地估算规则分（不含 AI 分），最终以服务端为准
               </span>
               <Input.TextArea rows={2} value={probe} onChange={(e) => setProbe(e.target.value)} style={{ marginTop: 6 }} maxLength={500} aria-label="试一试文本" />
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>

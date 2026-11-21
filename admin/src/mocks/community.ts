@@ -25,6 +25,8 @@ import type {
 } from '../api/types';
 import * as db from './data';
 import { avatar, photo, promo } from './images';
+import { aiVerdict, estimate, maskText } from './aiReview';
+import { aiModels } from './providers';
 
 type Ctx = { m: RegExpMatchArray; q: URLSearchParams; body: Record<string, unknown>; adminId: number; role: AdminRole };
 type Handler = (ctx: Ctx) => unknown;
@@ -90,8 +92,11 @@ function loopTrack(k: number): number[][] {
 export const settings: ModerationSettings = {
   block_words: ['代刷', '刷单返利', '赌博', '博彩', '裸聊', '发票代开'],
   review_words: ['代跑', '代练', '出二手', '扫码进群', '领福利', '垃圾', '加V', '兼职', '笑死', '傻'],
-  auto_approve_below: 30,
+  // V2 第三批: 自动放行线 20（原来 30）、自动拦截线 90、AI 审核开
+  auto_approve_below: 20,
   report_auto_hide: 3,
+  auto_reject_above: 90,
+  ai_enabled: true,
 };
 
 // ---------------- posts ----------------
@@ -210,6 +215,9 @@ posts.forEach((p, i) => {
   });
 });
 
+/** Tasks created from POST_SEEDS (OTHER_SEEDS start after them). */
+const POST_TASKS = tasks.length;
+
 interface OtherSeed {
   type: ReviewTargetType;
   text?: string;
@@ -279,6 +287,83 @@ OTHER_SEEDS.forEach((s, i) => {
     created_at: decided ? ago((s.h ?? 1) * HOUR + int(5, 90) * MIN) : ago(int(8, 900) * MIN),
   });
 });
+
+// ---------------- V2 第三批「AI」: verdicts, violation counts, has_activity ----------------
+
+/** Image description per task (what the fake vision model "sees"). */
+const imageHints = new Map<number, string>();
+OTHER_SEEDS.forEach((s, i) => {
+  if (s.img) imageHints.set(tasks[POST_TASKS + i].id, s.img);
+});
+
+// Two pending posts that expose the author's home through the track (→ 隐藏起终点后通过).
+const PRIVACY_SEEDS = [
+  { content: '每天从家门口出发绕小区三圈，楼下就是起点，风雨无阻第 87 天', km: 4.2, k: 30 },
+  { content: '新买的跑鞋第一次上脚，从小区南门出发沿河跑了一圈', km: 6.1, k: 31, images: ['新跑鞋'] },
+];
+PRIVACY_SEEDS.forEach((x, j) => {
+  const id = ++postSeq;
+  const started = NOW - (j + 1) * 47 * MIN - 40 * MIN;
+  const distance = Math.round(x.km * 1000);
+  const author = brief(x.k * 3 + 1);
+  const p: AdminPost = {
+    id,
+    author,
+    content: x.content,
+    images: (x.images ?? []).map((c, k) => ({ url: photo(x.k * 3 + k, c), width: 1080, height: 1440 })),
+    activity: { id: 5100 + j, sport: 'run', distance_m: distance, duration_sec: Math.round(x.km * 352), pace_sec_per_km: 352, claimed_area_m2: 12000, start_time: iso(started), track: loopTrack(x.k) },
+    visibility: 'public',
+    review_status: 'pending',
+    reject_reason: null,
+    like_count: 0,
+    comment_count: 0,
+    collect_count: 0,
+    share_count: 0,
+    created_at: iso(started + 30 * MIN),
+    deleted: false,
+  };
+  posts.push(p);
+  addTask({
+    target_type: 'post',
+    target_id: id,
+    user: { id: author.id, nickname: author.nickname },
+    text: p.content,
+    images: p.images.map((m) => m.url),
+    risk_score: 20,
+    risk_reasons: ['新用户发图 +20'],
+    created_at: p.created_at,
+  });
+});
+
+/** Past rejections / take-downs per author (seeded base + the history in this mock). */
+const violationBase = new Map<number, number>();
+function violations(userId: number): number {
+  const rejected = tasks.filter((t) => t.user.id === userId && t.status === 'rejected').length;
+  const removed = posts.filter((p) => p.author.id === userId && p.deleted).length;
+  return (violationBase.get(userId) ?? 0) + rejected + removed;
+}
+
+function enrich(t: ReviewTask) {
+  const m = aiModels();
+  t.ai = aiVerdict(t, imageHints.get(t.id) ?? null, { text: m.display, vision: m.vision });
+  // 最终风险分 = max(规则分, AI 分)
+  if (t.ai) t.risk_score = Math.max(t.risk_score, t.ai.risk_score);
+  t.has_activity = t.target_type === 'post' && !!posts.find((p) => p.id === t.target_id)?.activity;
+  if (t.ai?.suggestion === 'reject' && !violationBase.has(t.user.id)) violationBase.set(t.user.id, 1 + (t.user.id % 3));
+}
+tasks.forEach(enrich);
+
+/** Task as the API returns it (violation count is live). */
+function view(t: ReviewTask): ReviewTask {
+  return { ...clone(t), user_violation_count: violations(t.user.id) };
+}
+
+function nextPending(after: ReviewTask, type: string): ReviewTask | null {
+  const n = tasks
+    .filter((t) => t.status === 'pending' && t.id !== after.id && (!type || t.target_type === type))
+    .sort((a, b) => b.risk_score - a.risk_score || Date.parse(a.created_at) - Date.parse(b.created_at))[0];
+  return n ? view(n) : null;
+}
 
 function reviewStats(): ReviewStats {
   const pending = tasks.filter((t) => t.status === 'pending');
@@ -583,7 +668,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
         status === 'pending'
           ? list.sort((a, b) => b.risk_score - a.risk_score || Date.parse(a.created_at) - Date.parse(b.created_at))
           : list.sort((a, b) => Date.parse(b.reviewed_at ?? '') - Date.parse(a.reviewed_at ?? ''));
-      return paginate(list.map(clone), q);
+      return paginate(list.map(view), q);
     }],
     ['GET', /^\/reviews\/stats$/, ({ role }) => {
       requireRole(role, REVIEW_ROLES);
@@ -600,7 +685,45 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       if (reason.length > 200) fail(400, 'invalid_body', '拒绝原因最多 200 字');
       decide(t, approve, reason, adminId);
       log(adminId, approve ? 'review.approve' : 'review.reject', `${t.target_type}:${t.target_id}`, approve ? { task_id: t.id } : { task_id: t.id, reason });
-      return clone(t);
+      return view(t);
+    }],
+    // V2 第三批 (M-18): approve | approve_masked | approve_hide_endpoints | reject | reject_mute → {task, next}
+    ['POST', /^\/reviews\/(\d+)\/decide$/, ({ m, q, body, role, adminId }) => {
+      requireRole(role, REVIEW_ROLES);
+      const t = tasks.find((x) => x.id === Number(m[1]));
+      if (!t) fail(404, 'not_found', '审核任务不存在');
+      if (t.status !== 'pending') fail(409, 'already_reviewed', '这条内容已经被审核过了');
+      const action = String(body.action ?? '');
+      if (!['approve', 'approve_masked', 'approve_hide_endpoints', 'reject', 'reject_mute'].includes(action)) fail(400, 'invalid_body', 'action 只能是 approve / approve_masked / approve_hide_endpoints / reject / reject_mute');
+      const approve = action.startsWith('approve');
+      const reason = String(body.reason ?? '').trim() || (approve ? '' : '内容不符合社区规范');
+      if (reason.length > 200) fail(400, 'invalid_body', '拒绝原因最多 200 字');
+      const mute = body.mute_days === undefined ? 7 : Number(body.mute_days);
+      if (action === 'reject_mute' && (!Number.isInteger(mute) || mute < 1 || mute > 365)) fail(400, 'invalid_body', '禁言天数 1–365');
+      const post = t.target_type === 'post' ? posts.find((x) => x.id === t.target_id) : undefined;
+      if (action === 'approve_hide_endpoints' && !post?.activity) fail(400, 'not_supported', '这条动态没有附运动，不能隐藏起终点');
+      if (action === 'approve_masked') {
+        if (t.text) t.text = maskText(t.text, [...settings.block_words, ...settings.review_words]);
+        const badImages = !!t.ai && t.ai.labels.some((l) => ['ad', 'contact', 'porn', 'fraud', 'illegal', 'privacy', 'minor'].includes(l));
+        if (t.target_type === 'avatar' || t.target_type === 'crew_avatar') t.images = null; // 恢复默认头像
+        else if (badImages && post?.images.length) {
+          post.images = [];
+          t.images = [];
+        }
+        if (post) post.content = t.text ?? post.content;
+      }
+      if (action === 'approve_hide_endpoints' && post?.activity) post.activity.track = post.activity.track.slice(4, -4); // 起终点隐藏 500 m
+      decide(t, approve, reason, adminId);
+      if (action === 'reject_mute') {
+        const u = db.users.find((x) => x.id === t.user.id);
+        if (u && u.status !== 'banned') {
+          u.status = 'muted';
+          u.muted_until = new Date(Date.now() + mute * DAY).toISOString();
+        }
+      }
+      // like the server: the audit action is review.<action>; `next` honours ?target_type=
+      log(adminId, `review.${action}`, `${t.target_type}:${t.target_id}`, { task_id: t.id, reason: reason || undefined, mute_days: action === 'reject_mute' ? mute : undefined });
+      return { task: view(t), next: nextPending(t, q.get('target_type') ?? '') };
     }],
     ['POST', /^\/reviews\/batch$/, ({ body, role, adminId }) => {
       requireRole(role, REVIEW_ROLES);
@@ -693,6 +816,14 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       requireRole(role, ['admin']);
       return clone(settings);
     }],
+    ['GET', /^\/moderation\/estimate$/, ({ q, role }) => {
+      requireRole(role, ['admin']);
+      const a = Number(q.get('auto_approve_below') ?? settings.auto_approve_below);
+      const r = Number(q.get('auto_reject_above') ?? settings.auto_reject_above ?? 90);
+      if (!Number.isInteger(a) || !Number.isInteger(r) || a < 0 || r > 101) fail(400, 'invalid_body', '阈值应在 0–100 之间');
+      if (r <= a) fail(400, 'invalid_body', '自动拦截线应高于自动放行线');
+      return estimate(a, r);
+    }],
     ['PUT', /^\/moderation\/settings$/, ({ body, role, adminId }) => {
       requireRole(role, ['admin']);
       const clean = (ws: unknown) => {
@@ -711,7 +842,11 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       const hide = Number(body.report_auto_hide);
       if (!Number.isInteger(auto) || auto < 0 || auto > 100) fail(400, 'invalid_body', '自动通过阈值应在 0–100 之间');
       if (!Number.isInteger(hide) || hide < 1) fail(400, 'invalid_body', '举报自动隐藏次数至少为 1');
-      const next: ModerationSettings = { block_words: clean(body.block_words), review_words: clean(body.review_words), auto_approve_below: auto, report_auto_hide: hide };
+      const rej = body.auto_reject_above === undefined ? settings.auto_reject_above ?? 90 : Number(body.auto_reject_above);
+      if (!Number.isInteger(rej) || rej < 1 || rej > 100) fail(400, 'invalid_body', '自动拦截线应在 1–100 之间');
+      if (rej <= auto) fail(400, 'invalid_body', '自动拦截线应在 1–100 之间，且高于自动放行线');
+      const ai = body.ai_enabled === undefined ? settings.ai_enabled ?? true : body.ai_enabled === true;
+      const next: ModerationSettings = { block_words: clean(body.block_words), review_words: clean(body.review_words), auto_approve_below: auto, report_auto_hide: hide, auto_reject_above: rej, ai_enabled: ai };
       const diff = (a: string[], b: string[]) => b.filter((w) => !a.includes(w)).length;
       log(adminId, 'moderation.settings', 'moderation', {
         block_added: diff(settings.block_words, next.block_words),
@@ -719,6 +854,8 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
         review_added: diff(settings.review_words, next.review_words),
         review_removed: diff(next.review_words, settings.review_words),
         auto_approve_below: auto,
+        auto_reject_above: rej,
+        ai_enabled: ai,
         report_auto_hide: hide,
       });
       Object.assign(settings, next);

@@ -334,8 +334,11 @@ func (r *Registry) build(eff map[string]Effective) Snapshot {
 		v := e.Values
 		quota, _ := strconv.Atoi(v["weekly_free_quota"])
 		timeout, _ := strconv.Atoi(v["timeout_s"])
+		pin, _ := strconv.Atoi(v["price_input_per_mtok_fen"])
+		pout, _ := strconv.Atoi(v["price_output_per_mtok_fen"])
 		s.AI = &AIConfig{Vendor: v["vendor"], BaseURL: v["base_url"], APIKey: v["api_key"], Model: v["model"], SmallModel: v["small_model"],
-			DisplayName: v["display_name"], RegistrationNo: v["registration_no"], WeeklyFreeQuota: quota, TimeoutS: timeout}
+			DisplayName: v["display_name"], RegistrationNo: v["registration_no"], WeeklyFreeQuota: quota, TimeoutS: timeout,
+			VisionModel: v["vision_model"], PriceInputPerMTokFen: pin, PriceOutputPerMTokFen: pout}
 	}
 	if e, ok := r.on(eff, Email); ok {
 		port, _ := strconv.Atoi(e.Values["port"])

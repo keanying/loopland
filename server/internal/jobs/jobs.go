@@ -150,6 +150,7 @@ func (r *Runner) PurgeDeleted(ctx context.Context) error {
 				`DELETE FROM src.src_usr_loop_device WHERE user_id=$1`,
 				`DELETE FROM src.src_usr_loop_refresh_token WHERE user_id=$1`,
 				`DELETE FROM src.src_msg_loop_notification WHERE user_id=$1`,
+				`DELETE FROM src.src_msg_loop_ai_message WHERE user_id=$1`,
 				`DELETE FROM src.src_ply_loop_codex_item WHERE user_id=$1`,
 				`DELETE FROM src.src_ord_loop_membership WHERE user_id=$1`,
 				`UPDATE src.src_usr_loop_user SET status='deleted', phone_enc=NULL, phone_hash=NULL, phone_last4=NULL, nickname='已注销用户', avatar_url=NULL,

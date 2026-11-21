@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:dio/dio.dart' show RequestOptions;
+import 'package:dio/dio.dart' show HttpClientAdapter, RequestOptions;
 
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:loopland/api/api_client.dart';
@@ -81,10 +81,13 @@ const featuresJson = {
 ///
 /// [handlers] are consulted first, in order; a handler returns null to pass
 /// (e.g. `communityHandler` in community_fake.dart, method-aware and stateful).
+/// [wrapAdapter] can put an adapter in front of the JSON fake (e.g. the SSE
+/// stream of ai_fake.dart).
 List<Override> fakeBackend({
   User? user,
   Map<String, Object?> extra = const {},
   List<(int, Object?)? Function(RequestOptions o)> handlers = const [],
+  HttpClientAdapter Function(HttpClientAdapter inner)? wrapAdapter,
 }) {
   final adapter = FakeAdapter((o) {
     final p = o.path;
@@ -134,7 +137,8 @@ List<Override> fakeBackend({
   return [
     tokenStoreProvider.overrideWithValue(MemoryTokenStore(access: 'A', refresh: 'R')),
     kvCacheProvider.overrideWithValue(MemoryCache()),
-    apiClientProvider.overrideWithValue(ApiClient(tokens: MemoryTokenStore(access: 'A'), baseUrl: 'http://x', adapter: adapter)),
+    apiClientProvider.overrideWithValue(ApiClient(
+        tokens: MemoryTokenStore(access: 'A'), baseUrl: 'http://x', adapter: wrapAdapter == null ? adapter : wrapAdapter(adapter))),
     userProvider.overrideWithValue(u),
   ];
 }

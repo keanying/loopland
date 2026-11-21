@@ -94,7 +94,7 @@ export const DEFS: Def[] = [
   },
   {
     code: 'ai', name: 'AI 大模型', group: 'AI',
-    description: '国内已备案大模型的 OpenAI 兼容接口，供 AI 助手、战报、跟练使用。App 内需公示模型名称和备案号。',
+    description: '国内已备案大模型的 OpenAI 兼容接口，供 AI 助手、路线建议、战报、内容审核使用。App 内需公示模型名称和备案号。开发环境不配置时使用内置的模拟 AI。',
     fields: [
       f({
         key: 'vendor', label: '厂商', kind: 'select', options: ['qwen', 'deepseek', 'doubao', 'zhipu', 'custom'], required: true, default: 'qwen',
@@ -103,11 +103,15 @@ export const DEFS: Def[] = [
       f({ key: 'base_url', label: '接口地址', kind: 'url', help: '留空用厂商默认地址' }),
       f({ key: 'api_key', label: 'API Key', kind: 'text', secret: true, required: true }),
       f({ key: 'model', label: '对话模型', kind: 'text', required: true, help: '如 qwen-plus、deepseek-chat' }),
-      f({ key: 'small_model', label: '小模型（战报、跟练）', kind: 'text', help: '留空则用对话模型' }),
+      f({ key: 'small_model', label: '小模型（战报、路线解释、审核打分）', kind: 'text', help: '留空则用对话模型' }),
+      // V2 第三批「AI」(docs/api/v2-3-AI.md 「模型与合规」)
+      f({ key: 'vision_model', label: '视觉模型（可选）', kind: 'text', help: '如 qwen-vl-plus；留空则助手不能发图片，审核不识别图片' }),
       f({ key: 'display_name', label: '公示的模型名称', kind: 'text', required: true }),
       f({ key: 'registration_no', label: '生成式 AI 备案号', kind: 'text', required: true }),
       f({ key: 'weekly_free_quota', label: '免费用户每周次数', kind: 'number', default: '3' }),
       f({ key: 'timeout_s', label: '超时（秒）', kind: 'number', default: '30' }),
+      f({ key: 'price_input_per_mtok_fen', label: '输入单价（分 / 百万 Token，可选）', kind: 'number', help: '只用于管理端估算费用' }),
+      f({ key: 'price_output_per_mtok_fen', label: '输出单价（分 / 百万 Token，可选）', kind: 'number', help: '只用于管理端估算费用' }),
     ],
   },
   {
@@ -125,7 +129,7 @@ export const DEFS: Def[] = [
   },
   {
     code: 'amap', name: '高德 Web 服务', group: '地图',
-    description: '服务端用的高德 Web 服务 Key（地名、逆地理编码）。App 和管理端地图的 Key 在各自的配置文件里。',
+    description: '服务端用的高德 Web 服务 Key（地名、逆地理编码、AI 路线建议的步行 / 骑行路径规划）。App 和管理端地图的 Key 在各自的配置文件里。',
     fields: [f({ key: 'web_key', label: 'Web 服务 Key', kind: 'text', secret: true, required: true })],
   },
 ];
@@ -183,8 +187,9 @@ const rows: Record<string, Row> = {
   ai: {
     saved: true, enabled: true,
     values: {
-      vendor: 'qwen', base_url: '', api_key: 'sk-mock7f2e91c0a4d3b856', model: 'qwen-plus', small_model: 'qwen-turbo',
+      vendor: 'qwen', base_url: '', api_key: 'sk-mock7f2e91c0a4d3b856', model: 'qwen-plus', small_model: 'qwen-turbo', vision_model: 'qwen-vl-plus',
       display_name: '通义千问', registration_no: 'Beijing-QianWen-20230830S0002', weekly_free_quota: '3', timeout_s: '30',
+      price_input_per_mtok_fen: '80', price_output_per_mtok_fen: '200',
     },
     check: ok(1.5 * H), updated_by: 1, update_time: at(1.6 * H),
   },
@@ -265,6 +270,20 @@ function view(d: Def, eff: Record<string, Effective>): Provider {
     updated_by: r.saved ? r.updated_by : null,
     update_time: r.saved ? r.update_time : null,
   };
+}
+
+/** Unit prices for the AI 用量 mock (null = not filled in → cost_fen null). */
+export function aiPrices(): { input: number; output: number } | null {
+  const v = rows.ai.values;
+  const i = Number(v.price_input_per_mtok_fen);
+  const o = Number(v.price_output_per_mtok_fen);
+  return v.price_input_per_mtok_fen && v.price_output_per_mtok_fen && Number.isFinite(i) && Number.isFinite(o) ? { input: i, output: o } : null;
+}
+
+/** Model names for the AI mocks. */
+export function aiModels(): { model: string; small: string; vision: string; display: string } {
+  const v = rows.ai.values;
+  return { model: v.model || 'qwen-plus', small: v.small_model || v.model || 'qwen-plus', vision: v.vision_model || '', display: v.display_name || '通义千问' };
 }
 
 export function listProviders(): { items: Provider[] } {

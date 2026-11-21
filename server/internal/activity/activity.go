@@ -39,11 +39,26 @@ var V1Sports = map[gameplay.Sport]bool{
 	gameplay.SportStrength: true, gameplay.SportYoga: true, gameplay.SportRope: true, gameplay.SportHIIT: true,
 }
 
-// Goal is the pre-run target.
+// Goal is the pre-run target. type ai_route carries the chosen AI route
+// (docs/api/v2-3-AI.md, for the adoption rate).
 type Goal struct {
 	Type        string   `json:"type"`
 	Value       *float64 `json:"value,omitempty"`
 	TerritoryID *int64   `json:"territory_id,omitempty"`
+	RouteID     string   `json:"route_id,omitempty"`
+	RouteType   string   `json:"route_type,omitempty"`
+}
+
+// aiRouteTypes are the route types of goal.type=ai_route.
+var aiRouteTypes = map[string]bool{"loop": true, "capture": true, "defend": true, "boss": true}
+
+// Coach is the AI follow-along report of a home workout (AI 跟练).
+type Coach struct {
+	WorkoutKey   string `json:"workout_key"`
+	Camera       bool   `json:"camera"`
+	RepsDetected int    `json:"reps_detected"`
+	RepsManual   int    `json:"reps_manual"`
+	SetsDone     int    `json:"sets_done"`
 }
 
 // Upload is POST /v1/activities.
@@ -60,6 +75,7 @@ type Upload struct {
 	Wearable  *struct {
 		Brand string `json:"brand"`
 	} `json:"wearable,omitempty"`
+	Coach *Coach `json:"coach,omitempty"`
 }
 
 // Settlement is what the run earned.
@@ -291,6 +307,19 @@ func (u *Upload) validate() error {
 			return badRequest("amount 不合法")
 		}
 	}
+	if g := u.Goal; g != nil && g.Type == "ai_route" {
+		if g.RouteID == "" || len(g.RouteID) > 64 || !aiRouteTypes[g.RouteType] {
+			return badRequest("goal.route_id 不能为空，route_type 只能是 loop / capture / defend / boss")
+		}
+	}
+	if c := u.Coach; c != nil {
+		if gameplay.GPSSports[u.Sport] {
+			return badRequest("coach 只用于居家训练")
+		}
+		if c.RepsDetected < 0 || c.RepsManual < 0 || c.SetsDone < 0 || len(c.WorkoutKey) > 64 {
+			return badRequest("coach 数值不合法")
+		}
+	}
 	return nil
 }
 
@@ -373,7 +402,11 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 	if err != nil {
 		return Result{}, err
 	}
-	verdict := anticheat.Evaluate(rules, anticheat.Input{Sport: u.Sport, Points: u.Points, DistanceM: dist, Device: u.Device, SameDeviceAccounts: sameDevice})
+	in := anticheat.Input{Sport: u.Sport, Points: u.Points, DistanceM: dist, Device: u.Device, SameDeviceAccounts: sameDevice, Amount: amount}
+	if c := u.Coach; c != nil {
+		in.Coach = &anticheat.Coach{Camera: c.Camera, RepsDetected: c.RepsDetected, RepsManual: c.RepsManual}
+	}
+	verdict := anticheat.Evaluate(rules, in)
 
 	var res Result
 	var after func(context.Context)
@@ -381,12 +414,16 @@ func (s *Service) Submit(ctx context.Context, user int64, u Upload) (Result, err
 		goal, _ := json.Marshal(u.Goal)
 		device, _ := json.Marshal(u.Device)
 		wearable, _ := json.Marshal(u.Wearable)
+		var coach []byte
+		if u.Coach != nil {
+			coach, _ = json.Marshal(u.Coach)
+		}
 		var id int64
 		err := tx.QueryRow(ctx, `INSERT INTO src.src_act_loop_activity (user_id, client_id, sport, start_time, end_time, distance_m, duration_sec, amount,
-				track_geom, goal_json, device_json, wearable_json)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8, ST_GeomFromText($9, 4326), $10, $11, $12)
+				track_geom, goal_json, device_json, wearable_json, coach_json)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8, ST_GeomFromText($9, 4326), $10, $11, $12, $13)
 			ON CONFLICT (user_id, client_id) DO NOTHING RETURNING id`,
-			user, u.ClientID, string(u.Sport), u.StartedAt, u.EndedAt, dist, duration, amount, trackWKT(u.Points), goal, device, wearable).Scan(&id)
+			user, u.ClientID, string(u.Sport), u.StartedAt, u.EndedAt, dist, duration, amount, trackWKT(u.Points), goal, device, wearable, coach).Scan(&id)
 		if db.IsNoRows(err) {
 			return errDuplicate
 		}

@@ -116,12 +116,17 @@ class Post {
     this.liked = false,
     this.collected = false,
     this.createdAt,
+    this.aiReport,
   });
   final int id;
   final UserBrief author;
   final String content;
   final List<PostImage> images;
   final PostActivity? activity;
+
+  /// V2 AI (D-05): the attached AI 战报, shown apart from [content] with the
+  /// 「内容由 AI 生成」 label. null when none.
+  final PostAIReport? aiReport;
   final String visibility;
   final ReviewStatus reviewStatus;
   final String? rejectReason;
@@ -149,6 +154,7 @@ class Post {
         liked: jb(j['liked']),
         collected: jb(j['collected']),
         createdAt: jdt(j['created_at']),
+        aiReport: PostAIReport.maybe(j['ai_report']),
       );
 
   Post copyWith({
@@ -175,22 +181,46 @@ class Post {
         liked: liked ?? this.liked,
         collected: collected ?? this.collected,
         createdAt: createdAt,
+        aiReport: aiReport,
       );
+}
+
+/// `Post.ai_report`: `{"text": "...", "ai_generated": true}`.
+class PostAIReport {
+  const PostAIReport({required this.text, this.aiGenerated = true});
+  final String text;
+  final bool aiGenerated;
+
+  static PostAIReport? maybe(Object? v) {
+    final j = jmn(v);
+    if (j == null || js(j['text']).isEmpty) return null;
+    return PostAIReport(text: js(j['text']), aiGenerated: jb(j['ai_generated'], true));
+  }
 }
 
 /// `POST /v1/posts` body.
 class NewPost {
-  const NewPost({this.content = '', this.imageIds = const [], this.activityId, this.visibility = 'public'});
+  const NewPost({
+    this.content = '',
+    this.imageIds = const [],
+    this.activityId,
+    this.visibility = 'public',
+    this.aiReport = false,
+  });
   final String content;
   final List<int> imageIds;
   final int? activityId;
   final String visibility;
+
+  /// V2 AI: attach the activity's generated AI 战报 (needs [activityId]).
+  final bool aiReport;
 
   Json toJson() => {
         'content': content,
         'image_ids': imageIds,
         'activity_id': activityId,
         'visibility': visibility,
+        if (aiReport && activityId != null) 'ai_report': true,
       };
 }
 

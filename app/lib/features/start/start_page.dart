@@ -134,11 +134,14 @@ class _StartPageState extends ConsumerState<StartPage> {
       _DetailCard(
         title: sportName(_home),
         badge: '换能量',
-        desc: '${info.desc}居家训练不能圈新地，能量可用来建造和加固领地。',
+        desc: '${info.desc}AI 跟练按动作引导，摄像头在本机自动计数。居家训练不能圈新地，能量可用来建造和加固领地。',
         energy: cfg?.energyFor(_home)?.text,
         roles: cfg?.rolesFor(_home).map((r) => r.name).toList() ?? const [],
-        button: '开始训练',
-        onStart: () => context.push('/train/$_home'),
+        button: 'AI 跟练',
+        onStart: () => context.push('/coach?sport=$_home'),
+        // The old free-form timer / counter stays reachable.
+        secondary: '手动记录',
+        onSecondary: () => context.push('/train/$_home'),
       ),
     ];
   }
@@ -235,11 +238,15 @@ class _DetailCard extends StatelessWidget {
     required this.roles,
     required this.button,
     required this.onStart,
+    this.secondary,
+    this.onSecondary,
   });
   final String title, badge, desc, button;
   final String? energy;
   final List<String> roles;
   final VoidCallback onStart;
+  final String? secondary;
+  final VoidCallback? onSecondary;
 
   @override
   Widget build(BuildContext context) {
@@ -279,6 +286,14 @@ class _DetailCard extends StatelessWidget {
           child: FilledButton.icon(
               onPressed: onStart, icon: const Icon(Icons.play_arrow_rounded), label: Text(button)),
         ),
+        if (secondary != null)
+          Center(
+            child: TextButton(
+              onPressed: onSecondary,
+              style: TextButton.styleFrom(foregroundColor: LL.text2),
+              child: Text(secondary!),
+            ),
+          ),
       ]),
     );
   }

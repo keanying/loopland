@@ -61,12 +61,24 @@ type Post struct {
 	ShareCount   int           `json:"share_count"`
 	Liked        bool          `json:"liked"`
 	Collected    bool          `json:"collected"`
-	CreatedAt    time.Time     `json:"created_at"`
+	// AIReport is the attached AI battle report (docs/api/v2-3-AI.md).
+	AIReport  *PostAIReport `json:"ai_report"`
+	CreatedAt time.Time     `json:"created_at"`
 	// Deleted is only set in the admin list.
 	Deleted *bool `json:"deleted,omitempty"`
 
 	authorID   int64
 	activityID *int64
+	aiReport   *string
+	// hideM overrides the author's endpoint radius for this post (审核
+	// 「隐藏起终点后通过」).
+	hideM *float64
+}
+
+// PostAIReport is the AI battle report shown in a post.
+type PostAIReport struct {
+	Text        string `json:"text"`
+	AIGenerated bool   `json:"ai_generated"`
 }
 
 // Visibilities.
@@ -89,23 +101,36 @@ const notBlockedSQL = `NOT EXISTS (SELECT 1 FROM src.src_soc_loop_block b WHERE 
 const postCols = `p.id, p.user_id, p.content_text, p.images_json, p.activity_id, p.visibility_type, p.review_status, p.reject_reason,
 	p.like_qty, p.comment_qty, p.collect_qty, p.share_qty, p.create_time, p.delete_time IS NOT NULL,
 	EXISTS (SELECT 1 FROM src.src_soc_loop_post_like l WHERE l.post_id=p.id AND l.user_id=$1),
-	EXISTS (SELECT 1 FROM src.src_soc_loop_post_collect c WHERE c.post_id=p.id AND c.user_id=$1)`
+	EXISTS (SELECT 1 FROM src.src_soc_loop_post_collect c WHERE c.post_id=p.id AND c.user_id=$1),
+	p.ai_report_text, p.hide_endpoints_m`
 
-func scanPost(row pgx.Row) (Post, bool, error) {
-	var p Post
-	var raw []byte
-	var deleted bool
-	err := row.Scan(&p.ID, &p.authorID, &p.Content, &raw, &p.activityID, &p.Visibility, &p.ReviewStatus, &p.RejectReason,
-		&p.LikeCount, &p.CommentCount, &p.CollectCount, &p.ShareCount, &p.CreatedAt, &deleted, &p.Liked, &p.Collected)
-	if err != nil {
-		return p, false, err
-	}
+// postDest are the scan targets of postCols.
+func postDest(p *Post, raw *[]byte, deleted *bool) []any {
+	return []any{&p.ID, &p.authorID, &p.Content, raw, &p.activityID, &p.Visibility, &p.ReviewStatus, &p.RejectReason,
+		&p.LikeCount, &p.CommentCount, &p.CollectCount, &p.ShareCount, &p.CreatedAt, deleted, &p.Liked, &p.Collected, &p.aiReport, &p.hideM}
+}
+
+// finish decodes the stored images and the report.
+func (p *Post) finish(raw []byte) {
 	var imgs []storedImage
 	_ = json.Unmarshal(raw, &imgs)
 	p.Images = make([]PostImage, 0, len(imgs))
 	for _, im := range imgs {
 		p.Images = append(p.Images, im.PostImage)
 	}
+	if p.aiReport != nil {
+		p.AIReport = &PostAIReport{Text: *p.aiReport, AIGenerated: true}
+	}
+}
+
+func scanPost(row pgx.Row) (Post, bool, error) {
+	var p Post
+	var raw []byte
+	var deleted bool
+	if err := row.Scan(postDest(&p, &raw, &deleted)...); err != nil {
+		return p, false, err
+	}
+	p.finish(raw)
 	return p, deleted, nil
 }
 
@@ -150,7 +175,16 @@ func (s *Service) hydrate(ctx context.Context, viewer int64, posts []Post) error
 		p.Author = briefs[p.authorID]
 		if p.activityID != nil {
 			if a, ok := acts[*p.activityID]; ok {
-				p.Activity = &a
+				v := a.view
+				radius := a.radius
+				if p.hideM != nil {
+					radius = *p.hideM
+				}
+				v.Track = [][2]float64{}
+				for _, pt := range Simplify(HideEndpoints(a.pts, radius), PostTrackMax) {
+					v.Track = append(v.Track, [2]float64{round6(pt.Lng), round6(pt.Lat)})
+				}
+				p.Activity = &v
 			}
 		}
 		if p.authorID != viewer {
@@ -168,8 +202,15 @@ func (s *Service) hideRadius(author int64, hide bool) float64 {
 	return s.Config.For(author).Community.HideEndpointsM
 }
 
-func (s *Service) postActivities(ctx context.Context, ids []int64) (map[int64]PostActivity, error) {
-	out := map[int64]PostActivity{}
+// postActivity is an attached activity before its track is cut per post.
+type postActivity struct {
+	view   PostActivity
+	pts    []TPoint
+	radius float64 // the author's setting
+}
+
+func (s *Service) postActivities(ctx context.Context, ids []int64) (map[int64]postActivity, error) {
+	out := map[int64]postActivity{}
 	if len(ids) == 0 {
 		return out, nil
 	}
@@ -182,7 +223,8 @@ func (s *Service) postActivities(ctx context.Context, ids []int64) (map[int64]Po
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var a PostActivity
+		var pa postActivity
+		a := &pa.view
 		var owner int64
 		var geom *string
 		var hide bool
@@ -190,23 +232,20 @@ func (s *Service) postActivities(ctx context.Context, ids []int64) (map[int64]Po
 			return nil, err
 		}
 		a.PaceSecPerKm = pace(a.DistanceM, a.DurationSec)
-		a.Track = [][2]float64{}
+		pa.radius = s.hideRadius(owner, hide)
 		if geom != nil {
 			var g struct {
 				Coordinates [][]float64 `json:"coordinates"`
 			}
 			_ = json.Unmarshal([]byte(*geom), &g)
-			pts := make([]TPoint, 0, len(g.Coordinates))
+			pa.pts = make([]TPoint, 0, len(g.Coordinates))
 			for _, c := range g.Coordinates {
 				if len(c) >= 2 {
-					pts = append(pts, TPoint{Lng: c[0], Lat: c[1]})
+					pa.pts = append(pa.pts, TPoint{Lng: c[0], Lat: c[1]})
 				}
 			}
-			for _, p := range Simplify(HideEndpoints(pts, s.hideRadius(owner, hide)), PostTrackMax) {
-				a.Track = append(a.Track, [2]float64{round6(p.Lng), round6(p.Lat)})
-			}
 		}
-		out[a.ID] = a
+		out[a.ID] = pa
 	}
 	return out, rows.Err()
 }
@@ -239,6 +278,8 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request) error {
 		ImageIDs   []int64 `json:"image_ids"`
 		ActivityID *int64  `json:"activity_id"`
 		Visibility string  `json:"visibility"`
+		// AIReport attaches the activity's AI battle report.
+		AIReport bool `json:"ai_report"`
 	}
 	if err := httpx.Decode(r, &req); err != nil {
 		return err
@@ -262,9 +303,69 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request) error {
 		return httpx.BadRequest("invalid_body", "visibility 取值错误")
 	}
 	s := h.Svc
+	// Checks that do not need the author lock, then the (possibly slow)
+	// AI scoring outside the transaction.
+	muted, newUser, err := authorState(ctx, s.Pool, uid)
+	if err != nil {
+		return err
+	}
+	if muted {
+		return ErrMuted
+	}
+	imgs, err := media.Owned(ctx, s.Pool, uid, req.ImageIDs)
+	if err != nil {
+		return err
+	}
+	if req.ActivityID != nil {
+		var ok bool
+		if err := s.Pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_act_loop_activity WHERE id=$1 AND user_id=$2 AND status='settled')`,
+			*req.ActivityID, uid).Scan(&ok); err != nil {
+			return err
+		}
+		if !ok {
+			return httpx.BadRequest("invalid_activity", "只能附自己已完成结算的运动")
+		}
+	}
+	var report *string
+	if req.AIReport {
+		if req.ActivityID == nil {
+			return httpx.BadRequest("invalid_ai_report", "带 AI 战报时必须附上这次运动")
+		}
+		var text string
+		err := s.Pool.QueryRow(ctx, `SELECT report_text FROM src.src_act_loop_ai_report WHERE activity_id=$1 AND user_id=$2`, *req.ActivityID, uid).Scan(&text)
+		if db.IsNoRows(err) {
+			return httpx.BadRequest("invalid_ai_report", "这次运动还没有生成 AI 战报")
+		}
+		if err != nil {
+			return err
+		}
+		report = &text
+	}
+	if req.Visibility == "crew" {
+		if c, err := crew.Of(ctx, s.Pool, uid); err != nil {
+			return err
+		} else if c == nil {
+			return httpx.BadRequest("not_in_crew", "加入跑团后才能选「仅跑团」")
+		}
+	}
+	urls := make([]string, len(imgs))
+	stored := make([]storedImage, len(imgs))
+	for i, im := range imgs {
+		stored[i] = storedImage{ID: im.ID, PostImage: PostImage{URL: im.URL, Width: im.Width, Height: im.Height}}
+		urls[i] = im.URL
+	}
+	text := req.Content
+	if report != nil {
+		text = strings.TrimSpace(text + "\n" + *report)
+	}
+	sc := s.Mod.Review(ctx, moderation.Content{Target: moderation.Post, UserID: uid, Text: text, Images: urls, NewUserWithImages: newUser && len(imgs) > 0})
+	if sc.Blocked {
+		return moderation.ErrBlocked
+	}
+	outcome := s.Mod.Outcome(ctx, sc)
 	var id int64
-	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
-		muted, newUser, err := author(ctx, tx, uid)
+	err = pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
+		muted, _, err := author(ctx, tx, uid)
 		if err != nil {
 			return err
 		}
@@ -278,51 +379,16 @@ func (h *Handler) createPost(w http.ResponseWriter, r *http.Request) error {
 		if today >= s.Config.For(uid).Community.DailyPostLimit {
 			return httpx.E(http.StatusTooManyRequests, "rate_limited", "今天发的动态太多了，明天再来")
 		}
-		imgs, err := media.Owned(ctx, tx, uid, req.ImageIDs)
-		if err != nil {
-			return err
-		}
-		if req.ActivityID != nil {
-			var ok bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_act_loop_activity WHERE id=$1 AND user_id=$2 AND status='settled')`,
-				*req.ActivityID, uid).Scan(&ok); err != nil {
-				return err
-			}
-			if !ok {
-				return httpx.BadRequest("invalid_activity", "只能附自己已完成结算的运动")
-			}
-		}
-		if req.Visibility == "crew" {
-			if c, err := crew.Of(ctx, tx, uid); err != nil {
-				return err
-			} else if c == nil {
-				return httpx.BadRequest("not_in_crew", "加入跑团后才能选「仅跑团」")
-			}
-		}
-		sc := s.Mod.Check(ctx, req.Content, newUser && len(imgs) > 0)
-		if sc.Blocked {
-			return moderation.ErrBlocked
-		}
 		status := "approved"
-		if s.Mod.NeedsReview(ctx, sc) {
+		if outcome != moderation.OutcomeApprove {
 			status = "pending"
 		}
-		stored := make([]storedImage, len(imgs))
-		urls := make([]string, len(imgs))
-		for i, im := range imgs {
-			stored[i] = storedImage{ID: im.ID, PostImage: PostImage{URL: im.URL, Width: im.Width, Height: im.Height}}
-			urls[i] = im.URL
-		}
 		raw, _ := json.Marshal(stored)
-		if err := tx.QueryRow(ctx, `INSERT INTO src.src_soc_loop_post (user_id, content_text, images_json, activity_id, visibility_type, review_status)
-			VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`, uid, req.Content, raw, req.ActivityID, req.Visibility, status).Scan(&id); err != nil {
+		if err := tx.QueryRow(ctx, `INSERT INTO src.src_soc_loop_post (user_id, content_text, images_json, activity_id, visibility_type, review_status, ai_report_text)
+			VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, uid, req.Content, raw, req.ActivityID, req.Visibility, status, report).Scan(&id); err != nil {
 			return err
 		}
-		if status == "pending" {
-			_, err := moderation.Submit(ctx, tx, moderation.Post, id, uid, req.Content, urls, sc)
-			return err
-		}
-		return nil
+		return s.Mod.File(ctx, tx, moderation.Post, id, uid, text, urls, sc, outcome)
 	})
 	if err != nil {
 		return err
@@ -573,14 +639,8 @@ func (h *Handler) collections(w http.ResponseWriter, r *http.Request) error {
 		var raw []byte
 		var deleted bool
 		var at time.Time
-		err := r.Scan(&p.ID, &p.authorID, &p.Content, &raw, &p.activityID, &p.Visibility, &p.ReviewStatus, &p.RejectReason,
-			&p.LikeCount, &p.CommentCount, &p.CollectCount, &p.ShareCount, &p.CreatedAt, &deleted, &p.Liked, &p.Collected, &at)
-		var imgs []storedImage
-		_ = json.Unmarshal(raw, &imgs)
-		p.Images = make([]PostImage, 0, len(imgs))
-		for _, im := range imgs {
-			p.Images = append(p.Images, im.PostImage)
-		}
+		err := r.Scan(append(postDest(&p, &raw, &deleted), &at)...)
+		p.finish(raw)
 		times = append(times, at)
 		return p, err
 	})

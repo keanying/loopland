@@ -4,6 +4,7 @@
 //   pnpm run dev:mock
 //   pnpm run screenshots:v2            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
 //   ONLY=community pnpm run screenshots:v2   # 只跑第二批「社区」(内容审核 / 举报 / 动态 / 敏感词 / 组局 / 赛事 / 总览 / 角色)
+//   ONLY=ai pnpm run screenshots:v2          # 只跑第三批「AI」(23_ 起：AI 审核 / 双阈值 / AI 用量 / AI 对话 / AI 大模型 / 跟练配置 / 角色)
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -12,6 +13,7 @@ const { baseUrl: BASE, adminPrefix } = require('./devConfig.cjs');
 const OUT = path.join(__dirname, '..', 'screenshots', process.env.SHOT_DIR || 'v2');
 const PASSWORD = process.env.ADMIN_PASSWORD || 'loopland';
 const ONLY_COMMUNITY = process.env.ONLY === 'community';
+const ONLY_AI = process.env.ONLY === 'ai';
 const WRITES = !process.env.NO_WRITES;
 
 async function main() {
@@ -54,7 +56,7 @@ async function main() {
 
   const { ctx, page } = await session('admin');
 
-  if (!ONLY_COMMUNITY) {
+  if (!ONLY_COMMUNITY && !ONLY_AI) {
   // 总览
   await page.goto(`${BASE}/`);
   await page.waitForSelector('text=待处理事项');
@@ -236,10 +238,11 @@ async function main() {
   await page.click('.ant-modal-footer button:has-text("取消")');
   }
 
-  await community(page);
+  if (!ONLY_AI) await community(page);
+  if (!ONLY_COMMUNITY) await aiBatch(page);
   await ctx.close();
 
-  if (!ONLY_COMMUNITY) {
+  if (!ONLY_COMMUNITY && !ONLY_AI) {
   // ops: can use 玩法运营; cannot publish
   const ops = await session('xiaolin');
   await ops.page.goto(`${BASE}/operations`);
@@ -274,7 +277,188 @@ async function main() {
   await m.close();
   }
 
-  await communityRoles();
+  if (!ONLY_AI) await communityRoles();
+  if (!ONLY_COMMUNITY) await aiRoles();
+
+  // ---------------------------------------------------------------- V2 第三批「AI」
+  async function aiBatch(page) {
+    const visibleModal = '.ant-modal-wrap:not([style*="display: none"])';
+    const activeId = () => page.locator('.rv-item.active').getAttribute('data-id');
+
+    // 23 内容审核: AI 判定 next to the rule reasons, author violations, new decision buttons
+    await page.goto(`${BASE}/review`);
+    await page.waitForSelector('.rv-item.active');
+    await page.waitForSelector('.ai-box');
+    await page.mouse.move(1200, 5);
+    await shot(page, '23_AI审核_判定详情');
+
+    // B = 驳回并禁言 (editable days)
+    const before = await activeId();
+    await page.keyboard.press('b');
+    await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("驳回并禁言")`);
+    await page.click(`${visibleModal} .reason-presets .ant-tag-checkable:has-text("涉嫌诈骗")`);
+    await page.fill(`${visibleModal} input[aria-label="禁言天数"]`, '14');
+    await page.waitForSelector(`${visibleModal} button:has-text("驳回并禁言 14 天")`);
+    await shot(page, '23b_AI审核_驳回并禁言', { fullPage: false });
+    if (WRITES) {
+      await page.click(`${visibleModal} .ant-modal-footer button:has-text("驳回并禁言 14 天")`);
+      await page.waitForSelector('.ant-message-success:has-text("已驳回并禁言 14 天")');
+      await page.waitForTimeout(600);
+      if ((await activeId()) === before) problems.push('[ai] did not advance to the next task after 驳回并禁言');
+      await shot(page, '23c_AI审核_处理后跳到下一条', { fullPage: false });
+    } else await page.click(`${visibleModal} .ant-modal-footer button:has-text("取消")`);
+
+    // filter by AI suggestion: 建议隐藏起终点 → H
+    await page.goto(`${BASE}/review?ai=hide_endpoints`);
+    await page.waitForSelector('.rv-item.active');
+    await page.waitForSelector('.decide-btn.suggested[data-action="approve_hide_endpoints"]');
+    await page.mouse.move(1200, 5);
+    await shot(page, '23d_AI审核_建议隐藏起终点');
+    if (WRITES) {
+      await page.keyboard.press('h');
+      await page.waitForSelector('.ant-message-success:has-text("已隐藏起终点后通过")');
+    }
+
+    // 建议打码 → M
+    await page.goto(`${BASE}/review?ai=mask&sort=confidence`);
+    await page.waitForSelector('.rv-item.active');
+    await page.locator('.decide-btn[data-action="approve_masked"] button').hover();
+    await page.waitForSelector('.ant-tooltip:has-text("替换为 *")');
+    await shot(page, '23e_AI审核_建议打码_按置信度排序', { fullPage: false });
+    if (WRITES) {
+      await page.mouse.move(1200, 5);
+      await page.keyboard.press('m');
+      await page.waitForSelector('.ant-message-success:has-text("已打码后通过")');
+      // in-app navigation: a page load would reset the in-memory mock
+      await page.click('.ant-segmented-item:has-text("已通过")');
+      await page.waitForSelector('.rv-item .rv-text:has-text("***")');
+      await shot(page, '23f_AI审核_打码后的记录');
+    }
+    // no AI verdict (timed out → rules only)
+    await page.goto(`${BASE}/review?ai=none`);
+    await page.waitForSelector('.rv-item.active');
+    await page.waitForSelector('text=没有 AI 判定');
+    await shot(page, '23g_AI审核_没有AI判定', { fullPage: false });
+
+    // 24 审核设置: two thresholds + live estimate
+    await page.goto(`${BASE}/review?tab=settings`);
+    await page.waitForSelector('[data-testid="est-manual"]');
+    const est0 = await page.locator('[data-testid="est-manual"]').textContent();
+    await page.fill('input[aria-label="自动放行线"]', '10');
+    await page.locator('input[aria-label="自动放行线"]').blur();
+    await page.fill('input[aria-label="自动拦截线"]', '80');
+    await page.locator('input[aria-label="自动拦截线"]').blur();
+    await page.waitForFunction((v) => document.querySelector('[data-testid="est-manual"]')?.textContent !== v, est0);
+    await page.waitForTimeout(500);
+    await shot(page, '24_审核设置_双阈值');
+    await page.click('button[aria-label="AI 审核"]');
+    await page.waitForSelector('text=AI 审核已关闭');
+    await page.locator('.panel:has-text("审核阈值")').first().scrollIntoViewIfNeeded();
+    await shot(page, '24b_审核设置_关闭AI', { fullPage: false });
+    if (WRITES) {
+      await page.click('button[aria-label="AI 审核"]');
+      await page.click('button:has-text("保存设置")');
+      await page.waitForSelector('.ant-message-success:has-text("已保存")');
+    }
+
+    // 25 AI 用量
+    await page.click('nav.side a[aria-label="AI 用量"]');
+    await page.waitForSelector('text=各功能用量');
+    await page.waitForSelector('.ant-table-row');
+    await page.mouse.move(1200, 5);
+    await shot(page, '25_AI用量');
+    await page.click('.ant-segmented-item:has-text("近 30 天")');
+    await page.click('.ant-segmented-item:has-text("失败")');
+    await page.waitForTimeout(600);
+    await shot(page, '25b_AI用量_失败_30天', { fullPage: false });
+    await page.click('.ant-segmented-item:has-text("Token")');
+    await page.waitForTimeout(600);
+    await shot(page, '25c_AI用量_Token', { fullPage: false });
+    await page.goto(`${BASE}/ai-usage?feature=moderation&status=failed`);
+    await page.waitForSelector('.ant-table-row:has-text("失败")');
+    await page.locator('.panel:has-text("调用记录")').last().scrollIntoViewIfNeeded();
+    await shot(page, '25d_AI用量_失败的审核调用', { fullPage: false });
+
+    // 26 查看用户 AI 对话 (admin only, audited)
+    await page.goto(`${BASE}/users?id=10293`);
+    await page.click('.ant-drawer button:has-text("查看 AI 对话")');
+    await page.waitForSelector('.ant-modal-confirm-title:has-text("AI 对话")');
+    await shot(page, '26_用户_查看AI对话确认', { fullPage: false });
+    await page.click('.ant-modal-confirm-btns button:has-text("确认查看")');
+    await page.waitForSelector('.chat-msg');
+    await shot(page, '26b_用户_AI对话', { fullPage: false });
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+    await page.click('nav.side a[aria-label="审计日志"]');
+    await page.waitForSelector('text=查看用户 AI 对话');
+    await shot(page, '26c_审计_查看AI对话', { fullPage: false });
+
+    // 27 系统配置 → AI 大模型: vision model and prices come from the field definitions
+    await page.goto(`${BASE}/settings/providers?group=AI`);
+    await page.waitForSelector('.prov-card[data-code="ai"]');
+    await page.locator('.prov-card[data-code="ai"] button:has-text("编辑配置")').click();
+    await page.waitForSelector('.ant-drawer-title:has-text("AI 大模型")');
+    await page.waitForSelector('.ant-drawer label:has-text("视觉模型")');
+    await page.locator('.ant-drawer label:has-text("输出单价")').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await shot(page, '27_系统配置_AI大模型_视觉与单价', { fullPage: false });
+    await page.click('.ant-drawer button:has-text("取消")');
+
+    // 28 玩法配置: AI 跟练 + AI
+    await page.goto(`${BASE}/gameplay?tab=workouts`);
+    await page.waitForSelector('.wk-card');
+    const step = page.locator('.wk-card[data-workout="rope_basic"] .wk-step').first();
+    await step.locator('.ant-input-number-input').first().fill('120');
+    await step.locator('.ant-input-number-input').first().blur();
+    await page.locator('.wk-card[data-workout="hiit_burn"] button:has-text("添加动作")').click();
+    await page.locator('.wk-card[data-workout="hiit_burn"] .wk-step').last().locator('input[aria-label="动作名称"]').fill('波比跳');
+    await page.locator('.wk-card[data-workout="hiit_burn"] .wk-step').last().locator('input[aria-label="动作 key"]').fill('burpee');
+    await page.locator('.wk-card[data-workout="hiit_burn"] .wk-step').last().locator('input[aria-label="语音提示"]').fill('累了可以去掉跳跃');
+    await page.locator('.wk-card[data-workout="pilates_core"] .wk-step').nth(1).locator('input[aria-label="动作名称"]').fill('');
+    await page.waitForTimeout(300);
+    await shot(page, '28_玩法配置_AI跟练');
+    await page.goto(`${BASE}/gameplay?tab=ai`);
+    await page.waitForSelector('text=助手带上的历史轮数');
+    await shot(page, '28b_玩法配置_AI');
+  }
+
+  async function aiRoles() {
+    // ops: AI 用量 yes, 系统配置 / 查看 AI 对话 no
+    const ops = await session('xiaolin');
+    if (!(await ops.page.locator('nav.side a[aria-label="AI 用量"]').count())) problems.push('[xiaolin] AI 用量 menu missing for ops');
+    await ops.page.goto(`${BASE}/ai-usage`);
+    await ops.page.waitForSelector('text=各功能用量');
+    await ops.page.waitForSelector('.ant-table-row');
+    await shot(ops.page, '29_运营视角_AI用量', { fullPage: false });
+    await ops.page.goto(`${BASE}/users?id=10293`);
+    await ops.page.waitForSelector('.ant-drawer button:has-text("赠送 7 天会员")');
+    if (await ops.page.locator('.ant-drawer button:has-text("查看 AI 对话")').count()) problems.push('[xiaolin] 查看 AI 对话 visible to ops');
+    await ops.ctx.close();
+
+    // reviewer: no AI 用量
+    const rv = await session('amei');
+    if (await rv.page.locator('nav.side a[aria-label="AI 用量"]').count()) problems.push('[amei] AI 用量 menu visible to reviewer');
+    await rv.page.goto(`${BASE}/ai-usage`);
+    await rv.page.waitForSelector('text=没有权限');
+    await shot(rv.page, '29b_审核员视角_AI用量403', { fullPage: false });
+    await rv.page.goto(`${BASE}/review`);
+    await rv.page.waitForSelector('.ai-box');
+    await rv.ctx.close();
+
+    // narrow
+    const m = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+    const mp = await m.newPage();
+    mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
+    await mp.goto(`${BASE}/login`);
+    await mp.fill('#username', 'admin');
+    await mp.fill('#password', PASSWORD);
+    await mp.click('button[type=submit]');
+    await mp.waitForSelector('h1.page-title');
+    await mp.goto(`${BASE}/ai-usage`);
+    await mp.waitForSelector('.ant-table-row');
+    await shot(mp, '30_窄屏_AI用量');
+    await m.close();
+  }
 
   // ---------------------------------------------------------------- V2 第二批「社区」
   async function community(page) {
@@ -284,6 +468,7 @@ async function main() {
     await page.waitForSelector('.rv-item');
     await page.mouse.move(1200, 5);
     await shot(page, '14_社区_内容审核');
+    await page.locator('.rv-item:has(.thumbs) .rv-meta').first().click(); // highest-risk task may have no images
     await page.locator('.panel.grey .thumbs .ant-image').first().click();
     await page.waitForSelector('.ant-image-preview-img');
     await shot(page, '14b_内容审核_点击放大', { fullPage: false });
@@ -297,18 +482,18 @@ async function main() {
       await page.waitForSelector('.ant-message-success:has-text("已通过")');
     }
     await page.keyboard.press('r');
-    await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("拒绝")`);
+    await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("驳回")`);
     await page.click(`${visibleModal} .reason-presets .ant-tag-checkable:has-text("含联系方式")`);
     await page.fill(`${visibleModal} textarea`, '请勿在公开内容里留微信号');
     await shot(page, '14c_内容审核_拒绝原因', { fullPage: false });
     if (WRITES) {
-      await page.click(`${visibleModal} .ant-modal-footer button:has-text("拒绝")`);
-      await page.waitForSelector('.ant-message-success:has-text("已拒绝")');
+      await page.click(`${visibleModal} .ant-modal-footer button:has-text("驳回")`);
+      await page.waitForSelector('.ant-message-success:has-text("已驳回")');
     } else await page.click(`${visibleModal} .ant-modal-footer button:has-text("取消")`);
     await page.waitForTimeout(500);
     for (let i = 0; i < 3; i++) await page.locator('.rv-item .ant-checkbox-input').nth(i).check();
-    await page.click('.rv-toolbar button:has-text("批量拒绝")');
-    await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("拒绝选中的 3 条")`);
+    await page.click('.rv-toolbar button:has-text("批量驳回")');
+    await page.waitForSelector(`${visibleModal} .ant-modal-title:has-text("驳回选中的 3 条")`);
     await page.click(`${visibleModal} .reason-presets .ant-tag-checkable:has-text("含广告或引流")`);
     await shot(page, '14d_内容审核_批量拒绝', { fullPage: false });
     await page.click(`${visibleModal} .ant-modal-footer button:has-text("取消")`);
@@ -353,7 +538,7 @@ async function main() {
     await page.goto(`${BASE}/review?tab=posts`);
     await page.waitForSelector('.ant-table-row');
     await shot(page, '16_社区_动态管理');
-    await page.locator('.ant-table-row:has-text("周末带娃") button:has-text("查看")').click();
+    await page.locator('.ant-table-row:has-text("下雨天也要跑") button:has-text("查看")').click();
     await page.waitForSelector('.ant-drawer-title:has-text("动态 #")');
     await page.waitForTimeout(400);
     await shot(page, '16b_动态详情_图片与运动', { fullPage: false });
@@ -378,8 +563,8 @@ async function main() {
     await shot(page, '17b_敏感词_批量粘贴', { fullPage: false });
     await page.click(`${visibleModal} .ant-modal-footer button:has-text("添加")`);
     await page.locator('.panel:has(h2:has-text("拦截词")) .word-box .ant-tag:has-text("裸聊") .ant-tag-close-icon').click();
-    await page.fill('input[aria-label="自动通过阈值"]', '40');
-    await page.locator('input[aria-label="自动通过阈值"]').blur();
+    await page.fill('input[aria-label="自动放行线"]', '40');
+    await page.locator('input[aria-label="自动放行线"]').blur();
     await page.fill('textarea[aria-label="试一试文本"]', '周末一起跑，有内部价跑鞋，wx：shoes_8848');
     await page.waitForTimeout(400);
     await shot(page, '17_社区_敏感词与审核设置');

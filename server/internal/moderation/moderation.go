@@ -7,8 +7,6 @@ package moderation
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -39,17 +37,29 @@ type Settings struct {
 	BlockWords       []string `json:"block_words"`
 	ReviewWords      []string `json:"review_words"`
 	AutoApproveBelow int      `json:"auto_approve_below"`
-	ReportAutoHide   int      `json:"report_auto_hide"`
+	// AutoRejectAbove: a final score at or above it is rejected without a
+	// reviewer (docs/api/v2-3-AI.md «阈值»).
+	AutoRejectAbove int  `json:"auto_reject_above"`
+	AIEnabled       bool `json:"ai_enabled"`
+	ReportAutoHide  int  `json:"report_auto_hide"`
 }
 
 // DefaultSettings applies until an admin saves the page.
-var DefaultSettings = Settings{BlockWords: []string{}, ReviewWords: []string{}, AutoApproveBelow: 30, ReportAutoHide: 3}
+var DefaultSettings = Settings{BlockWords: []string{}, ReviewWords: []string{}, AutoApproveBelow: 20, AutoRejectAbove: 90, AIEnabled: true, ReportAutoHide: 3}
 
-// Score is the result of a text check.
+// Score is the result of a check: the rule score and, when the AI
+// classifier answered, its verdict; Value is the higher of the two.
 type Score struct {
 	Value   int      `json:"risk_score"`
 	Reasons []string `json:"risk_reasons"`
 	Blocked bool     `json:"-"`
+	// Rule is the rule-based part of Value.
+	Rule int `json:"-"`
+	// AI is the classifier's verdict (nil without one).
+	AI *Verdict `json:"-"`
+	// AIRetry is set when the classifier timed out or failed: the task is
+	// re-scored in the background.
+	AIRetry bool `json:"-"`
 }
 
 // Thresholds.
@@ -71,6 +81,12 @@ var (
 // Moderator scores text with the current settings.
 type Moderator struct {
 	Pool *pgxpool.Pool
+	// AI classifies content (nil: rules only).
+	AI Classifier
+	// AITimeout bounds the synchronous classification (default 3 s).
+	AITimeout time.Duration
+	// RescoreTimeout bounds one background re-scoring call (default 30 s).
+	RescoreTimeout time.Duration
 
 	mu       sync.RWMutex
 	settings Settings
@@ -78,11 +94,22 @@ type Moderator struct {
 	appliers map[string]Applier
 }
 
-// Applier changes the reviewed object when its task is decided. Approve
-// and Reject run inside the reviewing transaction.
+// Applier changes the reviewed object when its task is decided. Every
+// function runs inside the reviewing transaction; the optional ones are nil
+// for objects they do not apply to.
 type Applier struct {
 	Approve func(ctx context.Context, tx pgx.Tx, targetID int64) error
 	Reject  func(ctx context.Context, tx pgx.Tx, targetID int64, reason string) error
+	// Pend takes automatically approved content back to pending (the
+	// background AI re-scoring found it riskier).
+	Pend func(ctx context.Context, tx pgx.Tx, targetID int64) error
+	// Mask rewrites the object's text with mask and drops the listed images
+	// (images of single-image objects such as avatars are reset), before
+	// approval (approve_masked).
+	Mask func(ctx context.Context, tx pgx.Tx, targetID int64, mask func(string) string, dropImages []string) error
+	// HideEndpoints sets a per-object track endpoint radius before approval
+	// (approve_hide_endpoints, posts with an activity).
+	HideEndpoints func(ctx context.Context, tx pgx.Tx, targetID int64, radiusM float64) error
 }
 
 // Register sets the applier for a target type.
@@ -122,6 +149,9 @@ func (m *Moderator) Settings(ctx context.Context) Settings {
 	if s.ReviewWords == nil {
 		s.ReviewWords = []string{}
 	}
+	if s.AutoRejectAbove == 0 {
+		s.AutoRejectAbove = DefaultSettings.AutoRejectAbove
+	}
 	m.mu.Lock()
 	m.settings, m.loaded = s, time.Now()
 	m.mu.Unlock()
@@ -145,6 +175,12 @@ func (m *Moderator) SaveSettings(ctx context.Context, s Settings) (Settings, err
 	s.BlockWords, s.ReviewWords = clean(s.BlockWords), clean(s.ReviewWords)
 	if s.AutoApproveBelow < 0 || s.AutoApproveBelow > 100 {
 		return s, httpx.BadRequest("invalid_body", "自动通过阈值应在 0–100 之间")
+	}
+	if s.AutoRejectAbove == 0 { // clients from before 第三批
+		s.AutoRejectAbove = DefaultSettings.AutoRejectAbove
+	}
+	if s.AutoRejectAbove < 1 || s.AutoRejectAbove > 100 || s.AutoRejectAbove <= s.AutoApproveBelow {
+		return s, httpx.BadRequest("invalid_body", "自动拦截线应在 1–100 之间，且高于自动放行线")
 	}
 	if s.ReportAutoHide < 1 {
 		return s, httpx.BadRequest("invalid_body", "举报自动隐藏次数至少为 1")
@@ -225,21 +261,57 @@ func Submit(ctx context.Context, q db.Querier, target string, targetID, userID i
 	}
 	ij, _ := json.Marshal(images)
 	rj, _ := json.Marshal(sc.Reasons)
+	a := aiCols(sc)
 	var id int64
-	err := q.QueryRow(ctx, `INSERT INTO src.src_cnt_loop_review_task (target_type, target_id, user_id, content_text, images_json, risk_score, risk_reasons_json)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)
+	err := q.QueryRow(ctx, `INSERT INTO src.src_cnt_loop_review_task (target_type, target_id, user_id, content_text, images_json, risk_score, risk_reasons_json,
+			rule_score, ai_score, ai_labels_json, ai_reason, ai_confidence_rate, ai_suggestion_type, ai_model, ai_flagged_images_json, ai_status)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
 		ON CONFLICT (target_type, target_id) WHERE review_status='pending'
 		DO UPDATE SET content_text=EXCLUDED.content_text, images_json=EXCLUDED.images_json,
-			risk_score=GREATEST(src_cnt_loop_review_task.risk_score, EXCLUDED.risk_score), risk_reasons_json=EXCLUDED.risk_reasons_json
-		RETURNING id`, target, targetID, nullable(userID), text, ij, sc.Value, rj).Scan(&id)
+			risk_score=GREATEST(src_cnt_loop_review_task.risk_score, EXCLUDED.risk_score), risk_reasons_json=EXCLUDED.risk_reasons_json,
+			rule_score=EXCLUDED.rule_score, ai_score=EXCLUDED.ai_score, ai_labels_json=EXCLUDED.ai_labels_json, ai_reason=EXCLUDED.ai_reason,
+			ai_confidence_rate=EXCLUDED.ai_confidence_rate, ai_suggestion_type=EXCLUDED.ai_suggestion_type, ai_model=EXCLUDED.ai_model,
+			ai_flagged_images_json=EXCLUDED.ai_flagged_images_json, ai_status=EXCLUDED.ai_status, ai_retry_qty=0, submit_type='submit'
+		RETURNING id`, append([]any{target, targetID, nullable(userID), text, ij, sc.Value, rj}, a...)...).Scan(&id)
 	return id, err
+}
+
+// aiCols are rule_score .. ai_status for an insert.
+func aiCols(sc Score) []any {
+	status := "none"
+	var score *int
+	var reason, sugg, model *string
+	var conf *float64
+	labels, flagged := []byte("[]"), []byte("[]")
+	switch {
+	case sc.AI != nil:
+		v := sc.AI
+		status, score, conf = "ok", &v.RiskScore, &v.Confidence
+		reason, sugg, model = strPtr(v.Reason), strPtr(v.Suggestion), strPtr(v.ModelName)
+		if v.Labels != nil {
+			labels, _ = json.Marshal(v.Labels)
+		}
+		if v.FlaggedImages != nil {
+			flagged, _ = json.Marshal(v.FlaggedImages)
+		}
+	case sc.AIRetry:
+		status = "retry"
+	}
+	return []any{sc.Rule, score, labels, reason, conf, sugg, model, flagged, status}
+}
+
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // Reported bumps the report counter of an object and makes sure it is in
 // the queue; it returns the number of distinct reports.
 func Reported(ctx context.Context, q db.Querier, target string, targetID, userID int64, text string, reports int) error {
-	_, err := q.Exec(ctx, `INSERT INTO src.src_cnt_loop_review_task (target_type, target_id, user_id, content_text, report_qty, risk_reasons_json)
-		VALUES ($1,$2,$3,$4,$5,'["被举报"]')
+	_, err := q.Exec(ctx, `INSERT INTO src.src_cnt_loop_review_task (target_type, target_id, user_id, content_text, report_qty, risk_reasons_json, submit_type)
+		VALUES ($1,$2,$3,$4,$5,'["被举报"]','report')
 		ON CONFLICT (target_type, target_id) WHERE review_status='pending'
 		DO UPDATE SET report_qty=EXCLUDED.report_qty`, target, targetID, nullable(userID), text, reports)
 	return err
@@ -257,44 +329,11 @@ var ErrDecided = httpx.Conflict("already_reviewed", "这条已经审核过了")
 
 // Decide approves or rejects a pending task and applies it to the object.
 func (m *Moderator) Decide(ctx context.Context, taskID, adminID int64, approve bool, reason string) error {
-	return pgx.BeginFunc(ctx, m.Pool, func(tx pgx.Tx) error {
-		var target string
-		var targetID int64
-		var status string
-		err := tx.QueryRow(ctx, `SELECT target_type, target_id, review_status FROM src.src_cnt_loop_review_task WHERE id=$1 FOR UPDATE`, taskID).
-			Scan(&target, &targetID, &status)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return httpx.NotFound("审核任务")
-		}
-		if err != nil {
-			return err
-		}
-		if status != "pending" {
-			return ErrDecided
-		}
-		newStatus := "approved"
-		if !approve {
-			newStatus = "rejected"
-			if strings.TrimSpace(reason) == "" {
-				reason = "内容不符合社区规范"
-			}
-		}
-		if _, err := tx.Exec(ctx, `UPDATE src.src_cnt_loop_review_task SET review_status=$2, reject_reason=$3, reviewer_id=$4, review_time=now() WHERE id=$1`,
-			taskID, newStatus, nilIfEmpty(reason, !approve), adminID); err != nil {
-			return err
-		}
-		a, ok := m.ApplierFor(target)
-		if !ok {
-			return fmt.Errorf("no applier for %s", target)
-		}
-		if approve {
-			if a.Approve != nil {
-				return a.Approve(ctx, tx, targetID)
-			}
-			return nil
-		}
-		return a.Reject(ctx, tx, targetID, reason)
-	})
+	a := Action{Kind: ActApprove, Reason: reason}
+	if !approve {
+		a.Kind = ActReject
+	}
+	return m.Act(ctx, taskID, adminID, a)
 }
 
 func nilIfEmpty(s string, keep bool) *string {

@@ -2,29 +2,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../api/ai_api.dart';
+import '../../api/ai_models.dart';
 import '../../api/community_api.dart';
 import '../../api/community_models.dart';
 import '../../api/errors.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../ai/ai_widgets.dart';
 import 'media_picker.dart';
 import 'social_providers.dart';
 
 /// Opens the composer: `context.push<Post>('/posts/new', extra: ComposeArgs(...))`.
-/// The settlement page passes the run it just finished (C-05「一键带上战报
-/// 发动态」).
+/// The settlement page passes the run it just finished and its AI 战报
+/// (C-05「一键带上战报发动态」).
 class ComposeArgs {
-  const ComposeArgs({this.activity, this.text = ''});
+  const ComposeArgs({this.activity, this.text = '', this.aiReport});
 
   /// Pre-attached run.
   final Activity? activity;
 
-  /// Pre-filled text. Batch ③ (AI 战报) will fill this with the generated
-  /// report; see [ComposePage] `_aiReport`.
+  /// Pre-filled text.
   final String text;
+
+  /// Pre-attached AI 战报 of [activity]; posted as `ai_report: true` and
+  /// shown as its own block (not part of the 500-character text).
+  final AIReport? aiReport;
 }
 
 class _Img {
@@ -58,6 +65,13 @@ class _ComposePageState extends ConsumerState<ComposePage> {
   String _visibility = 'public';
   bool _posting = false;
   bool _uploading = false;
+
+  /// The attached AI 战报 (of [_activityId]).
+  late AIReport? _report =
+      widget.args.aiReport != null && widget.args.aiReport!.activityId == (widget.args.activity?.id ?? widget.activityId)
+          ? widget.args.aiReport
+          : null;
+  bool _reportBusy = false;
 
   @override
   void initState() {
@@ -133,6 +147,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
             imageIds: [for (final i in _images) i.uploaded!.id],
             activityId: _activityId,
             visibility: _visibility,
+            aiReport: _report != null && _report!.activityId == _activityId,
           ));
       if (!mounted) return;
       ref.read(postCacheProvider.notifier).put(p);
@@ -184,9 +199,26 @@ class _ComposePageState extends ConsumerState<ComposePage> {
         ),
       );
 
-  /// Hook for batch ③: generate an AI 战报 for the attached run and put it in
-  /// the text box. Not available yet.
-  void _aiReport() => toast(context, 'AI 战报即将上线');
+  /// C-05: generate (or 换一篇) the attached run's AI 战报 and attach it.
+  Future<void> _aiReport() async {
+    final id = _activityId;
+    if (id == null || _reportBusy) return;
+    setState(() => _reportBusy = true);
+    try {
+      final r = await ref.read(aiApiProvider).report(id, regenerate: _report?.activityId == id);
+      if (mounted && _activityId == id) setState(() => _report = r);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _reportBusy = false);
+    }
+  }
+
+  void _selectRun(int? id) => setState(() {
+        _activityId = id;
+        // A report belongs to one run.
+        if (_report?.activityId != id) _report = null;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -194,6 +226,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     final runs = ref.watch(recentRunsProvider);
     final hide = user?.settings.hideEndpoints ?? true;
     final len = _text.text.trim().length;
+    final ai = ref.watch(aiEnabledProvider);
     return Scaffold(
       body: SafeArea(
         child: Column(children: [
@@ -238,7 +271,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                       itemBuilder: (_, i) => _RunChoice(
                         activity: all[i],
                         selected: all[i].id == _activityId,
-                        onTap: () => setState(() => _activityId = all[i].id == _activityId ? null : all[i].id),
+                        onTap: () => _selectRun(all[i].id == _activityId ? null : all[i].id),
                       ),
                     );
                   },
@@ -266,15 +299,31 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                       counterText: '',
                     ),
                   ),
-                  Row(children: [
-                    ActionChip(
-                      avatar: const Icon(Icons.auto_awesome_rounded, size: 16, color: LL.lavender),
-                      label: const Text('AI 帮我写 · 即将上线'),
-                      onPressed: _activityId == null ? null : _aiReport,
-                      backgroundColor: const Color(0xFF26223A),
-                      side: BorderSide.none,
-                      labelStyle: const TextStyle(color: LL.lavender, fontSize: 12, fontWeight: FontWeight.w700),
+                  if (_report != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: AIReportBlock(
+                        key: const Key('compose-ai-report'),
+                        text: _report!.text,
+                        aiGenerated: _report!.aiGenerated,
+                        trailing: GestureDetector(
+                          onTap: () => setState(() => _report = null),
+                          child: const Icon(Icons.close_rounded, size: 18, color: LL.text2, semanticLabel: '移除 AI 战报'),
+                        ),
+                      ),
                     ),
+                  Row(children: [
+                    if (ai)
+                      ActionChip(
+                        avatar: _reportBusy
+                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: LL.lavender))
+                            : const Icon(Icons.auto_awesome_rounded, size: 16, color: LL.lavender),
+                        label: Text(_report == null ? 'AI 写战报' : '换一篇'),
+                        onPressed: _activityId == null || _reportBusy ? null : _aiReport,
+                        backgroundColor: const Color(0xFF26223A),
+                        side: BorderSide.none,
+                        labelStyle: const TextStyle(color: LL.lavender, fontSize: 12, fontWeight: FontWeight.w700),
+                      ),
                     const Spacer(),
                     Text('$len/$maxLen', style: TextStyle(color: len > maxLen ? LL.red : LL.text3, fontSize: 13)),
                   ]),

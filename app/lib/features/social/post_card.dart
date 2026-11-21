@@ -6,6 +6,7 @@ import '../../api/community_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../ai/ai_widgets.dart';
 import 'image_viewer.dart';
 import 'report_sheet.dart';
 import 'share_sheet.dart';
@@ -40,6 +41,10 @@ class PostCard extends ConsumerWidget {
             if (p.content.isNotEmpty) ...[
               const SizedBox(height: 10),
               PostText(text: p.content, maxLines: 6),
+            ],
+            if (p.aiReport != null) ...[
+              const SizedBox(height: 10),
+              AIReportBlock(text: p.aiReport!.text, aiGenerated: p.aiReport!.aiGenerated, maxLines: 4),
             ],
             if (p.images.isNotEmpty) ...[
               const SizedBox(height: 10),

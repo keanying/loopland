@@ -9,6 +9,7 @@ import type { AdminRole } from '../api/types';
  *   系统配置 · 第三方服务 (docs/api/系统配置.md) → admin only.
  *   V2 社区 (docs/api/v2-2-社区.md): 内容审核 / 举报 / 动态管理 → admin + ops + reviewer;
  *   敏感词与审核设置 → admin; 组局 / 赛事 → admin + ops.
+ *   V2 AI (docs/api/v2-3-AI.md): AI 用量 → admin + ops; 查看用户 AI 对话 → admin (audited).
  * The server stays the final judge (403 forbidden).
  */
 export type Permission =
@@ -44,7 +45,11 @@ export type Permission =
   /** V2 社区 · 组局与赛事 (view). */
   | 'community.read'
   /** Cancel meetups; create / edit / cancel races; mark offline finishes. */
-  | 'community.write';
+  | 'community.write'
+  /** V2 AI · AI 用量: daily usage, per-feature stats, call log (metadata only). */
+  | 'ai.usage'
+  /** Read a user's assistant conversation (complaint checks; audited). */
+  | 'user.ai_messages';
 
 const OPS: Permission[] = [
   'users.read',
@@ -68,10 +73,11 @@ const OPS: Permission[] = [
   'review.write',
   'community.read',
   'community.write',
+  'ai.usage',
 ];
 
 const MATRIX: Record<AdminRole, Permission[]> = {
-  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage', 'settings.providers', 'moderation.settings'],
+  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage', 'settings.providers', 'moderation.settings', 'user.ai_messages'],
   ops: OPS,
   reviewer: ['users.read', 'user.write', 'risk.read', 'risk.resolve', 'review.read', 'review.write'],
   merchant: [],

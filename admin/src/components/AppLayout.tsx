@@ -11,6 +11,7 @@ import {
   FileDoneOutlined,
   FlagOutlined,
   LogoutOutlined,
+  RobotOutlined,
   SafetyOutlined,
   SettingOutlined,
   ShopOutlined,
@@ -46,6 +47,8 @@ const MENU: MenuItem[] = [
   { to: '/audit', label: '审计日志', icon: <AuditOutlined />, perm: 'audit.read' },
   { to: '/admins', label: '后台账号', icon: <UserSwitchOutlined />, perm: 'admins.manage' },
   { to: '/settings/providers', label: '系统配置', icon: <SettingOutlined />, perm: 'settings.providers' },
+  // V2 第三批「AI」: admin + ops (系统配置 itself is admin-only, so it gets its own entry)
+  { to: '/ai-usage', label: 'AI 用量', icon: <RobotOutlined />, perm: 'ai.usage' },
 ];
 
 export default function AppLayout() {

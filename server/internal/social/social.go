@@ -152,6 +152,13 @@ var ErrMuted = httpx.Forbidden("muted", "你已被禁言，暂时不能发布内
 
 // author loads the facts the publishing checks need, locking the user row
 // so that per-day limits are counted without races.
+// authorState is author without the lock.
+func authorState(ctx context.Context, q db.Querier, uid int64) (muted, newUser bool, err error) {
+	err = q.QueryRow(ctx, `SELECT COALESCE(mute_end_time > now(), false), create_time > now() - interval '24 hours'
+		FROM src.src_usr_loop_user WHERE id=$1`, uid).Scan(&muted, &newUser)
+	return
+}
+
 func author(ctx context.Context, tx pgx.Tx, uid int64) (muted, newUser bool, err error) {
 	err = tx.QueryRow(ctx, `SELECT COALESCE(mute_end_time > now(), false), create_time > now() - interval '24 hours'
 		FROM src.src_usr_loop_user WHERE id=$1 FOR UPDATE`, uid).Scan(&muted, &newUser)

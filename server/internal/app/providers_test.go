@@ -45,10 +45,11 @@ func TestProviderConfig(t *testing.T) {
 	}))
 	defer ai.Close()
 
+	// In dev the mock model stands in until AI is configured (第三批).
 	var feat Features
 	e.anon().must("GET", "/v1/config/features", nil, &feat)
-	if feat.AI {
-		t.Fatal("AI enabled before configuration")
+	if !feat.AI || e.app.Providers.Current().AI != nil {
+		t.Fatal("dev mock AI not offered before configuration")
 	}
 
 	var list struct {
@@ -149,7 +150,7 @@ func TestProviderConfig(t *testing.T) {
 	// Disabling takes effect immediately; clear removes a secret.
 	ad.must("PUT", "/admin/v1/providers/ai", map[string]any{"enabled": false, "clear": []string{"api_key"}}, nil)
 	e.anon().must("GET", "/v1/config/features", nil, &feat)
-	if feat.AI || e.app.Providers.Current().AI != nil {
+	if e.app.Providers.Current().AI != nil || !feat.AI { // dev: the mock again
 		t.Fatal("AI still enabled")
 	}
 	if v := byCode()["ai"]; v.Values["api_key"].(map[string]any)["set"] != false {

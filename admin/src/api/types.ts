@@ -427,7 +427,48 @@ export interface Config {
   season_tasks?: SeasonTaskConf[];
   companion?: CompanionRules;
   relay?: RelayRules;
+  // ---- V2 batch 3 (docs/api/v2-3-AI.md 「玩法配置新增」) ----
+  workouts?: WorkoutConf[];
+  ai?: AIRules;
   [extra: string]: unknown;
+}
+
+/** jump-跳绳/开合跳 squat-深蹲 pushup-俯卧撑 crunch-卷腹 none-只计时 */
+export type WorkoutPose = 'jump' | 'squat' | 'pushup' | 'crunch' | 'none';
+export type WorkoutLevel = 'beginner' | 'intermediate' | 'advanced';
+
+export interface WorkoutStep {
+  key: string;
+  name: string;
+  /** count-按次数 time-按时长 */
+  mode: 'count' | 'time';
+  /** Reps (count) or seconds (time). */
+  target: number;
+  rest_sec: number;
+  sets: number;
+  pose: WorkoutPose | string;
+  cue: string;
+  demo_url?: string | null;
+  [extra: string]: unknown;
+}
+
+export interface WorkoutConf {
+  key: string;
+  name: string;
+  /** rope / hiit / yoga / strength */
+  sport: string;
+  level: WorkoutLevel | string;
+  cover_url?: string | null;
+  est_minutes: number;
+  camera: boolean;
+  steps: WorkoutStep[];
+  [extra: string]: unknown;
+}
+
+export interface AIRules {
+  route_max_km: number;
+  report_max_chars: number;
+  chat_history_turns: number;
 }
 
 export interface BossDamageRule {
@@ -950,6 +991,51 @@ export interface ReviewTask {
   reviewer: AdminRef | null;
   reviewed_at: string | null;
   created_at: string;
+  // ---- V2 第三批「AI」(docs/api/v2-3-AI.md 「内容审核升级」); absent on older servers ----
+  /** AI verdict; null when the model was not asked, timed out or failed (scored by rules only). */
+  ai?: ReviewAI | null;
+  /** How many of the author's contents were rejected / taken down before. */
+  user_violation_count?: number;
+  /** The post carries an activity (so 「隐藏起终点后通过」 applies). */
+  has_activity?: boolean;
+}
+
+/** ad-广告引流 contact-联系方式 porn-色情 politics-涉政 abuse-辱骂 fraud-诈骗 illegal-违法 privacy-隐私泄露 minor-未成年人 other-其他 */
+export type AILabel = 'ad' | 'contact' | 'porn' | 'politics' | 'abuse' | 'fraud' | 'illegal' | 'privacy' | 'minor' | 'other';
+/** reject-建议拒绝 review-建议人工复核 approve-建议通过 mask-建议打码后通过 hide_endpoints-建议隐藏起终点后通过 */
+export type AISuggestion = 'reject' | 'review' | 'approve' | 'mask' | 'hide_endpoints';
+
+export interface ReviewAI {
+  risk_score: number;
+  labels: (AILabel | string)[];
+  reason: string;
+  /** 0–1 */
+  confidence: number;
+  suggestion: AISuggestion | string;
+  model_name: string;
+}
+
+/** approve-通过 approve_masked-打码后通过 approve_hide_endpoints-隐藏起终点后通过 reject-驳回 reject_mute-驳回并禁言 */
+export type ReviewDecideAction = 'approve' | 'approve_masked' | 'approve_hide_endpoints' | 'reject' | 'reject_mute';
+
+export interface ReviewDecide {
+  action: ReviewDecideAction;
+  reason?: string;
+  mute_days?: number;
+}
+
+/**
+ * 「返回更新后的 ReviewTask 和 next」: read as {task, next}; a server that returns the
+ * task's own fields plus `next` at the top level is accepted too.
+ */
+export type ReviewDecideResult = { task?: ReviewTask; next?: ReviewTask | null } & Partial<ReviewTask>;
+
+export interface ModerationEstimate {
+  per_day_manual: number;
+  per_day_auto_approve: number;
+  per_day_auto_reject: number;
+  /** Days of history the estimate is based on. */
+  days: number;
 }
 
 export interface ReviewStats {
@@ -1040,6 +1126,10 @@ export interface ModerationSettings {
   auto_approve_below: number;
   /** Reports from this many different users send a post / comment back to review. */
   report_auto_hide: number;
+  /** V2 第三批: scoring ≥ this is rejected automatically (default 90). */
+  auto_reject_above?: number;
+  /** V2 第三批: ask the model to score content. */
+  ai_enabled?: boolean;
 }
 
 export interface Place {
@@ -1131,4 +1221,68 @@ export interface RaceEntry {
   finished_at: string | null;
   activity_id: number | null;
   signed_at: string;
+}
+
+// ---------- V2 第三批「AI」(docs/api/v2-3-AI.md 「管理端 · AI 用量」) ----------
+
+/** chat-助手对话 route-路线建议 report-运动战报 moderation-内容审核 workout-AI 跟练 */
+export type AIFeature = 'chat' | 'route' | 'report' | 'moderation' | 'workout';
+
+export interface AIUsageDay {
+  date: string;
+  calls: number;
+  failed: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  /** null when no unit price is set in 系统配置 → AI 大模型. */
+  cost_fen: number | null;
+}
+
+export interface AIUsageFeature {
+  feature: AIFeature | string;
+  calls: number;
+  failed: number;
+  avg_latency_ms: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  cost_fen: number | null;
+}
+
+export interface AIUsage {
+  days: AIUsageDay[];
+  by_feature: AIUsageFeature[];
+  quota: { users_hit_limit_this_week: number };
+}
+
+export interface AICall {
+  id: number;
+  feature: AIFeature | string;
+  /** null for calls not tied to a user (e.g. background re-scoring). */
+  user: UserBrief | null;
+  model: string;
+  status: 'ok' | 'failed';
+  error: string | null;
+  prompt_tokens: number;
+  completion_tokens: number;
+  latency_ms: number;
+  created_at: string;
+}
+
+/** Cards in assistant answers; only the fields the admin view shows are typed. */
+export type AICard =
+  | { type: 'route'; route: { id: string; type?: string; title: string; subtitle?: string; distance_m?: number } }
+  | { type: 'territory'; territory: { id: number; name: string; guard?: number } }
+  | { type: 'boss'; boss: { id: number; name: string; hp?: number; max_hp?: number } }
+  | { type: string; [k: string]: unknown };
+
+export interface AIMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  image_url: string | null;
+  cards: AICard[];
+  ai_generated: boolean;
+  created_at: string;
+  /** Soft-deleted by the user (「清空对话」); kept until the 180-day retention ends. */
+  deleted?: boolean;
 }

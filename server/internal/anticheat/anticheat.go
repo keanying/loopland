@@ -104,6 +104,40 @@ type Input struct {
 	DistanceM          float64
 	Device             Device
 	SameDeviceAccounts int
+	// Amount is the reported amount (home workouts: reps or minutes).
+	Amount float64
+	// Coach is the AI follow-along report (home workouts), nil without one.
+	Coach *Coach
+}
+
+// Coach is what the on-device pose counter saw.
+type Coach struct {
+	Camera       bool
+	RepsDetected int
+	RepsManual   int
+}
+
+// CoachMismatchRate: reported reps more than 20% above the camera count
+// go to review (rule coach_mismatch).
+const CoachMismatchRate = 0.2
+
+// coachMismatch compares the reported reps with the camera count. Count
+// sports (跳绳) report reps as the amount; the others report minutes, so
+// their reps are the detected plus the manually added ones.
+func coachMismatch(in Input) (reported, detected int, bad bool) {
+	c := in.Coach
+	if c == nil || !c.Camera || gameplay.GPSSports[in.Sport] {
+		return 0, 0, false
+	}
+	detected = c.RepsDetected
+	reported = c.RepsDetected + c.RepsManual
+	if in.Sport == gameplay.SportRope {
+		reported = int(math.Round(in.Amount))
+	}
+	if reported-detected < 5 { // a few missed reps are normal
+		return reported, detected, false
+	}
+	return reported, detected, float64(reported) > float64(detected)*(1+CoachMismatchRate)
 }
 
 // Flag is one triggered rule.
@@ -175,6 +209,10 @@ func Evaluate(r Rules, in Input) Result {
 					Detail: fmt.Sprintf("%d 处轨迹瞬移，最大 %.0f m", len(tp), maxJump(tp))})
 			}
 		}
+	}
+	if reported, detected, bad := coachMismatch(in); bad {
+		flags = append(flags, Flag{Rule: "coach_mismatch", Confidence: 0.7,
+			Detail: fmt.Sprintf("跟练上报 %d 次，摄像头识别 %d 次，多出 %.0f%%", reported, detected, (float64(reported)/math.Max(float64(detected), 1)-1)*100)})
 	}
 	if in.Device.Rooted || in.Device.Emulator || in.Device.MultiOpen {
 		flags = append(flags, Flag{Rule: "device_tamper", Confidence: 0.65, Detail: "设备已 root / 越狱、是模拟器或多开"})

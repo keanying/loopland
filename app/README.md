@@ -174,6 +174,13 @@ screenshots/  组件测试生成的界面截图
   - 集结跑：跑团页里发起、报名、到场签到（离集合点 300 m 内），签到满 2 人有加成，结算页显示「集结跑加成」。
   - 赛事（`/races`）：线上赛 / 线下赛报名、排行榜、完赛奖牌（结算页「赛事完赛」）。
   - 跑团：邀请码（生成、分享、`/crews/join-code` 加入）、编辑跑团（名称、头像、城区、加入方式，先生效后审核）。
+- **AI 跟练（V2 第三批 C-09，接口 `docs/api/v2-3-AI.md`「App · AI 跟练」）**：
+  - 入口：开始页「居家跟练」→「AI 跟练」（`/coach?sport=`），原来的自由计时 / 计数保留为「手动记录」（`/train/:sport`）。课程列表按 跳绳 / HIIT / 普拉提 / 力量 分页签，来自 `GET /v1/ai/workouts`；接口 503 `ai_unavailable`、断网或返回空时用内置课程（`lib/coach/workout.dart` 的 `builtinWorkouts`，与服务端默认 `workouts` 一致）。姿态计次在端上完成、不调大模型，所以 `features.ai=false` 时也不隐藏。
+  - 跟练页（`/coach/:key`，设计稿 11_AI_跟练）：前置摄像头预览 + 骨架叠加（CustomPainter）、「AI 自动计数」大数字、组数条、提示气泡、底部面板（已用时 / 倒计时或 次数/目标 / 组数 / 开始·暂停·继续 / 预计能量）；5 秒准备倒计时，按动作 `count`（到目标次数自动完成本组）或 `time` 计时，组间 / 动作间休息（显示「下一个」，可跳过），暂停 / 继续、完成本组、跳过动作、结束训练，结束后显示小结再「领取能量」。
+  - 计次（`lib/coach/rep_counter.dart`，纯 Dart，`test/coach/` 用合成关键点序列测试，含抖动 / 丢帧 / 离群点 / 低帧率）：`jump` 用鼻、肩、髋、膝、踝相对各自偏移的截尾均值得到身体高度（按躯干长度归一化），对「峰值相对前一个谷底的升幅」做迟滞（≥ max(0.055 躯干长, 35% 近期幅度)，升幅须在 0.6 s 内完成，过滤慢晃和漂移）；`squat` 膝角（≥155° 站直 / ≤115° 蹲下）、`pushup` 肘角（≥150° / ≤100°）、`crunch` 躯干与地面夹角（≤15° / ≥28°），角度取 0.3 s 中位数，回到起始姿势才计 1 次；`none` 只计时。
+  - 画面只在手机本地交给 ML Kit 识别，不上传、不保存（页面和课程列表都有说明，训练结束立即关闭摄像头，切到后台释放摄像头并暂停）。「全身入镜」提示；4 秒窗口内光线太暗 / 可用帧不足 40% / 2.5 秒没有画面时自动改为手动计数（+1 / +10 / −1），点状态条可恢复自动；没有摄像头权限、没有摄像头、Web / 桌面：计时 + 手动计数。
+  - 语音（`flutter_tts`，zh-CN）：准备、每组开始、过半、最后 3 个、最后 3 秒倒数、休息与下一个动作、完成；右上角静音开关（记在本机；跑步页目前没有语音设置）。
+  - 上传沿用 `POST /v1/activities`（跳绳 `amount` = 总次数，其余为分钟数）+ `coach`（`workout_key`、`camera`、`reps_detected`、`reps_manual`、`sets_done`），结果走原来的结算页（能量、复核）。手动补记比识别多 20% 以上时小结页提示可能进入人工复核（服务端规则 `coach_mismatch`）。
 - 离线：进行中的运动每 5 秒和每次暂停写入 `runs/in_progress.json`（先写临时文件再改名）；结束后先写入 `runs/pending/<client_id>.json` 再上传；启动时提示恢复中断的运动并补传，补传使用相同 `client_id`（服务端幂等）。
 
 ## 坐标系
@@ -252,6 +259,13 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 
 `device.rooted`（Android RootBeer / iOS DTTJailbreakDetection）、`device.emulator`（device_info_plus ＋ safe_device）、`device.multi_open`（应用私有目录不是 `/data/user/0/com.loopland.app`：MIUI/ColorOS 双开 999、三星 95、VirtualApp/平行空间等容器）。safe_device 的模拟定位检测已关闭（会触发定位）；模拟定位由 geolocator 的 `isMocked` 逐点上报。多开是启发式判断，工作资料（work profile）也会被标记，服务端只作为风险信号使用。
 
+### 8. AI 跟练 — `camera 0.12.2`、`google_mlkit_pose_detection 0.16.1`、`flutter_tts 4.2.5`
+
+- ML Kit 姿态识别模型随包内置（不依赖 Google Play 服务、不联网下载），stream 模式、base 模型；处理不过来的帧直接丢弃。Android 用 NV21（个别机型给 3 平面 YUV 时在 Dart 里转），iOS 用 BGRA。
+- Android：`CAMERA` 权限，`android.hardware.camera(.front)` 为 `required=false`；camera 插件自带的 `RECORD_AUDIO` 已 `tools:node="remove"`（不录音）。
+- iOS：`NSCameraUsageDescription` 已写明 AI 跟练用途和「只在本地识别」；ML Kit 9 要求 **iOS 15.5**，工程最低版本已改为 15.5。0.16.1 是 CocoaPods 插件（1.0.x 改成了 SPM，1.0.1 的 SPM 清单还缺 FlutterFramework 依赖，1.0.2 才修，发布不足两周），工程其余插件走 SPM，首次 `flutter build ios` 会为它生成 Podfile 并 `pod install`。
+- 依赖锁定在 `pubspec.lock`（`camera_android_camerax 0.7.6`、`camera_platform_interface 2.15.0` 取发布两周以上的版本）。
+
 ### Android release 构建
 
 - `signingConfigs.release` 读 `android/key.properties`（路径可由 app.yaml 的 `android.key_properties` 改）；没有该文件时 release 构建（assemble/bundle Release）直接失败，避免误传 debug 签名的包。仅本地测试可加 `-PallowDebugSigning`（`flutter build apk --release` 不能传 -P 时，用 `cd android && ./gradlew assembleRelease -PallowDebugSigning`）。
@@ -266,7 +280,7 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 
 ### iOS
 
-- Bundle ID `com.loopland.app`，最低 iOS 15。Info.plist 中文用途说明：使用期间定位、始终定位、运动与健身、健康（读 / 写）；`UIBackgroundModes = location`。
+- Bundle ID `com.loopland.app`，最低 iOS 15.5（ML Kit）。Info.plist 中文用途说明：使用期间定位、始终定位、运动与健身、健康（读 / 写）、相机（发动态 / 头像 / AI 跟练）；`UIBackgroundModes = location`。
 - `Runner.entitlements`：Sign in with Apple、Associated Domains（`applinks:$(LOOPLAND_ASSOCIATED_DOMAIN)`）。
 - 需在 Xcode 打开的 Capabilities：Sign in with Apple、In-App Purchase、Associated Domains、Background Modes（Location updates）。
 
@@ -294,4 +308,5 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 - 动态、组局、场馆、本地生活、能量商城、AI 剧情夜跑、轨迹绘画等仍只有占位。
 - 伙伴经验：`exp` 按服务端实现理解为累计经验，`exp_to_next` 为距下一级还差多少，本级进度 = `exp_per_level − exp_to_next`。
 - WebSocket 只解析 `boss` / `territory_attacked` / `rally` / `ping`；客户端不回 pong（约定未要求）。实时横幅只在 App 前台时出现，系统推送未接。
-- 语音播报、手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）。
+- 跑步中的语音播报、手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）；AI 跟练有语音。
+- AI 跟练的计次阈值只用合成数据调过（`test/coach/`），需要真机实测：不同光线 / 距离 / 机位下的跳绳、开合跳、深蹲、俯卧撑、卷腹计数准确率，前置摄像头骨架叠加的镜像与对齐，低端机帧率，后台切换释放摄像头，TTS 中文语音（部分 Android 机没装中文 TTS 引擎时只显示文字）。

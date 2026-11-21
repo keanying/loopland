@@ -517,20 +517,32 @@ class TrackPoint {
 }
 
 class Goal {
-  const Goal({this.type = 'free', this.value, this.territoryId});
+  const Goal({this.type = 'free', this.value, this.territoryId, this.routeId, this.routeType});
 
-  /// `free | distance | time | target`. distance in m, time in s.
+  /// `free | distance | time | target | ai_route`. distance in m, time in s.
   final String type;
   final num? value;
   final int? territoryId;
 
-  factory Goal.fromJson(Json j) =>
-      Goal(type: _s(j['type'], 'free'), value: j['value'] as num?, territoryId: _in(j['territory_id']));
+  /// `ai_route` (V2 AI, C-04): the suggestion's id and `loop | capture |
+  /// defend | boss` — only used for adoption statistics.
+  final String? routeId;
+  final String? routeType;
+
+  factory Goal.fromJson(Json j) => Goal(
+        type: _s(j['type'], 'free'),
+        value: j['value'] as num?,
+        territoryId: _in(j['territory_id']),
+        routeId: _sn(j['route_id']),
+        routeType: _sn(j['route_type']),
+      );
 
   Json toJson() => {
         'type': type,
         if (value != null) 'value': value,
         if (territoryId != null) 'territory_id': territoryId,
+        if (routeId != null) 'route_id': routeId,
+        if (routeType != null) 'route_type': routeType,
       };
 }
 
@@ -582,6 +594,7 @@ class ActivityUpload {
     this.amount,
     required this.device,
     this.wearableBrand,
+    this.coach,
   });
   final String clientId;
   final String sport;
@@ -593,6 +606,10 @@ class ActivityUpload {
   final num? amount;
   final DeviceInfo device;
   final String? wearableBrand;
+
+  /// AI 跟练 (docs/api/v2-3-AI.md): `{workout_key, camera, reps_detected,
+  /// reps_manual, sets_done}`.
+  final Json? coach;
 
   bool get isGps => points.isNotEmpty;
 
@@ -607,6 +624,7 @@ class ActivityUpload {
         amount: j['amount'] as num?,
         device: DeviceInfo.fromJson(_m(j['device'])),
         wearableBrand: _sn(_m(j['wearable'])['brand']),
+        coach: _mn(j['coach']),
       );
 
   Json toJson() => {
@@ -620,6 +638,7 @@ class ActivityUpload {
         if (amount != null) 'amount': amount,
         'device': device.toJson(),
         if (wearableBrand != null) 'wearable': {'brand': wearableBrand},
+        if (coach != null) 'coach': coach,
       };
 }
 

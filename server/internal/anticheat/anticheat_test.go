@@ -88,3 +88,26 @@ func TestDeviceAndMultiAccount(t *testing.T) {
 		t.Fatalf("multi-account alone is only monitored: %+v", r)
 	}
 }
+
+func TestCoachMismatch(t *testing.T) {
+	cases := []struct {
+		name   string
+		in     Input
+		review bool
+	}{
+		{"rope matches camera", Input{Sport: gameplay.SportRope, Amount: 480, Device: dev, Coach: &Coach{Camera: true, RepsDetected: 480}}, false},
+		{"rope within 20%", Input{Sport: gameplay.SportRope, Amount: 560, Device: dev, Coach: &Coach{Camera: true, RepsDetected: 480}}, false},
+		{"rope over 20%", Input{Sport: gameplay.SportRope, Amount: 600, Device: dev, Coach: &Coach{Camera: true, RepsDetected: 480}}, true},
+		{"hiit manual reps", Input{Sport: gameplay.SportHIIT, Amount: 15, Device: dev, Coach: &Coach{Camera: true, RepsDetected: 40, RepsManual: 30}}, true},
+		{"no camera", Input{Sport: gameplay.SportRope, Amount: 600, Device: dev, Coach: &Coach{Camera: false, RepsDetected: 0}}, false},
+		{"tiny difference", Input{Sport: gameplay.SportRope, Amount: 12, Device: dev, Coach: &Coach{Camera: true, RepsDetected: 9}}, false},
+		{"no coach", Input{Sport: gameplay.SportRope, Amount: 600, Device: dev}, false},
+	}
+	for _, c := range cases {
+		r := Evaluate(DefaultRules, c.in)
+		got := r.Verdict == Review && len(r.Flags) == 1 && r.Flags[0].Rule == "coach_mismatch"
+		if got != c.review || (!c.review && r.Verdict != Pass) {
+			t.Errorf("%s: %+v", c.name, r)
+		}
+	}
+}

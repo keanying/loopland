@@ -100,7 +100,26 @@ class _RunPageState extends ConsumerState<RunPage> {
         out.add(_HintChip(icon: Icons.explore_rounded, text: '到达打卡点「${c.name}」', color: LL.sky));
       }
     }
+    for (final g in ref.read(runControllerProvider).guide?.targets ?? const <GuideTarget>[]) {
+      if (haversine(pos, g.center) <= 80) {
+        out.add(_HintChip(icon: Icons.flag_rounded, text: '到达路线目标「${g.name}」', color: LL.lavender));
+      }
+    }
     return out;
+  }
+
+  /// Nearby objects plus the AI route's targets (numbered markers).
+  MapObjects _withGuide(RunGuide? g) {
+    if (g == null || g.targets.isEmpty) return _nearby;
+    return MapObjects(
+      bosses: _nearby.bosses,
+      chests: _nearby.chests,
+      checkpoints: [
+        ..._nearby.checkpoints,
+        for (var i = 0; i < g.targets.length; i++)
+          MapCheckpoint(routeId: 0, index: i, name: g.targets[i].name, center: g.targets[i].center),
+      ],
+    );
   }
 
   @override
@@ -151,7 +170,9 @@ class _RunPageState extends ConsumerState<RunPage> {
                 initialCenter: s.position ?? const LatLng(31.2304, 121.4737),
                 initialZoom: 16.5,
                 layers: MapLayers(
-                  objects: _nearby,
+                  objects: _withGuide(s.guide),
+                  // AI 路线建议: the chosen route as a dashed guide line.
+                  routePath: s.guide?.path ?? const [],
                   track: s.track,
                   loops: [for (final l in s.loops) l.ring],
                   hintFrom: hint == null ? null : s.position,
@@ -227,6 +248,7 @@ class _RunPageState extends ConsumerState<RunPage> {
         'distance' => '目标 ${Fmt.km(s.goal.value ?? 0, digits: 0)} km',
         'time' => '目标 ${((s.goal.value ?? 0) / 60).round()} 分钟',
         'target' => '抢领地 #${s.goal.territoryId}',
+        'ai_route' => s.guide?.title ?? 'AI 路线',
         _ => '自由圈地',
       };
 

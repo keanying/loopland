@@ -1,6 +1,7 @@
 // Field descriptors, defaults, validation and diff for the gameplay config editor.
-// V2 sections follow docs/api/v2-1-玩法.md 「玩法配置新增字段」.
+// V2 sections follow docs/api/v2-1-玩法.md 「玩法配置新增字段」 and v2-3-AI.md 「玩法配置新增」.
 import type {
+  AIRules,
   BossConf,
   BossRules,
   BuildingConf,
@@ -14,10 +15,12 @@ import type {
   RoleConf,
   SeasonTaskConf,
   SeasonTier,
+  WorkoutConf,
+  WorkoutStep,
 } from '../../api/types';
-import { MEDAL_TYPE, SEASON_TASK_TYPE, SPORT_LABEL, UNIT_LABEL } from '../../utils/labels';
+import { MEDAL_TYPE, SEASON_TASK_TYPE, SPORT_LABEL, UNIT_LABEL, WORKOUT_LEVEL, WORKOUT_POSE, WORKOUT_SPORTS } from '../../utils/labels';
 
-export type Tab = 'buildings' | 'roles' | 'drops' | 'energy' | 'boss' | 'chest' | 'defense' | 'tiers' | 'tasks' | 'medals' | 'companion' | 'relay';
+export type Tab = 'buildings' | 'roles' | 'drops' | 'energy' | 'boss' | 'chest' | 'defense' | 'tiers' | 'tasks' | 'medals' | 'companion' | 'relay' | 'workouts' | 'ai';
 
 export const TABS: { value: Tab; label: string; v2?: boolean }[] = [
   { value: 'buildings', label: '建筑' },
@@ -32,6 +35,8 @@ export const TABS: { value: Tab; label: string; v2?: boolean }[] = [
   { value: 'medals', label: '奖牌', v2: true },
   { value: 'companion', label: '伙伴养成', v2: true },
   { value: 'relay', label: '跑团接力', v2: true },
+  { value: 'workouts', label: 'AI 跟练', v2: true },
+  { value: 'ai', label: 'AI', v2: true },
 ];
 
 export interface NumField<K extends string = string> {
@@ -108,6 +113,53 @@ export const RELAY_FIELDS: NumField<keyof RelayRules>[] = [
   { key: 'reward_energy', label: '完成奖励（每人）', unit: '能量', min: 0, step: 10 },
 ];
 
+export const AI_FIELDS: NumField<keyof AIRules>[] = [
+  { key: 'route_max_km', label: 'AI 路线最长距离', unit: 'km', min: 1, max: 100, hint: '路线建议和助手规划路线时，闭环和目标路线都不超过这个距离' },
+  { key: 'report_max_chars', label: '战报最多字数', unit: '字', min: 20, max: 500, step: 10, hint: '超出的部分截断；发布动态时战报不计入 500 字' },
+  { key: 'chat_history_turns', label: '助手带上的历史轮数', unit: '轮', min: 0, max: 20, hint: '每次提问带上最近几轮对话作为上下文；越多越贵' },
+];
+
+const step = (key: string, name: string, mode: WorkoutStep['mode'], target: number, sets: number, rest_sec: number, pose: string, cue: string): WorkoutStep => ({
+  key, name, mode, target, sets, rest_sec, pose, cue, demo_url: null,
+});
+
+/** Same as server/internal/gameplay/workouts.go DefaultWorkouts (the four launch routines). */
+export const DEFAULT_WORKOUTS: WorkoutConf[] = [
+  {
+    key: 'rope_basic', name: '跳绳入门', sport: 'rope', level: 'beginner', cover_url: null, est_minutes: 12, camera: true,
+    steps: [
+      step('rope_jump', '双脚跳', 'count', 100, 5, 30, 'jump', '保持节奏，落地轻一点'),
+      step('rope_alternate', '左右交替跳', 'count', 60, 2, 30, 'jump', '像原地慢跑一样换脚'),
+    ],
+  },
+  {
+    key: 'hiit_burn', name: 'HIIT 燃脂', sport: 'hiit', level: 'intermediate', cover_url: null, est_minutes: 16, camera: true,
+    steps: [
+      step('jumping_jack', '开合跳', 'time', 40, 3, 20, 'jump', '手脚同时打开，核心收紧'),
+      step('squat', '深蹲', 'count', 15, 3, 20, 'squat', '膝盖对准脚尖，臀部向后坐'),
+      step('pushup', '俯卧撑', 'count', 10, 3, 30, 'pushup', '身体成一条直线，做不动可以跪姿'),
+      step('high_knees', '高抬腿', 'time', 30, 3, 30, 'none', '大腿抬到水平，快速交替'),
+    ],
+  },
+  {
+    key: 'pilates_core', name: '普拉提核心', sport: 'yoga', level: 'beginner', cover_url: null, est_minutes: 18, camera: true,
+    steps: [
+      step('crunch', '卷腹', 'count', 15, 3, 20, 'crunch', '下背贴地，用腹部发力'),
+      step('plank', '平板支撑', 'time', 40, 3, 20, 'none', '肩在手肘正上方，别塌腰'),
+      step('glute_bridge', '臀桥', 'count', 15, 3, 20, 'none', '臀部发力抬起，顶峰停一秒'),
+    ],
+  },
+  {
+    key: 'strength_basic', name: '力量入门', sport: 'strength', level: 'beginner', cover_url: null, est_minutes: 20, camera: true,
+    steps: [
+      step('squat', '徒手深蹲', 'count', 15, 4, 30, 'squat', '吸气下蹲，呼气起身'),
+      step('pushup', '俯卧撑', 'count', 10, 3, 30, 'pushup', '下放慢一点，推起快一点'),
+      step('lunge', '弓步蹲', 'time', 40, 3, 20, 'none', '前后脚都成 90 度'),
+      step('crunch', '卷腹', 'count', 20, 3, 20, 'crunch', '别用手拉脖子'),
+    ],
+  },
+];
+
 // Contract defaults, used to add a section that a pre-V2 config does not have yet.
 export const DEFAULTS: {
   boss: BossRules;
@@ -118,6 +170,8 @@ export const DEFAULTS: {
   medals: MedalConf[];
   companion: CompanionRules;
   relay: RelayRules;
+  workouts: WorkoutConf[];
+  ai: AIRules;
 } = {
   boss: {
     strike_cost: 100, strike_damage: 40, strike_cooldown_s: 30, combo_window_s: 300, combo_pct: 10, combo_max_pct: 50,
@@ -160,7 +214,18 @@ export const DEFAULTS: {
   ],
   companion: { feed_cost: 50, feed_exp: 10, exp_per_100m: 1, exp_per_level: 100 },
   relay: { default_legs: 6, leg_km: 3, duration_h: 168, reward_energy: 100 },
+  workouts: DEFAULT_WORKOUTS,
+  ai: { route_max_km: 15, report_max_chars: 120, chat_history_turns: 6 },
 };
+
+/** Seconds per counted rep, by pose (a rope jump is quick, a push-up is not). */
+const REP_SEC: Record<string, number> = { jump: 0.6, squat: 2.5, pushup: 2.5, crunch: 2, none: 2 };
+
+/** Rough duration of a workout in minutes: reps × time per rep (or the timed target), plus rest between sets. */
+export function workoutMinutes(w: WorkoutConf): number {
+  const sec = w.steps.reduce((s, x) => s + x.sets * ((x.mode === 'time' ? x.target : x.target * (REP_SEC[x.pose] ?? 2)) + x.rest_sec), 0);
+  return Math.max(1, Math.round(sec / 60));
+}
 
 export const clone = <T,>(c: T): T => JSON.parse(JSON.stringify(c)) as T;
 
@@ -170,6 +235,23 @@ export function normalize(c: Config): Config {
   if (n.medals) n.medals = n.medals.map((m) => ({ ...m, type: m.type ?? 'distance_km', target: m.target ?? m.distance_km ?? 0 }));
   return n;
 }
+
+export const WORKOUT_FIELDS: { key: keyof WorkoutConf; label: string }[] = [
+  { key: 'name', label: '名称' },
+  { key: 'sport', label: '运动' },
+  { key: 'level', label: '难度' },
+  { key: 'est_minutes', label: '预计分钟' },
+  { key: 'camera', label: '摄像头计次' },
+];
+export const STEP_FIELDS: { key: keyof WorkoutStep; label: string }[] = [
+  { key: 'name', label: '名称' },
+  { key: 'mode', label: '方式' },
+  { key: 'target', label: '目标' },
+  { key: 'sets', label: '组数' },
+  { key: 'rest_sec', label: '组间休息' },
+  { key: 'pose', label: '姿态识别' },
+  { key: 'cue', label: '语音提示' },
+];
 
 // ---------------- diff ----------------
 
@@ -286,6 +368,17 @@ export function diff(base: Config, draft: Config): Change[] {
     { key: 'type', label: '类型' },
     { key: 'target', label: '目标' },
   ]);
+  if (draft.ai) for (const f of AI_FIELDS) push('ai', `ai.${f.key}`, `AI · ${f.label}`, base.ai?.[f.key], draft.ai[f.key]);
+  list('workouts', 'workouts', '跟练', base.workouts, draft.workouts, (w, i) => w.key || `#${i}`, (w) => w.name || w.key || '（未命名）', WORKOUT_FIELDS);
+  const ow = new Map((base.workouts ?? []).map((w, i) => [w.key || `#${i}`, w]));
+  (draft.workouts ?? []).forEach((w, i) => {
+    const o = ow.get(w.key || `#${i}`);
+    if (!o) return; // the whole workout is already listed as 新增
+    list('workouts', `workouts.${w.key || `#${i}`}.steps`, `跟练 · ${w.name || w.key}`, o.steps, w.steps, (x, k) => x.key || `#${k}`, (x) => x.name || x.key || '（未命名）', STEP_FIELDS);
+    const order = (ws: WorkoutStep[]) => ws.map((x) => x.key).join(',');
+    if (order(o.steps) !== order(w.steps) && o.steps.length === w.steps.length)
+      out.push({ tab: 'workouts', path: `workouts.${w.key}.order`, label: `跟练 · ${w.name || w.key} · 动作顺序`, from: o.steps.map((x) => x.name).join('→'), to: w.steps.map((x) => x.name).join('→') });
+  });
   return out;
 }
 
@@ -364,5 +457,34 @@ export function validate(c: Config): Problem[] {
   }
   keyed('medals', '奖牌', c.medals);
   for (const m of c.medals ?? []) if (m.type && !(m.type in MEDAL_TYPE)) out.push({ tab: 'medals', text: `奖牌「${m.name}」类型无效` });
+
+  checkFields(out, 'ai', 'AI', c.ai, AI_FIELDS);
+  if (c.workouts) {
+    const seen = new Set<string>();
+    c.workouts.forEach((w, i) => {
+      const who = w.name || w.key || `第 ${i + 1} 套`;
+      if (!KEY_RE.test(w.key)) out.push({ tab: 'workouts', text: `跟练「${who}」的 key 须为小写字母开头的 a-z、0-9、_` });
+      else if (seen.has(w.key)) out.push({ tab: 'workouts', text: `跟练 key「${w.key}」重复` });
+      seen.add(w.key);
+      if (!w.name.trim()) out.push({ tab: 'workouts', text: `跟练「${w.key || i + 1}」缺少名称` });
+      if (!WORKOUT_SPORTS.includes(w.sport)) out.push({ tab: 'workouts', text: `跟练「${who}」的运动须为跳绳 / HIIT / 瑜伽 / 力量` });
+      if (!(w.level in WORKOUT_LEVEL)) out.push({ tab: 'workouts', text: `跟练「${who}」难度无效` });
+      if (!(w.est_minutes >= 1 && w.est_minutes <= 180)) out.push({ tab: 'workouts', text: `跟练「${who}」预计时长须为 1–180 分钟` });
+      if (!w.steps.length) out.push({ tab: 'workouts', text: `跟练「${who}」至少要有 1 个动作` });
+      const sk = new Set<string>();
+      w.steps.forEach((x, k) => {
+        const sw = `跟练「${who}」第 ${k + 1} 个动作${x.name ? `「${x.name}」` : ''}`;
+        if (!KEY_RE.test(x.key)) out.push({ tab: 'workouts', text: `${sw}的 key 须为小写字母开头的 a-z、0-9、_` });
+        else if (sk.has(x.key)) out.push({ tab: 'workouts', text: `${sw}的 key「${x.key}」和前面的动作重复` });
+        sk.add(x.key);
+        if (!x.name.trim()) out.push({ tab: 'workouts', text: `${sw}缺少名称` });
+        if (!(x.target >= 1)) out.push({ tab: 'workouts', text: `${sw}的目标必须 ≥ 1` });
+        if (!(x.sets >= 1 && x.sets <= 20)) out.push({ tab: 'workouts', text: `${sw}的组数须为 1–20` });
+        if (!(x.rest_sec >= 0 && x.rest_sec <= 600)) out.push({ tab: 'workouts', text: `${sw}的组间休息须为 0–600 秒` });
+        if (!(x.pose in WORKOUT_POSE)) out.push({ tab: 'workouts', text: `${sw}的姿态识别无效` });
+        if ((x.cue ?? '').length > 40) out.push({ tab: 'workouts', text: `${sw}的语音提示最多 40 字` });
+      });
+    });
+  }
   return out;
 }

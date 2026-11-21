@@ -71,6 +71,12 @@ const errorMessages = <String, String>{
   'race_full': '赛事名额已满',
   'race_started': '赛事已经开始，不能取消报名',
   'invalid_invite': '邀请码无效或已过期',
+  // V2 AI
+  'ai_unavailable': 'AI 助手暂时不可用，请稍后再试',
+  'ai_quota_exceeded': '本周免费次数已用完，开通会员不限次数',
+  'ai_image_unsupported': '当前 AI 模型还不支持识别图片',
+  'regenerate_limit': '这次运动的战报已经换过 2 次了',
+  'stream_interrupted': '回答中断了，请重试',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',

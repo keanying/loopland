@@ -19,6 +19,7 @@ import (
 
 	"github.com/keanying/loopland/server/internal/activity"
 	"github.com/keanying/loopland/server/internal/admin"
+	"github.com/keanying/loopland/server/internal/ai"
 	"github.com/keanying/loopland/server/internal/auth"
 	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/codex"
@@ -54,6 +55,8 @@ type App struct {
 	Providers *providers.Registry
 	// Moderation scores text and keeps the review queue.
 	Moderation *moderation.Moderator
+	// AI is 第三批「AI」: assistant, routes, reports, workouts, classifier.
+	AI *ai.Service
 }
 
 // Options allow tests to replace external services.
@@ -92,6 +95,12 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	// Content moderation shared by the community modules (社区 · 内容审核).
 	mod := &moderation.Moderator{Pool: pool}
 	social.Register(mod) // posts, comments, nicknames, avatars, bios, crew names / avatars
+	// AI (第三批): the model comes live from the registry; dev without one
+	// uses the mock. The classifier scores moderated content.
+	aiSvc := &ai.Service{Pool: pool, Redis: rdb, Config: store, Mod: mod, Log: log, Dev: cfg.Dev(), MediaDir: cfg.MediaDir,
+		AIConf: func() *providers.AIConfig { return reg.Current().AI }, AMapKey: func() string { return reg.Current().AMapKey },
+		HTTP: &http.Client{}}
+	mod.AI = ai.Classifier{Svc: aiSvc}
 
 	authSvc := &auth.Service{Pool: pool, Redis: rdb, Box: box, Config: store, SMS: opt.SMS, OneTap: opt.OneClick, WeChat: opt.WeChat,
 		Apple: opt.Apple, Captcha: opt.Captcha, JWTSecret: cfg.JWTSecret, AccessTTL: cfg.AccessTTL, RefreshTTL: cfg.RefreshTTL}
@@ -131,7 +140,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return httpx.OK(w, store.For(uid))
 	}))
 	mux.Handle("GET /v1/config/features", httpx.Wrap(func(w http.ResponseWriter, r *http.Request) error {
-		return httpx.OK(w, features(reg.Current(), opt))
+		return httpx.OK(w, features(reg.Current(), opt, aiSvc.Available()))
 	}))
 	(&auth.Handler{Svc: authSvc}).Routes(mux)
 	userH.Routes(mux, authed, authAny)
@@ -165,16 +174,19 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	(&social.Handler{Svc: socSvc}).Routes(mux, authed)
 	(&social.AdminHandler{Svc: socSvc, Audit: admin.Audit, RemoveMessage: commSvc.RemoveMessage}).Routes(mux,
 		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleReviewer), adminAPI.Guard(admin.RoleAdmin))
+	(&ai.Handler{Svc: aiSvc}).Routes(mux, authed)
+	(&ai.AdminHandler{Svc: aiSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps), adminAPI.Guard(admin.RoleAdmin))
 	mux.Handle("GET /v1/ws", hub)
 
 	return &App{
 		Handler: withMiddleware(mux, log),
-		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs())},
+		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs())},
 		Hub:     hub,
 		Play:    playSvc,
 		Config:  store, Pool: pool, Redis: rdb,
 		Providers:  reg,
 		Moderation: mod,
+		AI:         aiSvc,
 	}, nil
 }
 
@@ -224,15 +236,15 @@ type Features struct {
 }
 
 // features is computed per request from the live snapshot; test
-// replacements in opt take precedence.
-func features(s providers.Snapshot, opt Options) Features {
+// replacements in opt take precedence. aiOn includes the dev mock model.
+func features(s providers.Snapshot, opt Options, aiOn bool) Features {
 	pick := func(override, cur any) any {
 		if override != nil && !isLive(override) {
 			return override
 		}
 		return cur
 	}
-	f := Features{Login: []string{}, Pay: []string{}, AI: s.AI != nil}
+	f := Features{Login: []string{}, Pay: []string{}, AI: aiOn}
 	_, captchaOff := pick(opt.Captcha, s.Captcha).(auth.NoCaptcha)
 	f.Captcha = !captchaOff
 	for name, p := range map[string]any{"sms": pick(opt.SMS, s.SMS), "oneclick": pick(opt.OneClick, s.OneClick),

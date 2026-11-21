@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../api/community_common.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -138,6 +139,14 @@ class MePage extends ConsumerWidget {
                 title: u.membership?.active == true ? '会员 · ${u.membership!.planName ?? ''}' : '开通会员',
                 sub: u.membership?.active == true ? '到期 ${Fmt.date(u.membership!.expiresAt)}' : '手绘 / 3D 地图、高级数据等体验权益',
                 onTap: () => context.push('/membership'),
+              ),
+            if (ref.watch(aiEnabledProvider))
+              _MenuTile(
+                icon: Icons.auto_awesome_rounded,
+                color: LL.lavender,
+                title: 'AI 助手圈圈',
+                sub: '去哪抢地、怪兽怎么打、今天跑多少合适',
+                onTap: () => context.push('/ai'),
               ),
             _MenuTile(icon: Icons.history_rounded, color: LL.sky, title: '运动记录', onTap: () => context.push('/activities')),
             _MenuTile(icon: Icons.notifications_none_rounded, color: LL.pink, title: '消息', onTap: () => context.push('/inbox')),

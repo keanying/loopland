@@ -22,6 +22,7 @@ import type {
   UserDetail,
   UserStatus,
 } from '../api/types';
+import { DEFAULT_WORKOUTS } from '../pages/gameplay/config';
 
 function mulberry32(seed: number) {
   let a = seed;
@@ -424,6 +425,9 @@ export const gameplayConfig: Config = {
   ],
   companion: { feed_cost: 50, feed_exp: 10, exp_per_100m: 1, exp_per_level: 100 },
   relay: { default_legs: 6, leg_km: 3, duration_h: 168, reward_energy: 100 },
+  // V2 第三批「AI」(docs/api/v2-3-AI.md 「玩法配置新增」): the contract defaults
+  workouts: JSON.parse(JSON.stringify(DEFAULT_WORKOUTS)),
+  ai: { route_max_km: 15, report_max_chars: 120, chat_history_turns: 6 },
   bosses: [
     { key: 'sofa', name: '沙发怪', drops: [ { item: 'banner', kind: 'role', percent: 35 }, { item: 'knight', kind: 'role', percent: 20 }, { item: 'tent', kind: 'blueprint', percent: 10 }, { item: 'firetail', kind: 'egg', percent: 5 }, { item: 'energy', kind: 'energy', percent: 30 } ] },
     { key: 'bat', name: '熬夜蝠', drops: [ { item: 'scout', kind: 'role', percent: 30 }, { item: 'archer', kind: 'role', percent: 25 }, { item: 'tower', kind: 'blueprint', percent: 8 }, { item: 'nightnewt', kind: 'egg', percent: 4 }, { item: 'energy', kind: 'energy', percent: 33 } ] },
