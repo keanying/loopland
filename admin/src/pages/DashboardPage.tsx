@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Col, Empty, Row, Segmented, Skeleton, Table, Tag } from 'antd';
 import { ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, SafetyOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import type { EChartsOption } from 'echarts';
 import { api } from '../api/admin';
 import type { DashboardTodo } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import Chart from '../components/Chart';
+import { BossBadge, HpBar } from '../components/gameplay';
+import { bossKindName, timeLeft } from '../utils/gameplay';
 import { Delta, PageHeader, Panel } from '../components/ui';
 import { bigNumber, change, dayjs } from '../utils/format';
 import { TODO_TYPE } from '../utils/labels';
@@ -65,8 +68,10 @@ function MetricCard({ value, unit, label, now, before, invert }: { value: number
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { admin } = useAuth();
+  const { admin, can } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ['dashboard'], queryFn: api.dashboard });
+  const bosses = useQuery({ queryKey: ['bosses', 'active', 1], queryFn: () => api.bosses({ status: 'active', page: 1 }), enabled: can('ops.read') });
+  const activeBosses = bosses.data?.items ?? [];
   const [metric, setMetric] = useState<Metric>('active_users');
   const [range, setRange] = useState<7 | 30>(7);
   const [asTable, setAsTable] = useState(false);
@@ -275,6 +280,41 @@ export default function DashboardPage() {
             )}
           </Panel>
         </Col>
+
+        {activeBosses.length > 0 && (
+          <Col xs={24} xl={10}>
+            <Panel
+              title="进行中的怪兽"
+              extra={
+                <Link to="/operations" className="panel-hint">
+                  共 {bosses.data?.total ?? activeBosses.length} 只 · 查看全部 <ArrowRightOutlined />
+                </Link>
+              }
+            >
+              {activeBosses.slice(0, 4).map((b) => (
+                <Link to={`/operations?tab=bosses&boss=${b.id}`} key={b.id} className="boss-card" style={{ color: 'inherit' }}>
+                  <BossBadge kind={b.kind} />
+                  <div style={{ width: 130, flexShrink: 0, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {b.name || bossKindName(b.kind)} <span className="muted num">Lv.{b.level}</span>
+                    </div>
+                    <div className="muted" style={{ fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {b.location_name}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <HpBar hp={b.hp} max={b.hp_max} compact />
+                  </div>
+                  <div className="muted num" style={{ fontSize: 12, width: 84, textAlign: 'right', flexShrink: 0 }}>
+                    {b.participants} 人
+                    <br />
+                    {timeLeft(b.expires_at).replace('还剩 ', '')}
+                  </div>
+                </Link>
+              ))}
+            </Panel>
+          </Col>
+        )}
       </Row>
     </>
   );

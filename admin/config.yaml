@@ -1,0 +1,51 @@
+# 圈圈 Loopland 管理端 · 统一配置（开发默认值，提交到仓库）
+#
+# 所有域名 / 端口 / API 前缀 / 第三方 Key 都只在这里配置，src/ 里不写死。
+# vite.config.ts 在 `npm run dev / build / preview` 启动时读取并校验，写错会直接报中文错误、不会启动。
+# 浏览器用到的部分（api、amap、app）在构建时编进页面，代码里通过 src/config.ts 读取。
+#
+# 加载顺序（后面的覆盖前面的，按键深度合并，只需写要改的项）：
+#   1. config.yaml                 本文件，所有键的默认值（必需）
+#   2. config.local.yaml           本机覆盖（可选，已 gitignore）
+#   3. config.<mode>.yaml          按 Vite mode 叠加（可选），如 `npm run dev:mock`（--mode mock）读 config.mock.yaml
+#   4. $LOOPLAND_ADMIN_CONFIG      环境变量指定的文件（可选，相对路径以 admin/ 为准），优先级最高；
+#                                  设置后不再读 config.local.yaml，适合生产 / 测试服构建
+#
+# 改了配置文件，开发服务器会自动重启；构建产物需要重新 `npm run build`。
+
+# 开发服务器（npm run dev）
+dev_server:
+  host: localhost        # 监听地址；要让局域网 / 手机访问改成 0.0.0.0
+  port: 5173             # 端口
+  strict_port: false     # true：端口被占用时直接报错；false：自动换下一个空闲端口
+  open: false            # 启动后是否自动打开浏览器
+
+# 本地预览构建产物（npm run preview）
+preview:
+  host: localhost
+  port: 4173
+
+# 后端 API 服务。开发 / 预览时 Vite 把 api.admin_prefix、api.app_prefix 和 api.ws_path（WebSocket）代理到这里
+backend:
+  url: http://localhost:8080
+
+# 浏览器请求 API 的方式
+api:
+  base_path: ""          # 加在所有请求前面；"" = 同源（开发时走上面的代理，生产由 nginx 转发）。
+                         # 也可写 /some-prefix 或 https://api.example.com（跨域时后端需允许 CORS）
+  admin_prefix: /admin/v1  # 管理端接口前缀
+  app_prefix: /v1          # App 接口前缀（只用于代理）
+  ws_path: /v1/ws          # WebSocket 路径（代理时开启 ws）
+
+# 高德地图 JS API 2.0。key 留空时「地图与领地」用内置 SVG 地图（无底图，可缩放拖动）
+amap:
+  key: ""                # Web 端（JS API）Key
+  security_code: ""      # 安全密钥（明文方式，写入 window._AMapSecurityConfig.securityJsCode）
+  service_host: ""       # 安全密钥代理地址（推荐生产使用，如 https://admin.example.com/_AMapService）；填了就不用 security_code
+  version: "2.0"         # JS API 版本（必须加引号）
+  map_style: amap://styles/whitesmoke  # 底图样式
+
+# 应用
+app:
+  title: 圈圈 Loopland · 管理端   # 浏览器标签页标题
+  mock: false            # true：所有请求走 src/mocks 的内存假数据，不需要后端（npm run dev:mock 会打开）

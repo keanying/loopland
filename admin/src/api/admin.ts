@@ -1,4 +1,5 @@
-// One function per endpoint in docs/api/v1.md 「管理端」.
+// One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md).
+import { ADMIN_PREFIX } from '../config';
 import { http } from './client';
 import type {
   AdminAccount,
@@ -18,6 +19,7 @@ import type {
   ChestScatter,
   ChestStatus,
   Dashboard,
+  District,
   League,
   MapObjects,
   OrienteeringRoute,
@@ -35,6 +37,9 @@ import type {
   Paged,
   Plan,
   PlanUpdate,
+  Provider,
+  ProviderCheck,
+  ProviderSave,
   PublishRequest,
   RiskAction,
   RiskAlert,
@@ -53,7 +58,7 @@ import type {
   UserStats,
 } from './types';
 
-const A = '/admin/v1';
+const A = ADMIN_PREFIX;
 
 export const PAGE_SIZE = 20;
 
@@ -135,6 +140,7 @@ export const api = {
   createRoute: (body: RouteInput) => http.post<OrienteeringRoute>(`${A}/routes`, body),
   updateRoute: (id: number, body: RouteInput) => http.patch<OrienteeringRoute>(`${A}/routes/${id}`, body),
   deleteRoute: (id: number) => http.del<unknown>(`${A}/routes/${id}`),
+  districts: () => http.get<Items<District>>(`${A}/districts`),
   league: (p: { district?: string; week_start?: string }) => http.get<League>(`${A}/league`, p),
 
   // audit & admins
@@ -143,4 +149,10 @@ export const api = {
   admins: () => http.get<Items<AdminAccount>>(`${A}/admins`),
   createAdmin: (body: AdminCreate) => http.post<AdminAccount>(`${A}/admins`, body),
   patchAdmin: (id: number, body: AdminPatch) => http.patch<AdminAccount>(`${A}/admins/${id}`, body),
+
+  // 系统配置 · 第三方服务 (docs/api/系统配置.md)
+  providers: () => http.get<Items<Provider>>(`${A}/providers`),
+  saveProvider: (code: string, body: ProviderSave) => http.put<Provider>(`${A}/providers/${encodeURIComponent(code)}`, body),
+  testProvider: (code: string, input?: string) =>
+    http.post<ProviderCheck>(`${A}/providers/${encodeURIComponent(code)}/test`, input ? { input } : {}),
 };

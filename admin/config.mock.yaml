@@ -1,0 +1,4 @@
+# `npm run dev:mock` / `npm run build:mock`（vite --mode mock）叠加在 config.yaml（和 config.local.yaml）之上。
+# 所有请求走 src/mocks 的内存假数据，不需要后端；刷新页面数据会重置。
+app:
+  mock: true

@@ -136,7 +136,7 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .cp-row { display: grid; grid-template-columns: 28px minmax(90px, 1.4fr) minmax(96px, 1fr) minmax(96px, 1fr) 84px auto; gap: 6px; align-items: center; padding: 4px 0; }
 .boss-card { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-top: 1px solid #f0f0f2; }
 .boss-card:first-child { border-top: 0; }
-/* AMap marker contents (only with VITE_AMAP_KEY) */
+/* AMap marker contents (only with amap.key in config.yaml) */
 .amap-boss { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
 .amap-boss-label { background: var(--ink); color: #fff; border-radius: 8px; padding: 3px 8px 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .amap-boss-hp { height: 5px; background: #4a4a50; border-radius: 3px; margin-top: 3px; overflow: hidden; }
@@ -148,3 +148,8 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .amap-cp { width: 20px; height: 20px; border-radius: 50%; border: 2px solid; background: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .amap-pick { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--red); background: rgba(217,58,43,.15); }
 .route-preview .map-wrap { min-height: 420px; height: 420px; }
+.tab-strip { overflow-x: auto; max-width: 100%; margin-top: -6px; padding-bottom: 2px; }
+.tab-dot { display: inline-block; width: 7px; height: 7px; border-radius: 4px; background: #a9c23a; margin-left: 4px; vertical-align: top; }
+.tab-dot.bad { background: var(--red); }
+.field-cell { background: var(--card); border-radius: 16px; padding: 12px 14px; height: 100%; }
+.check-changed { display: inline-block; padding: 4px; border-radius: 6px; background: #f4fbd2; outline: 1px solid #a9c23a; }

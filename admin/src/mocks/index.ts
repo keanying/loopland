@@ -1,6 +1,7 @@
-// In-memory fake of the /admin/v1 API, used when VITE_MOCK=1.
-// Delete this folder (and the import in src/api/client.ts) once the backend is live.
+// In-memory fake of the admin API, used when app.mock is true (npm run dev:mock → config.mock.yaml).
+// Route patterns are relative to api.admin_prefix. Delete this folder (and the import in src/api/client.ts) once the backend is live.
 import { ApiError } from '../api/client';
+import { ADMIN_PREFIX } from '../config';
 import type {
   AdminRole,
   BossDetail,
@@ -265,12 +266,12 @@ function bumpVersion(v: string): string {
 type Handler = (ctx: { m: RegExpMatchArray; q: URLSearchParams; body: Record<string, unknown>; adminId: number; role: AdminRole }) => unknown;
 
 const routes: [string, RegExp, Handler][] = [
-  ['GET', /^\/admin\/v1\/me$/, ({ adminId }) => {
+  ['GET', /^\/me$/, ({ adminId }) => {
     const a = db.admins.find((x) => x.id === adminId)!;
     return { id: a.id, username: a.username, role: a.role };
   }],
 
-  ['GET', /^\/admin\/v1\/dashboard$/, (): Dashboard => {
+  ['GET', /^\/dashboard$/, (): Dashboard => {
     const open = db.riskAlerts.filter((a) => a.status === 'open').length;
     const refunds = db.orders.filter((o) => o.status === 'refund_requested').length;
     const renew = db.orders.filter((o) => o.status === 'renew_failed').length;
@@ -288,7 +289,7 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // users
-  ['GET', /^\/admin\/v1\/users\/stats$/, () => ({
+  ['GET', /^\/users\/stats$/, () => ({
     total: 312480,
     today_new: 1286,
     retention_7d: 0.42,
@@ -300,7 +301,7 @@ const routes: [string, RegExp, Handler][] = [
       { provider: 'apple', count: 4290 },
     ],
   })],
-  ['GET', /^\/admin\/v1\/users$/, ({ q }) => {
+  ['GET', /^\/users$/, ({ q }) => {
     const kw = (q.get('q') ?? '').trim();
     const filter = q.get('filter') ?? 'all';
     let list = db.users;
@@ -313,12 +314,12 @@ const routes: [string, RegExp, Handler][] = [
       q,
     );
   }],
-  ['GET', /^\/admin\/v1\/users\/(\d+)$/, ({ m }) => {
+  ['GET', /^\/users\/(\d+)$/, ({ m }) => {
     const u = db.users.find((x) => x.id === Number(m[1]));
     if (!u) fail(404, 'not_found', '用户不存在');
     return clone(u);
   }],
-  ['POST', /^\/admin\/v1\/users\/(\d+)\/reveal-phone$/, ({ m, role, adminId }) => {
+  ['POST', /^\/users\/(\d+)\/reveal-phone$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops', 'reviewer']);
     const id = Number(m[1]);
     const phone = db.phones.get(id);
@@ -326,7 +327,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'user.reveal_phone', `user:${id}`);
     return { phone };
   }],
-  ['POST', /^\/admin\/v1\/users\/(\d+)\/actions$/, ({ m, body, role, adminId }) => {
+  ['POST', /^\/users\/(\d+)\/actions$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const u = db.users.find((x) => x.id === Number(m[1]));
     if (!u) fail(404, 'not_found', '用户不存在');
@@ -336,9 +337,9 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // plans & orders
-  ['GET', /^\/admin\/v1\/entitlements$/, () => ({ items: clone(db.entitlements) })],
-  ['GET', /^\/admin\/v1\/plans$/, () => ({ items: clone([...db.plans].sort((a, b) => a.sort - b.sort)) })],
-  ['PUT', /^\/admin\/v1\/plans\/([\w-]+)$/, ({ m, body, role, adminId }) => {
+  ['GET', /^\/entitlements$/, () => ({ items: clone(db.entitlements) })],
+  ['GET', /^\/plans$/, () => ({ items: clone([...db.plans].sort((a, b) => a.sort - b.sort)) })],
+  ['PUT', /^\/plans\/([\w-]+)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const p = db.plans.find((x) => x.code === m[1]);
     if (!p) fail(404, 'not_found', '套餐不存在');
@@ -354,7 +355,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'plan.update', `plan:${p.code}`, { price_fen: price, first_price_fen: first, on_sale: p.on_sale });
     return clone(p);
   }],
-  ['PUT', /^\/admin\/v1\/plans\/([\w-]+)\/entitlements$/, ({ m, body, role, adminId }) => {
+  ['PUT', /^\/plans\/([\w-]+)\/entitlements$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const p = db.plans.find((x) => x.code === m[1]);
     if (!p) fail(404, 'not_found', '套餐不存在');
@@ -365,8 +366,8 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'plan.entitlements', `plan:${p.code}`, { entitlements: list });
     return clone(p);
   }],
-  ['GET', /^\/admin\/v1\/orders\/stats$/, (): OrderStats => ({ month_revenue_fen: 28_600_000, active_members: 18600, renew_success_rate: 0.81, refund_rate_today: 0.0143 })],
-  ['GET', /^\/admin\/v1\/orders$/, ({ q }) => {
+  ['GET', /^\/orders\/stats$/, (): OrderStats => ({ month_revenue_fen: 28_600_000, active_members: 18600, renew_success_rate: 0.81, refund_rate_today: 0.0143 })],
+  ['GET', /^\/orders$/, ({ q }) => {
     const status = q.get('status');
     const kw = (q.get('q') ?? '').trim();
     let list = db.orders;
@@ -374,7 +375,7 @@ const routes: [string, RegExp, Handler][] = [
     if (kw) list = list.filter((o) => o.order_no.includes(kw) || o.user.nickname.includes(kw) || String(o.user.id) === kw);
     return paginate(list.map(clone), q);
   }],
-  ['POST', /^\/admin\/v1\/orders\/(\w+)\/refund$/, ({ m, body, role, adminId }) => {
+  ['POST', /^\/orders\/(\w+)\/refund$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin']);
     const o = db.orders.find((x) => x.order_no === m[1]);
     if (!o) fail(404, 'not_found', '订单不存在');
@@ -385,7 +386,7 @@ const routes: [string, RegExp, Handler][] = [
     const { user: _user, ...order } = o;
     return clone(order);
   }],
-  ['POST', /^\/admin\/v1\/orders\/(\w+)\/remind$/, ({ m, role, adminId }) => {
+  ['POST', /^\/orders\/(\w+)\/remind$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const o = db.orders.find((x) => x.order_no === m[1]);
     if (!o) fail(404, 'not_found', '订单不存在');
@@ -395,7 +396,7 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // territories
-  ['GET', /^\/admin\/v1\/territories\/geo$/, ({ q }) => {
+  ['GET', /^\/territories\/geo$/, ({ q }) => {
     const bbox = (q.get('bbox') ?? '').split(',').map(Number);
     if (bbox.length !== 4 || !bbox.every(Number.isFinite)) fail(400, 'invalid_bbox', 'bbox 格式应为 minLng,minLat,maxLng,maxLat');
     const [a, b, c, d] = bbox;
@@ -403,7 +404,7 @@ const routes: [string, RegExp, Handler][] = [
     const list = db.territories.filter((t) => t.center.lng >= a && t.center.lng <= c && t.center.lat >= b && t.center.lat <= d);
     return { items: list.map((t) => clone(territorySummaryOf(t))) };
   }],
-  ['GET', /^\/admin\/v1\/territories$/, ({ q }) => {
+  ['GET', /^\/territories$/, ({ q }) => {
     const status = q.get('status') ?? 'all';
     const kw = (q.get('q') ?? '').trim();
     let list = db.territories;
@@ -421,12 +422,12 @@ const routes: [string, RegExp, Handler][] = [
       q,
     );
   }],
-  ['GET', /^\/admin\/v1\/territories\/(\d+)$/, ({ m }) => {
+  ['GET', /^\/territories\/(\d+)$/, ({ m }) => {
     const t = db.territories.find((x) => x.id === Number(m[1]));
     if (!t) fail(404, 'not_found', '领地不存在');
     return clone(t);
   }],
-  ['POST', /^\/admin\/v1\/territories\/(\d+)\/(guard|freeze|reset)$/, ({ m, body, role, adminId }) => {
+  ['POST', /^\/territories\/(\d+)\/(guard|freeze|reset)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const t = db.territories.find((x) => x.id === Number(m[1]));
     if (!t) fail(404, 'not_found', '领地不存在');
@@ -459,7 +460,7 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // risk
-  ['GET', /^\/admin\/v1\/risk\/alerts$/, ({ q }) => {
+  ['GET', /^\/risk\/alerts$/, ({ q }) => {
     const status = q.get('status') || 'open'; // server default
     const type = q.get('type');
     let list = [...db.riskAlerts];
@@ -468,8 +469,8 @@ const routes: [string, RegExp, Handler][] = [
     list.sort((a, b) => b.confidence - a.confidence);
     return paginate(list.map(clone), q);
   }],
-  ['GET', /^\/admin\/v1\/risk\/alerts\/(\d+)$/, ({ m }) => riskDetail(Number(m[1]))],
-  ['POST', /^\/admin\/v1\/risk\/alerts\/(\d+)\/resolve$/, ({ m, body, role, adminId }) => {
+  ['GET', /^\/risk\/alerts\/(\d+)$/, ({ m }) => riskDetail(Number(m[1]))],
+  ['POST', /^\/risk\/alerts\/(\d+)\/resolve$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops', 'reviewer']);
     const a = db.riskAlerts.find((x) => x.id === Number(m[1]));
     if (!a) fail(404, 'not_found', '告警不存在');
@@ -485,8 +486,8 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, `risk.${action}`, `alert:${a.id}`, { note: body.note ?? '' });
     return clone(a);
   }],
-  ['GET', /^\/admin\/v1\/risk\/rules$/, () => clone(db.riskRules)],
-  ['PUT', /^\/admin\/v1\/risk\/rules$/, ({ body, role, adminId }) => {
+  ['GET', /^\/risk\/rules$/, () => clone(db.riskRules)],
+  ['PUT', /^\/risk\/rules$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     Object.assign(db.riskRules, body as unknown as RiskRules);
     log(adminId, 'risk.rules', 'risk_rules', body);
@@ -494,8 +495,8 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // gameplay
-  ['GET', /^\/admin\/v1\/gameplay$/, () => clone(db.gameplay)],
-  ['POST', /^\/admin\/v1\/gameplay\/publish$/, ({ body, role, adminId }): GameplayState => {
+  ['GET', /^\/gameplay$/, () => clone(db.gameplay)],
+  ['POST', /^\/gameplay\/publish$/, ({ body, role, adminId }): GameplayState => {
     requireRole(role, ['admin']);
     const cfg = body.body as Config;
     validateConfig(cfg);
@@ -510,7 +511,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'gameplay.publish', `gameplay:${version}`, { rollout_pct: pctv });
     return clone(db.gameplay);
   }],
-  ['POST', /^\/admin\/v1\/gameplay\/rollout$/, ({ body, role, adminId }) => {
+  ['POST', /^\/gameplay\/rollout$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin']);
     db.gameplay.current.rollout_pct = Number(body.rollout_pct ?? 100);
     const h = db.gameplay.history.find((x) => x.version === db.gameplay.current.version);
@@ -518,7 +519,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'gameplay.rollout', `gameplay:${db.gameplay.current.version}`, { rollout_pct: db.gameplay.current.rollout_pct });
     return clone(db.gameplay);
   }],
-  ['POST', /^\/admin\/v1\/gameplay\/rollback$/, ({ role, adminId }) => {
+  ['POST', /^\/gameplay\/rollback$/, ({ role, adminId }) => {
     requireRole(role, ['admin']);
     if (!db.gameplay.previous) fail(409, 'conflict', '没有可以回滚的上一个版本');
     const gone = db.gameplay.current.version;
@@ -530,7 +531,7 @@ const routes: [string, RegExp, Handler][] = [
   }],
 
   // V2 玩法运营
-  ['GET', /^\/admin\/v1\/map\/objects$/, ({ q }) => {
+  ['GET', /^\/map\/objects$/, ({ q }) => {
     const b = parseBbox(q.get('bbox'));
     const now = Date.now();
     return {
@@ -544,17 +545,17 @@ const routes: [string, RegExp, Handler][] = [
         .filter((c) => inBbox(b, c.center)),
     };
   }],
-  ['GET', /^\/admin\/v1\/bosses$/, ({ q }) => {
+  ['GET', /^\/bosses$/, ({ q }) => {
     const status = q.get('status');
     const list = db.bosses.filter((b) => !status || b.status === status).sort((a, b) => b.spawned_at.localeCompare(a.spawned_at));
     return paginate(list.map((b) => clone(bossListItem(b))), q);
   }],
-  ['GET', /^\/admin\/v1\/bosses\/(\d+)$/, ({ m }) => {
+  ['GET', /^\/bosses\/(\d+)$/, ({ m }) => {
     const b = db.bosses.find((x) => x.id === Number(m[1]));
     if (!b) fail(404, 'not_found', '怪兽不存在');
     return clone(b);
   }],
-  ['POST', /^\/admin\/v1\/bosses$/, ({ body, role, adminId }) => {
+  ['POST', /^\/bosses$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const kind = String(body.kind ?? '');
     const conf = db.gameplay.current.body.bosses.find((x) => x.key === kind);
@@ -585,7 +586,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'boss.spawn', `boss:${b.id}`, { kind, lat, lng, hp, radius_m: radius, duration_h: hours });
     return clone(b);
   }],
-  ['POST', /^\/admin\/v1\/bosses\/(\d+)\/end$/, ({ m, role, adminId }) => {
+  ['POST', /^\/bosses\/(\d+)\/end$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const b = db.bosses.find((x) => x.id === Number(m[1]));
     if (!b) fail(404, 'not_found', '怪兽不存在');
@@ -597,12 +598,13 @@ const routes: [string, RegExp, Handler][] = [
     return clone(b);
   }],
 
-  ['GET', /^\/admin\/v1\/chests$/, ({ q }) => {
-    const status = q.get('status');
-    const list = db.chests.filter((c) => (status ? c.status === status : c.status !== 'removed')).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  ['GET', /^\/chests$/, ({ q }) => {
+    const status = q.get('status') ?? '';
+    if (!['', 'active', 'expired', 'removed'].includes(status)) fail(400, 'invalid_status', 'status 取值 active / expired / removed');
+    const list = db.chests.filter((c) => !status || c.status === status).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     return paginate(list.map(clone), q);
   }],
-  ['POST', /^\/admin\/v1\/chests$/, ({ body, role, adminId }) => {
+  ['POST', /^\/chests$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const lat = Number(body.lat);
     const lng = Number(body.lng);
@@ -620,7 +622,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'chest.place', `chest:${c.id}`, { lat, lng, energy_min: min, energy_max: max });
     return clone(c);
   }],
-  ['POST', /^\/admin\/v1\/chests\/scatter$/, ({ body, role, adminId }) => {
+  ['POST', /^\/chests\/scatter$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const [a, b, c, d] = parseBbox(body.bbox);
     const count = Number(body.count);
@@ -639,7 +641,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'chest.scatter', 'chests', { bbox: [a, b, c, d], count, duration_h: body.duration_h });
     return { placed: made.length };
   }],
-  ['DELETE', /^\/admin\/v1\/chests\/(\d+)$/, ({ m, role, adminId }) => {
+  ['DELETE', /^\/chests\/(\d+)$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const c = db.chests.find((x) => x.id === Number(m[1]));
     if (!c || c.status === 'removed') fail(404, 'not_found', '宝箱不存在');
@@ -648,11 +650,11 @@ const routes: [string, RegExp, Handler][] = [
     return {};
   }],
 
-  ['GET', /^\/admin\/v1\/seasons$/, () => {
+  ['GET', /^\/seasons$/, () => {
     const items = [...db.seasons].sort((a, b) => b.starts_at.localeCompare(a.starts_at)).map(seasonStatus);
     return { items: clone(items), total: items.length };
   }],
-  ['POST', /^\/admin\/v1\/seasons$/, ({ body, role, adminId }) => {
+  ['POST', /^\/seasons$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const v = seasonInput(body, null);
     const x: Season = { id: Math.max(...db.seasons.map((s) => s.id)) + 1, ...v, settled_at: null };
@@ -660,7 +662,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'season.create', `season:${x.id}`, v);
     return clone(seasonStatus(x));
   }],
-  ['PATCH', /^\/admin\/v1\/seasons\/(\d+)$/, ({ m, body, role, adminId }) => {
+  ['PATCH', /^\/seasons\/(\d+)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const x = db.seasons.find((s) => s.id === Number(m[1]));
     if (!x) fail(404, 'not_found', '赛季不存在');
@@ -669,7 +671,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'season.update', `season:${x.id}`, body);
     return clone(seasonStatus(x));
   }],
-  ['POST', /^\/admin\/v1\/seasons\/(\d+)\/settle$/, ({ m, role, adminId }) => {
+  ['POST', /^\/seasons\/(\d+)\/settle$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const x = db.seasons.find((s) => s.id === Number(m[1]));
     if (!x) fail(404, 'not_found', '赛季不存在');
@@ -680,11 +682,11 @@ const routes: [string, RegExp, Handler][] = [
     return clone(seasonStatus(x));
   }],
 
-  ['GET', /^\/admin\/v1\/campaigns$/, () => {
+  ['GET', /^\/campaigns$/, () => {
     const items = [...db.campaigns].sort((a, b) => b.starts_at.localeCompare(a.starts_at));
     return { items: clone(items), total: items.length };
   }],
-  ['POST', /^\/admin\/v1\/campaigns$/, ({ body, role, adminId }) => {
+  ['POST', /^\/campaigns$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const { medalName, ...v } = campaignInput(body);
     const id = Math.max(...db.campaigns.map((c) => c.id)) + 1;
@@ -693,7 +695,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'campaign.create', `campaign:${c.id}`, { title: c.title, type: c.type });
     return clone(c);
   }],
-  ['PATCH', /^\/admin\/v1\/campaigns\/(\d+)$/, ({ m, body, role, adminId }) => {
+  ['PATCH', /^\/campaigns\/(\d+)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const c = db.campaigns.find((x) => x.id === Number(m[1]));
     if (!c) fail(404, 'not_found', '活动不存在');
@@ -702,7 +704,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'campaign.update', `campaign:${c.id}`, body);
     return clone(c);
   }],
-  ['DELETE', /^\/admin\/v1\/campaigns\/(\d+)$/, ({ m, role, adminId }) => {
+  ['DELETE', /^\/campaigns\/(\d+)$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const i = db.campaigns.findIndex((x) => x.id === Number(m[1]));
     if (i < 0) fail(404, 'not_found', '活动不存在');
@@ -712,11 +714,11 @@ const routes: [string, RegExp, Handler][] = [
     return {};
   }],
 
-  ['GET', /^\/admin\/v1\/routes$/, () => {
+  ['GET', /^\/routes$/, () => {
     const items = [...db.routes].sort((a, b) => b.starts_at.localeCompare(a.starts_at));
     return { items: clone(items), total: items.length };
   }],
-  ['POST', /^\/admin\/v1\/routes$/, ({ body, role, adminId }) => {
+  ['POST', /^\/routes$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const v = routeInput(body);
     const r: OrienteeringRoute = { id: Math.max(...db.routes.map((x) => x.id)) + 1, ...v, finishers: 0 };
@@ -724,7 +726,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'route.create', `route:${r.id}`, { name: r.name, checkpoints: r.checkpoints.length });
     return clone(r);
   }],
-  ['PATCH', /^\/admin\/v1\/routes\/(\d+)$/, ({ m, body, role, adminId }) => {
+  ['PATCH', /^\/routes\/(\d+)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const r = db.routes.find((x) => x.id === Number(m[1]));
     if (!r) fail(404, 'not_found', '路线不存在');
@@ -732,7 +734,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'route.update', `route:${r.id}`, { name: r.name });
     return clone(r);
   }],
-  ['DELETE', /^\/admin\/v1\/routes\/(\d+)$/, ({ m, role, adminId }) => {
+  ['DELETE', /^\/routes\/(\d+)$/, ({ m, role, adminId }) => {
     requireRole(role, ['admin', 'ops']);
     const i = db.routes.findIndex((x) => x.id === Number(m[1]));
     if (i < 0) fail(404, 'not_found', '路线不存在');
@@ -741,25 +743,29 @@ const routes: [string, RegExp, Handler][] = [
     return {};
   }],
 
-  ['GET', /^\/admin\/v1\/league$/, ({ q, role }) => {
+  ['GET', /^\/districts$/, ({ role }) => {
     requireRole(role, ['admin', 'ops']);
-    const district = q.get('district') || db.DISTRICTS[0];
+    return { items: clone(db.DISTRICTS) };
+  }],
+  ['GET', /^\/league$/, ({ q, role }) => {
+    requireRole(role, ['admin', 'ops']);
+    const district = q.get('district') || db.DISTRICTS[0].name;
     const week = q.get('week_start') || mondayOf(new Date());
     if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) fail(400, 'invalid_body', 'week_start 格式应为 YYYY-MM-DD');
     return { week_start: week, district, standings: week > mondayOf(new Date()) ? [] : db.leagueFor(district, week) };
   }],
 
   // audit & admins
-  ['GET', /^\/admin\/v1\/audit$/, ({ q }) => {
+  ['GET', /^\/audit$/, ({ q }) => {
     const id = q.get('admin_id');
     const list = id ? db.audit.filter((a) => a.admin.id === Number(id)) : db.audit;
     return paginate(list.map(clone), q);
   }],
-  ['GET', /^\/admin\/v1\/admins$/, ({ role }) => {
+  ['GET', /^\/admins$/, ({ role }) => {
     requireRole(role, ['admin']);
     return { items: clone(db.admins) };
   }],
-  ['POST', /^\/admin\/v1\/admins$/, ({ body, role, adminId }) => {
+  ['POST', /^\/admins$/, ({ body, role, adminId }) => {
     requireRole(role, ['admin']);
     const username = String(body.username ?? '').trim();
     if (!username || String(body.password ?? '').length < 8) fail(400, 'invalid_body', '用户名必填，密码至少 8 位');
@@ -769,7 +775,7 @@ const routes: [string, RegExp, Handler][] = [
     log(adminId, 'admin.create', `admin:${a.id}`, { role: a.role });
     return clone(a);
   }],
-  ['PATCH', /^\/admin\/v1\/admins\/(\d+)$/, ({ m, body, role, adminId }) => {
+  ['PATCH', /^\/admins\/(\d+)$/, ({ m, body, role, adminId }) => {
     requireRole(role, ['admin']);
     const a = db.admins.find((x) => x.id === Number(m[1]));
     if (!a) fail(404, 'not_found', '账号不存在');
@@ -783,11 +789,13 @@ const routes: [string, RegExp, Handler][] = [
 
 export async function mockFetch(method: string, url: string, body: unknown, token: string | null): Promise<unknown> {
   await sleep(120 + Math.random() * 120);
-  const [path, qs] = url.split('?');
+  const [fullPath, qs] = url.split('?');
+  if (!fullPath.startsWith(ADMIN_PREFIX + '/')) fail(404, 'not_found', `mock: ${method} ${fullPath} 不在 ${ADMIN_PREFIX} 下`);
+  const path = fullPath.slice(ADMIN_PREFIX.length);
   const q = new URLSearchParams(qs ?? '');
   const b = (body ?? {}) as Record<string, unknown>;
 
-  if (method === 'POST' && path === '/admin/v1/login') {
+  if (method === 'POST' && path === '/login') {
     const a = db.admins.find((x) => x.username === String(b.username ?? '').trim());
     if (!a || !b.password || b.password === 'wrong') fail(401, 'invalid_credentials', '用户名或密码错误');
     if (a.disabled) fail(403, 'forbidden', '账号已停用');

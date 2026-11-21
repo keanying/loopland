@@ -660,7 +660,8 @@ export interface BossCreate {
   duration_h?: number;
 }
 
-export type ChestStatus = 'active' | 'opened_out' | 'expired';
+/** `GET /admin/v1/chests?status=` accepts exactly these (anything else → 400 invalid_status). */
+export type ChestStatus = 'active' | 'expired' | 'removed';
 
 /** Contract: 「位置、能量范围、开启人数、来源」; exact field names are not fixed, so most are optional. */
 export interface ChestListItem {
@@ -674,8 +675,8 @@ export interface ChestListItem {
   opened_count?: number;
   /** system (daily refresh) | scatter | admin — or an admin id. */
   source?: string | number | null;
-  /** removed = 下架 (mock only; the server may simply drop it from the list). */
-  status?: ChestStatus | 'removed';
+  /** removed = 下架. */
+  status?: ChestStatus;
   created_at?: string;
   expires_at?: string;
   [extra: string]: unknown;
@@ -791,8 +792,12 @@ export interface League {
   week_start: string;
   district: string;
   standings: LeagueRow[];
-  /** Not in the contract; used for the district selector when the server sends it. */
-  districts?: string[];
+}
+
+/** `GET /admin/v1/districts`: districts that have crews (league selector). */
+export interface District {
+  name: string;
+  crews: number;
 }
 
 // ---------- audit & admins ----------
@@ -824,4 +829,83 @@ export interface AdminPatch {
   role?: AdminRole;
   disabled?: boolean;
   password?: string;
+}
+
+// ---------- 系统配置 · 第三方服务 (docs/api/系统配置.md, admin role only) ----------
+
+export type ProviderCode =
+  | 'aliyun'
+  | 'sms'
+  | 'captcha'
+  | 'oneclick'
+  | 'realname'
+  | 'wechat_login'
+  | 'wechat_pay'
+  | 'alipay'
+  | 'apple'
+  | 'ai'
+  | 'email'
+  | 'amap';
+
+/** 账号与安全 / 支付 / AI / 通知 / 地图 */
+export type ProviderGroup = string;
+
+/** text 单行 / textarea 多行 / number 整数 / bool 开关（"true"/"false"）/ select 下拉 / url 地址 */
+export type ProviderFieldKind = 'text' | 'textarea' | 'number' | 'bool' | 'select' | 'url';
+
+export interface ProviderField {
+  key: string;
+  label: string;
+  help?: string;
+  kind: ProviderFieldKind;
+  /** Secret fields only come back as {set, hint}, never in plain text. */
+  secret: boolean;
+  /** Required to enable the service. */
+  required: boolean;
+  options?: string[];
+  default?: string;
+}
+
+export interface ProviderSecret {
+  set: boolean;
+  /** "前2位****后2位", or "****" for short values; omitted when not set. */
+  hint?: string;
+}
+
+/** db-管理端保存的 config-来自配置文件/环境变量 none-未配置 */
+export type ProviderSource = 'db' | 'config' | 'none';
+
+export interface ProviderCheck {
+  status: 'ok' | 'fail';
+  message: string;
+  time: string;
+}
+
+export interface Provider {
+  code: ProviderCode | string;
+  name: string;
+  group: ProviderGroup;
+  description: string;
+  /** Code of the service whose credentials this one reuses (e.g. sms → aliyun). */
+  uses?: string;
+  /** When set, the test needs an extra input; the text is its label. */
+  test_input?: string;
+  /** null for services without their own fields (oneclick, realname). */
+  fields: ProviderField[] | null;
+  enabled: boolean;
+  configured: boolean;
+  source: ProviderSource;
+  /** Plain fields are strings (defaults filled in); secret fields are {set, hint}. */
+  values: Record<string, string | ProviderSecret>;
+  last_check: ProviderCheck | null;
+  updated_by: number | null;
+  update_time: string | null;
+}
+
+export interface ProviderSave {
+  enabled: boolean;
+  /** Only the changed fields; an empty secret keeps the stored value. */
+  values: Record<string, string>;
+  /** Fields to empty (used to delete a secret). */
+  clear: string[];
 }

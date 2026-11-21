@@ -275,7 +275,7 @@ function CampaignModal({ value, onClose }: { value: Campaign | 'new' | null; onC
               <>
                 <Col span={8}>
                   <Form.Item name="start_hour_from" label="出发时段 从（点）" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
-                    <InputNumber className="num" min={0} max={23} style={{ width: '100%' }} addonAfter=":00" />
+                    <InputNumber className="num" min={0} max={23} style={{ width: '100%' }} suffix=":00" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
@@ -291,7 +291,7 @@ function CampaignModal({ value, onClose }: { value: Campaign | 'new' | null; onC
                     ]}
                     style={{ marginBottom: 0 }}
                   >
-                    <InputNumber className="num" min={1} max={23} style={{ width: '100%' }} addonAfter=":00" />
+                    <InputNumber className="num" min={1} max={23} style={{ width: '100%' }} suffix=":00" />
                   </Form.Item>
                 </Col>
               </>

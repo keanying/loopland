@@ -1,12 +1,4 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_MOCK?: string;
-  readonly VITE_AMAP_KEY?: string;
-  readonly VITE_AMAP_SECURITY_CODE?: string;
-  readonly VITE_API_BASE?: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+/** Injected by vite.config.ts from admin/config.yaml; read it through src/config.ts. */
+declare const __LOOPLAND_CONFIG__: import('./config.types').BrowserConfig;

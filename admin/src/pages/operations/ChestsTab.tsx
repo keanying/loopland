@@ -16,7 +16,9 @@ export default function ChestsTab() {
   const { modal } = App.useApp();
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
-  const status = (params.get('status') as ChestStatus) || 'active';
+  const raw = params.get('status');
+  // Old links may still carry ?status=opened_out; the server only knows these three.
+  const status: ChestStatus = raw === 'expired' || raw === 'removed' ? raw : 'active';
   const page = Number(params.get('page') ?? 1);
   const { can } = useAuth();
   const editable = can('ops.write');
@@ -57,8 +59,8 @@ export default function ChestsTab() {
             onChange={(v) => set({ status: v === 'active' ? null : String(v), page: null })}
             options={[
               { label: '可开启', value: 'active' },
-              { label: '已开完', value: 'opened_out' },
               { label: '已过期', value: 'expired' },
+              { label: '已下架', value: 'removed' },
             ]}
           />
           <Link to="/territories">

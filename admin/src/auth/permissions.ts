@@ -6,6 +6,7 @@ import type { AdminRole } from '../api/types';
  * mirrors the server's route guards (server/internal/admin/api.go):
  *   reviewer → users list/detail/actions and risk; merchant → dashboard only (V1).
  *   V2 玩法运营 (bosses, chests, seasons, campaigns, routes, league) → admin + ops.
+ *   系统配置 · 第三方服务 (docs/api/系统配置.md) → admin only.
  * The server stays the final judge (403 forbidden).
  */
 export type Permission =
@@ -29,7 +30,9 @@ export type Permission =
   | 'ops.read'
   | 'ops.write'
   | 'audit.read'
-  | 'admins.manage';
+  | 'admins.manage'
+  /** 系统配置 · 第三方服务: view and edit provider keys, run connection tests. */
+  | 'settings.providers';
 
 const OPS: Permission[] = [
   'users.read',
@@ -52,7 +55,7 @@ const OPS: Permission[] = [
 ];
 
 const MATRIX: Record<AdminRole, Permission[]> = {
-  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage'],
+  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage', 'settings.providers'],
   ops: OPS,
   reviewer: ['users.read', 'user.write', 'risk.read', 'risk.resolve'],
   merchant: [],

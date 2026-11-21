@@ -8,20 +8,31 @@ import { Panel, Tile } from '../../components/ui';
 import { area, dayjs, num } from '../../utils/format';
 import { BRAND } from '../../theme';
 
-// The contract has no district list endpoint; the server may echo `districts`, otherwise use these.
-const DISTRICTS = ['浦东新区', '黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区', '宝山区', '嘉定区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区'];
+// Fallback when GET /admin/v1/districts returns nothing (no crews yet): Shanghai's 16 districts.
+const FALLBACK_DISTRICTS = ['浦东新区', '黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区', '宝山区', '嘉定区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区'];
 
 const monday = (d: Dayjs) => d.subtract((d.day() + 6) % 7, 'day').startOf('day');
 
 export default function LeagueTab() {
-  const [district, setDistrict] = useState(DISTRICTS[0]);
+  const ds = useQuery({ queryKey: ['districts'], queryFn: api.districts, staleTime: 5 * 60_000 });
+  const fromServer = (ds.data?.items ?? []).filter((d) => d.name);
+  const options = fromServer.length
+    ? fromServer.map((d) => ({ value: d.name, label: `${d.name} · ${d.crews} 个跑团` }))
+    : FALLBACK_DISTRICTS.map((d) => ({ value: d, label: d }));
+  const [picked, setDistrict] = useState<string | null>(null);
+  const district = picked ?? options[0].value;
   const [week, setWeek] = useState<Dayjs>(() => monday(dayjs()));
   const weekStart = week.format('YYYY-MM-DD');
-  const q = useQuery({ queryKey: ['league', district, weekStart], queryFn: () => api.league({ district, week_start: weekStart }), placeholderData: (p) => p });
+  const q = useQuery({
+    queryKey: ['league', district, weekStart],
+    queryFn: () => api.league({ district, week_start: weekStart }),
+    // Wait for the district list so the first request uses its first entry, not the fallback.
+    enabled: !ds.isPending,
+    placeholderData: (p) => p,
+  });
   const data = q.data;
   const rows = data?.standings ?? [];
   const current = monday(dayjs()).isSame(week, 'day');
-  const options = Array.from(new Set([...DISTRICTS, ...(data?.districts ?? [])])).map((d) => ({ value: d, label: d }));
   const total = rows.reduce((s, r) => s + r.score_m2, 0);
 
   return (
@@ -29,7 +40,7 @@ export default function LeagueTab() {
       title="城区联赛"
       extra={
         <Space wrap>
-          <Select showSearch style={{ width: 150 }} value={district} options={options} onChange={setDistrict} aria-label="城区" />
+          <Select showSearch optionFilterProp="value" style={{ width: 190 }} value={district} options={options} loading={ds.isPending} onChange={setDistrict} aria-label="城区" />
           <DatePicker
             picker="week"
             value={week}
@@ -61,7 +72,7 @@ export default function LeagueTab() {
       </div>
       <Table<LeagueRow>
         rowKey={(r) => r.crew.id}
-        loading={q.isFetching}
+        loading={q.isFetching || ds.isPending}
         dataSource={rows}
         pagination={false}
         locale={{ emptyText: <Empty description={`${district}这一周没有跑团参赛`} /> }}

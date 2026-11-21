@@ -3,7 +3,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form, Input } from 'antd';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
-import { MOCK } from '../api/client';
+import { MOCK } from '../config';
 import { errorMessage } from '../utils/notify';
 import Logo from '../components/Logo';
 

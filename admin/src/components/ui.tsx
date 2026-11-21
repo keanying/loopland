@@ -4,7 +4,7 @@ import { ArrowDownOutlined, ArrowUpOutlined, LogoutOutlined } from '@ant-design/
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_LABEL } from '../utils/labels';
-import { MOCK } from '../api/client';
+import { MOCK } from '../config';
 
 export function MeChip() {
   const { admin, logout } = useAuth();

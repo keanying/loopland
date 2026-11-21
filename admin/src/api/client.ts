@@ -1,8 +1,7 @@
+import { API_BASE, MOCK } from '../config';
 import type { ApiErrorBody } from './types';
 
 const TOKEN_KEY = 'loopland_admin_token';
-const BASE = import.meta.env.VITE_API_BASE ?? '';
-export const MOCK = import.meta.env.VITE_MOCK === '1';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -74,7 +73,7 @@ export async function request<T>(method: string, path: string, opts: { query?: Q
 
     let res: Response;
     try {
-      res = await fetch(BASE + url, {
+      res = await fetch(API_BASE + url, {
         method,
         headers: {
           Accept: 'application/json',

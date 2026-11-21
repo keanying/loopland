@@ -1,4 +1,4 @@
 node_modules
 dist
-.env.local
-.env.*.local
+# 本机配置覆盖（见 config.yaml 顶部说明）
+config.local.yaml

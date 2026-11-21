@@ -137,6 +137,8 @@ export const AUDIT_ACTION: Record<string, string> = {
   'route.create': '新建定向路线',
   'route.update': '修改定向路线',
   'route.delete': '删除定向路线',
+  'provider.save': '修改第三方服务配置',
+  'provider.test': '测试第三方服务连接',
 };
 
 export const TODO_TYPE: Record<string, string> = { risk: '风控', refund: '会员退款', renew_failed: '续费失败' };
@@ -158,7 +160,6 @@ export const BOSS_STATUS: Record<string, { text: string; color: string }> = {
 
 export const CHEST_STATUS: Record<string, { text: string; color: string }> = {
   active: { text: '可开启', color: 'gold' },
-  opened_out: { text: '已开完', color: 'default' },
   expired: { text: '已过期', color: 'default' },
   removed: { text: '已下架', color: 'default' },
 };
@@ -192,4 +193,15 @@ export const MEDAL_TYPE: Record<string, { text: string; unit: string }> = {
   boss_defeats: { text: '参与击败怪兽', unit: '次' },
   chests: { text: '开宝箱', unit: '个' },
   routes: { text: '完成定向路线', unit: '条' },
+};
+
+// ---------- 系统配置 · 第三方服务 ----------
+
+/** Display order of provider groups (docs/api/系统配置.md). */
+export const PROVIDER_GROUPS = ['账号与安全', '支付', 'AI', '通知', '地图'];
+
+export const PROVIDER_SOURCE: Record<string, { text: string; color: string; hint: string }> = {
+  db: { text: '来源：管理端', color: 'purple', hint: '在管理端保存过，以数据库里的配置为准' },
+  config: { text: '来源：配置文件', color: 'blue', hint: '来自 server/config.yaml 或环境变量；在这里保存后改为以管理端为准' },
+  none: { text: '来源：未配置', color: 'default', hint: '管理端和配置文件里都没有配置' },
 };

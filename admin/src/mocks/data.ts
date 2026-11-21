@@ -1,4 +1,4 @@
-// Fixture data for VITE_MOCK=1. Shapes follow docs/api/v1.md exactly.
+// Fixture data for mock mode (app.mock: true in config.yaml). Shapes follow docs/api/v1.md exactly.
 // Everything here is deterministic (seeded) so screenshots are stable.
 import type {
   AdminAccount,
@@ -552,7 +552,7 @@ export const bosses: BossDetail[] = BOSS_SEED.map((b, i) => {
 });
 
 export const chests: ChestListItem[] = Array.from({ length: 26 }, (_, i) => {
-  const status = i < 18 ? 'active' : i < 23 ? 'opened_out' : 'expired';
+  const status = i < 18 ? 'active' : i < 23 ? 'expired' : 'removed';
   const created = NOW - (i < 18 ? int(1, 18) : int(24, 70)) * HOUR;
   const source = i % 5 === 0 ? 'admin' : i % 3 === 0 ? 'scatter' : 'system';
   return {
@@ -604,7 +604,14 @@ export const routes: OrienteeringRoute[] = [
   },
 ];
 
-export const DISTRICTS = ['浦东新区', '徐汇区', '黄浦区', '静安区', '杨浦区'];
+/** Districts that have crews (`GET /admin/v1/districts`), most crews first. */
+export const DISTRICTS = [
+  { name: '浦东新区', crews: 14 },
+  { name: '徐汇区', crews: 12 },
+  { name: '黄浦区', crews: 9 },
+  { name: '静安区', crews: 7 },
+  { name: '杨浦区', crews: 6 },
+];
 
 /** Deterministic standings per district + week. */
 export function leagueFor(district: string, weekStart: string) {

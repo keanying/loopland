@@ -340,6 +340,7 @@ function RouteDrawer({ value, onClose }: { value: OrienteeringRoute | 'new' | nu
               onSelect={() => undefined}
               focus={null}
               objects={{ bosses: [], chests: [], checkpoints: cps }}
+              preview
               picking={points.length < MAX_POINTS}
               onPick={(pt) => add(pt)}
             />

@@ -3,12 +3,12 @@
 // reports errors.
 //
 //   npm run dev:mock            # in one terminal
-//   BASE_URL=http://localhost:5173 npm run screenshots
+//   npm run screenshots            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
 
-const BASE = process.env.BASE_URL || 'http://localhost:5173';
+const { baseUrl: BASE } = require('./devConfig.cjs');
 const OUT = path.join(__dirname, '..', 'screenshots');
 
 async function main() {

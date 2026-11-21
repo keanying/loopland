@@ -1,90 +1,35 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Badge, Button, Col, Empty, Input, InputNumber, Row, Segmented, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { CheckCircleOutlined, RollbackOutlined } from '@ant-design/icons';
+import { Alert, App, Badge, Button, Checkbox, Col, Empty, Input, InputNumber, Row, Segmented, Select, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
+import { CheckCircleOutlined, DeleteOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import { api } from '../api/admin';
-import type { BossConf, BuildingConf, Config, EnergyRule, GameplayState, RoleConf } from '../api/types';
+import type { BuildingConf, Config, EnergyRule, GameplayState, MedalConf, MedalType, RoleConf, SeasonTaskConf, SeasonTaskType } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useAdminNames } from '../hooks/useAdminNames';
 import { PageHeader, Panel } from '../components/ui';
 import { dt } from '../utils/format';
-import { DROP_KIND, SPORT_LABEL, UNIT_LABEL } from '../utils/labels';
+import { DROP_KIND, MEDAL_TYPE, SEASON_TASK_TYPE, SPORT_LABEL, UNIT_LABEL } from '../utils/labels';
+import {
+  BOSS_GROUPS,
+  BUILDING_FIELDS,
+  CHEST_FIELDS,
+  clone,
+  COMPANION_FIELDS,
+  DEFAULTS,
+  DEFENSE_FIELDS,
+  diff,
+  dropItemName,
+  dropSum,
+  normalize,
+  RELAY_FIELDS,
+  TABS,
+  validate,
+  type NumField,
+  type Tab,
+} from './gameplay/config';
 import { toastOk } from '../utils/notify';
 import { BRAND } from '../theme';
-
-type Tab = 'buildings' | 'roles' | 'drops' | 'energy';
-
-interface Change {
-  path: string;
-  label: string;
-  from: string | number;
-  to: string | number;
-}
-
-const TOP_FIELDS: { key: string; label: string }[] = [
-  { key: 'daily_energy_cap', label: '每人每日能量上限' },
-  { key: 'slots_per_territory', label: '每块领地建造位' },
-  { key: 'base_station_slots', label: '基础驻扎位' },
-  { key: 'min_claim_area_m2', label: '最小圈地面积 m²' },
-  { key: 'boss_strike_cost', label: '攻打怪兽消耗能量' },
-];
-const BUILDING_FIELDS: { key: keyof BuildingConf; label: string }[] = [
-  { key: 'cost', label: '建造能量' },
-  { key: 'guard', label: '守卫 +' },
-  { key: 'daily_energy', label: '每日产能量' },
-  { key: 'unlock_level', label: '解锁等级' },
-];
-const ROLE_FIELDS: { key: keyof RoleConf; label: string }[] = [
-  { key: 'threshold', label: '招募门槛' },
-  { key: 'buff_value', label: '加成数值' },
-  { key: 'buff_text', label: '加成说明' },
-];
-const ENERGY_FIELDS: { key: keyof EnergyRule; label: string }[] = [
-  { key: 'per', label: '换算单位量' },
-  { key: 'energy', label: '换得能量' },
-];
-
-const EGG_NAMES: Record<string, string> = { firetail: '火尾蜥蛋', nightnewt: '夜行蝾螈蛋', axolotl: '六角龙蛋', frog: '雨蛙蛋', gecko: '闪电壁虎蛋' };
-
-function dropItemName(c: Config, item: string, kind: string): string {
-  if (kind === 'energy') return '能量';
-  if (kind === 'role') return c.roles.find((r) => r.key === item)?.name ?? item;
-  if (kind === 'blueprint') return `${c.buildings.find((x) => x.key === item)?.name ?? item}图纸`;
-  if (kind === 'egg') return c.companions?.find((x) => x.key === item)?.name ?? EGG_NAMES[item] ?? item;
-  return item;
-}
-
-function byKey<T>(arr: T[] | undefined, key: (x: T) => string): Map<string, T> {
-  return new Map((arr ?? []).map((x) => [key(x), x]));
-}
-
-/** Old → new list over the fields this page edits. */
-function diff(base: Config, draft: Config): Change[] {
-  const out: Change[] = [];
-  const push = (path: string, label: string, a: unknown, b: unknown) => {
-    if (a !== b) out.push({ path, label, from: a as string | number, to: b as string | number });
-  };
-  for (const f of TOP_FIELDS) push(f.key, f.label, base[f.key], draft[f.key]);
-  const bb = byKey(base.buildings, (b) => b.key);
-  for (const b of draft.buildings) for (const f of BUILDING_FIELDS) push(`buildings.${b.key}.${f.key}`, `${b.name} · ${f.label}`, bb.get(b.key)?.[f.key], b[f.key]);
-  const rr = byKey(base.roles, (r) => r.key);
-  for (const r of draft.roles) for (const f of ROLE_FIELDS) push(`roles.${r.key}.${f.key}`, `${r.name} · ${f.label}`, rr.get(r.key)?.[f.key], r[f.key]);
-  const bo = byKey(base.bosses, (b) => b.key);
-  for (const b of draft.bosses) {
-    const old = byKey(bo.get(b.key)?.drops, (d) => d.item);
-    for (const d of b.drops) push(`bosses.${b.key}.${d.item}`, `${b.name} · ${dropItemName(draft, d.item, d.kind)} 掉率 %`, old.get(d.item)?.percent, d.percent);
-  }
-  const ee = byKey(base.energy, (e) => e.sport);
-  for (const e of draft.energy) for (const f of ENERGY_FIELDS) push(`energy.${e.sport}.${f.key}`, `${e.name} · ${f.label}`, ee.get(e.sport)?.[f.key], e[f.key]);
-  return out;
-}
-
-function dropSum(b: BossConf): number {
-  return Math.round(b.drops.reduce((s, d) => s + (Number(d.percent) || 0), 0) * 100) / 100;
-}
-
-const clone = (c: Config): Config => JSON.parse(JSON.stringify(c)) as Config;
 
 export default function GameplayPage() {
   const { modal } = App.useApp();
@@ -94,7 +39,7 @@ export default function GameplayPage() {
   const canPublish = can('gameplay.publish');
   const adminName = useAdminNames();
   const [params, setParams] = useSearchParams();
-  const tab = (params.get('tab') as Tab) || 'buildings';
+  const tab = (TABS.find((t) => t.value === params.get('tab'))?.value ?? 'buildings') as Tab;
   const q = useQuery({ queryKey: ['gameplay'], queryFn: api.gameplay });
   const [draft, setDraft] = useState<Config | null>(null);
   const [rollout, setRollout] = useState<10 | 100>(10);
@@ -102,12 +47,15 @@ export default function GameplayPage() {
 
   const current = q.data?.current;
   useEffect(() => {
-    if (current) setDraft(clone(current.body));
+    if (current) setDraft(normalize(current.body));
   }, [current]);
 
-  const changes = useMemo(() => (current && draft ? diff(current.body, draft) : []), [current, draft]);
+  const base = useMemo(() => (current ? normalize(current.body) : null), [current]);
+  const changes = useMemo(() => (base && draft ? diff(base, draft) : []), [base, draft]);
   const changed = useMemo(() => new Set(changes.map((c) => c.path)), [changes]);
-  const badBosses = (draft?.bosses ?? []).filter((b) => Math.abs(dropSum(b) - 100) > 1e-6);
+  const problems = useMemo(() => (draft ? validate(draft) : []), [draft]);
+  const badTabs = new Set(problems.map((p) => p.tab));
+  const changedTabs = new Set(changes.map((c) => c.tab));
 
   const onState = (msg: string) => (s: GameplayState) => {
     qc.setQueryData(['gameplay'], s);
@@ -137,8 +85,8 @@ export default function GameplayPage() {
     ? '只有管理员可以发布玩法配置'
     : changes.length === 0
       ? '没有未发布的改动'
-      : badBosses.length
-        ? `${badBosses.map((b) => b.name).join('、')} 掉落合计不是 100%`
+      : problems.length
+        ? problems[0].text
         : !note.trim()
           ? '请填写发布说明'
           : null;
@@ -165,6 +113,38 @@ export default function GameplayPage() {
     />
   );
 
+  const fieldGrid = <K extends string>(section: string, obj: Record<K, number>, fields: NumField<K>[], onChange: (k: K, v: number) => void) => (
+    <Row gutter={[16, 16]}>
+      {fields.map((f) => (
+        <Col xs={24} sm={12} xxl={8} key={f.key}>
+          <div className="field-cell">
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{f.label}</div>
+            <Space style={{ marginTop: 6 }}>
+              {cell(`${section}.${f.key}`, obj[f.key], (v) => onChange(f.key, v), { min: f.min, max: f.max, step: f.step, precision: f.precision ?? 0, width: 120 })}
+              {f.unit && <span className="muted">{f.unit}</span>}
+            </Space>
+            {f.hint && (
+              <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                {f.hint}
+              </div>
+            )}
+          </div>
+        </Col>
+      ))}
+    </Row>
+  );
+
+  /** A pre-V2 config has no such section yet: offer to add it with the contract defaults. */
+  const missing = (title: string, add: () => void) => (
+    <Panel title={title}>
+      <Empty description="线上配置还没有这一部分（V2 之前发布的版本）">
+        <Button type="primary" disabled={!canEdit} onClick={add}>
+          按默认值添加
+        </Button>
+      </Empty>
+    </Panel>
+  );
+
   const confirmPublish = () =>
     modal.confirm({
       title: rollout === 100 ? '全量发布玩法配置？' : '发布到 10% 用户？',
@@ -186,7 +166,7 @@ export default function GameplayPage() {
           rowKey="key"
           pagination={false}
           dataSource={draft.buildings}
-          scroll={{ x: 640 }}
+          scroll={{ x: 760 }}
           columns={[
             {
               title: '建筑',
@@ -210,6 +190,25 @@ export default function GameplayPage() {
               render: (_: unknown, b: BuildingConf, i: number) =>
                 cell(`buildings.${b.key}.${f.key}`, b[f.key] as number, (v) => set((c) => ((c.buildings[i][f.key] as number) = v)), f.key === 'unlock_level' ? { min: 1, max: 20, width: 72 } : {}),
             })),
+            {
+              title: (
+                <Tooltip title="拥有这个建筑的图纸（怪兽掉落）就可以无视解锁等级建造">
+                  <span>图纸可越级建造</span>
+                </Tooltip>
+              ),
+              key: 'blueprint_bypass_level',
+              align: 'center' as const,
+              render: (_: unknown, b: BuildingConf, i: number) => (
+                <span className={changed.has(`buildings.${b.key}.blueprint_bypass_level`) ? 'check-changed' : undefined}>
+                  <Checkbox
+                    disabled={!canEdit}
+                    checked={!!b.blueprint_bypass_level}
+                    aria-label={`${b.name} 图纸可越级建造`}
+                    onChange={(e) => set((c) => (c.buildings[i].blueprint_bypass_level = e.target.checked))}
+                  />
+                </span>
+              ),
+            },
           ]}
         />
       </Panel>
@@ -351,6 +350,352 @@ export default function GameplayPage() {
         </Panel>
       );
     })(),
+
+    boss: !draft.boss
+      ? missing('怪兽', () => set((c) => (c.boss = clone(DEFAULTS.boss))))
+      : (
+          <Panel title="怪兽" extra={<span className="panel-hint">掉落表在「怪兽掉落」；这里是伤害、合击、投放与结算规则</span>}>
+            {BOSS_GROUPS.map((g) => (
+              <div key={g.title} style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+                  <b style={{ fontSize: 15 }}>{g.title}</b>
+                  <span className="muted" style={{ fontSize: 12 }}>
+                    {g.hint}
+                  </span>
+                </div>
+                {fieldGrid('boss', draft.boss as unknown as Record<string, number>, g.fields, (k, v) => set((c) => ((c.boss as unknown as Record<string, number>)[k] = v)))}
+              </div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
+              <b style={{ fontSize: 15 }}>运动伤害</b>
+              <span className="muted" style={{ fontSize: 12 }}>
+                GPS 运动按轨迹落在范围内的距离计；居家运动需先「出战」，按数量计
+              </span>
+            </div>
+            <Table
+              rowKey="sport"
+              size="small"
+              pagination={false}
+              dataSource={draft.boss.damage}
+              columns={[
+                { title: '运动', dataIndex: 'sport', render: (v: string) => <b>{SPORT_LABEL[v] ?? v}</b> },
+                {
+                  title: '伤害规则',
+                  key: 'rule',
+                  render: (_, d, i) => (
+                    <Space wrap>
+                      <span>每</span>
+                      {cell(`boss.damage.${d.sport}.per`, d.per, (v) => set((c) => (c.boss!.damage[i].per = v)), { min: 0.1, precision: 1, width: 84 })}
+                      <span>{UNIT_LABEL[d.unit] ?? d.unit} =</span>
+                      {cell(`boss.damage.${d.sport}.damage`, d.damage, (v) => set((c) => (c.boss!.damage[i].damage = v)), { width: 84 })}
+                      <span>伤害</span>
+                    </Space>
+                  ),
+                },
+                { title: 'GPS', dataIndex: 'unit', align: 'center', render: (u: string) => (u === 'km' || u === 'm' ? <Tag bordered={false} color="green">自动</Tag> : <Tag bordered={false}>需出战</Tag>) },
+              ]}
+            />
+          </Panel>
+        ),
+
+    chest: !draft.chest
+      ? missing('宝箱', () => set((c) => (c.chest = clone(DEFAULTS.chest))))
+      : (
+          <Panel title="宝箱" extra={<span className="panel-hint">每天 06:00 刷新；深夜 23:00–05:00 不刷新；宝箱能量不计入每日上限</span>}>
+            {fieldGrid('chest', draft.chest as unknown as Record<string, number>, CHEST_FIELDS, (k, v) => set((c) => ((c.chest as unknown as Record<string, number>)[k] = v)))}
+            <Alert style={{ marginTop: 16 }} type="info" showIcon={false} message={`每个宝箱随机给 ${draft.chest.energy_min}–${draft.chest.energy_max} 能量；药剂师有概率翻倍。`} />
+          </Panel>
+        ),
+
+    defense: !draft.defense
+      ? missing('守地', () => set((c) => (c.defense = clone(DEFAULTS.defense))))
+      : (
+          <Panel title="守地挑战" extra={<span className="panel-hint">加固：守卫值 += 本次运动能量</span>}>
+            {fieldGrid('defense', draft.defense as unknown as Record<string, number>, DEFENSE_FIELDS, (k, v) => set((c) => ((c.defense as unknown as Record<string, number>)[k] = v)))}
+          </Panel>
+        ),
+
+    tiers: !draft.season
+      ? missing('赛季段位', () => set((c) => (c.season = clone(DEFAULTS.season))))
+      : (
+          <Panel
+            title="赛季段位"
+            extra={
+              <Button size="small" icon={<PlusOutlined />} disabled={!canEdit || draft.season.tiers.length >= 10} onClick={() => set((c) => c.season!.tiers.push({ name: '', min_km2: (c.season!.tiers.at(-1)?.min_km2 ?? 0) + 5 }))}>
+                添加段位
+              </Button>
+            }
+          >
+            <Table
+              rowKey="_row"
+              size="small"
+              pagination={false}
+              dataSource={draft.season.tiers.map((x, i) => ({ ...x, _row: i }))}
+              columns={[
+                { title: '#', key: 'i', width: 40, render: (_, __, i) => <span className="muted num">{i + 1}</span> },
+                {
+                  title: '段位名称',
+                  key: 'name',
+                  render: (_, t, i) => (
+                    <Input
+                      disabled={!canEdit}
+                      value={t.name}
+                      maxLength={6}
+                      style={{ width: 120 }}
+                      status={!t.name.trim() ? 'error' : undefined}
+                      className={changed.has(`season.tiers.${i}.name`) ? 'cell-changed' : undefined}
+                      onChange={(e) => set((c) => (c.season!.tiers[i].name = e.target.value))}
+                    />
+                  ),
+                },
+                {
+                  title: '赛季内新圈面积 ≥',
+                  key: 'min',
+                  render: (_, t, i) => {
+                    const prev = draft.season!.tiers[i - 1];
+                    const wrong = i === 0 ? t.min_km2 !== 0 : !(t.min_km2 > prev.min_km2);
+                    return (
+                      <Space>
+                        <InputNumber
+                          className={`num${changed.has(`season.tiers.${i}.min_km2`) && !wrong ? ' cell-changed' : ''}`}
+                          disabled={!canEdit || i === 0}
+                          min={0}
+                          step={0.5}
+                          precision={2}
+                          value={t.min_km2}
+                          status={wrong ? 'error' : undefined}
+                          style={{ width: 110 }}
+                          onChange={(v) => set((c) => (c.season!.tiers[i].min_km2 = v ?? 0))}
+                        />
+                        <span className="muted">km²</span>
+                      </Space>
+                    );
+                  },
+                },
+                {
+                  title: 'III / II / I 起点',
+                  key: 'sub',
+                  render: (_, t, i) => {
+                    const next = draft.season!.tiers[i + 1];
+                    if (!next) return <span className="muted">最高段位，不再细分</span>;
+                    const step = (next.min_km2 - t.min_km2) / 3;
+                    if (!(step > 0)) return <span className="danger-text">须小于下一段</span>;
+                    return <span className="num muted">{[0, 1, 2].map((k) => (t.min_km2 + step * k).toFixed(2)).join(' / ')}</span>;
+                  },
+                },
+                {
+                  title: '',
+                  key: 'op',
+                  align: 'right',
+                  render: (_, __, i) => (
+                    <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除段位" disabled={!canEdit || i === 0 || draft.season!.tiers.length <= 2} onClick={() => set((c) => c.season!.tiers.splice(i, 1))} />
+                  ),
+                },
+              ]}
+            />
+            <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+              第一个段位从 0 开始，之后必须逐段递增。每段按最低面积到下一段最低面积平均分成 III / II / I。
+            </div>
+          </Panel>
+        ),
+
+    tasks: !draft.season_tasks
+      ? missing('赛季任务', () => set((c) => (c.season_tasks = clone(DEFAULTS.season_tasks))))
+      : (
+          <Panel
+            title="赛季任务"
+            extra={
+              <Space>
+                <span className="panel-hint">每周一刷新</span>
+                <Button size="small" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.push({ key: '', name: '', type: 'weekly_count', target: 1, reward_energy: 50 }))}>
+                  添加任务
+                </Button>
+              </Space>
+            }
+          >
+            <Table<SeasonTaskConf>
+              rowKey="_row"
+              size="small"
+              pagination={false}
+              dataSource={draft.season_tasks.map((x, i) => ({ ...x, _row: i }))}
+              scroll={{ x: 760 }}
+              columns={[
+                {
+                  title: 'key',
+                  key: 'key',
+                  render: (_, t, i) => (
+                    <Input disabled={!canEdit} value={t.key} style={{ width: 140, fontFamily: 'monospace' }} status={!/^[a-z][a-z0-9_]*$/.test(t.key) ? 'error' : undefined} placeholder="weekly_runs" onChange={(e) => set((c) => (c.season_tasks![i].key = e.target.value.trim()))} />
+                  ),
+                },
+                {
+                  title: '名称（App 展示）',
+                  key: 'name',
+                  render: (_, t, i) => (
+                    <Input disabled={!canEdit} value={t.name} style={{ width: 200 }} className={changed.has(`season_tasks.${t.key}.name`) ? 'cell-changed' : undefined} status={!t.name.trim() ? 'error' : undefined} onChange={(e) => set((c) => (c.season_tasks![i].name = e.target.value))} />
+                  ),
+                },
+                {
+                  title: '类型',
+                  key: 'type',
+                  render: (_, t, i) => (
+                    <Select<SeasonTaskType>
+                      disabled={!canEdit}
+                      value={t.type}
+                      style={{ width: 150 }}
+                      className={changed.has(`season_tasks.${t.key}.type`) ? 'cell-changed' : undefined}
+                      options={Object.entries(SEASON_TASK_TYPE).map(([k, v]) => ({ value: k as SeasonTaskType, label: v.text }))}
+                      onChange={(v) => set((c) => (c.season_tasks![i].type = v))}
+                    />
+                  ),
+                },
+                {
+                  title: '目标',
+                  key: 'target',
+                  render: (_, t, i) => (
+                    <Space>
+                      {cell(`season_tasks.${t.key}.target`, t.target, (v) => set((c) => (c.season_tasks![i].target = v)), { min: 0, precision: t.type === 'weekly_distance_km' ? 1 : 0, width: 100, step: t.type === 'weekly_area_m2' ? 5000 : 1 })}
+                      <span className="muted">{SEASON_TASK_TYPE[t.type]?.unit}</span>
+                    </Space>
+                  ),
+                },
+                { title: '奖励能量', key: 'reward', render: (_, t, i) => cell(`season_tasks.${t.key}.reward_energy`, t.reward_energy, (v) => set((c) => (c.season_tasks![i].reward_energy = v)), { step: 10, width: 90 }) },
+                {
+                  title: '',
+                  key: 'op',
+                  align: 'right',
+                  render: (_, __, i) => <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除任务" disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.splice(i, 1))} />,
+                },
+              ]}
+            />
+            <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+              任务奖励能量不计入每日上限。key 是稳定标识，上线后不要改，改了相当于删掉旧任务、新建一个。
+            </div>
+          </Panel>
+        ),
+
+    medals: (
+      <Panel
+        title="奖牌"
+        extra={
+          <Button size="small" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => set((c) => (c.medals = [...(c.medals ?? []), { key: '', name: '', type: 'distance_km', target: 1, distance_km: 1 }]))}>
+            添加奖牌
+          </Button>
+        }
+      >
+        {!draft.medals?.length ? (
+          <Empty description="还没有奖牌">
+            <Button disabled={!canEdit} onClick={() => set((c) => (c.medals = clone(DEFAULTS.medals)))}>
+              按默认值添加
+            </Button>
+          </Empty>
+        ) : (
+          <Table<MedalConf>
+            rowKey="_row"
+            size="small"
+            pagination={false}
+            dataSource={draft.medals.map((x, i) => ({ ...x, _row: i }))}
+            scroll={{ x: 680 }}
+            columns={[
+              {
+                title: 'key',
+                key: 'key',
+                render: (_, m, i) => (
+                  <Input disabled={!canEdit} value={m.key} style={{ width: 150, fontFamily: 'monospace' }} status={!/^[a-z][a-z0-9_]*$/.test(m.key) ? 'error' : undefined} placeholder="distance_100" onChange={(e) => set((c) => (c.medals![i].key = e.target.value.trim()))} />
+                ),
+              },
+              {
+                title: '名称',
+                key: 'name',
+                render: (_, m, i) => (
+                  <Input disabled={!canEdit} value={m.name} style={{ width: 140 }} className={changed.has(`medals.${m.key}.name`) ? 'cell-changed' : undefined} status={!m.name.trim() ? 'error' : undefined} onChange={(e) => set((c) => (c.medals![i].name = e.target.value))} />
+                ),
+              },
+              {
+                title: '类型',
+                key: 'type',
+                render: (_, m, i) => (
+                  <Select<MedalType>
+                    disabled={!canEdit}
+                    value={m.type ?? 'distance_km'}
+                    style={{ width: 150 }}
+                    className={changed.has(`medals.${m.key}.type`) ? 'cell-changed' : undefined}
+                    options={Object.entries(MEDAL_TYPE).map(([k, v]) => ({ value: k as MedalType, label: v.text }))}
+                    onChange={(v) =>
+                      set((c) => {
+                        const x = c.medals![i];
+                        x.type = v;
+                        if (v === 'distance_km') x.distance_km = x.target;
+                        else delete x.distance_km;
+                      })
+                    }
+                  />
+                ),
+              },
+              {
+                title: '目标',
+                key: 'target',
+                render: (_, m, i) => (
+                  <Space>
+                    {cell(`medals.${m.key}.target`, m.target ?? 0, (v) =>
+                      set((c) => {
+                        const x = c.medals![i];
+                        x.target = v;
+                        if ((x.type ?? 'distance_km') === 'distance_km') x.distance_km = v; // legacy field kept in sync
+                      }),
+                      { width: 100 },
+                    )}
+                    <span className="muted">{MEDAL_TYPE[m.type ?? 'distance_km']?.unit}</span>
+                  </Space>
+                ),
+              },
+              {
+                title: '',
+                key: 'op',
+                align: 'right',
+                render: (_, __, i) => <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除奖牌" disabled={!canEdit} onClick={() => set((c) => c.medals!.splice(i, 1))} />,
+              },
+            ]}
+          />
+        )}
+        <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
+          成就奖牌带进度，达到目标即获得；赛季段位奖牌在赛季结算时按最终段位自动发放，不在这里配置。累计里程类型同时写旧字段 distance_km 以兼容旧版 App。
+        </div>
+      </Panel>
+    ),
+
+    companion: !draft.companion
+      ? missing('伙伴养成', () => set((c) => (c.companion = clone(DEFAULTS.companion))))
+      : (
+          <Panel title="跑步伙伴养成" extra={<span className="panel-hint">伙伴仍然不提供对抗加成</span>}>
+            {fieldGrid('companion', draft.companion as unknown as Record<string, number>, COMPANION_FIELDS, (k, v) => set((c) => ((c.companion as unknown as Record<string, number>)[k] = v)))}
+            <Alert
+              style={{ marginTop: 16 }}
+              type="success"
+              showIcon={false}
+              message={
+                <span>
+                  示例：陪跑 5 km 得 <b className="num">{Math.round(draft.companion.exp_per_100m * 50 * 10) / 10}</b> 经验，升 1 级约需陪跑{' '}
+                  <b className="num">{draft.companion.exp_per_100m > 0 ? ((draft.companion.exp_per_level / draft.companion.exp_per_100m) * 0.1).toFixed(1) : '—'}</b> km 或喂{' '}
+                  <b className="num">{draft.companion.feed_exp > 0 ? Math.ceil(draft.companion.exp_per_level / draft.companion.feed_exp) : '—'}</b> 次
+                </span>
+              }
+            />
+          </Panel>
+        ),
+
+    relay: !draft.relay
+      ? missing('跑团接力', () => set((c) => (c.relay = clone(DEFAULTS.relay))))
+      : (
+          <Panel title="跑团接力" extra={<span className="panel-hint">团长发起；每位成员一次 GPS 运动跑满单棒距离算一棒</span>}>
+            {fieldGrid('relay', draft.relay as unknown as Record<string, number>, RELAY_FIELDS, (k, v) => set((c) => ((c.relay as unknown as Record<string, number>)[k] = v)))}
+            <Alert
+              style={{ marginTop: 16 }}
+              type="info"
+              showIcon={false}
+              message={`默认 ${draft.relay.default_legs} 棒 × ${draft.relay.leg_km} km = ${Math.round(draft.relay.default_legs * draft.relay.leg_km * 10) / 10} km，${Math.round(draft.relay.duration_h / 24)} 天内完成，全员各得 ${draft.relay.reward_energy} 能量。`}
+            />
+          </Panel>
+        ),
   };
 
   return (
@@ -358,28 +703,22 @@ export default function GameplayPage() {
       <PageHeader
         title="玩法配置"
         sub={`线上版本 ${current.version}${current.rollout_pct < 100 ? `（灰度 ${current.rollout_pct}%）` : ''} · 改动先灰度再全量，可一键回滚`}
-        extra={
-          <Segmented
-            size="large"
-            value={tab}
-            onChange={(v) => setParams(v === 'buildings' ? {} : { tab: String(v) })}
-            options={[
-              { label: '建筑', value: 'buildings' },
-              { label: '角色', value: 'roles' },
-              {
-                label: (
-                  <span>
-                    怪兽掉落
-                    {badBosses.length > 0 && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: 4, background: BRAND.red, marginLeft: 4, verticalAlign: 'top' }} />}
-                  </span>
-                ),
-                value: 'drops',
-              },
-              { label: '能量换算', value: 'energy' },
-            ]}
-          />
-        }
       />
+      <div className="tab-strip">
+        <Segmented
+          value={tab}
+          onChange={(v) => setParams(v === 'buildings' ? {} : { tab: String(v) })}
+          options={TABS.map((t) => ({
+            value: t.value,
+            label: (
+              <span>
+                {t.label}
+                {badTabs.has(t.value) ? <span className="tab-dot bad" /> : changedTabs.has(t.value) ? <span className="tab-dot" /> : null}
+              </span>
+            ),
+          }))}
+        />
+      </div>
       {!canEdit && <Alert type="info" showIcon message="当前角色只能查看玩法配置" />}
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={15} xxl={16}>
@@ -406,8 +745,22 @@ export default function GameplayPage() {
                 ))}
               </div>
             )}
-            {badBosses.length > 0 && (
-              <Alert style={{ marginTop: 12 }} type="error" showIcon message={`${badBosses.map((b) => `${b.name} ${dropSum(b)}%`).join('、')}：掉落合计必须等于 100%`} />
+            {problems.length > 0 && (
+              <Alert
+                style={{ marginTop: 12 }}
+                type="error"
+                showIcon
+                message={`${problems.length} 处需要修正才能发布`}
+                description={
+                  <ul style={{ margin: 0, paddingLeft: 16, maxHeight: 160, overflow: 'auto' }}>
+                    {problems.map((p, i) => (
+                      <li key={i}>
+                        <a onClick={() => setParams(p.tab === 'buildings' ? {} : { tab: p.tab })}>{TABS.find((t) => t.value === p.tab)?.label}</a>：{p.text}
+                      </li>
+                    ))}
+                  </ul>
+                }
+              />
             )}
 
             {canPublish ? (
@@ -440,7 +793,7 @@ export default function GameplayPage() {
             ) : (
               <Alert style={{ marginTop: 14 }} type="info" showIcon message="只有管理员可以发布玩法配置" description="可以在左侧试改数值查看差异，确认后请管理员发布（先 10% 灰度再全量）。" />
             )}
-            <Button block style={{ marginTop: 10 }} disabled={changes.length === 0} onClick={() => setDraft(clone(current.body))}>
+            <Button block style={{ marginTop: 10 }} disabled={changes.length === 0} onClick={() => setDraft(normalize(current.body))}>
               撤销全部改动
             </Button>
 

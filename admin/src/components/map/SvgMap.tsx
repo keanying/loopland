@@ -5,7 +5,8 @@ import type { MapCheckpoint } from '../../api/types';
 import { bossKindName, bossColor } from '../../utils/gameplay';
 import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, type MapProps } from './colors';
 
-const PAD = 40;
+// Room for boss labels above and the legend below.
+const PAD = { x: 40, top: 56, bottom: 76 };
 const M_PER_DEG_LAT = 110_574;
 
 interface View {
@@ -40,7 +41,8 @@ export default function SvgMap({
   onPick,
   pickPoint,
   onViewport,
-}: MapProps) {
+  preview,
+}: MapProps & { preview?: boolean }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
   // The viewBox follows the container's pixel size so the polygons fill it.
@@ -88,9 +90,9 @@ export default function SvgMap({
     const k = Math.cos((((minY + maxY) / 2) * Math.PI) / 180);
     const spanX = Math.max((maxX - minX) * k, 1e-6);
     const spanY = Math.max(maxY - minY, 1e-6);
-    const scale = Math.min((W - PAD * 2) / spanX, (H - PAD * 2) / spanY);
+    const scale = Math.min((W - PAD.x * 2) / spanX, (H - PAD.top - PAD.bottom) / spanY);
     const ox = (W - spanX * scale) / 2;
-    const oy = (H - spanY * scale) / 2;
+    const oy = PAD.top + (H - PAD.top - PAD.bottom - spanY * scale) / 2;
     return {
       fwd: (lng, lat) => [ox + (lng - minX) * k * scale, oy + (maxY - lat) * scale],
       inv: (x, y) => ({ lng: minX + (x - ox) / (k * scale), lat: maxY - (y - oy) / scale }),
@@ -215,7 +217,7 @@ export default function SvgMap({
                   key={t.id}
                   d={d}
                   fill={color}
-                  fillOpacity={sel ? 0.75 : 0.5}
+                  fillOpacity={preview ? 0.22 : sel ? 0.75 : 0.5}
                   fillRule="evenodd"
                   stroke={t.frozen ? '#2F6FD0' : sel ? '#141414' : '#3a3a40'}
                   strokeWidth={sel ? 3 : 1.4}
@@ -268,6 +270,7 @@ export default function SvgMap({
             ))}
 
           {proj &&
+            !preview &&
             shownItems.map((t) => {
               const [x, y] = proj.fwd(t.center.lng, t.center.lat);
               const sel = t.id === selectedId;
@@ -296,6 +299,11 @@ export default function SvgMap({
                     <text textAnchor="middle" dominantBaseline="central" fontSize={10 * z} fontWeight={800} fill={routeColor(rid)}>
                       {c.index + 1}
                     </text>
+                    {preview && (
+                      <text x={r + 4 * z} y={0} dominantBaseline="central" fontSize={11 * z} fontWeight={700} fill="#141414" stroke="#fff" strokeWidth={3 * z} paintOrder="stroke">
+                        {c.name}
+                      </text>
+                    )}
                     <title>{`定向打卡点 ${c.index + 1} · ${c.name} · 半径 ${c.radius_m} m（路线 #${rid}）`}</title>
                   </g>
                 );
@@ -394,13 +402,14 @@ export default function SvgMap({
       </div>
       <div className="map-legend">
         {layers.territories &&
+          !preview &&
           owners.map(([name, color]) => (
             <span key={name}>
               <span className="swatch" style={{ background: color }} />
               {name}
             </span>
           ))}
-        {layers.territories && (
+        {layers.territories && !preview && (
           <span>
             <span className="swatch" style={{ background: 'transparent', border: '1.5px dashed #2F6FD0' }} />
             已冻结
@@ -424,6 +433,7 @@ export default function SvgMap({
             定向打卡点
           </span>
         )}
+        {preview && <span className="muted">底色为附近领地</span>}
         <span className="muted">无底图示意</span>
       </div>
     </div>

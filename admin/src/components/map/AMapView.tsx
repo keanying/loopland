@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'antd';
 import { bossColor, bossKindName } from '../../utils/gameplay';
+import { config } from '../../config';
 import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, type MapProps } from './colors';
 
 // Minimal typings for the parts of AMap JS API 2.0 we use.
@@ -39,21 +40,22 @@ interface AMapNS {
 
 declare global {
   interface Window {
-    _AMapSecurityConfig?: { securityJsCode: string };
+    _AMapSecurityConfig?: { securityJsCode?: string; serviceHost?: string };
   }
 }
 
-async function loadAMap(key: string): Promise<AMapNS> {
-  const code = import.meta.env.VITE_AMAP_SECURITY_CODE;
-  if (code) window._AMapSecurityConfig = { securityJsCode: code };
+async function loadAMap(): Promise<AMapNS> {
+  const { key, security_code, service_host, version } = config.amap;
+  if (service_host) window._AMapSecurityConfig = { serviceHost: service_host };
+  else if (security_code) window._AMapSecurityConfig = { securityJsCode: security_code };
   const loader = await import('@amap/amap-jsapi-loader');
   const load = loader.load ?? (loader as unknown as { default: { load: typeof loader.load } }).default.load;
-  return (await load({ key, version: '2.0' })) as AMapNS;
+  return (await load({ key, version })) as AMapNS;
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-/** AMap (高德) JS API 2.0 map. Only used when VITE_AMAP_KEY is set. */
+/** AMap (高德) JS API 2.0 map. Only used when amap.key is set in config.yaml. */
 export default function AMapView({
   items,
   selectedId,
@@ -88,13 +90,12 @@ export default function AMapView({
   };
 
   useEffect(() => {
-    const key = import.meta.env.VITE_AMAP_KEY;
-    if (!key || !el.current) return;
+    if (!config.amap.key || !el.current) return;
     let alive = true;
-    loadAMap(key)
+    loadAMap()
       .then((A) => {
         if (!alive || !el.current) return;
-        const m = new A.Map(el.current, { zoom: 14, viewMode: '2D', mapStyle: 'amap://styles/whitesmoke' });
+        const m = new A.Map(el.current, { zoom: 14, viewMode: '2D', mapStyle: config.amap.map_style });
         const report = () => {
           const b = m.getBounds();
           const sw = b.getSouthWest();
