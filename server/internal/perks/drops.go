@@ -254,6 +254,11 @@ func (s *Service) UpdateDrop(ctx context.Context, tx pgx.Tx, id int64, in DropIn
 	if err := in.validate(ctx, tx); err != nil {
 		return err
 	}
+	// A moved or edited chest drop gets a fresh chest on the next spawn.
+	// Chests are locked before the drop, as a chest open does.
+	if _, err := tx.Exec(ctx, `UPDATE src.src_ply_loop_chest SET remove_time=now() WHERE drop_id=$1 AND remove_time IS NULL`, id); err != nil {
+		return err
+	}
 	lng, lat := in.point()
 	_, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_drop SET merchant_id=$2, campaign_id=$3, drop_name=$4,
 			center_geom=CASE WHEN $5::float8 IS NULL THEN NULL ELSE ST_SetSRID(ST_MakePoint($5,$6),4326) END, radius_m=$7, venue_id=$8, store_name=$9,
@@ -262,16 +267,16 @@ func (s *Service) UpdateDrop(ctx context.Context, tx pgx.Tx, id int64, in DropIn
 		id, in.MerchantID, in.CampaignID, in.Name, lng, lat, in.RadiusM, in.VenueID, in.StoreName,
 		in.Perk.Title, in.Perk.Description, in.Perk.ValueText, in.Perk.ValidDays, in.Perk.Rules, in.DailyCap,
 		in.StartTime, in.EndTime, in.SettlePriceAmt, in.SettleDirection)
-	if err != nil {
-		return err
-	}
-	// A moved or edited chest drop gets a fresh chest on the next spawn.
-	_, err = tx.Exec(ctx, `UPDATE src.src_ply_loop_chest SET remove_time=now() WHERE drop_id=$1 AND remove_time IS NULL`, id)
 	return err
 }
 
 // PauseDrop pauses (on) or resumes a drop.
 func (s *Service) PauseDrop(ctx context.Context, tx pgx.Tx, id int64, on bool) error {
+	if on { // chests before the drop, as a chest open locks them
+		if _, err := tx.Exec(ctx, `UPDATE src.src_ply_loop_chest SET remove_time=now() WHERE drop_id=$1 AND remove_time IS NULL`, id); err != nil {
+			return err
+		}
+	}
 	tag, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_drop SET is_paused=$2, update_time=now() WHERE id=$1`, id, on)
 	if err != nil {
 		return err
@@ -279,10 +284,7 @@ func (s *Service) PauseDrop(ctx context.Context, tx pgx.Tx, id int64, on bool) e
 	if tag.RowsAffected() == 0 {
 		return httpx.NotFound("投放")
 	}
-	if on {
-		_, err = tx.Exec(ctx, `UPDATE src.src_ply_loop_chest SET remove_time=now() WHERE drop_id=$1 AND remove_time IS NULL`, id)
-	}
-	return err
+	return nil
 }
 
 // ---------------------------------------------------------------- supplies

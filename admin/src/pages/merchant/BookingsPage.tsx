@@ -127,17 +127,17 @@ export default function BookingsPage() {
           rowKey="id"
           loading={list.isFetching}
           dataSource={list.data?.items}
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1200 }}
           onRow={(b) => ({ onClick: () => setDetail(b), style: { cursor: 'pointer' } })}
           locale={{ emptyText: <Empty description="没有符合条件的预订" /> }}
           pagination={{ current: page, pageSize: PAGE, total: list.data?.total ?? 0, showSizeChanger: false, showTotal: (t) => `共 ${t} 笔`, onChange: (p) => update({ page: p === 1 ? null : p }) }}
           columns={[
-            { title: '预订号', dataIndex: 'booking_no', width: 210, render: (v: string) => <span className="num">{v}</span> },
-            { title: '场馆', key: 'venue', width: 170, render: (_, b) => b.venue.name },
+            { title: '预订号', dataIndex: 'booking_no', width: 190, render: (v: string) => <span className="num">{v}</span> },
+            { title: '场馆', key: 'venue', width: 160, render: (_, b) => b.venue.name },
             {
               title: '时段',
               key: 'slot',
-              width: 200,
+              width: 190,
               render: (_, b) => (
                 <span className="num">
                   {slotText(b)}
@@ -166,8 +166,8 @@ export default function BookingsPage() {
               ),
             },
             { title: '状态', dataIndex: 'status', width: 96, render: (v: BookingStatus) => <BookingStatusTag status={v} /> },
-            { title: '组局', dataIndex: 'meetup_id', width: 110, render: (v: number | null) => (v ? <Tag bordered={false} color="purple">约球 #{v}</Tag> : <span className="muted">—</span>) },
-            { title: '下单时间', dataIndex: 'created_at', width: 150, render: (v: string) => <span className="num">{dt(v)}</span> },
+            { title: '组局', dataIndex: 'meetup_id', width: 90, render: (v: number | null) => (v ? <Tag bordered={false} color="purple">约球 #{v}</Tag> : <span className="muted">—</span>) },
+            { title: '下单时间', dataIndex: 'created_at', width: 140, render: (v: string) => <span className="num">{dt(v)}</span> },
             { title: '操作', key: 'op', width: 90, align: 'right', fixed: 'right', render: (_, b) => refundButton(b) || <span className="muted">—</span> },
           ]}
         />

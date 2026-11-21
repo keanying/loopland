@@ -475,19 +475,19 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
           </Col>
           <Col span={8}>
             <Form.Item name="store_count" label="参与门店数" rules={[{ required: true, message: '请填写门店数' }]}>
-              <InputNumber className="num" min={0} max={10000} addonAfter="店" style={{ width: '100%' }} />
+              <InputNumber className="num" min={0} max={10000} suffix="店" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
         <Row gutter={12}>
           <Col span={12}>
             <Form.Item name="target_redemptions" label="核销目标" rules={[{ required: true, message: '请填写核销目标' }]} extra="用于目标进度条">
-              <InputNumber className="num" min={1} max={10_000_000} addonAfter="次" style={{ width: '100%' }} />
+              <InputNumber className="num" min={1} max={10_000_000} suffix="次" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="investment_yuan" label="商户投入" rules={[{ required: true, message: '请填写商户投入' }]} extra="商户为活动投入的权益成本（元）">
-              <InputNumber className="num" min={0} max={100_000_000} precision={2} addonBefore="¥" style={{ width: '100%' }} />
+              <InputNumber className="num" min={0} max={100_000_000} precision={2} prefix="¥" style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>

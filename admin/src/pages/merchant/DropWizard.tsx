@@ -388,7 +388,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
                   </Col>
                   <Col span={8}>
                     <Form.Item name="radius_m" label="半径" rules={[{ required: true, message: '请填写半径' }]} extra={type === 'supply' ? '轨迹经过这个圆即领取' : '靠近到这个范围内可开启'}>
-                      <InputNumber className="num" min={20} max={500} step={10} addonAfter="m" style={{ width: '100%' }} />
+                      <InputNumber className="num" min={20} max={500} step={10} suffix="m" style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -436,7 +436,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
               <Input maxLength={60} showCount placeholder="限滨江店，每人每天 1 次" />
             </Form.Item>
             <Form.Item name={['perk', 'valid_days']} label="券有效天数（领取后）" rules={[{ required: true, message: '请填写有效天数' }]}>
-              <InputNumber className="num" min={1} max={90} addonAfter="天" style={{ width: 180 }} />
+              <InputNumber className="num" min={1} max={90} suffix="天" style={{ width: 180 }} />
             </Form.Item>
             <Space size={6} style={{ margin: '-14px 0 16px' }}>
               {[3, 7, 14, 30].map((d) => (
@@ -482,7 +482,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
             <Row gutter={12}>
               <Col xs={24} md={9}>
                 <Form.Item name="settle_price" label="结算单价（每张有效核销）" rules={[{ required: true, message: '请填写结算单价' }]}>
-                  <InputNumber className="num" min={0} max={1000} step={0.5} precision={2} addonBefore="¥" style={{ width: '100%' }} />
+                  <InputNumber className="num" min={0} max={1000} step={0.5} precision={2} prefix="¥" style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
               <Col xs={24} md={15}>

@@ -305,12 +305,12 @@ function ShopItemModal({ value, onClose }: { value: ShopItem | 'new' | null; onC
               <Row gutter={12}>
                 <Col span={8}>
                   <Form.Item name="fill" label="填充色" rules={[{ required: true }]} getValueFromEvent={(c: Color) => hex(c)}>
-                    <ColorPicker showText disabledAlpha format="hex" />
+                    <ColorPicker showText format="hex" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
                   <Form.Item name="stroke" label="描边色" rules={[{ required: true }]} getValueFromEvent={(c: Color) => hex(c)}>
-                    <ColorPicker showText disabledAlpha format="hex" />
+                    <ColorPicker showText format="hex" />
                   </Form.Item>
                 </Col>
                 <Col span={8}>

@@ -1,6 +1,6 @@
 # 圈圈 Loopland · App（V1 + V2 第一批「玩法深化」）
 
-Flutter 3 + Riverpod 客户端。接口约定以 `docs/api/v1.md` 和 `docs/api/v2-1-玩法.md` 为准。V2 第一批（城市怪兽、能量宝箱、守地挑战、赛季、城区联赛、限时活动、城市定向、伙伴养成、跑团接力、WebSocket 实时推送）已实现；其余 V2 入口（场馆、组局、动态、本地生活、能量商城、AI 剧情夜跑、轨迹绘画）显示「即将开放」。
+Flutter 3 + Riverpod 客户端。接口约定以 `docs/api/v1.md` 和 `docs/api/v2-1-玩法.md` 为准。V2 第一批（城市怪兽、能量宝箱、守地挑战、赛季、城区联赛、限时活动、城市定向、伙伴养成、跑团接力、WebSocket 实时推送）已实现；第二至四批（社区、AI、本地生活与商户）见下文；AI 剧情夜跑、轨迹绘画仍显示「即将开放」。
 
 ## 环境
 
@@ -149,7 +149,7 @@ screenshots/  组件测试生成的界面截图
 - 领地：地图首页（全城 / 我的 / 跑团、按视野 bbox 加载、点领地弹卡片：去建设 / 导航去抢 / 高德导航、缩放与定位按钮、铃铛进消息）。
 - 建城：6 个建造位、建筑选择（费用 / 守卫 / 产能 / 解锁等级 / 能量不足）、角色派驻与撤下、实时守卫值和每日能量。
 - 图鉴：角色 / 建筑 / 伙伴 / 怪兽（即将开放）/ 奖牌；三列卡片，未获得显示剪影 + 问号和解锁方式；详情弹层；孵化的伙伴设为陪跑。卡牌插画从原型 `CardArt.dc.html` 提取为 `assets/art/*.svg`。
-- 开始：户外 GPS（跑步 / 骑行 / 徒步 / 健走，目标：自由 / 距离 / 时间 / 抢指定领地）、居家训练（力量 / 瑜伽 / HIIT 计时，跳绳计数）、场馆运动显示 V2。
+- 开始：户外 GPS（跑步 / 骑行 / 徒步 / 健走，目标：自由 / 距离 / 时间 / 抢指定领地）、居家训练（力量 / 瑜伽 / HIIT 计时，跳绳计数）、场馆球类（场馆签到，见 V2 第四批）。
 - 运动中：3-2-1 倒计时、实时轨迹、本地圈地预览（移植的 claim 算法）、「还差 X 米可闭合」虚线提示、距离 / 配速 / 时长 / 已圈面积、暂停继续、长按结束、模拟定位提示、Android 前台服务常驻通知 / iOS 后台定位。
 - 结算页：圈地、攻击（守卫变化）、能量（含每日上限提示）、升级、招募进度、伙伴蛋、奖牌、复核 / 作废说明。
 - 社区（V1）：我的跑团卡片与本周排行、找跑团、创建、加入 / 申请、退出、团长管理（成员、踢人、转让、审批申请）。
@@ -159,7 +159,7 @@ screenshots/  组件测试生成的界面截图
   - 怪兽来袭页（`/bosses/:id`）：倒计时、怪兽插画（沙发怪 / 熬夜蝠 / 雾霾怪 / 糖分怪；卡牌 SVG + `widgets/monster_art.dart` 的矢量画法）、等级、描述、霸占领地、血量条（WebSocket 实时）、伤害规则（相同规则合并为「跑步 / 骑行」）、「去运动出战」（范围内先 `engage`，再去开始页）、「发起合击」（带定位；显示伤害、合击加成、剩余能量、冷却倒计时，429 用 `retry_after_s`）、伤害榜、掉落概率公示（含「不支持付费抽取」）、击退 / 到期结果与 `my_rewards`（重复折算能量）。
   - 实时：登录（且已绑手机、已授权）后连 `/v1/ws?token=`；断线按 1/2/4/8/16/30 s 退避重连并重发订阅；握手失败或鉴权类关闭码时调用一次需要登录的接口，让 ApiClient 用 refresh token 轮换（失败则退出登录、停止重连）；75 s 收不到任何消息（服务端 30 s 一次 ping）视为断线。`territory_attacked` / `rally` 在顶部弹横幅，点击进领地 / 怪兽页。
   - 玩法中心（`/games`）：核心卡（城市争霸）+ 城区联赛、能量宝箱、城市定向、跑步伙伴（内嵌喂食卡）、跑团接力、限时活动（进行中数量）；AI 剧情夜跑、轨迹绘画「即将开放」。点选玩法切换上方大卡（同原型）。
-  - 赛季页（`/season`）：段位卡（进度条、段位条、「距 黄金 I 还差 x km²」）、我的排名 / 跑团排名、赛事中心（→ 城区联赛 `/league`）、本地生活 / 能量商城（即将开放）、奖牌（带进度环）/ 赛季任务 / 排行（个人、跑团）。
+  - 赛季页（`/season`）：段位卡（进度条、段位条、「距 黄金 I 还差 x km²」）、我的排名 / 跑团排名、赛事中心（→ 城区联赛 `/league`）、本地生活 / 能量商城（→ `/local`）、奖牌（带进度环）/ 赛季任务 / 排行（个人、跑团）。
   - 城市定向（`/routes`、`/routes/:id`）：路线列表与详情，地图上有序打卡点（已打卡 / 下一站 / 待打卡）+ 路线虚线，「去打卡」开始跑步。限时活动（`/campaigns`）：规则中文化（距离、配速、开跑时段）、时间、奖励、完成状态。
   - 图鉴：怪兽页签（出手、击退、最佳排名，未遇到为剪影）；伙伴显示等级、经验条、陪跑米数、「喂 50 能量」。
   - 跑团接力：跑团页 / 社区页的接力卡（各棒由谁跑、距离、截止倒计时）；团长可发起（棒数、每棒距离）。
@@ -189,6 +189,16 @@ screenshots/  组件测试生成的界面截图
   - 画面只在手机本地交给 ML Kit 识别，不上传、不保存（页面和课程列表都有说明，训练结束立即关闭摄像头，切到后台释放摄像头并暂停）。「全身入镜」提示；4 秒窗口内光线太暗 / 可用帧不足 40% / 2.5 秒没有画面时自动改为手动计数（+1 / +10 / −1），点状态条可恢复自动；没有摄像头权限、没有摄像头、Web / 桌面：计时 + 手动计数。
   - 语音（`flutter_tts`，zh-CN）：准备、每组开始、过半、最后 3 个、最后 3 秒倒数、休息与下一个动作、完成；右上角静音开关（记在本机；跑步页目前没有语音设置）。
   - 上传沿用 `POST /v1/activities`（跳绳 `amount` = 总次数，其余为分钟数）+ `coach`（`workout_key`、`camera`、`reps_detected`、`reps_manual`、`sets_done`），结果走原来的结算页（能量、复核）。手动补记比识别多 20% 以上时小结页提示可能进入人工复核（服务端规则 `coach_mismatch`）。
+- **本地生活 · 订场 / 场馆签到 / 馆主 / 约球订场 / 赛事报名费（V2 第四批 C-07、C-08、E-03、D-11、D-12，接口 `docs/api/v2-4-本地生活与商户.md`）**：代码在 `lib/api/local_api.dart`、`local_models.dart`、`lib/features/local/`（`local_page.dart` 页面壳、`booking_tab.dart`、`booking_flow.dart`、`venue_widgets.dart`、`venue_pages.dart`、`venue_checkin.dart`、`venue_section.dart`、`qr_scan_page.dart`、`my_bookings_page.dart`、`meetup_booking.dart`、`local_routes.dart`）、`lib/map/venue_marker.dart`。
+  - 本地生活 `/local?tab=booking|campaigns|shop`（设计稿 08；入口：我的、赛季页、开始页「场馆球类」）：订场 / 联名活动 / 能量商城三个标签（后两个首次切换时才加载）。「订场」：运动分类（全部 + 8 种）、按当前定位由近到远的合作场馆（`bookable=true`），卡片显示首字色块、名称、「距你 0.8 km · 室内 · 可租拍」、馆主行（「馆主 · 夜跑兔（你的跑团）」/ 馆主是自己时显示订场折扣 / 「暂无馆主 · 先签到先得」）、价格；展开的场馆有日期条（今天起 7 天，按北京时间）、时段格（已满划线不可点，馆主价小字）、连续多选（1–4 个，`booking.max_slots`，点两端缩短、点中间或不相邻重新开始）、「先选一个时段 / 确认预订 21:00–23:00 · ¥120」。顶部「推荐」条：附近（5 km 内）还有空位、未开始的约球组局（`GET /v1/meetups?type=ball`，按规则选，不调 AI，所以标「推荐」不标 AI），点进组局详情。
+  - 下单：确认订单弹层（场馆、时段、原价 / 馆主折扣 / 实付、取消规则、支付方式）→ `POST /v1/bookings` → 复用会员的支付流程（`PaymentService.payOrder`：微信 / 支付宝 SDK 或 dev 的 `mock` + `/v1/dev/orders/{no}/pay`，之后轮询 `GET /v1/orders/{no}`）→ 结果弹层（查看订单）。线下场地服务不走内购：**iOS 也提供微信 / 支付宝**（`servicePayChannels`，与 `/v1/config/features` 的 `pay` 取交集）。`realname_required` → 实名页；未成年先本地提示、服务端 `minor_not_allowed` 同样提示；`slot_unavailable` → 关闭弹层、清空选择并刷新时段；SDK 取消 → 提示订单保留 15 分钟。
+  - 我的订场 `/me/bookings`（我的页、订场标签右上角）：全部 / 待支付 / 待使用 / 已完成 / 已退款 / 已取消，状态标签；详情 `/me/bookings/:id`：金额明细、支付单号、免费取消截止时间、按状态的说明；开始前 2 小时以上「取消并退款」（二次确认，原路退款 → 退款中），之后按钮禁用，服务端 `cancel_too_late` 也提示联系客服。待支付订单契约里没有「继续支付」接口，只能取消或等 15 分钟过期。
+  - 场馆签到：开始页「场馆球类」= 附近 5 km 场馆（含只签到的据点）+「签到」按钮（今日已签置灰）+「扫码」+ 订场入口；场馆详情 `/venues/:id`：馆主卡（头像金圈、上周积分、「你的跑团」、我是馆主时的订场折扣）、我的本周积分、本周积分榜（周一 00:00 结算）、地图小图，底部「扫码 / 定位签到 / 订场」。定位签到用当前 GCJ-02 位置；拿不到定位时提示改扫码。扫码：App 内扫一扫（`mobile_scanner`），内容可以是 `LPV.<id>.<签名>` 或链接 `https://<links.universal_link_domain>/v/<内容>`（`parseVenueQr`，签名由服务端校验）；系统相机扫到的链接通过 Universal Link / App Link 打开 `/v/:payload`，自动签到后进场馆页。结果弹层：能量、馆主积分、本周积分、和本周第一的差距、据点券（粉色券卡，点开卡券包 `/me/coupons`）。`checkin_not_allowed` 显示服务端原因，`already_checked_in`、每天 3 个场馆（429）有提示。
+  - 地图：`/v1/map/objects` 的 `venues` 画成据点图钉（有馆主时金圈 + 皇冠 + 馆主头像，头像未加载 / 无头像时画昵称首字；放大后显示「馆主 夜跑兔」），点击进场馆页；高德用同一画法生成 Marker 位图（先无头像，头像下载后替换）。
+  - 约球订场（D-11）：发起组局选「约球」后可打开「同时订场」→ 选场馆和时段（球类场馆）→ 集合地点和起止时间自动改成场馆和所订时段；发起成功后立即走订场支付（带 `meetup_id`），失败时组局保留，可在组局详情「给这个局订场」。组局详情显示「已订场 · 场馆 · 时间」（读 `Meetup.booking`；发起人在服务端没返回时用 `meetup_id` 查自己的订单）。
+  - 赛事报名费（D-12）：赛事卡片和详情显示报名费，「报名 ¥39」→ 缴费弹层（规则、支付方式，iOS 同样微信 / 支付宝）→ `POST /v1/races/{id}/signup {"channel"}` → 支付（订单号取自 `my_entry.order_no` / `order.order_no`；都没有时 SDK 支付后轮询赛事）；`pending_pay` 显示「待支付 · 15 分钟内未支付自动取消」和「取消报名 / 继续支付」（服务端复用未支付订单）；已支付取消时提示报名费原路退回。
+  - Android App Link：`MainActivity` 增加 `https://${LOOPLAND_LINK_DOMAIN}/v/` 的 `autoVerify` intent-filter，域名由生成器写进 `android/loopland.properties`（`links.universal_link_domain`），服务器需要部署 `/.well-known/assetlinks.json`；iOS 沿用 Associated Domains，`apple-app-site-association` 需要包含 `/v/*`。
+  - 联调：`LOOPLAND_LIVE_API=… flutter test integration_live/local_live_test.dart`（管理端建商户和场馆、定位 / 扫码 / 伪造码签到、地图据点、实名前后下单、mock 支付、时段占用、取消退款、约球订场、付费赛事报名与取消）。
 - **联名权益 / 卡券包 / 能量商城（V2 第四批 A-16、E-04、E-05，接口 `docs/api/v2-4-本地生活与商户.md`）**：代码在 `lib/api/perks_api.dart`、`perks_models.dart`、`lib/features/local/`（`campaigns_tab.dart`、`shop_tab.dart`、`coupons_pages.dart`、`supply_sheet.dart`）、`lib/widgets/cosmetics.dart`。
   - 本地生活「联名活动」：进行中的品牌联名（时间、门店数、权益、怎么领：补给站 / 商户宝箱 / 据点、规则、投放点，点投放点回到地图并居中）。「能量商城」：领地皮肤 / 头像框 / 地图标记按类型筛选、预览，兑换前确认（`not_enough_energy`、`already_owned`），装备 / 卸下（同类只装备一个）；明示「能量只能运动获得，不能充值、不能转让」，没有付费入口。
   - 卡券包 `/me/coupons`（我的、结算页、联名活动入口）：未使用 / 已使用 / 已过期；券详情 `/me/coupons/:id` 显示到店二维码（`qr_flutter` 本地绘制，`GET /v1/coupons/{id}/qr` 每 50 秒和回到前台时刷新，倒计时，截图无效）、券码、规则（含「核销需要当天有一条运动记录」）、有效期、来源。没有做屏幕调亮（不想为此引入原生插件）。
@@ -273,6 +283,10 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 
 `device.rooted`（Android RootBeer / iOS DTTJailbreakDetection）、`device.emulator`（device_info_plus ＋ safe_device）、`device.multi_open`（应用私有目录不是 `/data/user/0/com.loopland.app`：MIUI/ColorOS 双开 999、三星 95、VirtualApp/平行空间等容器）。safe_device 的模拟定位检测已关闭（会触发定位）；模拟定位由 geolocator 的 `isMocked` 逐点上报。多开是启发式判断，工作资料（work profile）也会被标记，服务端只作为风险信号使用。
 
+### 8b. 场馆扫码 — `mobile_scanner 7.5.0`
+
+- Android CameraX + ML Kit 条码（模型随包），iOS 用 Apple Vision，只识别 QR；相机权限由插件在打开扫一扫时申请（Android `CAMERA` 已声明，iOS `NSCameraUsageDescription` 已加上「扫场馆二维码签到」）。拒绝权限 / 不支持时扫码页提示改用定位签到。画面只在本机识别。
+
 ### 8. AI 跟练 — `camera 0.12.2`、`google_mlkit_pose_detection 0.16.1`、`flutter_tts 4.2.5`
 
 - ML Kit 姿态识别模型随包内置（不依赖 Google Play 服务、不联网下载），stream 模式、base 模型；处理不过来的帧直接丢弃。Android 用 NV21（个别机型给 3 平面 YUV 时在 Dart 里转），iOS 用 BGRA。
@@ -319,7 +333,8 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 - `ali_auth` 授权页的部分样式（如勾选框图片、Android 端某些字段）由 SDK 决定，按插件支持程度定制。
 - `safe_device` 依赖 `play-services-location`（未调用其定位相关能力）。
 - 支付宝 iOS 官方建议的 `NSAllowsArbitraryLoads` 未开启（审核风险），如遇支付宝 H5 收银台加载问题再按需加。
-- 动态、组局、场馆、本地生活、能量商城、AI 剧情夜跑、轨迹绘画等仍只有占位。
+- AI 剧情夜跑、轨迹绘画仍只有占位。
+- 订场 / 报名费的微信、支付宝支付和场馆扫码（相机权限、mobile_scanner 与 ML Kit 姿态识别同包、App Link 验证）只在本环境用假实现测试，需要真机验证。
 - 伙伴经验：`exp` 按服务端实现理解为累计经验，`exp_to_next` 为距下一级还差多少，本级进度 = `exp_per_level − exp_to_next`。
 - WebSocket 只解析 `boss` / `territory_attacked` / `rally` / `ping`；客户端不回 pong（约定未要求）。实时横幅只在 App 前台时出现，系统推送未接。
 - 跑步中的语音播报、手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）；AI 跟练有语音。

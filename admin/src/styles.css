@@ -323,3 +323,4 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .mer-drop-head { flex-wrap: nowrap; }
 .mer-drop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .redeem-input input::placeholder, input.redeem-input::placeholder { font-size: 15px; letter-spacing: 0; text-transform: none; }
+.panel-head .ant-segmented { max-width: 100%; overflow-x: auto; }

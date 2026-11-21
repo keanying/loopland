@@ -75,6 +75,7 @@ export function PointPicker({ point, name, radius, onPick, enabled = true }: { p
         objects={{ bosses: [], chests: [], checkpoints: point ? [{ route_id: 0, index: 0, name: name || '场馆', center: point, radius_m: radius }] : [] }}
         layers={{ territories: true, bosses: false, chests: false, checkpoints: true }}
         preview
+        checkpointLabel="场馆 · 签到范围"
         picking
         onPick={(p) => onPick({ lat: +p.lat.toFixed(6), lng: +p.lng.toFixed(6) })}
       />

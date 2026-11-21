@@ -197,6 +197,7 @@ export default function SettlementPage() {
           columns={[
             { title: '结算单号', dataIndex: 'statement_no', width: 150, render: (v: string) => <span className="num">{v}</span> },
             ...(staff ? [] : [{ title: '商户', key: 'merchant', width: 170, render: (_: unknown, s: Statement) => s.merchant.name }]),
+            { title: '状态', dataIndex: 'status', width: 130, render: (v: StatementStatus) => <StatementStatusTag status={v} /> },
             { title: '周期', key: 'period', render: (_, s) => <span className="num">{dayjs(s.period_start).format('MM/DD')}–{dayjs(s.period_end).format('MM/DD')}</span> },
             {
               title: '有效核销',
@@ -234,7 +235,6 @@ export default function SettlementPage() {
                 ),
             },
             { title: '净额', dataIndex: 'net_amt', align: 'right', render: (v: number) => <b><NetAmount amt={v} /></b> },
-            { title: '状态', dataIndex: 'status', render: (v: StatementStatus) => <StatementStatusTag status={v} /> },
             {
               title: '操作',
               key: 'op',

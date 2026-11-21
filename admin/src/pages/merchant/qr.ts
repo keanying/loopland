@@ -44,7 +44,8 @@ export async function downloadVenueQr(text: string, venueName: string, venueId: 
   if (!blob) throw new Error('导出图片失败');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `场馆签到码_${venueId}_${venueName.replace(/[\\/:*?"<>|\s·]+/g, '_')}.png`;
+  // ASCII name: some browsers (headless Chromium among them) drop non-ASCII download names to "download".
+  a.download = `loopland_venue_${venueId}_checkin_qr.png`;
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();

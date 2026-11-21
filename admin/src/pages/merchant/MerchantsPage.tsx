@@ -156,6 +156,23 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
   const reveal = useMutation({ mutationFn: (mid: number) => merchantApi.revealMerchantPhone(mid), onSuccess: (r, mid) => setPhone({ id: mid, phone: r.phone }) });
   const m = detail.data;
   const revealed = m && phone?.id === m.id ? phone.phone : null;
+  const qc = useQueryClient();
+  const setStatus = useMutation({
+    mutationFn: ({ mid, status }: { mid: number; status: MerchantStatus }) => merchantApi.updateMerchant(mid, { status }),
+    onSuccess: (r) => {
+      toastOk(`已改为「${MERCHANT_STATUS[r.status].text}」`);
+      qc.invalidateQueries({ queryKey: ['merchants'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+  // The next step of the partnership, one click from the detail (资质审核 → 待签约 → 合作中 ⇄ 暂停).
+  const next: Partial<Record<MerchantStatus, { to: MerchantStatus; label: string; danger?: boolean; confirm: string }>> = {
+    reviewing: { to: 'pending_sign', label: '资质审核通过', confirm: '资质核对无误，改为「待签约」？' },
+    pending_sign: { to: 'partner', label: '已签约，开始合作', confirm: '改为「合作中」？其场馆可以开放预订，投放可以发券。' },
+    partner: { to: 'suspended', label: '暂停合作', danger: true, confirm: MERCHANT_STATUS.suspended.hint + '。确认暂停？' },
+    suspended: { to: 'partner', label: '恢复合作', confirm: '恢复为「合作中」？' },
+  };
+  const step = m ? next[m.status] : undefined;
 
   return (
     <Drawer
@@ -176,9 +193,30 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
       extra={
         m &&
         can('merchant.write') && (
-          <Button icon={<EditOutlined />} onClick={() => onEdit(m)}>
-            编辑
-          </Button>
+          <Space>
+            {step && (
+              <Button
+                type={step.danger ? 'default' : 'primary'}
+                danger={step.danger}
+                loading={setStatus.isPending}
+                onClick={() =>
+                  modal.confirm({
+                    title: `${step.label} · ${m.name}`,
+                    content: step.confirm,
+                    okText: step.label,
+                    okButtonProps: { danger: step.danger },
+                    cancelText: '取消',
+                    onOk: () => setStatus.mutateAsync({ mid: m.id, status: step.to }),
+                  })
+                }
+              >
+                {step.label}
+              </Button>
+            )}
+            <Button icon={<EditOutlined />} onClick={() => onEdit(m)}>
+              编辑
+            </Button>
+          </Space>
         )
       }
       loading={detail.isLoading}
