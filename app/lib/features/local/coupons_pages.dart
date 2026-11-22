@@ -39,6 +39,9 @@ String groupedCode(String code) {
 /// perk's own rules text does not mention it.
 const activityRule = '需要当天有一条运动记录：今天运动过（已结算的运动记录）才能核销';
 
+/// Bought coupons (商品券, V2 batch 5) are redeemed without a run that day.
+const productCouponRule = '购买的券到店出示即可核销，不需要当天有运动记录';
+
 void openCoupon(BuildContext context, Coupon c) => context.push('/me/coupons/${c.id}', extra: c);
 
 /// /me/coupons
@@ -50,7 +53,7 @@ class CouponsPage extends ConsumerStatefulWidget {
 }
 
 class _CouponsPageState extends ConsumerState<CouponsPage> {
-  late int _tab = couponStatuses.indexOf(widget.initialStatus).clamp(0, 2);
+  late int _tab = couponStatuses.indexOf(widget.initialStatus).clamp(0, couponStatuses.length - 1);
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +62,7 @@ class _CouponsPageState extends ConsumerState<CouponsPage> {
     return Scaffold(
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const BackHeader(title: '卡券包', subtitle: '运动得来的联名福利 · 到店出示二维码核销'),
+          const BackHeader(title: '卡券包', subtitle: '运动领的联名福利、买的团购券 · 到店出示二维码核销'),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: PillTabs(labels: couponStatusNames, index: _tab, onChanged: (i) => setState(() => _tab = i)),
@@ -76,7 +79,9 @@ class _CouponsPageState extends ConsumerState<CouponsPage> {
                         const Icon(Icons.confirmation_number_outlined, color: LL.text3, size: 44),
                         const SizedBox(height: 12),
                         Text(
-                          status == 'unused' ? '还没有可用的券\n跑步经过补给站、开商户宝箱、到据点签到都能领' : '这里还没有券',
+                          status == 'unused'
+                              ? '还没有可用的券\n跑步经过补给站、开商户宝箱、到据点签到都能领\n场馆页的「团购 / 套餐」也能买'
+                              : '这里还没有券',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: LL.text2, height: 1.6),
                         ),
@@ -110,9 +115,10 @@ class CouponCard extends StatelessWidget {
     final color = active ? couponColor(c) : LL.card2;
     final fg = active ? LL.ink : LL.text3;
     final sub = switch (c.status) {
-      'unused' => '有效期至 ${_md(c.expiresAt)}',
+      'unused' => '${c.isPass ? '${c.usesText} · ' : ''}有效期至 ${_md(c.expiresAt)}',
       'used' => '已于 ${_mdhm(c.usedAt)} 使用${c.usedStore == null ? '' : ' · ${c.usedStore}'}',
       'voided' => '已作废',
+      'refunded' => '已退款 · 原路退回',
       _ => '已于 ${_md(c.expiresAt)} 过期',
     };
     return Semantics(
@@ -147,7 +153,13 @@ class CouponCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: active ? LL.text : LL.text2)),
                     const SizedBox(height: 2),
-                    Text(c.merchant?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 13)),
+                    Row(children: [
+                      if (c.isProduct) ...[_BoughtTag(active: active), const SizedBox(width: 6)],
+                      Flexible(
+                        child: Text(c.merchant?.name ?? '',
+                            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 13)),
+                      ),
+                    ]),
                     const SizedBox(height: 4),
                     Text(sub, style: TextStyle(color: active ? LL.lime : LL.text3, fontSize: 12, fontWeight: FontWeight.w700)),
                   ]),
@@ -164,6 +176,22 @@ class CouponCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 「已购」: a coupon bought with money (商品券), not won by running.
+class _BoughtTag extends StatelessWidget {
+  const _BoughtTag({required this.active});
+  final bool active;
+  @override
+  Widget build(BuildContext context) => Container(
+        key: const Key('coupon_bought'),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+        decoration: BoxDecoration(
+          color: active ? LL.sky : LL.card2,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text('已购', style: TextStyle(color: active ? LL.ink : LL.text3, fontSize: 11, fontWeight: FontWeight.w900)),
+      );
 }
 
 class _PerforationPainter extends CustomPainter {
@@ -233,10 +261,13 @@ class _CouponDetail extends StatelessWidget {
     final c = coupon;
     final color = c.isUnused ? couponColor(c) : LL.card2;
     final fg = c.isUnused ? LL.ink : LL.text2;
+    // Bought coupons (商品券) need no run on the day.
     final rules = [
       if (c.perk.rules.isNotEmpty) ...c.perk.rules.split(RegExp(r'[；;\n]')).map((e) => e.trim()).where((e) => e.isNotEmpty),
-      if (!c.perk.rules.contains('运动记录')) activityRule,
+      if (!c.isProduct && !c.perk.rules.contains('运动记录')) activityRule,
+      if (c.isProduct) productCouponRule,
     ];
+    final src = c.source;
     return Scaffold(
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
@@ -268,6 +299,13 @@ class _CouponDetail extends StatelessWidget {
                 child: c.isUnused
                     ? Column(children: [
                         CouponQrPanel(couponId: c.id, clock: clock),
+                        if (c.isPass) ...[
+                          const SizedBox(height: 10),
+                          Text(c.usesText,
+                              key: const Key('coupon_uses'),
+                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: LL.lime)),
+                          const Text('每次核销用掉 1 次', style: TextStyle(color: LL.text3, fontSize: 12)),
+                        ],
                         const SizedBox(height: 14),
                         const Text('券码', style: TextStyle(color: LL.text3, fontSize: 12)),
                         SelectableText(groupedCode(c.code),
@@ -284,6 +322,7 @@ class _CouponDetail extends StatelessWidget {
                           switch (c.status) {
                             'used' => '已于 ${_mdhm(c.usedAt)}${c.usedStore == null ? '' : ' 在 ${c.usedStore} '}核销',
                             'voided' => '这张券已作废',
+                            'refunded' => '这张券已退款，钱款原路退回',
                             _ => '已于 ${_md(c.expiresAt)} 过期',
                           },
                           textAlign: TextAlign.center,
@@ -295,7 +334,7 @@ class _CouponDetail extends StatelessWidget {
               ),
             ]),
           ),
-          if (c.isUnused) ...[
+          if (c.isUnused && !c.isProduct) ...[
             const SizedBox(height: 12),
             LLCard(
               color: const Color(0xFF26223A),
@@ -316,13 +355,29 @@ class _CouponDetail extends StatelessWidget {
           LLCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               for (final r in rules) _Bullet(r),
-              _Bullet('有效期：${_md(c.obtainedAt)} – ${_md(c.expiresAt)}${c.perk.validDays > 0 ? '（领取后 ${c.perk.validDays} 天内有效）' : ''}'),
-              if (c.source != null)
-                _Bullet('来源：${c.source!.name.isNotEmpty ? c.source!.name : dropTypeName(c.source!.type)}'
-                    '${c.source!.name.isNotEmpty ? '（${dropTypeName(c.source!.type)}）' : ''}'),
+              _Bullet('有效期：${_md(c.obtainedAt)} – ${_md(c.expiresAt)}${c.perk.validDays > 0 ? '（${c.isProduct ? '购买' : '领取'}后 ${c.perk.validDays} 天内有效）' : ''}'),
+              if (src != null && src.isProduct)
+                _Bullet('来源：购买${src.name.isNotEmpty ? '「${src.name}」' : '的团购商品'}')
+              else if (src != null)
+                _Bullet('来源：${src.name.isNotEmpty ? src.name : dropTypeName(src.type)}'
+                    '${src.name.isNotEmpty ? '（${dropTypeName(src.type)}）' : ''}'),
               const _Bullet('二维码 60 秒有效、自动刷新，截图转发无效；券不能转让、不能兑现'),
             ]),
           ),
+          if (src != null && src.isProduct && src.orderId != null) ...[
+            const SizedBox(height: 12),
+            LLCard(
+              key: const Key('coupon_order'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              onTap: () => context.push('/me/product-orders/${src.orderId}'),
+              child: const Row(children: [
+                Icon(Icons.receipt_long_outlined, color: LL.sky),
+                SizedBox(width: 10),
+                Expanded(child: Text('查看订单 · 未使用的券可在订单里退款', style: TextStyle(fontWeight: FontWeight.w700))),
+                Icon(Icons.chevron_right_rounded, color: LL.text3),
+              ]),
+            ),
+          ],
         ]),
       ),
     );

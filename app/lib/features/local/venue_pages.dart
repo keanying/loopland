@@ -13,10 +13,11 @@ import '../community/gathering_widgets.dart' show SectionHeader, Tag;
 import '../social/social_widgets.dart' show UserAvatar, openProfile;
 import 'booking_flow.dart';
 import 'local_providers.dart';
+import 'product_widgets.dart' show ProductSection;
 import 'venue_checkin.dart';
 import 'venue_widgets.dart';
 
-/// 场馆详情（C-07 / C-08 / E-03）：馆主、本周积分榜、签到（定位 / 扫码）、订场。
+/// 场馆详情（C-07 / C-08 / E-03）：团购 / 套餐、馆主、本周积分榜、签到（定位 / 扫码）、订场。
 class VenueDetailPage extends ConsumerStatefulWidget {
   const VenueDetailPage({super.key, required this.venueId, this.now});
   final int venueId;
@@ -110,6 +111,8 @@ class _VenueDetailPageState extends ConsumerState<VenueDetailPage> {
                         const SizedBox(height: 8),
                         Text(v.address, style: const TextStyle(color: LL.text2)),
                       ],
+                      if (v.products.isNotEmpty)
+                        ProductSection(products: v.products, merchantId: v.merchant?.id, merchantName: v.merchant?.name),
                       const SectionHeader('本周馆主'),
                       _ownerCard(v, me?.id, me?.crew?.id),
                       const SizedBox(height: 10),

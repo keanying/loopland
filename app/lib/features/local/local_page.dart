@@ -7,6 +7,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import 'booking_tab.dart';
 import 'campaigns_tab.dart';
+import 'product_pages.dart' show PromotionStrip;
 import 'shop_tab.dart';
 
 /// Tab keys for `/local?tab=`.
@@ -54,6 +55,8 @@ class _LocalPageState extends ConsumerState<LocalPage> {
               EnergyBadge(energy: energy),
             ]),
           ),
+          // V2 batch 5: running official promotions (hidden when none).
+          const PromotionStrip(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(children: [
