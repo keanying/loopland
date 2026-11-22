@@ -84,6 +84,25 @@ type ReviewTask struct {
 	UserViolationCount int `json:"user_violation_count"`
 	// HasActivity marks posts with an activity (approve_hide_endpoints).
 	HasActivity bool `json:"has_activity"`
+	// Merchant / Product: only on product tasks (第五批，商户商品审核).
+	Merchant *TaskMerchant `json:"merchant,omitempty"`
+	Product  *TaskProduct  `json:"product,omitempty"`
+}
+
+// TaskMerchant is the merchant of a product review task.
+type TaskMerchant struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// TaskProduct is the product of a product review task. IsChange: a content
+// change to a product already on sale (the old content stays on sale).
+type TaskProduct struct {
+	ID          int64  `json:"id"`
+	Type        string `json:"type"`
+	PriceAmt    int    `json:"price_amt"`
+	OriginalAmt *int   `json:"original_amt"`
+	IsChange    bool   `json:"is_change"`
 }
 
 // ReviewAI is the AI part of a review task.
@@ -102,11 +121,14 @@ const taskCols = `t.id, t.target_type, t.target_id, u.id, u.nickname, COALESCE(t
 	(SELECT count(*) FROM src.src_cnt_loop_review_task v WHERE v.user_id=t.user_id AND v.review_status='rejected')
 	  + (SELECT count(*) FROM src.src_soc_loop_post dp WHERE dp.user_id=t.user_id AND dp.delete_reason IS NOT NULL
 	     AND NOT EXISTS (SELECT 1 FROM src.src_cnt_loop_review_task v2 WHERE v2.target_type='post' AND v2.target_id=dp.id AND v2.review_status='rejected')),
-	t.target_type='post' AND EXISTS (SELECT 1 FROM src.src_soc_loop_post hp WHERE hp.id=t.target_id AND hp.activity_id IS NOT NULL)`
+	t.target_type='post' AND EXISTS (SELECT 1 FROM src.src_soc_loop_post hp WHERE hp.id=t.target_id AND hp.activity_id IS NOT NULL),
+	pd.id, pd.product_type, pd.price_amt, pd.original_amt, pd.pending_content_json IS NOT NULL, pm.id, pm.merchant_name`
 
 const taskFrom = ` FROM src.src_cnt_loop_review_task t
 	LEFT JOIN src.src_usr_loop_user u ON u.id=t.user_id
-	LEFT JOIN src.src_sys_loop_admin a ON a.id=t.reviewer_id`
+	LEFT JOIN src.src_sys_loop_admin a ON a.id=t.reviewer_id
+	LEFT JOIN src.src_mer_loop_product pd ON t.target_type='product' AND pd.id=t.target_id
+	LEFT JOIN src.src_mer_loop_merchant pm ON pm.id=pd.merchant_id`
 
 func scanTask(r pgx.CollectableRow) (ReviewTask, error) {
 	var t ReviewTask
@@ -115,9 +137,21 @@ func scanTask(r pgx.CollectableRow) (ReviewTask, error) {
 	var imgs, reasons, labels []byte
 	var ai ReviewAI
 	var aiScore *int
+	var pid, mid *int64
+	var ptype, mname *string
+	var price *int
+	var orig *int
+	var isChange *bool
 	err := r.Scan(&t.ID, &t.TargetType, &t.TargetID, &uid, &nick, &t.Text, &imgs, &t.RiskScore, &reasons,
 		&t.ReportCount, &t.Status, &t.RejectReason, &aid, &uname, &t.ReviewedAt, &t.CreatedAt,
-		&aiScore, &labels, &ai.Reason, &ai.Confidence, &ai.Suggestion, &ai.ModelName, &t.UserViolationCount, &t.HasActivity)
+		&aiScore, &labels, &ai.Reason, &ai.Confidence, &ai.Suggestion, &ai.ModelName, &t.UserViolationCount, &t.HasActivity,
+		&pid, &ptype, &price, &orig, &isChange, &mid, &mname)
+	if pid != nil {
+		t.Product = &TaskProduct{ID: *pid, Type: *ptype, PriceAmt: *price, OriginalAmt: orig, IsChange: isChange != nil && *isChange}
+	}
+	if mid != nil {
+		t.Merchant = &TaskMerchant{ID: *mid, Name: *mname}
+	}
 	if aiScore != nil {
 		ai.RiskScore = *aiScore
 		_ = json.Unmarshal(labels, &ai.Labels)

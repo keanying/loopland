@@ -26,6 +26,7 @@ type productView struct {
 	ReviewNote        *string `json:"review_note"`
 	HasPendingChanges *bool   `json:"has_pending_changes"`
 	AllowPromotion    bool    `json:"allow_promotion"`
+	Refundable        bool    `json:"refundable"`
 	Promotion         *struct {
 		ID            int64 `json:"id"`
 		PromoPriceAmt int   `json:"promo_price_amt"`
@@ -65,6 +66,7 @@ type productOrderView struct {
 	UnitPriceAmt int             `json:"unit_price_amt"`
 	AmountAmt    int             `json:"amount_amt"`
 	RefundAmt    int             `json:"refund_amt"`
+	Refundable   bool            `json:"refundable"`
 	Status       string          `json:"status"`
 	Coupons      []productCoupon `json:"coupons"`
 	Promotion    *struct {
@@ -120,6 +122,11 @@ func (c *client) buy(product int64, qty int) productOrderView {
 	c.must("GET", fmt.Sprintf("/v1/product-orders/%d", res.Order.ID), nil, &o)
 	if o.Status != "paid" || len(o.Coupons) != qty {
 		c.e.t.Fatalf("paid order: %+v", o)
+	}
+	var p productView
+	c.must("GET", fmt.Sprintf("/v1/products/%d", product), nil, &p)
+	if o.Refundable != p.Refundable {
+		c.e.t.Fatalf("order refundable %v, product %v", o.Refundable, p.Refundable)
 	}
 	return o
 }

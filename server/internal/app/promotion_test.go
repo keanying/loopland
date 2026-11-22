@@ -26,7 +26,11 @@ type entryView struct {
 	PlatformSubsidyAmt int    `json:"platform_subsidy_amt"`
 	PromoSoldQty       int    `json:"promo_sold_qty"`
 	Note               string `json:"note"`
-	Product            struct {
+	Promotion          struct {
+		ID    int64  `json:"id"`
+		Title string `json:"title"`
+	} `json:"promotion"`
+	Product struct {
 		ID int64 `json:"id"`
 	} `json:"product"`
 }
@@ -82,7 +86,7 @@ func TestPromotions(t *testing.T) {
 		Items []entryView `json:"items"`
 	}
 	s1.must("GET", "/admin/v1/promotion-entries?status=pending_merchant", nil, &mine)
-	if len(mine.Items) != 1 || mine.Items[0].ID != en.ID {
+	if len(mine.Items) != 1 || mine.Items[0].ID != en.ID || mine.Items[0].Promotion.ID != en.PromotionID || mine.Items[0].Promotion.Title == "" {
 		t.Fatalf("invitations: %+v", mine)
 	}
 	s2.expectErr("POST", fmt.Sprintf("/admin/v1/promotion-entries/%d/accept", en.ID), nil, 404, "not_found")

@@ -270,22 +270,33 @@ func (s *Service) PromotionAction(ctx context.Context, tx pgx.Tx, id int64, acti
 
 // Entry is PromotionEntry.
 type Entry struct {
-	ID                 int64      `json:"id"`
-	PromotionID        int64      `json:"promotion_id"`
-	Product            Product    `json:"product"`
-	Merchant           Ref        `json:"merchant"`
-	PromoPriceAmt      int        `json:"promo_price_amt"`
-	PlatformSubsidyAmt int        `json:"platform_subsidy_amt"`
-	PromoStockQty      *int       `json:"promo_stock_qty"`
-	PromoSoldQty       int        `json:"promo_sold_qty"`
-	SortNo             int        `json:"sort_no"`
-	Source             string     `json:"source"`
-	Status             string     `json:"status"`
-	Note               string     `json:"note"`
-	CreatedAt          time.Time  `json:"created_at"`
-	DecidedAt          *time.Time `json:"decided_at"`
+	ID          int64 `json:"id"`
+	PromotionID int64 `json:"promotion_id"`
+	// Promotion: the activity this entry belongs to (商户「我的报名」展示用)
+	Promotion          EntryPromotion `json:"promotion"`
+	Product            Product        `json:"product"`
+	Merchant           Ref            `json:"merchant"`
+	PromoPriceAmt      int            `json:"promo_price_amt"`
+	PlatformSubsidyAmt int            `json:"platform_subsidy_amt"`
+	PromoStockQty      *int           `json:"promo_stock_qty"`
+	PromoSoldQty       int            `json:"promo_sold_qty"`
+	SortNo             int            `json:"sort_no"`
+	Source             string         `json:"source"`
+	Status             string         `json:"status"`
+	Note               string         `json:"note"`
+	CreatedAt          time.Time      `json:"created_at"`
+	DecidedAt          *time.Time     `json:"decided_at"`
 
 	productID int64
+}
+
+// EntryPromotion is the brief of an entry's promotion.
+type EntryPromotion struct {
+	ID       int64     `json:"id"`
+	Title    string    `json:"title"`
+	StartsAt time.Time `json:"starts_at"`
+	EndsAt   time.Time `json:"ends_at"`
+	Status   string    `json:"status"`
 }
 
 // EntryFilter filters the entry lists.
@@ -296,15 +307,20 @@ type EntryFilter struct {
 
 func (s *Service) queryEntries(ctx context.Context, q db.Querier, where string, args ...any) ([]Entry, error) {
 	rows, err := q.Query(ctx, `SELECT e.id, e.promotion_id, e.product_id, e.merchant_id, m.merchant_name, e.promo_price_amt, e.platform_subsidy_amt,
-			e.promo_stock_qty, e.promo_sold_qty, e.sort_no, e.source_type, e.entry_status, e.note, e.create_time, e.decide_time
-		FROM src.src_mkt_loop_promotion_entry e JOIN src.src_mer_loop_merchant m ON m.id=e.merchant_id WHERE `+where, args...)
+			e.promo_stock_qty, e.promo_sold_qty, e.sort_no, e.source_type, e.entry_status, e.note, e.create_time, e.decide_time,
+			pr.promotion_title, pr.start_time, pr.end_time, `+promotionStatusSQL+`
+		FROM src.src_mkt_loop_promotion_entry e JOIN src.src_mer_loop_merchant m ON m.id=e.merchant_id
+		JOIN src.src_mkt_loop_promotion pr ON pr.id=e.promotion_id WHERE `+where, args...)
 	if err != nil {
 		return nil, err
 	}
 	es, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (Entry, error) {
 		var x Entry
-		return x, r.Scan(&x.ID, &x.PromotionID, &x.productID, &x.Merchant.ID, &x.Merchant.Name, &x.PromoPriceAmt, &x.PlatformSubsidyAmt,
-			&x.PromoStockQty, &x.PromoSoldQty, &x.SortNo, &x.Source, &x.Status, &x.Note, &x.CreatedAt, &x.DecidedAt)
+		err := r.Scan(&x.ID, &x.PromotionID, &x.productID, &x.Merchant.ID, &x.Merchant.Name, &x.PromoPriceAmt, &x.PlatformSubsidyAmt,
+			&x.PromoStockQty, &x.PromoSoldQty, &x.SortNo, &x.Source, &x.Status, &x.Note, &x.CreatedAt, &x.DecidedAt,
+			&x.Promotion.Title, &x.Promotion.StartsAt, &x.Promotion.EndsAt, &x.Promotion.Status)
+		x.Promotion.ID = x.PromotionID
+		return x, err
 	})
 	if err != nil {
 		return nil, err

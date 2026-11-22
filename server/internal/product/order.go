@@ -48,17 +48,19 @@ type PayRef struct {
 
 // Order is ProductOrder.
 type Order struct {
-	ID           int64          `json:"id"`
-	OrderNo      string         `json:"order_no"`
-	Product      OrderProduct   `json:"product"`
-	Merchant     Ref            `json:"merchant"`
-	Qty          int            `json:"qty"`
-	UnitPriceAmt int            `json:"unit_price_amt"`
-	AmountAmt    int            `json:"amount_amt"`
-	RefundAmt    int            `json:"refund_amt"`
-	Promotion    *PromotionRef  `json:"promotion"`
-	Status       string         `json:"status"`
-	Coupons      []perks.Coupon `json:"coupons"`
+	ID           int64        `json:"id"`
+	OrderNo      string       `json:"order_no"`
+	Product      OrderProduct `json:"product"`
+	Merchant     Ref          `json:"merchant"`
+	Qty          int          `json:"qty"`
+	UnitPriceAmt int          `json:"unit_price_amt"`
+	AmountAmt    int          `json:"amount_amt"`
+	RefundAmt    int          `json:"refund_amt"`
+	// Refundable: 下单时商品是否支持退款（App 据此显示「退款」按钮）
+	Refundable bool           `json:"refundable"`
+	Promotion  *PromotionRef  `json:"promotion"`
+	Status     string         `json:"status"`
+	Coupons    []perks.Coupon `json:"coupons"`
 	// Pay is the payment order (as on bookings; the dev mock payment
 	// /v1/dev/orders/{no}/pay takes its order_no).
 	Pay          *PayRef    `json:"pay"`
@@ -69,7 +71,6 @@ type Order struct {
 
 	userID     int64
 	payOrderNo *string
-	refundable bool
 }
 
 const orderCols = `po.id, po.order_no, po.product_id, po.product_title, po.product_type, po.image_url, po.merchant_id, m.merchant_name, po.qty,
@@ -91,7 +92,7 @@ func (s *Service) queryOrders(ctx context.Context, q db.Querier, withUser bool, 
 		var nick, channel string
 		err := r.Scan(&o.ID, &o.OrderNo, &o.Product.ID, &o.Product.Title, &o.Product.Type, &o.Product.Image, &o.Merchant.ID, &o.Merchant.Name, &o.Qty,
 			&o.UnitPriceAmt, &o.AmountAmt, &o.RefundAmt, &promoID, &promoTitle, &o.Status, &o.PayExpiresAt, &o.PaidAt,
-			&o.CreatedAt, &o.userID, &nick, &o.payOrderNo, &o.refundable, &channel)
+			&o.CreatedAt, &o.userID, &nick, &o.payOrderNo, &o.Refundable, &channel)
 		if o.payOrderNo != nil {
 			o.Pay = &PayRef{OrderNo: *o.payOrderNo, Channel: channel}
 		}
