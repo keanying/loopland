@@ -20,8 +20,9 @@ import (
 type File struct {
 	Env  string `yaml:"env"` // LOOPLAND_ENV: dev | prod
 	HTTP struct {
-		Addr          string `yaml:"addr"`            // LOOPLAND_HTTP_ADDR
-		PublicBaseURL string `yaml:"public_base_url"` // LOOPLAND_PUBLIC_BASE_URL
+		Addr          string   `yaml:"addr"`            // LOOPLAND_HTTP_ADDR
+		PublicBaseURL string   `yaml:"public_base_url"` // LOOPLAND_PUBLIC_BASE_URL
+		CORSOrigins   []string `yaml:"cors_origins"`    // LOOPLAND_CORS_ORIGINS（逗号分隔）
 	} `yaml:"http"`
 	Database struct {
 		URL string `yaml:"url"` // LOOPLAND_DATABASE_URL
@@ -110,6 +111,7 @@ func (f File) env(dir string) map[string]string {
 		"LOOPLAND_ENV":                   f.Env,
 		"LOOPLAND_HTTP_ADDR":             f.HTTP.Addr,
 		"LOOPLAND_PUBLIC_BASE_URL":       f.HTTP.PublicBaseURL,
+		"LOOPLAND_CORS_ORIGINS":          strings.Join(f.HTTP.CORSOrigins, ","),
 		"LOOPLAND_DATABASE_URL":          f.Database.URL,
 		"LOOPLAND_REDIS_URL":             f.Redis.URL,
 		"LOOPLAND_ACCESS_TTL":            f.Auth.AccessTTL,

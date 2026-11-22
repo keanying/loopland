@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime/debug"
 	"slices"
 	"strings"
@@ -206,7 +207,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	mux.Handle("GET /v1/ws", hub)
 
 	return &App{
-		Handler: withMiddleware(mux, log),
+		Handler: withMiddleware(cors(mux, cfg), log),
 		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs(), perksSvc.Jobs(), venueSvc.Jobs())},
 		Hub:     hub,
 		Play:    playSvc,
@@ -337,6 +338,56 @@ func withMiddleware(next http.Handler, log *slog.Logger) http.Handler {
 		}()
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		next.ServeHTTP(sw, r)
+	})
+}
+
+// cors lets browser front-ends on other origins call the API: the App's
+// web build (flutter run -d chrome / web-server) and H5 pages. Allowed:
+// the configured http.cors_origins, plus any localhost / 127.0.0.1 origin
+// in dev. Preflight OPTIONS requests are answered here.
+func cors(next http.Handler, cfg config.Config) http.Handler {
+	allowed := map[string]bool{}
+	for _, o := range cfg.CORSOrigins {
+		allowed[o] = true
+	}
+	ok := func(origin string) bool {
+		if origin == "" {
+			return false
+		}
+		if allowed[origin] || allowed["*"] {
+			return true
+		}
+		if cfg.Dev() {
+			if u, err := url.Parse(origin); err == nil && (u.Scheme == "http" || u.Scheme == "https") {
+				h := u.Hostname()
+				return h == "localhost" || h == "127.0.0.1" || h == "::1"
+			}
+		}
+		return false
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if !ok(origin) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		h := w.Header()
+		h.Set("Access-Control-Allow-Origin", origin)
+		h.Add("Vary", "Origin")
+		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
+			h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			if req := r.Header.Get("Access-Control-Request-Headers"); req != "" {
+				h.Set("Access-Control-Allow-Headers", req)
+			} else {
+				h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+			}
+			h.Set("Access-Control-Max-Age", "600")
+			h.Add("Vary", "Access-Control-Request-Method")
+			h.Add("Vary", "Access-Control-Request-Headers")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 

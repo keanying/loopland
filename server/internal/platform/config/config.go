@@ -29,6 +29,10 @@ type Config struct {
 
 	BootstrapAdmin string // "username:password"
 	PublicBaseURL  string // for payment notify URLs and share links
+	// CORSOrigins are web origins allowed to call the API from a browser
+	// (App 的 Web 版、H5 页面). In dev every http://localhost / 127.0.0.1
+	// origin is allowed as well.
+	CORSOrigins []string
 	// MediaDir is where uploads are stored when 对象存储 OSS is not enabled
 	// (dev); relative paths in config.yaml are against the file's directory.
 	MediaDir string
@@ -197,6 +201,7 @@ func Load() (Config, error) {
 		RefreshTTL:     dur("LOOPLAND_REFRESH_TTL", 30*24*time.Hour),
 		BootstrapAdmin: get("LOOPLAND_BOOTSTRAP_ADMIN"),
 		PublicBaseURL:  strings.TrimRight(env("LOOPLAND_PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
+		CORSOrigins:    splitList(get("LOOPLAND_CORS_ORIGINS")),
 		JobsOff:        get("LOOPLAND_JOBS_OFF") == "1",
 		MediaDir:       env("LOOPLAND_MEDIA_DIR", "data/media"),
 		Aliyun: Aliyun{
@@ -303,4 +308,14 @@ func secret(k string, dev bool, devDefault string) ([]byte, error) {
 		return nil, fmt.Errorf("%s must be at least 32 characters", k)
 	}
 	return []byte(v), nil
+}
+
+func splitList(v string) []string {
+	out := []string{}
+	for _, p := range strings.Split(v, ",") {
+		if p = strings.TrimRight(strings.TrimSpace(p), "/"); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

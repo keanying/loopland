@@ -11,6 +11,7 @@ env: dev                         # LOOPLAND_ENV：dev | prod
 http:
   addr: ":8080"                  # LOOPLAND_HTTP_ADDR：监听地址和端口
   public_base_url: http://localhost:8080   # LOOPLAND_PUBLIC_BASE_URL：对外地址，支付回调用
+  cors_origins: []               # LOOPLAND_CORS_ORIGINS：允许浏览器跨域调用 API 的网页地址（App 的 Web 版、H5）；dev 下 localhost 任意端口都自动允许
 
 database:
   url: postgres://loopland:loopland@localhost:5433/loopland?sslmode=disable   # LOOPLAND_DATABASE_URL

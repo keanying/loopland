@@ -16,6 +16,7 @@ env: prod
 http:
   addr: ":8080"
   public_base_url: https://api.example.com     # 已备案的公网 https 域名（支付回调）
+  cors_origins: []                            # 有 Web 版 App / H5 页面时填它们的地址，如 ["https://m.example.com"]
 
 database:
   url: postgres://loopland:CHANGE_ME@pgm-xxxx.pg.rds.aliyuncs.com:5432/loopland?sslmode=require
