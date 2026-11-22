@@ -125,13 +125,18 @@ export default function OpenAppsPage() {
         <AppForm
           value={editing}
           onClose={() => setEditing(null)}
-          onCreated={(app) => {
-            setSecret({ app, reset: false });
-            update({ id: app.id });
-          }}
+          onCreated={(app) => setSecret({ app, reset: false })}
         />
       )}
-      <SecretModal app={secret?.app ?? null} reset={secret?.reset} onClose={() => setSecret(null)} />
+      <SecretModal
+        app={secret?.app ?? null}
+        reset={secret?.reset}
+        onClose={() => {
+          // A new app opens in the drawer once the secret is saved (not before: the drawer would cover the dialog).
+          if (secret && !secret.reset) update({ id: secret.app.id });
+          setSecret(null);
+        }}
+      />
       <SigningGuide open={guide} onClose={() => setGuide(false)} />
     </>
   );

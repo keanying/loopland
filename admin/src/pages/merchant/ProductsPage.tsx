@@ -223,7 +223,7 @@ export default function ProductsPage() {
           rowKey="id"
           loading={list.isFetching}
           dataSource={items}
-          scroll={{ x: 1200 }}
+          scroll={{ x: staff ? 1190 : 1240 }}
           onRow={(p) => ({ onClick: () => update({ id: p.id }), style: { cursor: 'pointer' } })}
           locale={{ emptyText: <Empty description={q || status || merchantId ? '没有符合条件的商品' : writable ? '还没有商品，点「新建商品」开始' : '还没有商品'} /> }}
           pagination={{ current: page, pageSize: PAGE, total: list.data?.total ?? 0, showSizeChanger: false, showTotal: (t) => `共 ${t} 个`, onChange: (p) => update({ page: p === 1 ? null : p }) }}
@@ -231,7 +231,7 @@ export default function ProductsPage() {
             {
               title: '商品',
               key: 'title',
-              width: 280,
+              width: 260,
               render: (_, p) => (
                 <div className="prod-cell">
                   <ProductThumb p={p} />
@@ -252,7 +252,7 @@ export default function ProductsPage() {
             {
               title: '售价',
               key: 'price',
-              width: 140,
+              width: 130,
               render: (_, p) => (
                 <div>
                   <PriceText price={p.price_amt} original={p.original_amt} />
@@ -271,7 +271,7 @@ export default function ProductsPage() {
             {
               title: '库存 / 已售',
               key: 'stock',
-              width: 110,
+              width: 100,
               align: 'right',
               render: (_, p) => (
                 <span className="num">
@@ -282,7 +282,7 @@ export default function ProductsPage() {
                 </span>
               ),
             },
-            { title: '有效期', key: 'valid', width: 130, render: (_, p) => <span className="num">{validityText(p)}</span> },
+            { title: '有效期', key: 'valid', width: 120, render: (_, p) => <span className="num">{validityText(p)}</span> },
             {
               title: '状态',
               key: 'status',
@@ -313,11 +313,11 @@ export default function ProductsPage() {
               width: 80,
               render: (_, p) => (p.allow_promotion ? <Tag bordered={false} color="green">已授权</Tag> : <span className="muted">—</span>),
             },
-            { title: '更新时间', dataIndex: 'updated_at', width: 120, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm')}</span> },
+            { title: '更新时间', dataIndex: 'updated_at', width: 100, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm')}</span> },
             {
               title: '操作',
               key: 'op',
-              width: writable ? 300 : 120,
+              width: writable ? 250 : 120,
               align: 'right',
               fixed: 'right',
               render: (_, p) => (writable ? actions(p) : banButton(p) ?? <span className="muted">—</span>),
@@ -745,13 +745,13 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
                 </Form.Item>
               ) : (
                 <Form.Item name="valid_days" rules={[{ required: true, message: '请填写天数' }]}>
-                  <InputNumber className="num" min={1} max={365} precision={0} addonBefore="购买后" addonAfter="天内可用" style={{ width: '100%' }} />
+                  <InputNumber className="num" min={1} max={365} precision={0} prefix="购买后" suffix="天内可用" style={{ width: '100%' }} />
                 </Form.Item>
               )}
               <Form.Item name="venue_ids" label="适用门店" extra="不选 = 本商户所有场馆都可用；核销时校验门店">
                 <Select mode="multiple" allowClear placeholder="全部门店" options={own.options} loading={own.isLoading} />
               </Form.Item>
-              <Form.Item name="sports" label="运动（可选）">
+              <Form.Item name="sports" label="运动">
                 <Select mode="multiple" allowClear placeholder="用于 App 按运动筛选" options={VENUE_SPORTS.map((s) => ({ value: s, label: VENUE_SPORT[s] }))} />
               </Form.Item>
               <Form.Item name="refundable" label="退款" valuePropName="checked" extra="可退：未使用的券用户随时可退，过期未用自动退款；不可退：过期作废">

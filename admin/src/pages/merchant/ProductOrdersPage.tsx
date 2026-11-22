@@ -170,7 +170,7 @@ export default function ProductOrdersPage() {
           rowKey="id"
           loading={list.isFetching}
           dataSource={list.data?.items}
-          scroll={{ x: 1250 }}
+          scroll={{ x: 1200 }}
           onRow={(o) => ({ onClick: () => setDetail(o), style: { cursor: 'pointer' } })}
           locale={{ emptyText: <Empty description="没有符合条件的订单" /> }}
           pagination={{ current: page, pageSize: PAGE, total: list.data?.total ?? 0, showSizeChanger: false, showTotal: (t) => `共 ${t} 笔`, onChange: (p) => update({ page: p === 1 ? null : p }) }}
@@ -241,7 +241,9 @@ export default function ProductOrdersPage() {
             },
             { title: '状态', dataIndex: 'status', width: 90, render: (v: ProductOrderStatus) => <OrderStatusTag status={v} /> },
             { title: '下单时间', dataIndex: 'created_at', width: 130, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm')}</span> },
-            { title: '操作', key: 'op', width: 80, align: 'right', fixed: 'right', render: (_, o) => refundButton(o) || <span className="muted">—</span> },
+            ...(can('product_order.refund')
+              ? [{ title: '操作', key: 'op', width: 80, align: 'right' as const, fixed: 'right' as const, render: (_: unknown, o: ProductOrder) => refundButton(o) || <span className="muted">—</span> }]
+              : []),
           ]}
         />
       </Panel>

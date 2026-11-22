@@ -446,7 +446,7 @@ const orders: OrderRow[] = [];
     let status: ProductOrderStatus = r < 0.5 ? 'paid' : r < 0.78 ? 'completed' : r < 0.86 ? 'refunded' : r < 0.94 ? 'cancelled' : 'paid';
     if (k < 3) status = 'pending';
     if (k === 5) status = 'refunding';
-    const stamp = new Date(created);
+    const stamp = new Date(status === 'pending' ? NOW - (k + 1) * 3 * MIN : created);
     const rows: CouponRow[] = [];
     const store = venues.find((v) => v.id === (p.venue_ids[0] ?? venues.find((x) => x.merchant_id === p.merchant_id)?.id))?.name ?? mref(p.merchant_id).name;
     if (status !== 'pending' && status !== 'cancelled') {

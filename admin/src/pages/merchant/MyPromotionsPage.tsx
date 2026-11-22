@@ -316,7 +316,7 @@ export default function MyPromotionsPage() {
         )}
       </Panel>
 
-      <ApplyModal promotion={applying} onClose={() => setApplying(null)} onDone={refresh} />
+      <ApplyModal promotion={applying} taken={new Set(all.filter((e) => applying && e.promotion_id === applying.id && LIVE.includes(e.status)).map((e) => e.product.id))} onClose={() => setApplying(null)} onDone={refresh} />
       <ReasonModal
         open={declining !== null}
         title={`拒绝邀请「${declining?.product.title ?? ''}」`}
@@ -332,7 +332,8 @@ export default function MyPromotionsPage() {
   );
 }
 
-function ApplyModal({ promotion, onClose, onDone }: { promotion: Promotion | null; onClose: () => void; onDone: () => void }) {
+/** `taken`: my products already in this activity (applied, invited or active). */
+function ApplyModal({ promotion, taken, onClose, onDone }: { promotion: Promotion | null; taken: Set<number>; onClose: () => void; onDone: () => void }) {
   const [form] = Form.useForm<{ product_id: number; promo_yuan: number; stock?: number | null }>();
   const products = useQuery({ queryKey: ['products', 'on_sale', 'mine'], queryFn: () => commerceApi.products({ status: 'on_sale', page_size: 100 }), enabled: !!promotion });
   const productId = Form.useWatch('product_id', form);
@@ -372,10 +373,10 @@ function ApplyModal({ promotion, onClose, onDone }: { promotion: Promotion | nul
             options={(products.data?.items ?? []).map((x) => ({
               value: x.id,
               title: x.title,
-              disabled: !!x.promotion,
+              disabled: !!x.promotion || taken.has(x.id),
               label: (
                 <span>
-                  {x.title} <span className="muted">· {yuan(x.price_amt)}{x.promotion ? ` · 已在「${x.promotion.title}」` : ''}</span>
+                  {x.title} <span className="muted">· {yuan(x.price_amt)}{taken.has(x.id) ? ' · 已在本活动' : x.promotion ? ` · 已在「${x.promotion.title}」` : ''}</span>
                 </span>
               ),
             }))}
