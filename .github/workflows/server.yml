@@ -19,16 +19,16 @@ jobs:
           POSTGRES_USER: loopland
           POSTGRES_PASSWORD: loopland
           POSTGRES_DB: loopland
-        ports: ["5432:5432"]
+        ports: ["5433:5432"]
         options: >-
           --health-cmd "pg_isready -U loopland" --health-interval 5s --health-retries 10
       redis:
         image: redis:7-alpine
-        ports: ["6379:6379"]
+        ports: ["6378:6379"]
     env:
       LOOPLAND_TEST_REQUIRE_DB: "1"
-      LOOPLAND_TEST_DATABASE_URL: postgres://loopland:loopland@localhost:5432/postgres?sslmode=disable
-      LOOPLAND_TEST_REDIS_URL: redis://localhost:6379/15
+      LOOPLAND_TEST_DATABASE_URL: postgres://loopland:loopland@localhost:5433/postgres?sslmode=disable
+      LOOPLAND_TEST_REDIS_URL: redis://localhost:6378/15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

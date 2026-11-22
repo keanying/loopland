@@ -112,7 +112,8 @@ function Cmd-DbInit {
     if (-not (Have 'psql')) { Die '需要 psql（随 PostgreSQL 安装，在 C:\Program Files\PostgreSQL\16\bin）' }
     $su = if ($env:PGSUPERUSER) { $env:PGSUPERUSER } else { 'postgres' }
     $pgHost = if ($env:PGHOST) { $env:PGHOST } else { 'localhost' }
-    Say "用超级用户 $su 创建 loopland 用户、loopland 库和 PostGIS 扩展（已存在则跳过）"
+    $pgPort = if ($env:PGPORT) { $env:PGPORT } else { '5433' }   # 本项目的 PostgreSQL 端口（server\config.yaml 默认 5433）
+    Say "用超级用户 $su（端口 $pgPort）创建 loopland 用户、loopland 库和 PostGIS 扩展（已存在则跳过）"
     $sql = @'
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='loopland') THEN CREATE ROLE loopland LOGIN PASSWORD 'loopland' CREATEDB; END IF;
@@ -121,9 +122,9 @@ SELECT 'CREATE DATABASE loopland OWNER loopland' WHERE NOT EXISTS (SELECT 1 FROM
 '@
     $tmp = New-TemporaryFile
     Set-Content -Path $tmp -Value $sql -Encoding UTF8
-    Invoke-Checked 'psql' @('-U', $su, '-h', $pgHost, '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-f', $tmp.FullName)
+    Invoke-Checked 'psql' @('-U', $su, '-h', $pgHost, '-p', $pgPort, '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-f', $tmp.FullName)
     Remove-Item $tmp
-    Invoke-Checked 'psql' @('-U', $su, '-h', $pgHost, '-d', 'loopland', '-v', 'ON_ERROR_STOP=1', '-c', 'CREATE EXTENSION IF NOT EXISTS postgis')
+    Invoke-Checked 'psql' @('-U', $su, '-h', $pgHost, '-p', $pgPort, '-d', 'loopland', '-v', 'ON_ERROR_STOP=1', '-c', 'CREATE EXTENSION IF NOT EXISTS postgis')
     Say '完成。后端启动时会自动建表。'
 }
 

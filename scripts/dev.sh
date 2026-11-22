@@ -64,7 +64,8 @@ cmd_deps() {
 cmd_db_init() {
   have psql || die "需要 psql"
   local su="${PGSUPERUSER:-postgres}"
-  say "用超级用户 $su 创建 loopland 用户、loopland 库和 PostGIS 扩展（已存在则跳过）"
+  export PGPORT="${PGPORT:-5433}"   # 本项目的 PostgreSQL 端口（server/config.yaml 默认 5433）
+  say "用超级用户 $su（端口 $PGPORT）创建 loopland 用户、loopland 库和 PostGIS 扩展（已存在则跳过）"
   psql -U "$su" -h "${PGHOST:-localhost}" -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='loopland') THEN CREATE ROLE loopland LOGIN PASSWORD 'loopland' CREATEDB; END IF;
