@@ -37,6 +37,10 @@ type Hub struct {
 	Redis *redis.Client
 	Log   *slog.Logger
 	Auth  func(token string) (int64, error)
+	// AllowOrigin lets browser pages on other origins connect (the App's web
+	// build, same list as HTTP CORS). Nil: same-origin only. Phone apps send
+	// no Origin header and are not affected.
+	AllowOrigin func(origin string) bool
 
 	mu    sync.RWMutex
 	conns map[*conn]struct{}
@@ -121,7 +125,11 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rc := http.NewResponseController(w)
 	_ = rc.SetReadDeadline(time.Time{})
 	_ = rc.SetWriteDeadline(time.Time{})
-	ws, err := websocket.Accept(w, r, nil)
+	var opts *websocket.AcceptOptions
+	if o := r.Header.Get("Origin"); o != "" && h.AllowOrigin != nil && h.AllowOrigin(o) {
+		opts = &websocket.AcceptOptions{InsecureSkipVerify: true} // origin already checked above
+	}
+	ws, err := websocket.Accept(w, r, opts)
 	if err != nil {
 		return
 	}

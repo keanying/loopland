@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -103,7 +104,8 @@ class RunState {
   final RunGuide? guide;
 
   int elapsedMs(DateTime now) =>
-      activeMs + (resumedAt == null ? 0 : now.difference(resumedAt!).inMilliseconds.clamp(0, 1 << 40));
+      activeMs + (resumedAt == null ? 0 : math.max(0, now.difference(resumedAt!).inMilliseconds));
+  // 注意：不能写 clamp(0, 1 << 40)——浏览器（JS）里位移按 32 位算，1 << 40 == 0，时长会一直是 0。
 
   double get claimedAreaM2 => loops.fold(0.0, (s, l) => s + l.areaM2);
 

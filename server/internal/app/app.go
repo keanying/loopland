@@ -114,7 +114,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		authSvc.DevCode = "000000"
 	}
 	terrSvc := &territory.Service{Pool: pool, Config: store}
-	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse}
+	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse, AllowOrigin: originAllowed(cfg)}
 	// 本地生活 part B: drops, coupons, redemptions, brand campaigns, statements.
 	perksSvc := &perks.Service{Pool: pool, Log: log, QRKey: perks.DeriveKey(cfg.DataKey)}
 	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log, Perks: perksSvc}
@@ -345,12 +345,15 @@ func withMiddleware(next http.Handler, log *slog.Logger) http.Handler {
 // web build (flutter run -d chrome / web-server) and H5 pages. Allowed:
 // the configured http.cors_origins, plus any localhost / 127.0.0.1 origin
 // in dev. Preflight OPTIONS requests are answered here.
-func cors(next http.Handler, cfg config.Config) http.Handler {
+// originAllowed reports whether a browser page at origin may call the API
+// (HTTP CORS and the realtime WebSocket): http.cors_origins, plus any
+// localhost port in dev.
+func originAllowed(cfg config.Config) func(origin string) bool {
 	allowed := map[string]bool{}
 	for _, o := range cfg.CORSOrigins {
 		allowed[o] = true
 	}
-	ok := func(origin string) bool {
+	return func(origin string) bool {
 		if origin == "" {
 			return false
 		}
@@ -365,6 +368,10 @@ func cors(next http.Handler, cfg config.Config) http.Handler {
 		}
 		return false
 	}
+}
+
+func cors(next http.Handler, cfg config.Config) http.Handler {
+	ok := originAllowed(cfg)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if !ok(origin) {

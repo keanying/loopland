@@ -48,7 +48,10 @@ import 'widgets/nav_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(authProvider, (_, _) => refresh.value++);
+  // 只在影响跳转的登录状态变化时让路由重新判断。刷新用户资料（例如结算后 refreshUser）
+  // 不能触发：路由刷新会按浏览器历史里序列化过的状态重建当前页，带的 extra（如结算结果）
+  // 序列化时已被丢掉，页面会变成「结算结果已失效」。
+  ref.listen(authProvider.select((a) => (a.status, a.needBindPhone, a.needConsent)), (_, _) => refresh.value++);
   ref.listen(launchPrivacyProvider, (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
