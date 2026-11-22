@@ -114,9 +114,23 @@ cmd_app() {
     gen+=(--api-base "http://10.0.2.2:$API_PORT") # Android 模拟器访问电脑上的后端
   fi
   "$(dirname "$(command -v flutter)")/dart" "${gen[@]}"   # Flutter 自带的 Dart
+  # 本机地址不走代理：设了 HTTP_PROXY 时，Flutter 连 Chrome 调试端口（localhost）也会被转给代理而失败
+  export NO_PROXY="localhost,127.0.0.1,::1${NO_PROXY:+,$NO_PROXY}" no_proxy="localhost,127.0.0.1,::1${no_proxy:+,$no_proxy}"
   local args=(--dart-define-from-file="config/$profile.json")
   [ "${1:-}" != "" ] && args+=(-d "$1")
-  exec flutter run "${args[@]}"
+  if [ "${1:-}" != chrome ] && [ "${1:-}" != edge ]; then exec flutter run "${args[@]}"; fi
+  local start=$SECONDS
+  flutter run "${args[@]}" && return 0
+  [ $((SECONDS - start)) -gt 300 ] && return 1
+  # 连不上浏览器的调试端口：改用网页服务器模式，编译好后用默认浏览器打开
+  local port="${LOOPLAND_APP_WEB_PORT:-5300}" url
+  url="http://localhost:$port"
+  say "连不上浏览器的调试端口，改用网页服务器模式：编译好后打开 $url（改代码后在本窗口按 r 刷新）"
+  ( for _ in $(seq 1 240); do
+      if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then sleep 2; (xdg-open "$url" || open "$url") >/dev/null 2>&1; exit 0; fi
+      sleep 2
+    done ) &
+  exec flutter run --dart-define-from-file="config/$profile.json" -d web-server --web-port "$port" --web-hostname localhost
 }
 
 cmd_doctor() { cd "$ROOT/server" && go run . doctor; }

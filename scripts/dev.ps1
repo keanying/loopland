@@ -172,9 +172,35 @@ function Cmd-App {
     $dart = Join-Path (Split-Path (Get-Command flutter).Source) 'dart.bat'
     if (-not (Test-Path $dart)) { $dart = 'dart' }
     Invoke-Checked $dart $genArgs
+    # 本机地址不走代理：设了 HTTP_PROXY 时，Flutter 连 Chrome 调试端口（localhost）也会被转给代理而失败
+    $env:NO_PROXY = (@('localhost,127.0.0.1,::1', $env:NO_PROXY) | Where-Object { $_ }) -join ','
+    $env:no_proxy = $env:NO_PROXY
     $flutterArgs = @('run', "--dart-define-from-file=config/$appProfile.json")
     if ($Device) { $flutterArgs += @('-d', $Device) }
-    Invoke-Checked 'flutter' $flutterArgs
+    if ($Device -notin 'chrome', 'edge') { Invoke-Checked 'flutter' $flutterArgs; return }
+
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+    try { & flutter @flutterArgs } finally { $ErrorActionPreference = $old }
+    if ($LASTEXITCODE -eq 0 -or $sw.Elapsed.TotalMinutes -gt 5) { return }
+    # 连不上浏览器的调试端口（被代理、安全软件或公司策略拦截）：改用网页服务器模式，
+    # Flutter 不需要控制浏览器，只是在本机起一个网页，再用默认浏览器打开。
+    $port = if ($env:LOOPLAND_APP_WEB_PORT) { $env:LOOPLAND_APP_WEB_PORT } else { '5300' }
+    $url = "http://localhost:$port"
+    Say "连不上浏览器的调试端口，改用网页服务器模式：编译好后自动用默认浏览器打开 $url（改代码后在本窗口按 r 刷新）"
+    $null = Start-Job -ArgumentList $port, $url -ScriptBlock {
+        param($port, $url)
+        for ($i = 0; $i -lt 240; $i++) {
+            try {
+                $c = New-Object Net.Sockets.TcpClient
+                $c.Connect('127.0.0.1', [int]$port); $c.Close()
+                Start-Sleep -Seconds 2
+                Start-Process $url
+                return
+            } catch { Start-Sleep -Seconds 2 }
+        }
+    }
+    Invoke-Checked 'flutter' @('run', "--dart-define-from-file=config/$appProfile.json", '-d', 'web-server', '--web-port', $port, '--web-hostname', 'localhost')
 }
 
 function Cmd-Doctor {

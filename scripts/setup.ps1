@@ -127,7 +127,7 @@ function Step-Mirrors {
     # 国内镜像不需要代理：代理没开或不稳定时，下载会失败或下到一半（Flutter 工具会因此编译失败）
     $proxy = if ($env:HTTPS_PROXY) { $env:HTTPS_PROXY } else { $env:HTTP_PROXY }
     if ($proxy) {
-        $hosts = 'pub.flutter-io.cn,storage.flutter-io.cn,mirrors.tuna.tsinghua.edu.cn,mirrors.ustc.edu.cn,mirrors.cernet.edu.cn,goproxy.cn,registry.npmmirror.com,npmmirror.com,cdn.npmmirror.com'
+        $hosts = 'localhost,127.0.0.1,::1,pub.flutter-io.cn,storage.flutter-io.cn,mirrors.tuna.tsinghua.edu.cn,mirrors.ustc.edu.cn,mirrors.cernet.edu.cn,goproxy.cn,registry.npmmirror.com,npmmirror.com,cdn.npmmirror.com'
         $env:NO_PROXY = (@($env:NO_PROXY, $hosts) | Where-Object { $_ }) -join ','
         $env:no_proxy = $env:NO_PROXY
         Info "检测到代理 $proxy：本次运行访问国内镜像不走代理"
