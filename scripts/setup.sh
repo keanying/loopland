@@ -210,7 +210,13 @@ flutter_config() {
   fi
   rm -f "$root/bin/cache/lockfile"
   info "运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟）…"
-  flutter --version
+  if ! timeout 900 flutter --version; then
+    # 工具编译失败几乎都是下载的依赖包不完整：清掉 pub 缓存和工具编译产物后重建
+    warn "Flutter 工具没能正常启动：清理下载缓存和工具的编译产物后重建"
+    rm -f "$root/bin/cache/flutter_tools.snapshot" "$root/bin/cache/flutter_tools.stamp" "$root/bin/cache/lockfile"
+    rm -rf "$root/packages/flutter_tools/.dart_tool" "${PUB_CACHE:-$HOME/.pub-cache}"
+    flutter --version || die "flutter --version 仍然失败，请把上面的输出发给开发同学"
+  fi
   flutter config --no-analytics >/dev/null 2>&1 || true
   "$root/bin/dart" --disable-analytics >/dev/null 2>&1 || true
   info "下载 Flutter 运行需要的文件（第一次要几分钟）…"

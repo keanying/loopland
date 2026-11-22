@@ -122,6 +122,27 @@ function Step-Mirrors {
     Set-UserEnv 'GOPROXY' 'https://goproxy.cn,direct'
     Set-UserEnv 'COREPACK_NPM_REGISTRY' 'https://registry.npmmirror.com'
     Info 'Flutter：pub.flutter-io.cn / storage.flutter-io.cn；Go：goproxy.cn；npm / pnpm：registry.npmmirror.com'
+    # 国内镜像不需要代理：代理没开或不稳定时，下载会失败或下到一半（Flutter 工具会因此编译失败）
+    $proxy = if ($env:HTTPS_PROXY) { $env:HTTPS_PROXY } else { $env:HTTP_PROXY }
+    if ($proxy) {
+        $hosts = 'pub.flutter-io.cn,storage.flutter-io.cn,mirrors.tuna.tsinghua.edu.cn,mirrors.ustc.edu.cn,mirrors.cernet.edu.cn,goproxy.cn,registry.npmmirror.com,npmmirror.com,cdn.npmmirror.com'
+        $env:NO_PROXY = (@($env:NO_PROXY, $hosts) | Where-Object { $_ }) -join ','
+        $env:no_proxy = $env:NO_PROXY
+        Info "检测到代理 $proxy：本次运行访问国内镜像不走代理"
+        if (-not (Test-Proxy $proxy)) {
+            Warn "代理 $proxy 连不上（代理软件没开？）：本次运行先不使用它。不再需要的话，可以在「系统属性 → 环境变量」里删掉 HTTP_PROXY / HTTPS_PROXY。"
+            Remove-Item Env:HTTP_PROXY, Env:HTTPS_PROXY, Env:http_proxy, Env:https_proxy -ErrorAction SilentlyContinue
+        }
+    }
+}
+function Test-Proxy([string]$proxy) {
+    try {
+        $u = [Uri]$proxy
+        $c = New-Object Net.Sockets.TcpClient
+        $ok = $c.ConnectAsync($u.Host, $u.Port).Wait(2000) -and $c.Connected
+        $c.Close()
+        return $ok
+    } catch { return $false }
 }
 
 # ---------------------------------------------------------------- 2. 工具
@@ -324,7 +345,7 @@ function Clear-FlutterLock {
 }
 
 # 运行 flutter，输出直接显示；每分钟提示一次还在运行，超过 $Minutes 分钟就停止并给出排查办法
-function Invoke-FlutterWatched([string[]]$Arguments, [int]$Minutes = 20) {
+function Invoke-FlutterWatched([string[]]$Arguments, [int]$Minutes = 20, [switch]$NoDie) {
     $bat = Join-Path (Get-FlutterRoot) 'bin\flutter.bat'
     $argLine = '/d /c ""' + $bat + '" ' + ($Arguments -join ' ') + '"'
     $p = Start-Process -FilePath 'cmd.exe' -ArgumentList $argLine -NoNewWindow -PassThru
@@ -335,12 +356,30 @@ function Invoke-FlutterWatched([string[]]$Arguments, [int]$Minutes = 20) {
         if ($m -ge $Minutes) {
             Get-CimInstance Win32_Process -Filter "ParentProcessId=$($p.Id)" -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
             Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
-            Die ("flutter $($Arguments -join ' ') 超过 $Minutes 分钟没有结束，已停止。请在新的 PowerShell 窗口运行下面的命令看卡在哪一步，把最后几行发给开发同学：`n" +
-                "    & '$bat' --verbose --version")
+            if ($NoDie) { Warn "flutter $($Arguments -join ' ') 超过 $Minutes 分钟没有结束，已停止"; return $false }
+            Die ("flutter $($Arguments -join ' ') 超过 $Minutes 分钟没有结束，已停止。请运行 .\scripts\flutter-diag.ps1，把输出发给开发同学。")
         }
-        Info "flutter $($Arguments -join ' ') 仍在运行（已 $m 分钟）…第一次会编译 Flutter 工具、下载文件；长时间没有任何新输出时，多半是被 IDE 或旧进程占着锁"
+        Info "flutter $($Arguments -join ' ') 仍在运行（已 $m 分钟）…第一次会编译 Flutter 工具、下载文件"
     }
-    if ($p.ExitCode -ne 0) { Die "flutter $($Arguments -join ' ') 失败（退出码 $($p.ExitCode)）" }
+    if ($p.ExitCode -ne 0) {
+        if ($NoDie) { Warn "flutter $($Arguments -join ' ') 失败（退出码 $($p.ExitCode)）"; return $false }
+        Die "flutter $($Arguments -join ' ') 失败（退出码 $($p.ExitCode)）"
+    }
+    return $true
+}
+
+# Flutter 工具编译失败（Unable to create dart snapshot / 'Directory' isn't a type）几乎都是
+# 下载的依赖包不完整：清掉 pub 缓存和工具的编译产物，让它从头重建。
+function Repair-FlutterTool {
+    $root = Get-FlutterRoot
+    Warn 'Flutter 工具没能正常启动：清理下载缓存和工具的编译产物后重建（会重新下载依赖包，几分钟）'
+    Clear-FlutterLock
+    foreach ($f in 'flutter_tools.snapshot', 'flutter_tools.stamp', 'flutter.bat.lock') {
+        Remove-Item (Join-Path $root "bin\cache\$f") -Force -ErrorAction SilentlyContinue
+    }
+    Remove-Item (Join-Path $root 'packages\flutter_tools\.dart_tool') -Recurse -Force -ErrorAction SilentlyContinue
+    $pubCache = if ($env:PUB_CACHE) { $env:PUB_CACHE } else { Join-Path $env:LOCALAPPDATA 'Pub\Cache' }
+    Remove-Item $pubCache -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # 用 Flutter 自带的 Dart（单独装的 Dart 版本可能太旧，且会排在 PATH 前面）
@@ -357,11 +396,15 @@ function Step-FlutterConfig {
     }
     Clear-FlutterLock
     Info '运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟，下面会显示进度）…'
-    Invoke-FlutterWatched @('--version')
+    if (-not (Invoke-FlutterWatched @('--version') 12 -NoDie)) {
+        Repair-FlutterTool
+        Info '重新运行 flutter --version…'
+        $null = Invoke-FlutterWatched @('--version') 20
+    }
     Invoke-Quiet 'flutter' @('config', '--no-analytics') | Out-Null
     Invoke-Quiet (Get-FlutterDart) @('--disable-analytics') | Out-Null
     Info '下载 Flutter 运行需要的文件（第一次要几分钟）…'
-    Invoke-FlutterWatched @('precache') 30
+    $null = Invoke-FlutterWatched @('precache') 30
 }
 
 function Step-Docker {
