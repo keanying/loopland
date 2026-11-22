@@ -35,7 +35,7 @@ func newEnv(t *testing.T) *env {
 	pool := testdb.New(t)
 	url := os.Getenv("LOOPLAND_TEST_REDIS_URL")
 	if url == "" {
-		url = "redis://localhost:6379/15"
+		url = "redis://localhost:6378/15"
 	}
 	opts, _ := redis.ParseURL(url)
 	rdb := redis.NewClient(opts)

@@ -32,8 +32,7 @@ function Set-Default($name, $value) {
 }
 Set-Default 'LOOPLAND_ENV' 'dev'
 Set-Default 'LOOPLAND_HTTP_ADDR' ":$ApiPort"
-Set-Default 'LOOPLAND_DATABASE_URL' 'postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable'
-Set-Default 'LOOPLAND_REDIS_URL' 'redis://localhost:6379/0'
+# 数据库和 Redis 地址以 server\config.yaml（本机覆盖写 config.local.yaml）为准，这里不再设置
 Set-Default 'LOOPLAND_BOOTSTRAP_ADMIN' 'admin:admin-password-1'
 
 function Say($msg) { Write-Host "==> $msg" -ForegroundColor Green }

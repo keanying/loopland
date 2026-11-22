@@ -180,8 +180,8 @@ func Load() (Config, error) {
 	c := Config{
 		Env:            env("LOOPLAND_ENV", "dev"),
 		HTTPAddr:       env("LOOPLAND_HTTP_ADDR", ":8080"),
-		DatabaseURL:    env("LOOPLAND_DATABASE_URL", "postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable"),
-		RedisURL:       env("LOOPLAND_REDIS_URL", "redis://localhost:6379/0"),
+		DatabaseURL:    env("LOOPLAND_DATABASE_URL", "postgres://loopland:loopland@localhost:5433/loopland?sslmode=disable"),
+		RedisURL:       env("LOOPLAND_REDIS_URL", "redis://localhost:6378/0"),
 		AccessTTL:      dur("LOOPLAND_ACCESS_TTL", 2*time.Hour),
 		RefreshTTL:     dur("LOOPLAND_REFRESH_TTL", 30*24*time.Hour),
 		BootstrapAdmin: get("LOOPLAND_BOOTSTRAP_ADMIN"),

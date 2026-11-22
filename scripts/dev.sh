@@ -18,8 +18,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_PORT="${LOOPLAND_API_PORT:-8080}"
 export LOOPLAND_ENV="${LOOPLAND_ENV:-dev}"
 export LOOPLAND_HTTP_ADDR="${LOOPLAND_HTTP_ADDR:-:$API_PORT}"
-export LOOPLAND_DATABASE_URL="${LOOPLAND_DATABASE_URL:-postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable}"
-export LOOPLAND_REDIS_URL="${LOOPLAND_REDIS_URL:-redis://localhost:6379/0}"
+# 数据库和 Redis 地址以 server/config.yaml（本机覆盖写 config.local.yaml）为准，这里不再设置
 export LOOPLAND_BOOTSTRAP_ADMIN="${LOOPLAND_BOOTSTRAP_ADMIN:-admin:admin-password-1}"
 
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }

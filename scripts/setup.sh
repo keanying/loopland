@@ -257,6 +257,17 @@ step_project() {
 step_start() {
   local dev="$ROOT/scripts/dev.sh"
   if [ "$NO_DOCKER" = 1 ]; then
+    # Docker 版对外端口是 5433 / 6378（server/config.yaml 的默认值）；本机安装的是标准端口
+    if [ ! -f "$ROOT/server/config.local.yaml" ]; then
+      cat >"$ROOT/server/config.local.yaml" <<'YAML'
+# 本机覆盖（不提交）：不用 Docker、用本机安装的 PostgreSQL / Redis 时，它们是标准端口
+database:
+  url: postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable
+redis:
+  url: redis://localhost:6379/0
+YAML
+      info "已写入 server/config.local.yaml：使用本机 PostgreSQL 5432、Redis 6379"
+    fi
     say "初始化本机数据库（db-init）"
     "$dev" db-init
   else

@@ -24,7 +24,7 @@ func New(t testing.TB) *pgxpool.Pool {
 	t.Helper()
 	base := os.Getenv("LOOPLAND_TEST_DATABASE_URL")
 	if base == "" {
-		base = "postgres://loopland:loopland@localhost:5432/postgres?sslmode=disable"
+		base = "postgres://loopland:loopland@localhost:5433/postgres?sslmode=disable"
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

@@ -33,7 +33,22 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .side-spacer { flex: 1; }
 /* 12 menu entries + logout: tighten on short screens so logout stays inside the bar */
 @media (max-height: 960px) and (min-width: 901px) { .side { gap: 3px; } .side-link { height: 44px; } }
+@media (max-height: 820px) and (min-width: 901px) { .side { gap: 2px; padding: 14px 12px; } .side-link { height: 38px; width: 46px; font-size: 19px; } .side-logo { margin-bottom: 4px; } }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+
+/* 宽屏：外框占满浏览器窗口（不再限制 1600px），高度固定为一屏；
+   左侧导航不动，只有右侧内容区滚动，页头吸顶。窄屏（≤900px）仍按原来的整页滚动。 */
+@media (min-width: 901px) {
+  html, body { height: 100%; overflow: hidden; }
+  .shell { height: 100vh; padding: 16px; box-sizing: border-box; }
+  .frame { max-width: none; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; }
+  .side { position: static; align-self: stretch; height: auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .side::-webkit-scrollbar { display: none; }
+  .main { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 24px 0; scrollbar-gutter: stable; }
+  .main .page-header { position: sticky; top: 0; z-index: 20; background: #fff; padding: 4px 0 12px; margin-bottom: -8px; }
+}
+/* 卡片网格：按可用宽度自动增减列数（大屏多列，不会被拉得很宽） */
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 16px; }
 
 /* ---------- header ---------- */
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px; }

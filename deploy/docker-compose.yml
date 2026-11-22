@@ -3,7 +3,7 @@
 #   docker compose -f deploy/docker-compose.yml run --rm seed     # 可选：灌演示数据
 # 后端 API      http://localhost:8080
 # 管理端        http://localhost:8000   （admin / admin-password-1）
-# 数据库与缓存   localhost:5432（loopland/loopland）、localhost:6379
+# 数据库与缓存   localhost:5433（loopland/loopland）、localhost:6378（对外端口；容器之间仍用 5432 / 6379）
 services:
   postgres:
     image: postgis/postgis:16-3.4
@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: loopland
       POSTGRES_PASSWORD: loopland
       POSTGRES_DB: loopland
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -20,7 +20,7 @@ services:
       retries: 20
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports: ["6378:6379"]
   api:
     build: ../server
     environment:

@@ -222,11 +222,11 @@ export default function ProvidersPage() {
           </Row>
           {shown.map((g) => (
             <Panel key={g} title={g} extra={<span className="panel-hint">{items.filter((p) => p.group === g).length} 个服务</span>}>
-              <Row gutter={[16, 16]}>
+              <div className="card-grid">
                 {items
                   .filter((p) => p.group === g)
                   .map((p) => (
-                    <Col key={p.code} xs={24} lg={12} xxl={8}>
+                    <div key={p.code}>
                       <ProviderCard
                         p={p}
                         uses={p.uses ? byCode.get(p.uses) : undefined}
@@ -240,9 +240,9 @@ export default function ProvidersPage() {
                         onTest={() => onTest(p)}
                         onToggle={(on) => onToggle(p, on)}
                       />
-                    </Col>
+                    </div>
                   ))}
-              </Row>
+              </div>
             </Panel>
           ))}
         </>

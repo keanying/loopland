@@ -13,10 +13,10 @@ http:
   public_base_url: http://localhost:8080   # LOOPLAND_PUBLIC_BASE_URL：对外地址，支付回调用
 
 database:
-  url: postgres://loopland:loopland@localhost:5432/loopland?sslmode=disable   # LOOPLAND_DATABASE_URL
+  url: postgres://loopland:loopland@localhost:5433/loopland?sslmode=disable   # LOOPLAND_DATABASE_URL
 
 redis:
-  url: redis://localhost:6379/0  # LOOPLAND_REDIS_URL
+  url: redis://localhost:6378/0  # LOOPLAND_REDIS_URL
 
 auth:
   access_ttl: 2h                 # LOOPLAND_ACCESS_TTL
