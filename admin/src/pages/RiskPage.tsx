@@ -86,7 +86,7 @@ export default function RiskPage() {
         </Col>
       </Row>
 
-      <Row gutter={[20, 20]}>
+      <Row gutter={[20, 20]} className="split-fill">
         <Col xs={24} xl={9}>
           <Panel
             title="告警"
@@ -114,6 +114,7 @@ export default function RiskPage() {
             <div className="panel-hint" style={{ marginTop: -6, marginBottom: 8 }}>
               按置信度从高到低
             </div>
+            <div className="split-scroll">
             {list.isLoading ? (
               <Skeleton active />
             ) : items.length === 0 ? (
@@ -139,6 +140,7 @@ export default function RiskPage() {
                 </div>
               ))
             )}
+            </div>
             {(list.data?.total ?? 0) > PAGE_SIZE && (
               <Pagination
                 size="small"

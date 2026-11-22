@@ -44,8 +44,31 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
   .frame { max-width: none; height: 100%; min-height: 0; box-sizing: border-box; overflow: hidden; }
   .side { position: static; align-self: stretch; height: auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .side::-webkit-scrollbar { display: none; }
-  .main { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 24px 0; scrollbar-gutter: stable; }
+  .main { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0 0 4px 0; }
   .main .page-header { position: sticky; top: 0; z-index: 20; background: #fff; padding: 4px 0 12px; margin-bottom: -8px; }
+  /* 不显示外层滚动条（内容超出一屏时仍可用滚轮滚动） */
+  .main { scrollbar-width: none; }
+  .main::-webkit-scrollbar { display: none; }
+
+  /* 列表卡片固定大小：页面最后一张带表格的卡片占满剩余高度，
+     表格在卡片里滚动（表头吸顶），分页固定在卡片底部。
+     也可以给任意卡片加 className="fill" 手动开启。 */
+  .main > .panel.fill,
+  .main > .panel:last-child:has(.ant-table-wrapper) { flex: 1 0 0; min-height: 360px; height: auto; display: flex; flex-direction: column; }
+  .main > .panel.fill > *,
+  .main > .panel:last-child:has(.ant-table-wrapper) > * { flex-shrink: 0; }
+  /* 卡片到表格之间的每一层（标签页、加载层等）都撑满并把高度传下去 */
+  .main > .panel.fill :is(*:has(.ant-table-wrapper), .ant-table-wrapper, .ant-spin-nested-loading, .ant-spin-container):not(.ant-tabs-tabpane-hidden, .ant-table-wrapper .ant-table-wrapper *),
+  .main > .panel:last-child:has(.ant-table-wrapper) :is(*:has(.ant-table-wrapper), .ant-table-wrapper, .ant-spin-nested-loading, .ant-spin-container):not(.ant-tabs-tabpane-hidden, .ant-table-wrapper .ant-table-wrapper *),
+  .main > .panel.fill > .ant-table-wrapper,
+  .main > .panel:last-child:has(.ant-table-wrapper) > .ant-table-wrapper { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table > .ant-table-container { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table > .ant-table-container > .ant-table-content { flex: 1 1 0; min-height: 0; overflow: auto !important; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table > .ant-table-container > .ant-table-content > table > thead > tr > th { position: sticky; top: 0; z-index: 3; background: #fff; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table > .ant-table-container > .ant-table-content > table > thead > tr > th.ant-table-cell-fix-left,
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table > .ant-table-container > .ant-table-content > table > thead > tr > th.ant-table-cell-fix-right { z-index: 4; }
+  .main > .panel:is(.fill, :last-child) .ant-table-wrapper > .ant-spin-nested-loading > .ant-spin-container > .ant-table-pagination { flex-shrink: 0; margin-bottom: 0; }
 }
 /* 卡片网格：按可用宽度自动增减列数（大屏多列，不会被拉得很宽） */
 .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 16px; }
@@ -342,3 +365,14 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .mer-drop-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .redeem-input input::placeholder, input.redeem-input::placeholder { font-size: 15px; letter-spacing: 0; text-transform: none; }
 .panel-head .ant-segmented { max-width: 100%; overflow-x: auto; }
+
+/* 左列表右详情（内容审核、风控）：宽屏时占满剩余高度，左右各自在卡片里滚动，
+   列表的筛选栏和分页固定。窄屏仍整页滚动。 */
+@media (min-width: 1200px) {
+  .main > .split-fill { flex: 1 0 0; min-height: 460px; flex-wrap: nowrap; }
+  .main > .split-fill > .ant-col { display: flex; flex-direction: column; min-height: 0; }
+  .main > .split-fill > .ant-col > .panel { flex: 1 1 0; min-height: 0; height: auto !important; position: static !important; overflow-y: auto; scrollbar-width: thin; }
+  .main > .split-fill > .ant-col > .panel:has(> .split-scroll) { display: flex; flex-direction: column; overflow: hidden; }
+  .main > .split-fill > .ant-col > .panel:has(> .split-scroll) > * { flex-shrink: 0; }
+  .main > .split-fill .split-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; margin: 0 -6px; padding: 2px 6px; }
+}

@@ -248,7 +248,7 @@ export default function QueueTab() {
         </Col>
       </Row>
 
-      <Row gutter={[20, 20]}>
+      <Row gutter={[20, 20]} className="split-fill">
         <Col xs={24} xl={10}>
           <Panel
             title="审核队列"
@@ -331,7 +331,7 @@ export default function QueueTab() {
               {pending ? (sort === 'risk' ? '按最终风险分（规则分与 AI 分取高）从高到低，同分先提交的在前' : `本页${SORTS[sort].label}`) : '按审核时间倒序'}
               {pending && ' · 处理后自动跳到下一条'}
             </div>
-            <div ref={listRef}>
+            <div ref={listRef} className="split-scroll">
               {list.isLoading ? (
                 <Skeleton active />
               ) : items.length === 0 ? (
