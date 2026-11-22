@@ -62,3 +62,6 @@ server/data/
 
 # Flutter 诊断日志
 flutter-diag.log
+
+# Claude Code 并行开发用的临时 git 工作区
+.claude/worktrees/
