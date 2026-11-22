@@ -156,6 +156,17 @@ func get(k string) string {
 	return fileValues[k]
 }
 
+// Origin says where setting k came from: "环境变量 K", the config file, or "默认值".
+func Origin(k string) string {
+	if v, ok := os.LookupEnv(k); ok && v != "" {
+		return "环境变量 " + k
+	}
+	if fileValues[k] != "" && Source != "" {
+		return Source
+	}
+	return "内置默认值"
+}
+
 // Source is the config file Load used ("" when none).
 var Source string
 

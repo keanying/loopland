@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -57,8 +58,9 @@ func run(cfg config.Config, log *slog.Logger) error {
 	pool, rdb, err := app.Open(ctx, cfg)
 	if err != nil {
 		if cfg.Dev() {
-			return fmt.Errorf("%w\n  → 本机开发需要 PostgreSQL(PostGIS) 和 Redis：运行 scripts/dev.sh deps（Windows：scripts\\dev.ps1 deps），"+
-				"或检查 %s 里的 database.url / redis.url", err, config.Source)
+			return fmt.Errorf("%w\n  → 正在连接 数据库 %s（来自 %s）、Redis %s（来自 %s）\n"+
+				"  → 本机开发需要 PostgreSQL(PostGIS) 和 Redis：运行 scripts/dev.sh deps（Windows：scripts\\dev.ps1 deps）；地址不对就改上面写的来源",
+				err, hostOf(cfg.DatabaseURL), config.Origin("LOOPLAND_DATABASE_URL"), hostOf(cfg.RedisURL), config.Origin("LOOPLAND_REDIS_URL"))
 		}
 		return err
 	}
@@ -103,4 +105,12 @@ func run(cfg config.Config, log *slog.Logger) error {
 	shutdown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdown)
+}
+
+// hostOf returns host:port of a connection URL (without credentials).
+func hostOf(raw string) string {
+	if u, err := url.Parse(raw); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return "（无法解析）"
 }
