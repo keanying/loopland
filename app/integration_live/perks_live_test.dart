@@ -7,7 +7,7 @@
 //   LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live/perks_live_test.dart
 //
 // The backend must run with LOOPLAND_ENV=dev (SMS code 000000) and the
-// bootstrap admin admin:admin-password-1 (to create the merchant, drops and
+// bootstrap admin looproot:LoopRoot101011! (to create the merchant, drops and
 // the campaign). Optional LOOPLAND_LIVE_DB (a psql connection string for the
 // same scratch database) tops the test user's energy up so the shop can be
 // bought from; without it only the not_enough_energy path is checked.
@@ -47,7 +47,7 @@ void main() {
 
     // ── 运营：商户、两个补给站、联名活动 ──
     final admin = Dio(BaseOptions(baseUrl: base!, contentType: 'application/json'));
-    final login = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'admin', 'password': 'admin-password-1'});
+    final login = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'looproot', 'password': 'LoopRoot101011!'});
     admin.options.headers['Authorization'] = 'Bearer ${login.data!['token']}';
     final merchant = (await admin.post<Map<String, dynamic>>('/admin/v1/merchants',
             data: {'name': '测试咖啡$rnd', 'type': 'brand', 'status': 'partner', 'contact_name': '王经理', 'contact_phone': '13800138000'}))

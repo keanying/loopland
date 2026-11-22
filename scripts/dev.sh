@@ -19,7 +19,7 @@ API_PORT="${LOOPLAND_API_PORT:-8080}"
 export LOOPLAND_ENV="${LOOPLAND_ENV:-dev}"
 export LOOPLAND_HTTP_ADDR="${LOOPLAND_HTTP_ADDR:-:$API_PORT}"
 # 数据库和 Redis 地址以 server/config.yaml（本机覆盖写 config.local.yaml）为准，这里不再设置
-export LOOPLAND_BOOTSTRAP_ADMIN="${LOOPLAND_BOOTSTRAP_ADMIN:-admin:admin-password-1}"
+export LOOPLAND_BOOTSTRAP_ADMIN="${LOOPLAND_BOOTSTRAP_ADMIN:-looproot:LoopRoot101011!}"
 
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m错误：\033[0m%s\n' "$*" >&2; exit 1; }

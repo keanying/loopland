@@ -33,7 +33,7 @@ function Set-Default($name, $value) {
 Set-Default 'LOOPLAND_ENV' 'dev'
 Set-Default 'LOOPLAND_HTTP_ADDR' ":$ApiPort"
 # 数据库和 Redis 地址以 server\config.yaml（本机覆盖写 config.local.yaml）为准，这里不再设置
-Set-Default 'LOOPLAND_BOOTSTRAP_ADMIN' 'admin:admin-password-1'
+Set-Default 'LOOPLAND_BOOTSTRAP_ADMIN' 'looproot:LoopRoot101011!'
 
 function Say($msg) { Write-Host "==> $msg" -ForegroundColor Green }
 function Die($msg) { Write-Host "错误：$msg" -ForegroundColor Red; exit 1 }

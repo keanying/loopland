@@ -13,7 +13,7 @@ flutter pub get
 flutter analyze          # 应为 No issues found
 flutter test             # 单元测试 + 组件测试
 LOOPLAND_SCREENSHOTS=1 flutter test test/widgets   # 顺便把截图写到 screenshots/（V2 页面在 screenshots/v2/）
-# 联调：后端以 LOOPLAND_ENV=dev 运行（V2 测试还需要管理员 admin:admin-password-1 来投放怪兽 / 宝箱）
+# 联调：后端以 LOOPLAND_ENV=dev 运行（V2 测试还需要管理员 looproot:LoopRoot101011! 来投放怪兽 / 宝箱）
 LOOPLAND_LIVE_API=http://localhost:8082 flutter test integration_live
 # AI（ai_live_test.dart）：开发环境没配 AI 时后端用内置模拟 AI，含真实 SSE 流式
 ```

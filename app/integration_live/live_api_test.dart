@@ -185,7 +185,7 @@ void main() {
 
     // Operator places a monster on the track and two chests.
     final admin = Dio(BaseOptions(baseUrl: base!, contentType: 'application/json'));
-    final login = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'admin', 'password': 'admin-password-1'});
+    final login = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'looproot', 'password': 'LoopRoot101011!'});
     admin.options.headers['Authorization'] = 'Bearer ${login.data!['token']}';
     final c0 = at(cx, cy);
     final spawned = await admin.post<Map<String, dynamic>>('/admin/v1/bosses',

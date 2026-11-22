@@ -4,6 +4,8 @@
 //
 //   pnpm run dev:mock            # in one terminal
 //   pnpm run screenshots            # 地址取自 config.yaml 的 dev_server；端口变了可加 BASE_URL=http://localhost:5174
+// 真实后端的管理员账号（默认 looproot）；假数据模式下 admin 也能登录
+const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -36,7 +38,7 @@ async function main() {
   }
 
   async function login(page, username) {
-    await page.fill('#username', username);
+    await page.fill('#username', username === 'admin' ? ADMIN_USER : username);
     await page.fill('#password', 'loopland');
     await page.click('button[type=submit]');
     await page.waitForSelector('h1.page-title');
@@ -149,7 +151,7 @@ async function main() {
   const mp = await m.newPage();
   mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
   await mp.goto(`${BASE}/login`);
-  await mp.fill('#username', 'admin');
+  await mp.fill('#username', ADMIN_USER);
   await mp.fill('#password', 'loopland');
   await mp.click('button[type=submit]');
   await mp.waitForSelector('text=待处理事项');

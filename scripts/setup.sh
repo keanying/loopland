@@ -274,7 +274,7 @@ step_start() {
     say "后台启动 App（$APP_DEVICE，第一次编译要几分钟；日志：app/run.log）"
     (cd "$ROOT" && nohup "$dev" app "$APP_DEVICE" >app/run.log 2>&1 &)
   fi
-  say "启动管理端：浏览器打开 http://localhost:5173 （账号 admin / admin-password-1）"
+  say "启动管理端：浏览器打开 http://localhost:5173 （账号 looproot / LoopRoot101011!）"
   info "App 演示账号：手机号 13800000001–13800000006，验证码 000000"
   info "Ctrl+C 停止管理端；停止后端：pkill -f 'go run .' 或关掉对应进程"
   "$dev" admin

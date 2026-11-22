@@ -19,7 +19,7 @@
 ## 快速开始
 
 ```bash
-make dev-up      # 启动 PostGIS、Redis 和 API（dev 模式，管理员 admin / admin-password-1）
+make dev-up      # 启动 PostGIS、Redis 和 API（dev 模式，管理员 looproot / LoopRoot101011!）
 make seed        # 灌入演示数据：6 个用户、圈地、抢地、作弊记录、跑团、会员订单
 ```
 

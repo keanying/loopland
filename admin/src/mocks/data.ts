@@ -54,6 +54,7 @@ export const admins: AdminAccount[] = [
   { id: 3, username: 'amei', role: 'reviewer', disabled: false, created_at: ago(60 * DAY) },
   { id: 4, username: 'shop', role: 'merchant', disabled: false, created_at: ago(30 * DAY) },
   { id: 5, username: 'old_ops', role: 'ops', disabled: true, created_at: ago(200 * DAY) },
+  { id: 6, username: 'looproot', role: 'admin', disabled: false, created_at: ago(120 * DAY) },
 ];
 
 // ---------------- users ----------------

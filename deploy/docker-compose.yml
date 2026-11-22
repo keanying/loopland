@@ -2,7 +2,7 @@
 #   docker compose -f deploy/docker-compose.yml up -d --build
 #   docker compose -f deploy/docker-compose.yml run --rm seed     # 可选：灌演示数据
 # 后端 API      http://localhost:8080
-# 管理端        http://localhost:8000   （admin / admin-password-1）
+# 管理端        http://localhost:8000   （looproot / LoopRoot101011!）
 # 数据库与缓存   localhost:5433（loopland/loopland）、localhost:6378（对外端口；容器之间仍用 5432 / 6379）
 services:
   postgres:
@@ -27,7 +27,7 @@ services:
       LOOPLAND_ENV: dev
       LOOPLAND_DATABASE_URL: postgres://loopland:loopland@postgres:5432/loopland?sslmode=disable
       LOOPLAND_REDIS_URL: redis://redis:6379/0
-      LOOPLAND_BOOTSTRAP_ADMIN: admin:admin-password-1
+      LOOPLAND_BOOTSTRAP_ADMIN: "looproot:LoopRoot101011!"
     ports: ["8080:8080"]
     depends_on:
       postgres:
@@ -46,7 +46,7 @@ services:
   # One-shot: docker compose -f deploy/docker-compose.yml run --rm seed
   seed:
     build: ../server
-    entrypoint: ["/loopland-seed", "-api", "http://api:8080", "-admin", "admin:admin-password-1"]
+    entrypoint: ["/loopland-seed", "-api", "http://api:8080", "-admin", "looproot:LoopRoot101011!"]
     depends_on: [api]
     profiles: ["tools"]
 

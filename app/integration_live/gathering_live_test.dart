@@ -6,7 +6,7 @@
 //   LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live/gathering_live_test.dart
 //
 // The backend must run with LOOPLAND_ENV=dev (SMS code 000000) and the
-// bootstrap admin admin:admin-password-1 (to publish a race).
+// bootstrap admin looproot:LoopRoot101011! (to publish a race).
 @TestOn('vm')
 library;
 
@@ -237,7 +237,7 @@ void main() {
 
     // ── 赛事：管理端发布一场正在进行的线上赛 ──
     final admin = Dio(BaseOptions(baseUrl: base, contentType: 'application/json'));
-    final al = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'admin', 'password': 'admin-password-1'});
+    final al = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'looproot', 'password': 'LoopRoot101011!'});
     admin.options.headers['Authorization'] = 'Bearer ${al.data!['token']}';
     final now = DateTime.now().toUtc();
     final created = await admin.post<Map<String, dynamic>>('/admin/v1/races', data: {

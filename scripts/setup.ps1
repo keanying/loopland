@@ -485,7 +485,7 @@ function Step-Start {
         Start-Process $shell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $dev, 'app', $device)
         if ($device -in 'chrome', 'edge') { Info '浏览器里只能演示界面和接口；高德地图、微信、一键登录等原生能力要用手机或模拟器（-App emulator-5554）' }
     }
-    Say '启动管理端：浏览器打开 http://localhost:5173 （账号 admin / admin-password-1）'
+    Say '启动管理端：浏览器打开 http://localhost:5173 （账号 looproot / LoopRoot101011!）'
     Info 'App 演示账号：手机号 13800000001–13800000006，验证码 000000'
     Info '按 Ctrl+C 停止管理端；后端和 App 各在一个新窗口里，关掉那个窗口即停止。'
     & $dev admin

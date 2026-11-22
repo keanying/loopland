@@ -24,7 +24,7 @@ import (
 var (
 	fs       = flag.NewFlagSet("seed", flag.ExitOnError)
 	api      = fs.String("api", "http://localhost:8080", "backend base URL (dev mode)")
-	adminCrd = fs.String("admin", "admin:admin-password-1", "admin username:password for V2 gameplay seed data (empty to skip)")
+	adminCrd = fs.String("admin", "looproot:LoopRoot101011!", "admin username:password for V2 gameplay seed data (empty to skip)")
 )
 
 type client struct{ token string }

@@ -17,7 +17,7 @@
       "mode": "debug",
       "program": "${workspaceFolder}/server/main.go",
       "cwd": "${workspaceFolder}/server",
-      "args": ["seed", "-admin", "admin:admin-password-1"]
+      "args": ["seed", "-admin", "looproot:LoopRoot101011!"]
     },
     {
       "name": "后端 配置自检",

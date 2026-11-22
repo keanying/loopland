@@ -7,6 +7,8 @@
 //   ONLY=ai pnpm run screenshots:v2          # 只跑第三批「AI」(23_ 起：AI 审核 / 双阈值 / AI 用量 / AI 对话 / AI 大模型 / 跟练配置 / 角色)
 //   ONLY=perks pnpm run screenshots:v2       # 只跑第四批的投放 / 联名活动 / 能量商城 / 补给站图层（scripts/screenshots-v2-perks.cjs）
 //   ONLY=merchant pnpm run screenshots:v2    # 只跑第四批的商户 / 场馆 / 订场 / 核销结算 / 核销台（含窄屏商户对接 + 假摄像头扫码）/ 总览待办（scripts/screenshots-v2-merchant.cjs）
+// 真实后端的管理员账号（默认 looproot）；假数据模式下 admin 也能登录
+const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
 const path = require('path');
 const fs = require('fs');
 const { chromium } = require('playwright');
@@ -38,7 +40,7 @@ async function main() {
       if (r.url().includes(`${adminPrefix}/`) && r.status() >= 400 && !process.env.ALLOW_HTTP_ERRORS) problems.push(`[${username}] HTTP ${r.status()} ${r.request().method()} ${r.url()}`);
     });
     await page.goto(`${BASE}/login`);
-    await page.fill('#username', username);
+    await page.fill('#username', username === 'admin' ? ADMIN_USER : username);
     await page.fill('#password', username === 'admin' ? PASSWORD : process.env.STAFF_PASSWORD || 'loopland');
     await page.click('button[type=submit]');
     await page.waitForSelector('h1.page-title');
@@ -283,7 +285,7 @@ async function main() {
   const mp = await m.newPage();
   mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
   await mp.goto(`${BASE}/login`);
-  await mp.fill('#username', 'admin');
+  await mp.fill('#username', ADMIN_USER);
   await mp.fill('#password', PASSWORD);
   await mp.click('button[type=submit]');
   await mp.waitForSelector('h1.page-title');
@@ -466,7 +468,7 @@ async function main() {
     const mp = await m.newPage();
     mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
     await mp.goto(`${BASE}/login`);
-    await mp.fill('#username', 'admin');
+    await mp.fill('#username', ADMIN_USER);
     await mp.fill('#password', PASSWORD);
     await mp.click('button[type=submit]');
     await mp.waitForSelector('h1.page-title');
@@ -685,7 +687,7 @@ async function main() {
     const mp = await m.newPage();
     mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
     await mp.goto(`${BASE}/login`);
-    await mp.fill('#username', 'admin');
+    await mp.fill('#username', ADMIN_USER);
     await mp.fill('#password', PASSWORD);
     await mp.click('button[type=submit]');
     await mp.waitForSelector('h1.page-title');

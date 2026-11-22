@@ -17,8 +17,8 @@ pnpm run preview        # 本地预览 dist/（同样代理 API）
 pnpm run lint           # eslint，0 warning
 ```
 
-后端本地启动（见 `../server`）：`LOOPLAND_ENV=dev LOOPLAND_BOOTSTRAP_ADMIN='admin:admin-password-1' go run ./cmd/loopland-api`，然后用 admin / admin-password-1 登录。
-`go run ./cmd/loopland-seed -api http://localhost:8080 -admin admin:admin-password-1` 会顺带造 V2 数据（赛季、活动、定向路线、怪兽、宝箱、跑团）。后台账号密码至少 10 位。
+后端本地启动（见 `../server`）：`LOOPLAND_ENV=dev LOOPLAND_BOOTSTRAP_ADMIN='looproot:LoopRoot101011!' go run .`，然后用 looproot / LoopRoot101011! 登录。
+`go run . seed -api http://localhost:8080 -admin 'looproot:LoopRoot101011!'` 会顺带造 V2 数据（赛季、活动、定向路线、怪兽、宝箱、跑团）。后台账号密码至少 10 位。
 
 ### 截图
 
@@ -27,7 +27,7 @@ pnpm run dev:mock          # 终端 1
 pnpm run screenshots       # 终端 2；地址取自配置里的 dev_server（Vite 换了端口时加 BASE_URL=http://localhost:5174）
 ```
 
-V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分；第四批「本地生活与商户」的商户 / 场馆 / 订场 / 核销结算 / 核销记录 / 核销台 / 总览待办 / 运营视角 / 窄屏商户对接在 `scripts/screenshots-v2-merchant.cjs`，`ONLY=merchant` 只跑这部分，编号从 `MERCHANT_FROM`（默认 39）起；投放 / 联名活动 / 能量商城 / 地图补给站图层在 `scripts/screenshots-v2-perks.cjs`，`ONLY=perks` 只跑这部分（55_ 起）；核销台扫码用 Chromium 假摄像头播放现生成的券二维码视频，需要 ffmpeg）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_PASSWORD=admin-password-1 STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
+V2 页面另有一套：`pnpm run screenshots:v2`，存到 `screenshots/v2/`（会在内存假数据里召唤怪兽、撒宝箱、建活动；14_ 起是第二批「社区」：审核、举报、下架、敏感词、组局、赛事、审核员 / 运营视角，`ONLY=community` 只跑这部分；23_ 起是第三批「AI」：AI 审核判定与新处理动作、双阈值与预计人工量、AI 用量、查看用户 AI 对话、AI 大模型新字段、AI 跟练 / AI 配置、运营 / 审核员视角，`ONLY=ai` 只跑这部分；第四批「本地生活与商户」的商户 / 场馆 / 订场 / 核销结算 / 核销记录 / 核销台 / 总览待办 / 运营视角 / 窄屏商户对接在 `scripts/screenshots-v2-merchant.cjs`，`ONLY=merchant` 只跑这部分，编号从 `MERCHANT_FROM`（默认 39）起；投放 / 联名活动 / 能量商城 / 地图补给站图层在 `scripts/screenshots-v2-perks.cjs`，`ONLY=perks` 只跑这部分（55_ 起）；核销台扫码用 Chromium 假摄像头播放现生成的券二维码视频，需要 ffmpeg）。连真实后端时加 `SHOT_DIR=real-v2 ADMIN_USERNAME=looproot ADMIN_PASSWORD=LoopRoot101011! STAFF_PASSWORD=<xiaolin / amei 的密码>`（这两个账号需先在「后台账号」里建好），HTTP 4xx/5xx 也算失败。
 
 `scripts/screenshots.cjs` 用 Playwright 依次打开所有页面（管理员、运营、审核员三种视角和窄屏），把整页 PNG 存到 `screenshots/`；浏览器控制台有 error / warning 时脚本以非 0 退出。`screenshots/real/` 是连真实后端时的截图。
 

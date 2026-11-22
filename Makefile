@@ -11,7 +11,7 @@ fmt:
 
 # Needs PostgreSQL+PostGIS and Redis (see `make dev-up` or deploy/docker-compose.yml).
 run:
-	cd server && LOOPLAND_ENV=dev LOOPLAND_BOOTSTRAP_ADMIN=admin:admin-password-1 go run .
+	cd server && LOOPLAND_ENV=dev LOOPLAND_BOOTSTRAP_ADMIN='looproot:LoopRoot101011!' go run .
 
 seed:
 	cd server && go run . seed -api http://localhost:8080

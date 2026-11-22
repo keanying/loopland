@@ -21,7 +21,7 @@ redis:
 auth:
   access_ttl: 2h                 # LOOPLAND_ACCESS_TTL
   refresh_ttl: 720h              # LOOPLAND_REFRESH_TTL（30 天）
-  bootstrap_admin: "admin:admin-password-1"   # LOOPLAND_BOOTSTRAP_ADMIN：没有任何管理员时自动创建
+  bootstrap_admin: "looproot:LoopRoot101011!"   # LOOPLAND_BOOTSTRAP_ADMIN：没有任何管理员时自动创建
   # dev 模式下 JWT 密钥和数据加密密钥有内置默认值，正式环境必须配置：
   # jwt_secret_file: secrets/jwt_secret
   # admin_jwt_secret_file: secrets/admin_jwt_secret

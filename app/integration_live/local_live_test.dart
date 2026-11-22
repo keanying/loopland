@@ -5,7 +5,7 @@
 //   LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live/local_live_test.dart
 //
 // The backend must run with LOOPLAND_ENV=dev (SMS code 000000, mock pay) and
-// the bootstrap admin admin:admin-password-1 (to create venues and a race).
+// the bootstrap admin looproot:LoopRoot101011! (to create venues and a race).
 @TestOn('vm')
 library;
 
@@ -60,7 +60,7 @@ void main() {
     final far = Projection(origin).inverse(Point(dx + 3000, 0));
 
     final admin = Dio(BaseOptions(baseUrl: base!, contentType: 'application/json'));
-    final al = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'admin', 'password': 'admin-password-1'});
+    final al = await admin.post<Map<String, dynamic>>('/admin/v1/login', data: {'username': 'looproot', 'password': 'LoopRoot101011!'});
     admin.options.headers['Authorization'] = 'Bearer ${al.data!['token']}';
     final merchant = await admin.post<Map<String, dynamic>>('/admin/v1/merchants',
         data: {'name': '联调健身中心$rnd', 'type': 'venue', 'status': 'partner', 'contact_name': '王', 'contact_phone': '13800001111'});

@@ -2,6 +2,8 @@
 // `ONLY=perks pnpm run screenshots:v2`). Names start at PERKS_FROM (default below) and carry the page name.
 // Writes (create a drop / launch a campaign / pause) are skipped with NO_WRITES=1 (real backend you care about).
 
+// 真实后端的管理员账号（默认 looproot）；假数据模式下 admin 也能登录
+const ADMIN_USER = process.env.ADMIN_USERNAME || 'admin';
 const FROM = Number(process.env.PERKS_FROM || 55);
 // Names picked in the forms (defaults match the mock data; override for a real backend's seed data).
 const STRONGHOLD_MERCHANT = process.env.PERKS_STRONGHOLD_MERCHANT || '跑野运动馆';
@@ -194,7 +196,7 @@ module.exports = async function perksShots({ browser, session, shot, BASE, probl
   const mp = await m.newPage();
   mp.on('pageerror', (e) => problems.push(`[mobile] pageerror: ${e.message}`));
   await mp.goto(`${BASE}/login`);
-  await mp.fill('#username', 'admin');
+  await mp.fill('#username', ADMIN_USER);
   await mp.fill('#password', process.env.ADMIN_PASSWORD || 'loopland');
   await mp.click('button[type=submit]');
   await mp.waitForSelector('h1.page-title');
