@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/providers.dart';
 import '../core/theme.dart';
-import 'card_art.dart';
+import 'card_art.dart' show hasArt;
 
 /// Scaffold with the floating rounded bottom bar: 领地 / 图鉴 / 开始 / 社区 / 我的.
 class NavShell extends ConsumerWidget {
@@ -69,48 +70,61 @@ class _Bar extends StatelessWidget {
       );
     }
 
+    const button = 84.0; // 中间「开始」按钮直径（含外圈）
     return SizedBox(
-      height: NavShell.barHeight + 18,
+      height: NavShell.barHeight + 22,
       child: Stack(clipBehavior: Clip.none, alignment: Alignment.bottomCenter, children: [
-        Container(
+        // 底栏：中间向上鼓起一个弧，托住「开始」按钮（同设计稿）
+        SizedBox(
           height: NavShell.barHeight,
-          decoration: BoxDecoration(
-            color: const Color(0xF21B1B20),
-            borderRadius: BorderRadius.circular(38),
-            border: Border.all(color: LL.border),
-            boxShadow: const [BoxShadow(color: Color(0x88000000), blurRadius: 24, offset: Offset(0, 8))],
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _BarPainter(hump: button / 2 + 10),
+            child: Row(children: [
+              item(0, Icons.map_outlined, '领地'),
+              item(1, Icons.content_copy_outlined, '图鉴'),
+              const SizedBox(width: button + 12),
+              item(3, Icons.groups_outlined, '社区'),
+              item(4, Icons.person_outline_rounded, '我的'),
+            ]),
           ),
-          child: Row(children: [
-            item(0, Icons.map_outlined, '领地'),
-            item(1, Icons.content_copy_outlined, '图鉴'),
-            const SizedBox(width: 88),
-            item(3, Icons.groups_outlined, '社区'),
-            item(4, Icons.person_outline_rounded, '我的'),
-          ]),
         ),
         Positioned(
-          bottom: 8,
+          bottom: NavShell.barHeight / 2 - button / 2 + 6,
           child: Semantics(
             button: true,
+            selected: index == 2,
             label: '开始',
             child: GestureDetector(
               onTap: () => onTap(2),
-              child: Container(
-                width: 84,
-                height: 84,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: LL.night,
-                  border: Border.all(color: index == 2 ? LL.lime : LL.lavender.withValues(alpha: 0.7), width: 2),
-                  boxShadow: [BoxShadow(color: LL.lavender.withValues(alpha: 0.35), blurRadius: 18)],
-                ),
-                child: ClipOval(
-                  child: Container(
-                    color: index == 2 ? LL.lime.withValues(alpha: 0.25) : LL.card,
-                    child: FittedBox(
-                      fit: BoxFit.cover,
-                      child: CardArt(artKey: centerArt, width: 80),
+              child: SizedBox(
+                width: button,
+                height: button,
+                child: CustomPaint(
+                  // 外圈虚线（薰衣紫）
+                  painter: _DashedRingPainter(color: LL.lavender.withValues(alpha: 0.8)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(7),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: LL.lavender,
+                        // 选中「开始」时外环加粗
+                        border: Border.all(color: LL.lime, width: index == 2 ? 3.5 : 2.5),
+                        boxShadow: [BoxShadow(color: LL.lavender.withValues(alpha: 0.45), blurRadius: 18)],
+                      ),
+                      child: !hasArt(centerArt)
+                          ? const Icon(Icons.play_arrow_rounded, color: LL.ink, size: 36)
+                          // 素材四周留白较多：放大后裁成圆形，和设计稿一样占满按钮
+                          : ClipOval(
+                              child: Transform.translate(
+                                offset: const Offset(-2, -5),
+                                child: Transform.scale(
+                                  scale: 1.22,
+                                  child: SvgPicture.asset('assets/art/${centerArt}_fig.svg', fit: BoxFit.contain),
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -121,4 +135,59 @@ class _Bar extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// 底栏背景：圆角胶囊，中间顶部向上鼓起一个平滑的弧。
+class _BarPainter extends CustomPainter {
+  _BarPainter({required this.hump});
+  final double hump; // 鼓起部分的半宽
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, r = h / 2, cx = w / 2;
+    const rise = 14.0; // 鼓起高度
+    final path = Path()
+      ..moveTo(r, 0)
+      ..lineTo(cx - hump - 22, 0)
+      ..cubicTo(cx - hump + 4, 0, cx - hump + 6, -rise, cx, -rise)
+      ..cubicTo(cx + hump - 6, -rise, cx + hump - 4, 0, cx + hump + 22, 0)
+      ..lineTo(w - r, 0)
+      ..arcToPoint(Offset(w - r, h), radius: Radius.circular(r))
+      ..lineTo(r, h)
+      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
+      ..close();
+    canvas.drawShadow(path, const Color(0xFF000000), 12, false);
+    canvas.drawPath(path, Paint()..color = const Color(0xF21B1B20));
+    canvas.drawPath(path, Paint()
+      ..color = LL.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1);
+  }
+
+  @override
+  bool shouldRepaint(_BarPainter old) => old.hump != hump;
+}
+
+/// 「开始」按钮外圈的虚线圆。
+class _DashedRingPainter extends CustomPainter {
+  _DashedRingPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+    final rect = Offset.zero & size;
+    const dashes = 28;
+    const sweep = 2 * 3.141592653589793 / dashes;
+    for (var i = 0; i < dashes; i++) {
+      canvas.drawArc(rect.deflate(1.5), i * sweep, sweep * 0.35, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRingPainter old) => old.color != color;
 }
