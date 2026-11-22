@@ -514,6 +514,15 @@ func (s *Service) Refund(ctx context.Context, orderNo, reason string) (Order, er
 	if o.Channel == AppleIAP {
 		return o, httpx.BadRequest("manage_in_app_store", "App Store 订单需由用户向 Apple 申请退款")
 	}
+	if o.BizType != BizMembership {
+		if f, err := s.fulfiller(o.BizType); err == nil {
+			if g, ok := f.(RefundGuard); ok {
+				if err := g.CanRefund(ctx, s.Pool, o); err != nil {
+					return o, err
+				}
+			}
+		}
+	}
 	prov, ok := s.provider(o.Channel)
 	if !ok {
 		return o, httpx.BadRequest("channel_not_allowed", "支付渠道未配置")

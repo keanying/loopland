@@ -139,6 +139,23 @@ func (w *WeChatPay) Refund(ctx context.Context, o Order, reason string) error {
 	return nil
 }
 
+// RefundPart implements PartialRefunder.
+func (w *WeChatPay) RefundPart(ctx context.Context, o Order, refundNo string, amountFen int, reason string) error {
+	bm := make(gopay.BodyMap)
+	bm.Set("out_trade_no", o.OrderNo).Set("out_refund_no", refundNo).Set("reason", reason).
+		SetBodyMap("amount", func(b gopay.BodyMap) {
+			b.Set("refund", amountFen).Set("total", o.AmountFen).Set("currency", "CNY")
+		})
+	rsp, err := w.cli.V3Refund(ctx, bm)
+	if err != nil {
+		return err
+	}
+	if rsp.Code != 0 {
+		return fmt.Errorf("wechat refund: %s", rsp.Error)
+	}
+	return nil
+}
+
 // Charge implements Provider. WeChat 委托代扣 needs the papay contract to be
 // signed during the first purchase; that product is not activated yet.
 func (w *WeChatPay) Charge(context.Context, Order) (string, error) { return "", ErrUnsupported }
@@ -222,6 +239,20 @@ func (a *Alipay) Refund(ctx context.Context, o Order, reason string) error {
 	return nil
 }
 
+// RefundPart implements PartialRefunder.
+func (a *Alipay) RefundPart(ctx context.Context, o Order, refundNo string, amountFen int, reason string) error {
+	bm := make(gopay.BodyMap)
+	bm.Set("out_trade_no", o.OrderNo).Set("refund_amount", yuan(amountFen)).Set("refund_reason", reason).Set("out_request_no", refundNo)
+	rsp, err := a.cli.TradeRefund(ctx, bm)
+	if err != nil {
+		return err
+	}
+	if rsp.Response == nil || rsp.Response.Code != "10000" {
+		return fmt.Errorf("alipay refund failed")
+	}
+	return nil
+}
+
 // Charge implements Provider. Alipay 周期扣款 needs an agreement signed with
 // the first payment; not activated yet.
 func (a *Alipay) Charge(context.Context, Order) (string, error) { return "", ErrUnsupported }
@@ -280,6 +311,9 @@ func (MockPay) Ack(rw http.ResponseWriter) { rw.WriteHeader(http.StatusOK) }
 
 // Refund implements Provider.
 func (MockPay) Refund(context.Context, Order, string) error { return nil }
+
+// RefundPart implements PartialRefunder.
+func (MockPay) RefundPart(context.Context, Order, string, int, string) error { return nil }
 
 // Charge implements Provider.
 func (MockPay) Charge(_ context.Context, o Order) (string, error) { return "MOCK-" + o.OrderNo, nil }

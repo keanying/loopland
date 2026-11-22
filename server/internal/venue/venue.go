@@ -50,6 +50,9 @@ type Venue struct {
 	MyWeekPoints      int        `json:"my_week_points"`
 	CheckedInToday    bool       `json:"checked_in_today"`
 	WeekRank          *[]RankRow `json:"week_rank,omitempty"`
+	// Products are the on-sale products usable at the venue (detail only,
+	// 第五批; filled by the product module).
+	Products any `json:"products,omitempty"`
 
 	row venueRow
 }
@@ -189,6 +192,16 @@ func (s *Service) Detail(ctx context.Context, viewer, id int64, at *LatLng) (Ven
 		return v, err
 	}
 	v.WeekRank = &rank
+	v.Products = []any{}
+	if s.Products != nil && v.row.merchantID != nil {
+		ps, err := s.Products.VenueProducts(ctx, viewer, *v.row.merchantID, id)
+		if err != nil {
+			return v, err
+		}
+		if ps != nil {
+			v.Products = ps
+		}
+	}
 	return v, nil
 }
 

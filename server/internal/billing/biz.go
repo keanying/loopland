@@ -19,7 +19,62 @@ const (
 	BizMembership = "membership"
 	BizBooking    = "booking"
 	BizRaceFee    = "race_fee"
+	BizProduct    = "product"
 )
+
+// RefundGuard is implemented by fulfillers whose orders may only be
+// refunded in full in some states (商品订单 refund unused coupons through
+// their own partial refunds instead).
+type RefundGuard interface {
+	CanRefund(ctx context.Context, q db.Querier, o Order) error
+}
+
+// PartialRefunder is a channel that can refund part of an order. Each
+// refund has its own refundNo (the channel's out_refund_no) so it can be
+// retried safely.
+type PartialRefunder interface {
+	RefundPart(ctx context.Context, o Order, refundNo string, amountFen int, reason string) error
+}
+
+// RefundPart refunds amountFen of a paid non-membership order through its
+// channel. It does not change the order: the caller records the refund and
+// calls MarkRefunded once everything was refunded.
+func (s *Service) RefundPart(ctx context.Context, orderNo, refundNo string, amountFen int, reason string) error {
+	o, err := s.GetOrder(ctx, s.Pool, orderNo, 0)
+	if err != nil {
+		return err
+	}
+	if o.Status != "paid" || o.BizType == BizMembership {
+		return httpx.Conflict("invalid_status", "只有已支付的订单可以退款")
+	}
+	if amountFen <= 0 || amountFen > o.AmountFen {
+		return fmt.Errorf("refund %d of order %s (%d)", amountFen, orderNo, o.AmountFen)
+	}
+	prov, ok := s.provider(o.Channel)
+	if !ok {
+		return httpx.BadRequest("channel_not_allowed", "支付渠道未配置")
+	}
+	if pr, ok := prov.(PartialRefunder); ok {
+		err = pr.RefundPart(ctx, o, refundNo, amountFen, reason)
+	} else if amountFen == o.AmountFen {
+		err = prov.Refund(ctx, o, reason)
+	} else {
+		return httpx.BadRequest("channel_not_allowed", "这个支付方式不支持部分退款")
+	}
+	if err != nil {
+		s.Log.Error("partial refund", "order", orderNo, "refund", refundNo, "err", err)
+		return httpx.E(http.StatusBadGateway, "provider_error", "退款请求失败：%v", err)
+	}
+	return nil
+}
+
+// MarkRefunded closes a fully refunded non-membership order inside the
+// caller's transaction (after its partial refunds succeeded).
+func MarkRefunded(ctx context.Context, tx pgx.Tx, orderNo, reason string) error {
+	_, err := tx.Exec(ctx, `UPDATE src.src_ord_loop_order SET status='refunded', refund_time=now(), refund_reason=$2
+		WHERE order_no=$1 AND status IN ('paid','refund_requested') AND biz_type <> 'membership'`, orderNo, reason)
+	return err
+}
 
 // Fulfiller delivers what a non-membership order bought.
 type Fulfiller interface {

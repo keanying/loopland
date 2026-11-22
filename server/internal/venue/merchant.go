@@ -26,6 +26,7 @@ type Merchant struct {
 	ContactPhone          *string   `json:"contact_phone"`
 	LicenseImages         []string  `json:"license_images"`
 	BookingCommissionRate float64   `json:"booking_commission_rate"`
+	ProductCommissionRate float64   `json:"product_commission_rate"`
 	VenueCount            int       `json:"venue_count"`
 	DropCount             int       `json:"drop_count"`
 	TodayRedemptions      int       `json:"today_redemptions"`
@@ -54,7 +55,7 @@ var (
 )
 
 const merchantCols = `m.id, m.merchant_name, m.merchant_type, m.merchant_status, m.contact_name, m.contact_phone_enc, m.license_images_json,
-	m.booking_commission_rate::float8, (SELECT count(*) FROM src.src_mer_loop_venue v WHERE v.merchant_id=m.id), m.create_time`
+	m.booking_commission_rate::float8, m.product_commission_rate::float8, (SELECT count(*) FROM src.src_mer_loop_venue v WHERE v.merchant_id=m.id), m.create_time`
 
 func (s *Service) queryMerchants(ctx context.Context, q db.Querier, where string, args ...any) ([]Merchant, error) {
 	rows, err := q.Query(ctx, `SELECT `+merchantCols+` FROM src.src_mer_loop_merchant m WHERE `+where, args...)
@@ -64,7 +65,7 @@ func (s *Service) queryMerchants(ctx context.Context, q db.Querier, where string
 	ms, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (Merchant, error) {
 		var m Merchant
 		var enc, images []byte
-		err := r.Scan(&m.ID, &m.Name, &m.Type, &m.Status, &m.ContactName, &enc, &images, &m.BookingCommissionRate, &m.VenueCount, &m.CreatedAt)
+		err := r.Scan(&m.ID, &m.Name, &m.Type, &m.Status, &m.ContactName, &enc, &images, &m.BookingCommissionRate, &m.ProductCommissionRate, &m.VenueCount, &m.CreatedAt)
 		if err != nil {
 			return m, err
 		}
@@ -168,6 +169,8 @@ type MerchantInput struct {
 	ContactPhone          *string   `json:"contact_phone"`
 	LicenseImages         *[]string `json:"license_images"`
 	BookingCommissionRate *float64  `json:"booking_commission_rate"`
+	// ProductCommissionRate is set by admin only (default 0.08).
+	ProductCommissionRate *float64 `json:"product_commission_rate"`
 
 	phoneSet bool
 }
@@ -230,6 +233,9 @@ func (in *MerchantInput) validate(create bool) error {
 	if r := in.BookingCommissionRate; r != nil && (*r < 0 || *r > 1) {
 		return bad("订场佣金比例应在 0–1 之间")
 	}
+	if r := in.ProductCommissionRate; r != nil && (*r < 0 || *r > 1) {
+		return bad("商品佣金比例应在 0–1 之间")
+	}
 	return nil
 }
 
@@ -248,7 +254,7 @@ func (s *Service) CreateMerchant(ctx context.Context, tx pgx.Tx, in MerchantInpu
 	if err := in.validate(true); err != nil {
 		return 0, err
 	}
-	status, images, rate := "reviewing", []string{}, 0.0
+	status, images, rate, productRate := "reviewing", []string{}, 0.0, 0.08
 	if in.Status != nil {
 		status = *in.Status
 	}
@@ -258,12 +264,15 @@ func (s *Service) CreateMerchant(ctx context.Context, tx pgx.Tx, in MerchantInpu
 	if in.BookingCommissionRate != nil {
 		rate = *in.BookingCommissionRate
 	}
+	if in.ProductCommissionRate != nil {
+		productRate = *in.ProductCommissionRate
+	}
 	raw, _ := json.Marshal(images)
 	enc, last4 := s.phone(&in)
 	var id int64
 	err := tx.QueryRow(ctx, `INSERT INTO src.src_mer_loop_merchant (merchant_name, merchant_type, merchant_status, contact_name, contact_phone_enc,
-			contact_phone_last4, license_images_json, booking_commission_rate)
-		VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7,$8) RETURNING id`, *in.Name, *in.Type, status, in.ContactName, enc, last4, raw, rate).Scan(&id)
+			contact_phone_last4, license_images_json, booking_commission_rate, product_commission_rate)
+		VALUES ($1,$2,$3,NULLIF($4,''),$5,$6,$7,$8,$9) RETURNING id`, *in.Name, *in.Type, status, in.ContactName, enc, last4, raw, rate, productRate).Scan(&id)
 	return id, err
 }
 
@@ -280,8 +289,9 @@ func (s *Service) UpdateMerchant(ctx context.Context, tx pgx.Tx, id int64, in Me
 	tag, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_merchant SET merchant_name=COALESCE($2, merchant_name), merchant_type=COALESCE($3, merchant_type),
 			merchant_status=COALESCE($4, merchant_status), contact_name=CASE WHEN $5::text IS NULL THEN contact_name ELSE NULLIF($5,'') END,
 			contact_phone_enc=CASE WHEN $6 THEN $7 ELSE contact_phone_enc END, contact_phone_last4=CASE WHEN $6 THEN $8 ELSE contact_phone_last4 END,
-			license_images_json=COALESCE($9, license_images_json), booking_commission_rate=COALESCE($10, booking_commission_rate), update_time=now()
-		WHERE id=$1`, id, in.Name, in.Type, in.Status, in.ContactName, in.phoneSet, enc, last4, images, in.BookingCommissionRate)
+			license_images_json=COALESCE($9, license_images_json), booking_commission_rate=COALESCE($10, booking_commission_rate),
+			product_commission_rate=COALESCE($11, product_commission_rate), update_time=now()
+		WHERE id=$1`, id, in.Name, in.Type, in.Status, in.ContactName, in.phoneSet, enc, last4, images, in.BookingCommissionRate, in.ProductCommissionRate)
 	if err == nil && tag.RowsAffected() == 0 {
 		return httpx.NotFound("商户")
 	}

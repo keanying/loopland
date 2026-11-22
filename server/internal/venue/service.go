@@ -43,6 +43,12 @@ type MerchantExtras interface {
 	MerchantDrops(ctx context.Context, merchantID int64) (any, error)
 }
 
+// ProductLister is implemented by the product module (第五批): the on-sale
+// products usable at a venue, shown on its detail page.
+type ProductLister interface {
+	VenueProducts(ctx context.Context, viewer, merchantID, venueID int64) (any, error)
+}
+
 // Service implements the venue, merchant and booking endpoints.
 type Service struct {
 	Pool       *pgxpool.Pool
@@ -59,6 +65,8 @@ type Service struct {
 	// Coupons and Extras are optional (perks module).
 	Coupons CouponIssuer
 	Extras  MerchantExtras
+	// Products is optional (product module).
+	Products ProductLister
 }
 
 // DeriveQRKey derives the venue QR signing key from the data key, so the
