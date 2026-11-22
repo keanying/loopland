@@ -140,7 +140,15 @@ step_node() {
 step_flutter() {
   say "Flutter（需要 ≥ $NEED_FLUTTER）"
   local v=""
-  have flutter && v="$(flutter --version 2>/dev/null | sed -nE 's/^Flutter ([0-9]+\.[0-9]+).*/\1/p' | head -n1 || true)"
+  # 不运行 flutter 判断版本（第一次运行要编译工具、旧进程可能占着锁）：读 SDK 里的文件或 git 标签
+  local root=""
+  have flutter && root="$(cd "$(dirname "$(command -v flutter)")/.." && pwd)"
+  if [ -n "$root" ]; then
+    if [ -f "$root/bin/cache/flutter.version.json" ]; then
+      v="$(sed -nE 's/.*"frameworkVersion": *"([0-9]+\.[0-9]+).*/\1/p' "$root/bin/cache/flutter.version.json" | head -n1)"
+    fi
+    [ -z "$v" ] && v="$(git -C "$root" describe --tags --abbrev=0 2>/dev/null | sed -nE 's/^([0-9]+\.[0-9]+).*/\1/p' || true)"
+  fi
   if [ -n "$v" ] && ver_ge "$v" "$NEED_FLUTTER"; then info "已安装 Flutter $v"; flutter_config; return; fi
   local base="https://storage.googleapis.com"; [ "$NO_MIRROR" = 0 ] && base="https://storage.flutter-io.cn"
   local os=linux; [ "$OS" = Darwin ] && os=macos
@@ -171,6 +179,16 @@ print(rs[0]["archive"] + " " + rs[0]["sha256"] if rs else "")
   flutter_config
 }
 flutter_config() {
+  local root; root="$(cd "$(dirname "$(command -v flutter)")/.." && pwd)"
+  # 之前没跑完的 flutter 命令会占着 bin/cache/lockfile，新命令会一直等它
+  if pgrep -f "$root/bin/cache/dart-sdk" >/dev/null 2>&1; then
+    warn "结束之前没退出的 Flutter 进程"
+    pkill -f "$root/bin/cache/dart-sdk" || true
+    sleep 1
+  fi
+  rm -f "$root/bin/cache/lockfile"
+  info "运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟）…"
+  flutter --version
   flutter config --no-analytics >/dev/null 2>&1 || true
   dart --disable-analytics >/dev/null 2>&1 || true
   info "下载 Flutter 运行需要的文件（第一次要几分钟）…"

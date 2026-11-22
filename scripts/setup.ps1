@@ -161,8 +161,10 @@ function Step-Node {
 
 function Step-Flutter {
     Say "Flutter（需要 ≥ $NeedFlutter）"
-    $v = Get-Version 'flutter' @('--version') 'Flutter (\d+)\.(\d+)'
-    if ($v -and $v -ge $NeedFlutter) { Info "已安装 Flutter $v"; Step-FlutterConfig; return }
+    # 不运行 flutter 命令判断版本：第一次运行要编译工具，旧进程还可能占着锁，看起来像卡死
+    $v = Get-FlutterVersion
+    if ($v -and $v -ge $NeedFlutter) { Info "已安装 Flutter $v（$(Get-FlutterRoot)）"; Step-FlutterConfig; return }
+    if ($v) { Info "Flutter $v 版本不够，安装 $NeedFlutter" }
     $base = if ($NoMirror) { 'https://storage.googleapis.com' } else { 'https://storage.flutter-io.cn' }
     Info '查询 Flutter 版本列表…'
     $rel = Invoke-RestMethod "$base/flutter_infra_release/releases/releases_windows.json"
@@ -193,7 +195,43 @@ function Step-Flutter {
     Info "已加入 PATH：$dest\bin"
     Step-FlutterConfig
 }
+function Get-FlutterRoot {
+    $cmd = Get-Command flutter -ErrorAction SilentlyContinue
+    if ($cmd) { return Split-Path (Split-Path $cmd.Source) }
+    return $null
+}
+# 从 SDK 里的文件读版本：bin\cache\flutter.version.json（运行过一次后才有），否则 git 标签
+function Get-FlutterVersion {
+    $root = Get-FlutterRoot
+    if (-not $root) { return $null }
+    $text = $null
+    $json = Join-Path $root 'bin\cache\flutter.version.json'
+    if (Test-Path $json) {
+        try { $text = (Get-Content $json -Raw | ConvertFrom-Json).frameworkVersion } catch { $text = $null }
+    }
+    if (-not $text) {
+        $r = Invoke-Quiet 'git' @('-C', $root, 'describe', '--tags', '--abbrev=0')
+        if ($r.Code -eq 0) { $text = $r.Output | Select-Object -First 1 }
+    }
+    if ($text -and $text -match '^(\d+)\.(\d+)') { return [version]"$($Matches[1]).$($Matches[2])" }
+    return $null
+}
+# 之前没跑完的 flutter / flutter doctor 会占着 bin\cache\lockfile，新命令会一直等它
+function Clear-FlutterLock {
+    $root = Get-FlutterRoot
+    if (-not $root) { return }
+    $stale = @(Get-Process dart, dartaotruntime -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -like "$root*" })
+    if ($stale.Count -gt 0) {
+        Warn "结束 $($stale.Count) 个之前没退出的 Flutter 进程（IDE 的 Dart 分析服务会自动重启）"
+        $stale | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+    }
+    Remove-Item (Join-Path $root 'bin\cache\lockfile') -Force -ErrorAction SilentlyContinue
+}
 function Step-FlutterConfig {
+    Clear-FlutterLock
+    Info '运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟，下面会显示进度）…'
+    Invoke-Checked 'flutter' @('--version')
     Invoke-Quiet 'flutter' @('config', '--no-analytics') | Out-Null
     Invoke-Quiet 'dart' @('--disable-analytics') | Out-Null
     Info '下载 Flutter 运行需要的文件（第一次要几分钟）…'
