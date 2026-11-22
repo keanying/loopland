@@ -18,7 +18,9 @@ import (
 	"io"
 	"log/slog"
 	"math/big"
+	"net"
 	"net/http"
+	neturl "net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -233,6 +235,32 @@ type Dispatcher struct {
 	// HTTP overrides the client (tests); default has Timeout and does not
 	// follow redirects.
 	HTTP *http.Client
+	// AllowPrivate lets webhooks reach loopback / private / link-local
+	// addresses (dev only: local receivers). Otherwise such targets are
+	// refused, so a merchant cannot make the platform call internal services.
+	AllowPrivate bool
+}
+
+// checkTarget resolves the webhook host and refuses internal addresses.
+func (d *Dispatcher) checkTarget(ctx context.Context, rawURL string) error {
+	if d.AllowPrivate {
+		return nil
+	}
+	u, err := neturl.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+	ips, err := net.DefaultResolver.LookupIPAddr(ctx, u.Hostname())
+	if err != nil {
+		return fmt.Errorf("解析 webhook 域名失败：%w", err)
+	}
+	for _, a := range ips {
+		ip := a.IP
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() || ip.IsMulticast() {
+			return errors.New("webhook 地址指向内网或本机，已拒绝")
+		}
+	}
+	return nil
 }
 
 func (d *Dispatcher) client() *http.Client {
@@ -380,6 +408,9 @@ func (d *Dispatcher) attempt(ctx context.Context, id int64, manual bool) (bool, 
 func (d *Dispatcher) send(ctx context.Context, url, secret, typ string, deliveryID int64, body []byte) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
+	if err := d.checkTarget(ctx, url); err != nil {
+		return 0, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return 0, err

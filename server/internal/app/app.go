@@ -151,7 +151,7 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	mod.Register(moderation.Product, productSvc.Applier())
 	billSvc.Register(billing.BizProduct, productSvc.Fulfiller())
 	venueSvc.Products = productSvc
-	hooks := &webhook.Dispatcher{Pool: pool, Box: box, Log: log}
+	hooks := &webhook.Dispatcher{Pool: pool, Box: box, Log: log, AllowPrivate: cfg.Dev()}
 	openSvc := &openapi.Service{Pool: pool, Redis: rdb, Box: box, Webhooks: hooks, Products: productSvc, Perks: perksSvc, Venues: venueSvc, Dev: cfg.Dev()}
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 
