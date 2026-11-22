@@ -173,14 +173,27 @@ class BrandCampaign {
 
 /// Where a coupon came from.
 class CouponSource {
-  const CouponSource({required this.type, this.dropId, this.name = ''});
+  const CouponSource({required this.type, this.dropId, this.name = '', this.productId, this.orderId});
 
-  /// `supply | chest | stronghold`.
+  /// `supply | chest | stronghold`, or `product` (bought, V2 batch 5).
   final String type;
   final int? dropId;
   final String name;
-  static CouponSource? maybe(Object? v) =>
-      v is Map ? CouponSource(type: js(v['type']), dropId: jin(v['drop_id']), name: js(v['name'])) : null;
+
+  /// `product` coupons: the product and its ProductOrder.
+  final int? productId, orderId;
+
+  bool get isProduct => type == 'product';
+
+  static CouponSource? maybe(Object? v) => v is Map
+      ? CouponSource(
+          type: js(v['type']),
+          dropId: jin(v['drop_id']),
+          name: js(v['name']),
+          productId: jin(v['product_id']),
+          orderId: jin(v['order_id']),
+        )
+      : null;
 }
 
 /// A coupon in my wallet (卡券包).
@@ -196,6 +209,8 @@ class Coupon {
     this.expiresAt,
     this.usedAt,
     this.usedStore,
+    this.usesTotal = 1,
+    this.usesLeft = 1,
   });
   final int id;
   final String code;
@@ -203,18 +218,31 @@ class Coupon {
   final PerkMerchant? merchant;
   final CouponSource? source;
 
-  /// `unused | used | expired | voided`.
+  /// `unused | used | expired | voided | refunded`.
   final String status;
   final DateTime? obtainedAt, expiresAt, usedAt;
   final String? usedStore;
 
+  /// Uses of a 次卡 (`uses_total` > 1); 1 / 1 for every other coupon.
+  final int usesTotal, usesLeft;
+
   bool get isUnused => status == 'unused';
+
+  /// Bought with money (商品券): no same-day run needed to redeem.
+  bool get isProduct => source?.isProduct ?? false;
+
+  /// A 次卡 with more than one use.
+  bool get isPass => usesTotal > 1;
+
+  /// 「剩余 3/10 次」.
+  String get usesText => '剩余 $usesLeft/$usesTotal 次';
 
   String get statusText => switch (status) {
         'unused' => '未使用',
         'used' => '已使用',
         'expired' => '已过期',
         'voided' => '已作废',
+        'refunded' => '已退款',
         _ => status,
       };
 
@@ -229,6 +257,8 @@ class Coupon {
         expiresAt: jdt(j['expires_at']),
         usedAt: jdt(j['used_at']),
         usedStore: jsn(j['used_store']),
+        usesTotal: ji(j['uses_total'], 1),
+        usesLeft: ji(j['uses_left'], ji(j['uses_total'], 1)),
       );
   static Coupon? maybe(Object? v) => v is Map ? Coupon.fromJson(v.cast<String, dynamic>()) : null;
 }
