@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +7,7 @@ import '../core/providers.dart';
 import '../core/theme.dart';
 import 'card_art.dart' show hasArt;
 import 'nav_bar_cover.dart';
+import 'running_gecko.dart';
 
 /// Scaffold with the floating rounded bottom bar: 领地 / 图鉴 / 开始 / 社区 / 我的.
 class NavShell extends ConsumerWidget {
@@ -127,7 +126,9 @@ class _Bar extends StatelessWidget {
   }
 }
 
-/// 中间的「开始」按钮：外圈虚线慢慢转，伙伴轻轻上下浮动（系统开启「减弱动态效果」时静止）。
+/// 中间的「开始」按钮（同原型 Main）：外圈虚线 14 秒转一圈，里面的小壁虎原地奔跑
+/// （腿 0.64 秒摆一个来回）。出战伙伴不是壁虎时，显示它的形象并按同样的步频颠动。
+/// 系统开启「减弱动态效果」时静止。
 class _StartButton extends StatefulWidget {
   const _StartButton({required this.size, required this.selected, required this.art});
   final double size;
@@ -138,52 +139,65 @@ class _StartButton extends StatefulWidget {
   State<_StartButton> createState() => _StartButtonState();
 }
 
-class _StartButtonState extends State<_StartButton> with SingleTickerProviderStateMixin {
-  // 一个周期 8 秒：外圈转一圈，伙伴浮动 4 次
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 8));
+class _StartButtonState extends State<_StartButton> with TickerProviderStateMixin {
+  late final AnimationController _ring = AnimationController(vsync: this, duration: const Duration(seconds: 14));
+  late final AnimationController _gait = AnimationController(vsync: this, duration: const Duration(milliseconds: 640));
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _c.stop();
-    } else if (!_c.isAnimating) {
-      _c.repeat();
+    for (final c in [_ring, _gait]) {
+      if (MediaQuery.disableAnimationsOf(context)) {
+        c.stop();
+      } else if (!c.isAnimating) {
+        c.repeat();
+      }
     }
   }
 
   @override
   void dispose() {
-    _c.dispose();
+    _ring.dispose();
+    _gait.dispose();
     super.dispose();
+  }
+
+  Widget _figure() {
+    final art = widget.art;
+    if (art == 'gecko' || !hasArt(art)) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 2, 6, 6),
+        child: AnimatedBuilder(
+          animation: _gait,
+          builder: (_, _) => CustomPaint(painter: RunningGeckoPainter(_gait.value), size: Size.infinite),
+        ),
+      );
+    }
+    // 其他伙伴：按跑步的步频颠动、身体前倾
+    return ClipOval(
+      child: AnimatedBuilder(
+        animation: _gait,
+        builder: (_, child) => Transform.translate(
+          offset: Offset(-2, -5 - 2.5 * RunningGeckoPainter.tri(_gait.value * 2)),
+          child: Transform.rotate(angle: -0.08, child: child),
+        ),
+        child: Transform.scale(
+          scale: 1.22,
+          child: SvgPicture.asset('assets/art/${art}_fig.svg', fit: BoxFit.contain),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final art = widget.art;
-    final figure = !hasArt(art)
-        ? const Icon(Icons.play_arrow_rounded, color: LL.ink, size: 36)
-        // 素材四周留白较多：放大后裁成圆形，和设计稿一样占满按钮
-        : ClipOval(
-            child: AnimatedBuilder(
-              animation: _c,
-              builder: (_, child) => Transform.translate(
-                offset: Offset(-2, -5 + 2.5 * math.sin(_c.value * 2 * math.pi * 4)),
-                child: child,
-              ),
-              child: Transform.scale(
-                scale: 1.22,
-                child: SvgPicture.asset('assets/art/${art}_fig.svg', fit: BoxFit.contain),
-              ),
-            ),
-          );
     return SizedBox(
       width: widget.size,
       height: widget.size,
       child: Stack(fit: StackFit.expand, children: [
         // 外圈虚线（薰衣紫），缓慢旋转
         RotationTransition(
-          turns: _c,
+          turns: _ring,
           child: CustomPaint(painter: _DashedRingPainter(color: LL.lavender.withValues(alpha: 0.8))),
         ),
         Padding(
@@ -196,7 +210,7 @@ class _StartButtonState extends State<_StartButton> with SingleTickerProviderSta
               border: Border.all(color: LL.lime, width: widget.selected ? 3.5 : 2.5),
               boxShadow: [BoxShadow(color: LL.lavender.withValues(alpha: 0.45), blurRadius: 18)],
             ),
-            child: figure,
+            child: _figure(),
           ),
         ),
       ]),
