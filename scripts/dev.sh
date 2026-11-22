@@ -113,7 +113,7 @@ cmd_app() {
   if [[ "${1:-}" == emulator-* ]] && [ ! -f config/app.local.yaml ]; then
     gen+=(--api-base "http://10.0.2.2:$API_PORT") # Android 模拟器访问电脑上的后端
   fi
-  dart "${gen[@]}"
+  "$(dirname "$(command -v flutter)")/dart" "${gen[@]}"   # Flutter 自带的 Dart
   local args=(--dart-define-from-file="config/$profile.json")
   [ "${1:-}" != "" ] && args+=(-d "$1")
   exec flutter run "${args[@]}"

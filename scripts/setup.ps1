@@ -312,12 +312,23 @@ function Invoke-FlutterWatched([string[]]$Arguments, [int]$Minutes = 20) {
     if ($p.ExitCode -ne 0) { Die "flutter $($Arguments -join ' ') 失败（退出码 $($p.ExitCode)）" }
 }
 
+# 用 Flutter 自带的 Dart（单独装的 Dart 版本可能太旧，且会排在 PATH 前面）
+function Get-FlutterDart {
+    $root = Get-FlutterRoot
+    if ($root -and (Test-Path (Join-Path $root 'bin\dart.bat'))) { return (Join-Path $root 'bin\dart.bat') }
+    return 'dart'
+}
 function Step-FlutterConfig {
+    $other = Get-Command dart -ErrorAction SilentlyContinue
+    $root = Get-FlutterRoot
+    if ($other -and $root -and -not ($other.Source -like "$root\*")) {
+        Warn "PATH 里另有一个 Dart（$($other.Source)），会排在 Flutter 自带的 Dart 前面。本项目用 Flutter 自带的 Dart；建议从 Path 里删掉它的目录，或卸载单独安装的 Dart。"
+    }
     Clear-FlutterLock
     Info '运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟，下面会显示进度）…'
     Invoke-FlutterWatched @('--version')
     Invoke-Quiet 'flutter' @('config', '--no-analytics') | Out-Null
-    Invoke-Quiet 'dart' @('--disable-analytics') | Out-Null
+    Invoke-Quiet (Get-FlutterDart) @('--disable-analytics') | Out-Null
     Info '下载 Flutter 运行需要的文件（第一次要几分钟）…'
     Invoke-FlutterWatched @('precache') 30
 }
@@ -366,7 +377,7 @@ function Step-ProjectDeps {
     Push-Location (Join-Path $Root 'app')
     try {
         Invoke-Checked 'flutter' @('pub', 'get')
-        Invoke-Checked 'dart' @('run', 'tool/gen_config.dart', '--profile', 'dev')
+        Invoke-Checked (Get-FlutterDart) @('run', 'tool/gen_config.dart', '--profile', 'dev')
     } finally { Pop-Location }
 }
 

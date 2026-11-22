@@ -168,7 +168,10 @@ function Cmd-App {
         # Android 模拟器访问电脑上的后端要用 10.0.2.2
         $genArgs += @('--api-base', "http://10.0.2.2:$ApiPort")
     }
-    Invoke-Checked 'dart' $genArgs
+    # 用 Flutter 自带的 Dart（单独装的 Dart 可能版本太旧、又排在 PATH 前面）
+    $dart = Join-Path (Split-Path (Get-Command flutter).Source) 'dart.bat'
+    if (-not (Test-Path $dart)) { $dart = 'dart' }
+    Invoke-Checked $dart $genArgs
     $flutterArgs = @('run', "--dart-define-from-file=config/$appProfile.json")
     if ($Device) { $flutterArgs += @('-d', $Device) }
     Invoke-Checked 'flutter' $flutterArgs

@@ -212,7 +212,7 @@ flutter_config() {
   info "运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟）…"
   flutter --version
   flutter config --no-analytics >/dev/null 2>&1 || true
-  dart --disable-analytics >/dev/null 2>&1 || true
+  "$root/bin/dart" --disable-analytics >/dev/null 2>&1 || true
   info "下载 Flutter 运行需要的文件（第一次要几分钟）…"
   flutter precache
 }
@@ -244,7 +244,7 @@ step_project() {
   say "管理端依赖（pnpm install）"
   (cd "$ROOT/admin" && CI=true pnpm install --frozen-lockfile)
   say "App 依赖（flutter pub get）和配置文件"
-  (cd "$ROOT/app" && flutter pub get && dart run tool/gen_config.dart --profile dev)
+  (cd "$ROOT/app" && flutter pub get && "$(dirname "$(command -v flutter)")/dart" run tool/gen_config.dart --profile dev)
 }
 
 # ---------------------------------------------------------------- 5. 启动
