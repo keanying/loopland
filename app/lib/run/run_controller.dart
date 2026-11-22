@@ -354,8 +354,11 @@ class RunController extends Notifier<RunState> {
       points: thinPoints(state.points),
       device: device,
     );
-    await _store.savePending(PendingUpload(upload: upload));
-    await _store.clearInProgress();
+    // 本机保存失败（磁盘满、没有文件系统等）不能挡住结束：直接上传，失败时由页面提示
+    try {
+      await _store.savePending(PendingUpload(upload: upload));
+      await _store.clearInProgress();
+    } catch (_) {}
     state = state.copyWith(phase: RunPhase.finished, activeMs: elapsed, resumedAt: () => null);
     return upload;
   }

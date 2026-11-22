@@ -346,8 +346,9 @@ class _RunPageState extends ConsumerState<RunPage> {
     }
     setState(() => _finishing = true);
     final track = st.track;
-    final upload = await ctrl.finish();
     try {
+      // finish() 也放在 try 里：任何一步出错都要关掉「正在结算」遮罩
+      final upload = await ctrl.finish();
       final r = await ref.read(uploaderProvider).submit(upload);
       ref.read(authProvider.notifier).refreshUser().ignore();
       ref.invalidate(codexProvider);

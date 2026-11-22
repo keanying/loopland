@@ -136,4 +136,36 @@ void main() {
       expect(out[i].t, greaterThan(out[i - 1].t));
     }
   });
+
+  test('finish() still returns the upload when local storage is broken (web)', () async {
+    final broken = RunStore(directory: () async => throw UnsupportedError('no file system'));
+    final c2 = ProviderContainer(overrides: [
+      clockProvider.overrideWithValue(() => now),
+      runStoreProvider.overrideWithValue(broken),
+      tokenStoreProvider.overrideWithValue(MemoryTokenStore()),
+      locationSourceProvider.overrideWithValue(FakeLocationSource()),
+    ]);
+    addTearDown(c2.dispose);
+    final ctrl = c2.read(runControllerProvider.notifier);
+    ctrl.start(const RunConfig(sport: 'run'), countdownFrom: 0);
+    ctrl.onFix(fix(0, 0, 0));
+    ctrl.onFix(fix(100, 0, 30));
+    now = now.add(const Duration(seconds: 30));
+    final u = await ctrl.finish();
+    expect(u.points, hasLength(2));
+    expect(c2.read(runControllerProvider).phase, RunPhase.finished);
+  });
+
+  test('MemoryRunStore keeps in-progress and pending runs in memory', () async {
+    final m = MemoryRunStore();
+    final ctrl = c.read(runControllerProvider.notifier);
+    ctrl.start(const RunConfig(sport: 'run'), countdownFrom: 0);
+    ctrl.onFix(fix(0, 0, 0));
+    final u = await ctrl.finish();
+    await m.savePending(PendingUpload(upload: u));
+    expect((await m.pending()).single.upload.clientId, u.clientId);
+    await m.removePending(u.clientId);
+    expect(await m.pending(), isEmpty);
+    expect(await m.loadInProgress(), isNull);
+  });
 }

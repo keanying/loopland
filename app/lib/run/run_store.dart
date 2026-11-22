@@ -142,3 +142,32 @@ class RunStore {
     if (await f.exists()) await f.delete();
   }
 }
+
+/// Browser (Flutter web) version: there is no app file system on the web, so
+/// runs are kept in memory for this tab only (no crash recovery after a
+/// reload). Phones use [RunStore].
+class MemoryRunStore extends RunStore {
+  MemoryRunStore() : super(directory: () async => throw UnsupportedError('no file system on the web'));
+
+  RunSnapshot? _inProgress;
+  final Map<String, PendingUpload> _pending = {};
+
+  @override
+  Future<void> saveInProgress(RunSnapshot s) async => _inProgress = s;
+
+  @override
+  Future<RunSnapshot?> loadInProgress() async => _inProgress;
+
+  @override
+  Future<void> clearInProgress() async => _inProgress = null;
+
+  @override
+  Future<void> savePending(PendingUpload p) async => _pending[p.upload.clientId] = p;
+
+  @override
+  Future<List<PendingUpload>> pending() async =>
+      _pending.values.toList()..sort((a, b) => a.upload.startedAt.compareTo(b.upload.startedAt));
+
+  @override
+  Future<void> removePending(String clientId) async => _pending.remove(clientId);
+}

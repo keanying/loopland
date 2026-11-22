@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/errors.dart';
@@ -6,7 +7,8 @@ import '../api/models.dart';
 import '../core/providers.dart';
 import 'run_store.dart';
 
-final runStoreProvider = Provider<RunStore>((ref) => RunStore());
+// 浏览器里没有 App 的文件目录：用内存版（只在当前标签页里保留）
+final runStoreProvider = Provider<RunStore>((ref) => kIsWeb ? MemoryRunStore() : RunStore());
 
 final uploaderProvider = Provider<Uploader>(
     (ref) => Uploader(api: ref.watch(apiProvider), store: ref.watch(runStoreProvider)));
