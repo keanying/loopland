@@ -9,7 +9,8 @@
 #   scripts/setup.sh --no-start       只装环境和依赖，不启动
 #   scripts/setup.sh --no-docker      不用 Docker：用本机 PostgreSQL(PostGIS) + Redis（会运行 db-init）
 #   scripts/setup.sh --no-mirror      不配置国内镜像（海外网络）
-#   scripts/setup.sh --app chrome     最后再启动 App（chrome / linux / macos / 设备 ID）
+#   scripts/setup.sh --app linux      App 跑在哪（默认 chrome；也可以 linux / macos / 设备 ID）
+#   scripts/setup.sh --no-app         最后不启动 App（只启动后端和管理端）
 #   LOOPLAND_TOOLS=~/tools scripts/setup.sh   工具装到别的目录
 #   FLUTTER_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/flutter scripts/setup.sh   指定 Flutter 镜像（默认自动测速）
 set -euo pipefail
@@ -20,14 +21,15 @@ NEED_GO=1.26
 NEED_NODE=22
 NEED_FLUTTER=3.50
 PNPM_VERSION=10.28.0
-NO_START=0 NO_DOCKER=0 NO_MIRROR=0 APP_DEVICE=""
+NO_START=0 NO_DOCKER=0 NO_MIRROR=0 NO_APP=0 APP_DEVICE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --no-start) NO_START=1 ;;
     --no-docker) NO_DOCKER=1 ;;
     --no-mirror) NO_MIRROR=1 ;;
     --app) shift; APP_DEVICE="${1:-}" ;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+    --no-app) NO_APP=1 ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "未知参数：$1（--help 查看用法）" >&2; exit 2 ;;
   esac
   shift
@@ -277,8 +279,9 @@ YAML
   (cd "$ROOT/server" && nohup go run . >api.log 2>&1 &)
   say "灌演示数据（会等后端启动）"
   "$dev" seed
-  if [ -n "$APP_DEVICE" ]; then
-    say "后台启动 App（$APP_DEVICE，日志：app/run.log）"
+  if [ "$NO_APP" = 0 ]; then
+    [ -z "$APP_DEVICE" ] && APP_DEVICE=chrome
+    say "后台启动 App（$APP_DEVICE，第一次编译要几分钟；日志：app/run.log）"
     (cd "$ROOT" && nohup "$dev" app "$APP_DEVICE" >app/run.log 2>&1 &)
   fi
   say "启动管理端：浏览器打开 http://localhost:5173 （账号 admin / admin-password-1）"

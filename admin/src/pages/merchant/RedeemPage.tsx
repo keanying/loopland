@@ -139,7 +139,7 @@ export default function RedeemPage() {
 
   return (
     <div className="redeem-page">
-      <PageHeader title="核销台" sub={staff ? own.data?.name ?? '本店' : '运营代核销：可以核销任意商户的券'} extra={<MerchantNav />} />
+      <PageHeader title="核销台" subline={staff ? own.data?.name ?? '本店' : '运营代核销：可以核销任意商户的券'} extra={<MerchantNav />} />
 
       <div className="redeem-grid">
         <section className="redeem-card">

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { Dropdown, Tag } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Dropdown, Tag, Tooltip } from 'antd';
+import { ArrowDownOutlined, ArrowUpOutlined, ExclamationCircleOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_LABEL } from '../utils/labels';
@@ -38,12 +38,28 @@ export function MeChip() {
   );
 }
 
-export function PageHeader({ title, sub, extra }: { title: string; sub?: ReactNode; extra?: ReactNode }) {
+/** 说明文字收进一个「!」图标，鼠标悬停 / 点击时显示，页面上不占位置。 */
+export function InfoTip({ children, label = '说明' }: { children: ReactNode; label?: string }) {
+  return (
+    <Tooltip title={children} placement="bottomLeft" styles={{ root: { maxWidth: 420 } }} trigger={['hover', 'click']}>
+      <ExclamationCircleOutlined className="info-tip" role="button" tabIndex={0} aria-label={label} />
+    </Tooltip>
+  );
+}
+
+/**
+ * 页头。sub：页面说明，收进标题旁的「!」图标；subline：需要一直看得到的短信息（日期、门店名），
+ * 显示在标题下面。
+ */
+export function PageHeader({ title, sub, subline, extra }: { title: string; sub?: ReactNode; subline?: ReactNode; extra?: ReactNode }) {
   return (
     <header className="page-header">
       <div>
-        <h1 className="page-title">{title}</h1>
-        {sub && <div className="page-sub">{sub}</div>}
+        <h1 className="page-title">
+          {title}
+          {sub && <InfoTip label={`${title}说明`}>{sub}</InfoTip>}
+        </h1>
+        {subline && <div className="page-sub">{subline}</div>}
       </div>
       <div className="page-extra">
         {extra}

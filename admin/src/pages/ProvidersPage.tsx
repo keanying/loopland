@@ -25,7 +25,7 @@ import {
 } from '@ant-design/icons';
 import { api } from '../api/admin';
 import type { Items, Provider, ProviderCheck, ProviderField, ProviderSave, ProviderSecret } from '../api/types';
-import { PageHeader, Panel, Tile } from '../components/ui';
+import { InfoTip, PageHeader, Panel, Tile } from '../components/ui';
 import { useAdminNames } from '../hooks/useAdminNames';
 import { ago, dt } from '../utils/format';
 import { PROVIDER_GROUPS, PROVIDER_SOURCE } from '../utils/labels';
@@ -344,6 +344,7 @@ function ProviderCard(props: {
           <div className="prov-name">
             {p.name}
             <span className="prov-code">{p.code}</span>
+            {p.description && <InfoTip label={`${p.name}说明`}>{p.description}</InfoTip>}
           </div>
           <StatusTags p={p} />
         </div>
@@ -351,7 +352,6 @@ function ProviderCard(props: {
           <Switch checked={p.enabled} loading={toggling} onChange={props.onToggle} aria-label={`启用${p.name}`} />
         </Tooltip>
       </div>
-      <div className="prov-desc">{p.description}</div>
       {p.uses && (
         <div className="prov-uses">
           <LinkOutlined /> 复用：{uses?.name ?? p.uses}

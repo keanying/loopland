@@ -9,7 +9,8 @@
   .\scripts\setup.ps1 -NoDocker           不用 Docker：用本机 PostgreSQL(PostGIS) + Redis（会运行 db-init）
   .\scripts\setup.ps1 -NoMirror           不配置国内镜像（海外网络）
   .\scripts\setup.ps1 -WithAndroid        顺带安装 Android Studio（开发安卓 App 需要）
-  .\scripts\setup.ps1 -App chrome         最后再启动 App（chrome / windows / emulator-5554 …）
+  .\scripts\setup.ps1 -App emulator-5554  App 跑在哪（默认 chrome，没装 Chrome 用 edge；也可以 windows / 模拟器 ID）
+  .\scripts\setup.ps1 -NoApp              最后不启动 App（只启动后端和管理端）
   .\scripts\setup.ps1 -ToolsDir D:\dev    Flutter SDK 装在哪个目录下（默认 D:\dev，没有 D 盘就用 用户目录\dev）
   .\scripts\setup.ps1 -FlutterMirror https://mirrors.tuna.tsinghua.edu.cn/flutter
                                           指定 Flutter 下载镜像（默认自动测速，选最快的）
@@ -25,6 +26,7 @@ param(
     [switch]$NoMirror,
     [switch]$WithAndroid,
     [string]$App = '',
+    [switch]$NoApp,
     [string]$ToolsDir = '',
     [string]$FlutterMirror = ''
 )
@@ -483,13 +485,20 @@ redis:
     Start-Process $shell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $dev, 'api')
     Say '灌演示数据（会等后端启动）'
     & $dev seed
-    if ($App) {
-        Say "在新窗口启动 App（$App）"
-        Start-Process $shell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $dev, 'app', $App)
+    if (-not $NoApp) {
+        $device = $App
+        if (-not $device) {
+            # 不用模拟器也能看：默认在浏览器里跑（Chrome，没有就用 Edge）
+            $chrome = @("$env:ProgramFiles\Google\Chrome\Application\chrome.exe", "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe", "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe") | Where-Object { Test-Path $_ }
+            $device = if ($chrome) { 'chrome' } else { 'edge' }
+        }
+        Say "在新窗口启动 App（$device；第一次编译要几分钟）"
+        Start-Process $shell -ArgumentList @('-NoExit', '-ExecutionPolicy', 'Bypass', '-File', $dev, 'app', $device)
+        if ($device -in 'chrome', 'edge') { Info '浏览器里只能演示界面和接口；高德地图、微信、一键登录等原生能力要用手机或模拟器（-App emulator-5554）' }
     }
     Say '启动管理端：浏览器打开 http://localhost:5173 （账号 admin / admin-password-1）'
     Info 'App 演示账号：手机号 13800000001–13800000006，验证码 000000'
-    Info '按 Ctrl+C 停止管理端；后端在另一个窗口里，关掉那个窗口即停止。'
+    Info '按 Ctrl+C 停止管理端；后端和 App 各在一个新窗口里，关掉那个窗口即停止。'
     & $dev admin
 }
 

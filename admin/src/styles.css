@@ -54,6 +54,9 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 4px; }
 .page-title { font-size: 28px; font-weight: 900; letter-spacing: .5px; margin: 0; line-height: 1.25; }
 .page-sub { font-size: 13px; color: #6a6a70; margin-top: 4px; }
+.info-tip { font-size: 15px; color: #a0a0a8; margin-left: 8px; cursor: help; vertical-align: middle; transition: color .15s; }
+.info-tip:hover, .info-tip:focus-visible { color: var(--ink); outline: none; }
+.page-title .info-tip { font-size: 18px; vertical-align: 4px; }
 .page-extra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .me-chip { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 2px 4px; border-radius: 999px; }
 .me-avatar { width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; background: #fff; }

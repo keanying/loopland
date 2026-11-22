@@ -53,6 +53,23 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // ali_auth（阿里云号码认证）的 Web 端在启动时就会 new PhoneNumberServer()，它来自阿里云的 Web SDK。
+    // 浏览器里不做一键登录：没有加载那个 SDK 时给一个空实现，避免 App 一启动就白屏；一键登录会报「不可用」。
+    if (typeof window.PhoneNumberServer === 'undefined') {
+      window.PhoneNumberServer = function () {};
+      var unavailable = function (o) {
+        if (o && typeof o.error === 'function') o.error({ code: '600024', msg: '浏览器里不支持本机号码一键登录' });
+      };
+      window.PhoneNumberServer.prototype = {
+        getConnection: function () { return Promise.resolve('unknown'); },
+        setLoggerEnable: function () {},
+        getVersion: function () { return Promise.resolve('web-stub'); },
+        checkAuthAvailable: unavailable,
+        getVerifyToken: unavailable
+      };
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

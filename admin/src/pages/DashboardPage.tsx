@@ -140,7 +140,7 @@ export default function DashboardPage() {
   if (isLoading || !data) {
     return (
       <>
-        <PageHeader title="总览" sub={dayjs().format('YYYY 年 M 月 D 日 · dddd')} />
+        <PageHeader title="总览" subline={dayjs().format('YYYY 年 M 月 D 日 · dddd')} />
         <Skeleton active paragraph={{ rows: 12 }} />
       </>
     );
@@ -155,7 +155,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <PageHeader title="总览" sub={dayjs().format('YYYY 年 M 月 D 日 · dddd')} />
+      <PageHeader title="总览" subline={dayjs().format('YYYY 年 M 月 D 日 · dddd')} />
 
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={13}>
