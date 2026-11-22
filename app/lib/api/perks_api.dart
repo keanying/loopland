@@ -17,9 +17,9 @@ class PerksApi {
       jl(jm(await c.get('/v1/brand-campaigns'))['items'], BrandCampaign.fromJson);
 
   // ── 卡券包（E-04） ──
-  /// status: `unused | used | expired`.
+  /// status: `unused | used | expired`; '' = all (incl. `voided`, `refunded`).
   Future<List<Coupon>> myCoupons(String status) async =>
-      jl(jm(await c.get('/v1/me/coupons', query: {'status': status}))['items'], Coupon.fromJson);
+      jl(jm(await c.get('/v1/me/coupons', query: {if (status.isNotEmpty) 'status': status}))['items'], Coupon.fromJson);
 
   /// The QR payload shown at the store; valid for `expires_in_sec` (60 s).
   Future<CouponQr> couponQr(int id) async => CouponQr.fromJson(jm(await c.get('/v1/coupons/$id/qr')));

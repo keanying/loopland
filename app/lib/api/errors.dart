@@ -90,6 +90,12 @@ const errorMessages = <String, String>{
   'already_claimed': '今天已经领过这个补给站的券了，明天再来',
   'sold_out': '今天的券已经发完了，明天再来',
   'already_owned': '你已经拥有这件装扮了',
+  // V2 本地生活 · 商户商品 / 商品订单
+  'limit_reached': '已达到这个商品的限购数量',
+  'not_on_sale': '这个商品已下架，看看其他的吧',
+  'not_refundable': '这个商品购买后不可退款',
+  'nothing_to_refund': '没有可以退款的券了（已使用或已退款）',
+  'invalid_status': '订单状态已变化，请刷新后再试',
   // 客户端
   'network': '网络连接失败，请检查网络后重试',
   'timeout': '网络超时，请稍后再试',

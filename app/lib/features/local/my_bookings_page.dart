@@ -11,60 +11,81 @@ import '../../pay/payment_service.dart' show channelNames, paymentServiceProvide
 import '../../widgets/common.dart';
 import '../community/gathering_widgets.dart' show Tag;
 import 'local_providers.dart';
+import 'product_orders_pages.dart' show ProductOrdersList;
 import 'venue_widgets.dart';
 
 const _filters = ['', 'pending_pay', 'paid', 'completed', 'refunded', 'cancelled'];
 const _filterLabels = ['全部', '待支付', '待使用', '已完成', '已退款', '已取消'];
 
-/// 我的订场：状态筛选、列表。
+/// 我的订单：「订场」/「商品」(V2 batch 5) 两类，各自的状态筛选和列表。
+/// `/me/bookings` opens 订场, `/me/orders?type=product` opens 商品.
 class MyBookingsPage extends ConsumerStatefulWidget {
-  const MyBookingsPage({super.key});
+  const MyBookingsPage({super.key, this.initialKind = 'booking'});
+
+  /// `booking | product`.
+  final String initialKind;
   @override
   ConsumerState<MyBookingsPage> createState() => _MyBookingsPageState();
 }
 
 class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
   int _f = 0;
+  late int _kind = widget.initialKind == 'product' ? 1 : 0;
 
   @override
   Widget build(BuildContext context) {
-    final status = _filters[_f];
-    final async = ref.watch(myBookingsProvider(status));
     return Scaffold(
       body: SafeArea(
         child: Column(children: [
-          const BackHeader(title: '我的订场', subtitle: '开始前 $freeCancelHours 小时以上可免费取消'),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ChipTabs(labels: _filterLabels, index: _f, onChanged: (i) => setState(() => _f = i)),
+          BackHeader(
+            title: '我的订单',
+            subtitle: _kind == 0 ? '订场：开始前 $freeCancelHours 小时以上可免费取消' : '团购 / 套餐：未使用的券可退款',
           ),
-          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: PillTabs(labels: const ['订场', '商品'], index: _kind, onChanged: (i) => setState(() => _kind = i)),
+          ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async => ref.invalidate(myBookingsProvider(status)),
-              child: AsyncBody<List<Booking>>(
-                value: async,
-                onRetry: () => ref.invalidate(myBookingsProvider(status)),
-                data: (list) => list.isEmpty
-                    ? ListView(children: [
-                        const Padding(
-                          padding: EdgeInsets.fromLTRB(40, 40, 40, 12),
-                          child: Text('还没有订场记录', textAlign: TextAlign.center, style: TextStyle(color: LL.text2)),
-                        ),
-                        Center(child: FilledButton(onPressed: () => context.push('/local'), child: const Text('去订场'))),
-                      ])
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                        itemCount: list.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: 10),
-                        itemBuilder: (context, i) => BookingTile(booking: list[i]),
-                      ),
-              ),
-            ),
+            child: _kind == 0 ? _bookings() : const ProductOrdersList(),
           ),
         ]),
       ),
     );
+  }
+
+  Widget _bookings() {
+    final status = _filters[_f];
+    final async = ref.watch(myBookingsProvider(status));
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ChipTabs(labels: _filterLabels, index: _f, onChanged: (i) => setState(() => _f = i)),
+      ),
+      const SizedBox(height: 8),
+      Expanded(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(myBookingsProvider(status)),
+          child: AsyncBody<List<Booking>>(
+            value: async,
+            onRetry: () => ref.invalidate(myBookingsProvider(status)),
+            data: (list) => list.isEmpty
+                ? ListView(children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(40, 40, 40, 12),
+                      child: Text('还没有订场记录', textAlign: TextAlign.center, style: TextStyle(color: LL.text2)),
+                    ),
+                    Center(child: FilledButton(onPressed: () => context.push('/local'), child: const Text('去订场'))),
+                  ])
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: list.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (context, i) => BookingTile(booking: list[i]),
+                  ),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 

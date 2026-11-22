@@ -299,7 +299,8 @@ void main() {
     local.bookings[1]['cancel_deadline'] = DateTime.now().add(const Duration(hours: 1)).toUtc().toIso8601String();
     await t.pumpWidget(app('/me/bookings', overrides()));
     await idle(t);
-    expect(find.text('我的订场'), findsOneWidget);
+    expect(find.text('我的订单'), findsOneWidget);
+    expect(find.text('订场'), findsOneWidget); // 订场 | 商品
     expect(find.text('城南全民健身中心 · 匹克球'), findsOneWidget);
     expect(find.text('已支付'), findsNWidgets(2));
     expect(find.text('已完成'), findsWidgets);

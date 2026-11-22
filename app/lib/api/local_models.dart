@@ -5,6 +5,7 @@ import '../claim/geo.dart';
 import 'community_common.dart';
 import 'models.dart' show Json;
 import 'perks_models.dart' show Coupon;
+import 'product_models.dart' show Product;
 
 /// `sports` keys → Chinese names, in the order the app shows them.
 const venueSportNames = {
@@ -79,6 +80,7 @@ class Venue {
     this.myWeekPoints = 0,
     this.checkedInToday = false,
     this.weekRank = const [],
+    this.products = const [],
   });
   final int id;
   final String name;
@@ -104,6 +106,10 @@ class Venue {
 
   /// Only from `GET /v1/venues/{id}` (top 10 this week).
   final List<VenueRankEntry> weekRank;
+
+  /// Only from `GET /v1/venues/{id}` (V2 batch 5): on-sale products usable
+  /// here (团购 / 套餐), up to 10, by sales.
+  final List<Product> products;
 
   String get sportsText => sports.map(venueSportName).join(' · ');
   String get priceUnitText => switch (priceUnit) { 'hour' => '小时', 'session' => '场', _ => priceUnit };
@@ -141,6 +147,7 @@ class Venue {
         myWeekPoints: v.myWeekPoints,
         checkedInToday: v.checkedInToday,
         weekRank: v.weekRank.isEmpty ? weekRank : v.weekRank,
+        products: v.products.isEmpty ? products : v.products,
       );
 
   factory Venue.fromJson(Json j) {
@@ -166,6 +173,7 @@ class Venue {
       myWeekPoints: ji(j['my_week_points']),
       checkedInToday: jb(j['checked_in_today']),
       weekRank: jl(j['week_rank'], VenueRankEntry.fromJson),
+      products: jl(j['products'], Product.fromJson),
     );
   }
 }
