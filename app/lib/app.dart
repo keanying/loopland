@@ -44,6 +44,7 @@ import 'run/uploader.dart';
 import 'widgets/card_art.dart';
 import 'widgets/common.dart';
 import 'realtime/realtime_banner.dart';
+import 'widgets/nav_bar_cover.dart';
 import 'widgets/nav_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -56,6 +57,10 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refresh.dispose);
 
   int? id(GoRouterState s) => int.tryParse(s.pathParameters['id'] ?? '');
+  // 标签页里弹出底部面板时让底栏收起（见 NavShell）
+  final cover = ref.read(navBarCoverProvider);
+  StatefulShellBranch tab(String path, Widget page) =>
+      StatefulShellBranch(observers: [NavBarCoverObserver(cover)], routes: [GoRoute(path: path, builder: (_, _) => page)]);
 
   return GoRouter(
     initialLocation: '/splash',
@@ -90,11 +95,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => StartupGate(child: NavShell(shell: shell)),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/map', builder: (_, _) => const MapPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/codex', builder: (_, _) => const CodexPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/start', builder: (_, _) => const StartPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/community', builder: (_, _) => const CommunityPage())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/me', builder: (_, _) => const MePage())]),
+          tab('/map', const MapPage()),
+          tab('/codex', const CodexPage()),
+          tab('/start', const StartPage()),
+          tab('/community', const CommunityPage()),
+          tab('/me', const MePage()),
         ],
       ),
       GoRoute(

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../core/providers.dart';
 import '../core/theme.dart';
 import 'card_art.dart' show hasArt;
+import 'nav_bar_cover.dart';
 
 /// Scaffold with the floating rounded bottom bar: 领地 / 图鉴 / 开始 / 社区 / 我的.
 class NavShell extends ConsumerWidget {
@@ -21,6 +24,7 @@ class NavShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final escort = ref.watch(codexProvider).value?.companions.where((c) => c.escort).firstOrNull;
     final bottom = MediaQuery.paddingOf(context).bottom;
+    final cover = ref.watch(navBarCoverProvider);
     return Scaffold(
       body: Stack(children: [
         Positioned.fill(child: shell),
@@ -28,10 +32,27 @@ class NavShell extends ConsumerWidget {
           left: 12,
           right: 12,
           bottom: 12 + bottom,
-          child: _Bar(
-            index: shell.currentIndex,
-            onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
-            centerArt: escort?.key ?? 'gecko',
+          // 标签页里弹出底部面板（领地详情、宝箱等）时，底栏滑下去收起，不挡住面板
+          child: ListenableBuilder(
+            listenable: cover,
+            builder: (context, child) => IgnorePointer(
+              ignoring: cover.covered,
+              child: AnimatedSlide(
+                offset: cover.covered ? const Offset(0, 1.4) : Offset.zero,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: AnimatedOpacity(
+                  opacity: cover.covered ? 0 : 1,
+                  duration: const Duration(milliseconds: 180),
+                  child: child,
+                ),
+              ),
+            ),
+            child: _Bar(
+              index: shell.currentIndex,
+              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              centerArt: escort?.key ?? 'gecko',
+            ),
           ),
         ),
       ]),
@@ -97,39 +118,85 @@ class _Bar extends StatelessWidget {
             label: '开始',
             child: GestureDetector(
               onTap: () => onTap(2),
-              child: SizedBox(
-                width: button,
-                height: button,
-                child: CustomPaint(
-                  // 外圈虚线（薰衣紫）
-                  painter: _DashedRingPainter(color: LL.lavender.withValues(alpha: 0.8)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(7),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: LL.lavender,
-                        // 选中「开始」时外环加粗
-                        border: Border.all(color: LL.lime, width: index == 2 ? 3.5 : 2.5),
-                        boxShadow: [BoxShadow(color: LL.lavender.withValues(alpha: 0.45), blurRadius: 18)],
-                      ),
-                      child: !hasArt(centerArt)
-                          ? const Icon(Icons.play_arrow_rounded, color: LL.ink, size: 36)
-                          // 素材四周留白较多：放大后裁成圆形，和设计稿一样占满按钮
-                          : ClipOval(
-                              child: Transform.translate(
-                                offset: const Offset(-2, -5),
-                                child: Transform.scale(
-                                  scale: 1.22,
-                                  child: SvgPicture.asset('assets/art/${centerArt}_fig.svg', fit: BoxFit.contain),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
+              child: _StartButton(size: button, selected: index == 2, art: centerArt),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// 中间的「开始」按钮：外圈虚线慢慢转，伙伴轻轻上下浮动（系统开启「减弱动态效果」时静止）。
+class _StartButton extends StatefulWidget {
+  const _StartButton({required this.size, required this.selected, required this.art});
+  final double size;
+  final bool selected;
+  final String art;
+
+  @override
+  State<_StartButton> createState() => _StartButtonState();
+}
+
+class _StartButtonState extends State<_StartButton> with SingleTickerProviderStateMixin {
+  // 一个周期 8 秒：外圈转一圈，伙伴浮动 4 次
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(seconds: 8));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final art = widget.art;
+    final figure = !hasArt(art)
+        ? const Icon(Icons.play_arrow_rounded, color: LL.ink, size: 36)
+        // 素材四周留白较多：放大后裁成圆形，和设计稿一样占满按钮
+        : ClipOval(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Transform.translate(
+                offset: Offset(-2, -5 + 2.5 * math.sin(_c.value * 2 * math.pi * 4)),
+                child: child,
+              ),
+              child: Transform.scale(
+                scale: 1.22,
+                child: SvgPicture.asset('assets/art/${art}_fig.svg', fit: BoxFit.contain),
               ),
             ),
+          );
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: Stack(fit: StackFit.expand, children: [
+        // 外圈虚线（薰衣紫），缓慢旋转
+        RotationTransition(
+          turns: _c,
+          child: CustomPaint(painter: _DashedRingPainter(color: LL.lavender.withValues(alpha: 0.8))),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(7),
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: LL.lavender,
+              // 选中「开始」时外环加粗
+              border: Border.all(color: LL.lime, width: widget.selected ? 3.5 : 2.5),
+              boxShadow: [BoxShadow(color: LL.lavender.withValues(alpha: 0.45), blurRadius: 18)],
+            ),
+            child: figure,
           ),
         ),
       ]),
