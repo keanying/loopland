@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Col, Empty, Row, Segmented, Skeleton, Table, Tag } from 'antd';
-import { AccountBookOutlined, ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, SafetyOutlined, ShopOutlined } from '@ant-design/icons';
+import { AccountBookOutlined, ApiOutlined, ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, GiftOutlined, SafetyOutlined, ShopOutlined, ShoppingOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { EChartsOption } from 'echarts';
 import { api } from '../api/admin';
@@ -32,6 +32,9 @@ function todoRoute(t: DashboardTodo): string {
   if (t.type === 'merchant_review') return '/merchant/merchants?status=reviewing';
   if (t.type === 'booking_refund') return '/merchant/bookings?status=refunding';
   if (t.type === 'statement_confirm') return '/merchant/settlement?status=draft';
+  if (t.type === 'product_review') return '/review?type=product';
+  if (t.type === 'promotion_apply') return '/merchant/promotions?entry_status=pending_platform';
+  if (t.type === 'webhook_failed') return '/merchant/merchants';
   if (t.type === 'refund') return '/plans?tab=orders&status=refund_requested';
   return '/plans?tab=orders&status=renew_failed';
 }
@@ -53,6 +56,9 @@ const TODO_ICON: Record<string, ReactNode> = {
   merchant_review: <ShopOutlined />,
   booking_refund: <ShopOutlined />,
   statement_confirm: <AccountBookOutlined />,
+  product_review: <ShoppingOutlined />,
+  promotion_apply: <GiftOutlined />,
+  webhook_failed: <ApiOutlined />,
 };
 
 function MetricCard({ value, unit, label, now, before, invert }: { value: number; unit?: string; label: string; now: number; before: number; invert?: boolean }) {

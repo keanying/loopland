@@ -39,9 +39,10 @@ export const COUPON_STATUS: Record<CouponStatus, { text: string; color: string }
   used: { text: '已核销', color: 'blue' },
   expired: { text: '已过期', color: 'default' },
   voided: { text: '已作废', color: 'error' },
+  refunded: { text: '已退款', color: 'default' },
 };
 
-export const DROP_TYPE_LABEL: Record<string, string> = { supply: '补给站', chest: '商户宝箱', stronghold: '据点' };
+export const DROP_TYPE_LABEL: Record<string, string> = { supply: '补给站', chest: '商户宝箱', stronghold: '据点', product: '商品券' };
 export const DROP_STATUS_LABEL: Record<string, { text: string; color: string }> = {
   scheduled: { text: '未开始', color: 'default' },
   active: { text: '发券中', color: 'success' },
@@ -66,6 +67,7 @@ export const REDEEM_ERROR: Record<string, { title: string; hint: string }> = {
   no_activity_today: { title: '今天还没有运动记录', hint: '顾客今天运动后再来核销' },
   daily_cap_reached: { title: '今日核销已达上限', hint: '这个投放今天的核销名额用完了，明天再来' },
   forbidden: { title: '没有核销权限', hint: '当前账号不能核销，请联系运营' },
+  wrong_store: { title: '这张券不能在本门店使用', hint: '商品只在指定门店可用，请让顾客到适用门店核销' },
   no_merchant: { title: '账号未绑定商户', hint: '请联系运营给这个账号绑定商户' },
   network: { title: '网络连接失败', hint: '检查网络后重试' },
 };

@@ -79,7 +79,7 @@ export default function AppLayout() {
                 </span>
               </Tooltip>
             ) : (
-              <Tooltip key={m.to} title={m.to === '/review' && pendingReviews ? `${m.label} · ${pendingReviews} 条待审核` : m.group && admin?.role === 'merchant' ? '核销与结算' : m.label} placement="right">
+              <Tooltip key={m.to} title={m.to === '/review' && pendingReviews ? `${m.label} · ${pendingReviews} 条待审核` : m.group && admin?.role === 'merchant' ? '核销、商品与结算' : m.label} placement="right">
                 <NavLink to={m.to} end={m.to === '/'} aria-label={m.label} className={({ isActive }) => 'side-link' + (isActive ? ' active' : '')}>
                   {m.icon}
                   {m.to === '/review' && pendingReviews > 0 && <span className="side-count num">{pendingReviews > 99 ? '99+' : pendingReviews}</span>}

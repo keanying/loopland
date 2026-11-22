@@ -25,6 +25,8 @@ export interface Merchant {
   license_images: string[];
   /** 0–1 (0.1 = the platform keeps 10% of booking revenue). */
   booking_commission_rate: number;
+  /** V2 第五批: 0–1, platform commission on redeemed product coupons (default 0.08; admin only edits it). */
+  product_commission_rate?: number;
   venue_count: number;
   drop_count: number;
   today_redemptions: number;
@@ -52,6 +54,8 @@ export interface MerchantInput {
   contact_phone?: string | null;
   license_images: string[];
   booking_commission_rate: number;
+  /** V2 第五批: admin only (ops leave it out). */
+  product_commission_rate?: number;
 }
 
 // ---------- 场馆 (C-07 / C-08 / E-03) ----------
@@ -164,15 +168,20 @@ export interface BookingFilter {
 
 // ---------- 核销 (A-16 / E-04) ----------
 
-export type CouponStatus = 'unused' | 'used' | 'expired' | 'voided';
+/** V2 第五批 adds refunded (product coupons). */
+export type CouponStatus = 'unused' | 'used' | 'expired' | 'voided' | 'refunded';
 
 export interface Coupon {
   id: number;
   code: string;
   perk: Perk;
   merchant: MerchantRef;
-  source: { type: 'supply' | 'chest' | 'stronghold'; drop_id: number; name: string };
+  /** V2 第五批: product coupons carry {type:'product', product_id, order_id, name}. */
+  source: { type: 'supply' | 'chest' | 'stronghold'; drop_id: number; name: string } | { type: 'product'; product_id: number; order_id: number; name: string };
   status: CouponStatus;
+  /** V2 第五批: 次卡 > 1. */
+  uses_total?: number;
+  uses_left?: number;
   obtained_at: string;
   expires_at: string;
   used_at: string | null;
@@ -221,6 +230,11 @@ export interface Statement {
   booking_qty: number;
   booking_amt: number;
   booking_commission_amt: number;
+  /** V2 第五批 (optional on older servers): product coupon redemptions in the period. */
+  product_qty?: number;
+  product_amt?: number;
+  product_commission_amt?: number;
+  product_subsidy_amt?: number;
   /** > 0: the merchant pays the platform; < 0: the platform pays the merchant. */
   net_amt: number;
   status: StatementStatus;
@@ -230,7 +244,7 @@ export interface Statement {
 }
 
 export interface StatementLine {
-  type: 'redemption' | 'booking';
+  type: 'redemption' | 'booking' | 'product';
   ref_no: string;
   user: { id: number; nickname: string } | null;
   amount_amt: number;

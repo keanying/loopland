@@ -380,7 +380,15 @@ export function pendingReviews(): number {
   return tasks.filter((t) => t.status === 'pending').length;
 }
 
+type DecideHook = (t: ReviewTask, approve: boolean, reason: string) => void;
+const decideHooks: DecideHook[] = [];
+/** Other mocks (V2 第五批 商品) apply a decision to their own objects. */
+export function onReviewDecided(h: DecideHook) {
+  decideHooks.push(h);
+}
+
 function decide(t: ReviewTask, approve: boolean, reason: string, adminId: number) {
+  for (const h of decideHooks) h(t, approve, reason);
   t.status = approve ? 'approved' : 'rejected';
   t.reject_reason = approve ? null : reason;
   t.reviewer = adminRef(adminId);

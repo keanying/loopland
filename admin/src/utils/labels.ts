@@ -167,6 +167,10 @@ export const TODO_TYPE: Record<string, string> = {
   merchant_review: '商户资质',
   booking_refund: '订场退款',
   statement_confirm: '结算单',
+  // V2 第五批
+  product_review: '商品审核',
+  promotion_apply: '活动报名',
+  webhook_failed: 'Webhook 失败',
 };
 
 // ---------- V2 玩法 ----------
@@ -243,10 +247,11 @@ export const REVIEW_TARGET: Record<string, { text: string; color: string }> = {
   crew_avatar: { text: '跑团头像', color: 'volcano' },
   bio: { text: '简介', color: 'gold' },
   meetup: { text: '组局', color: 'green' },
+  product: { text: '商品', color: 'orange' },
 };
 
 /** Tab order on the review queue. */
-export const REVIEW_TARGET_ORDER = ['post', 'comment', 'nickname', 'avatar', 'crew_name', 'crew_avatar', 'bio', 'meetup'] as const;
+export const REVIEW_TARGET_ORDER = ['post', 'comment', 'nickname', 'avatar', 'crew_name', 'crew_avatar', 'bio', 'meetup', 'product'] as const;
 
 export const REVIEW_STATUS: Record<string, { text: string; color: string }> = {
   pending: { text: '待审核', color: 'warning' },
@@ -264,10 +269,14 @@ export const REJECT_EFFECT: Record<string, string> = {
   crew_avatar: '跑团头像清空',
   bio: '简介清空',
   meetup: '组局不在附近列表展示',
+  product: '新商品不上架（改动被丢弃，在售的旧内容不变），原因写进商品的审核意见',
 };
 
 /** Preset rejection reasons; the reviewer can add free text after them. */
 export const REJECT_REASONS = ['含广告或引流', '含联系方式', '色情低俗', '辱骂攻击', '涉嫌诈骗', '违法违规', '与运动无关的刷屏', '昵称或头像不合规'];
+
+/** V2 第五批 · preset reasons for a product task (sent to the merchant as the product's review note). */
+export const PRODUCT_REJECT_REASONS = ['含联系方式或站外引流', '门市价虚标', '图片与商品不符', '描述夸大或含违规用语', '使用规则不清楚', '超出经营范围'];
 
 export const REPORT_REASON: Record<string, string> = {
   spam: '垃圾广告',

@@ -30,6 +30,13 @@ import RedemptionsPage from './pages/merchant/RedemptionsPage';
 import DropsPage from './pages/merchant/DropsPage';
 import BrandCampaignsPage from './pages/merchant/BrandCampaignsPage';
 import ShopPage from './pages/merchant/ShopPage';
+// V2 第五批「商户商品与开放平台」
+import ProductsPage from './pages/merchant/ProductsPage';
+import ProductOrdersPage from './pages/merchant/ProductOrdersPage';
+import PromotionsPage from './pages/merchant/PromotionsPage';
+import MyPromotionsPage from './pages/merchant/MyPromotionsPage';
+import MyVenuesPage from './pages/merchant/MyVenuesPage';
+import OpenAppsPage from './pages/merchant/OpenAppsPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { admin, loading } = useAuth();
@@ -55,6 +62,13 @@ function RequirePerm({ perm, children }: { perm: Permission; children: ReactNode
 function Home() {
   const { can } = useAuth();
   return can('dashboard.read') ? <DashboardPage /> : <MerchantHome />;
+}
+
+/** One route, two pages: the platform's (first permission) or the merchant account's own (second). */
+function PermSwitch({ items }: { items: [Permission, ReactNode][] }) {
+  const { can } = useAuth();
+  const hit = items.find(([p]) => can(p));
+  return hit ? <>{hit[1]}</> : <Result status="403" title="没有权限" subTitle="当前角色没有权限访问这个页面" />;
 }
 
 function KeepQuery({ to }: { to: string }) {
@@ -129,8 +143,12 @@ export default function App() {
         <Route path="statements" element={<KeepQuery to="/merchant/settlement" />} />
         <Route path="settlement" element={<KeepQuery to="/merchant/settlement" />} />
         <Route path="redemptions" element={<KeepQuery to="/merchant/redemptions" />} />
+        <Route path="products" element={<KeepQuery to="/merchant/products" />} />
+        <Route path="product-orders" element={<KeepQuery to="/merchant/product-orders" />} />
+        <Route path="promotions" element={<KeepQuery to="/merchant/promotions" />} />
+        <Route path="open-apps" element={<KeepQuery to="/merchant/open-apps" />} />
         <Route path="merchant/merchants" element={<RequirePerm perm="merchant.read"><MerchantsPage /></RequirePerm>} />
-        <Route path="merchant/venues" element={<RequirePerm perm="venue.read"><VenuesPage /></RequirePerm>} />
+        <Route path="merchant/venues" element={<PermSwitch items={[['venue.read', <VenuesPage key="all" />], ['venue.self', <MyVenuesPage key="mine" />]]} />} />
         <Route path="merchant/bookings" element={<RequirePerm perm="booking.read"><BookingsPage /></RequirePerm>} />
         <Route path="merchant/settlement" element={<RequirePerm perm="settlement.read"><SettlementPage /></RequirePerm>} />
         <Route path="merchant/redeem" element={<RequirePerm perm="redeem"><RedeemPage /></RequirePerm>} />
@@ -138,6 +156,10 @@ export default function App() {
         <Route path="merchant/drops" element={<RequirePerm perm="perks.read"><DropsPage /></RequirePerm>} />
         <Route path="merchant/campaigns" element={<RequirePerm perm="perks.read"><BrandCampaignsPage /></RequirePerm>} />
         <Route path="merchant/shop" element={<RequirePerm perm="perks.read"><ShopPage /></RequirePerm>} />
+        <Route path="merchant/products" element={<RequirePerm perm="product.read"><ProductsPage /></RequirePerm>} />
+        <Route path="merchant/product-orders" element={<RequirePerm perm="product.read"><ProductOrdersPage /></RequirePerm>} />
+        <Route path="merchant/promotions" element={<PermSwitch items={[['promotion.manage', <PromotionsPage key="all" />], ['promotion.join', <MyPromotionsPage key="mine" />]]} />} />
+        <Route path="merchant/open-apps" element={<RequirePerm perm="openapi.manage"><OpenAppsPage /></RequirePerm>} />
         <Route path="settings/ai-usage" element={<Navigate to="/ai-usage" replace />} />
         <Route path="*" element={<Result status="404" title="页面不存在" />} />
       </Route>

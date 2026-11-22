@@ -12,6 +12,7 @@ import { DROP_STATUS_LABEL, DROP_TYPE_LABEL, MERCHANT_STATUS, MERCHANT_STATUS_OR
 import { MerchantNav } from './nav';
 import { MerchantIcon, MerchantStatusTag } from './shared';
 import { IMAGE_URL, urlParams } from './util';
+import { OpenAppsSection } from './openApps';
 
 const PAGE = 20;
 
@@ -242,6 +243,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
           <Descriptions size="small" column={2} bordered>
             <Descriptions.Item label="类型">{MERCHANT_TYPE[m.type] ?? m.type}</Descriptions.Item>
             <Descriptions.Item label="录入时间">{dt(m.created_at)}</Descriptions.Item>
+
             <Descriptions.Item label="联系人">{m.contact_name ?? '—'}</Descriptions.Item>
             <Descriptions.Item label="联系电话">
               <Space wrap>
@@ -255,6 +257,10 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
                 )}
                 {revealed && <span className="muted" style={{ fontSize: 12 }}>已记入审计日志</span>}
               </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="商品佣金" span={2}>
+              <span className="num">{m.product_commission_rate !== undefined ? pct(m.product_commission_rate) : '—'}</span>
+              <span className="muted" style={{ fontSize: 12 }}> · 商户商品券按核销结算时扣除</span>
             </Descriptions.Item>
           </Descriptions>
 
@@ -337,7 +343,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
               )}
             </div>
             {m.staff.length === 0 ? (
-              <span className="muted">还没有员工账号。员工用「商户对接」角色登录，只能核销本店的券、看本商户的订场和结算单</span>
+              <span className="muted">还没有员工账号。员工用「商户对接」角色登录，只能管本商户的核销、商品、官方活动、场馆资料、订场、结算单和开放平台</span>
             ) : (
               <Space wrap>
                 {m.staff.map((s) => (
@@ -349,6 +355,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
               </Space>
             )}
           </section>
+          {can('openapi.manage') && <OpenAppsSection merchantId={m.id} />}
           <StaffModal
             merchant={staffOpen ? m : null}
             onClose={() => setStaffOpen(false)}
@@ -377,7 +384,7 @@ function StaffModal({ merchant, onClose, onDone }: { merchant: MerchantDetail | 
   });
   return (
     <Modal open={merchant !== null} title={`新建员工账号 · ${merchant?.name ?? ''}`} okText="创建" cancelText="取消" confirmLoading={create.isPending} onCancel={onClose} onOk={() => form.submit()} destroyOnHidden>
-      <Alert type="info" showIcon style={{ marginBottom: 14 }} message="角色为「商户对接」，绑定这个商户" description="只能看到本商户的核销台、核销记录、场馆预订和结算单。" />
+      <Alert type="info" showIcon style={{ marginBottom: 14 }} message="角色为「商户对接」，绑定这个商户" description="只能看到本商户的核销台、商品与订单、官方活动、场馆预订、场馆资料（部分字段）、结算单和开放平台。" />
       <Form form={form} layout="vertical" onFinish={(v) => create.mutate({ username: v.username.trim(), password: v.password })}>
         <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请填写用户名' }, { pattern: /^[a-zA-Z0-9_.-]{3,32}$/, message: '3–32 位字母、数字、下划线' }]}>
           <Input placeholder="如 paoye_front" autoComplete="off" />
@@ -400,10 +407,15 @@ interface FormValues {
   contact_phone?: string;
   license_images: { url: string }[];
   commission_pct: number;
+  /** V2 第五批 (admin only). */
+  product_commission_pct?: number;
 }
 
 function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | null; onClose: () => void; onSaved: (m: Merchant) => void }) {
   const qc = useQueryClient();
+  const { admin } = useAuth();
+  // 商品佣金 (docs/api/v2-5「结算」): only admin edits it; ops leave the field out of the request.
+  const productRateEditable = admin?.role === 'admin';
   const [form] = Form.useForm<FormValues>();
   const editing = value && value !== 'new' ? value : null;
   const images = Form.useWatch('license_images', form) ?? [];
@@ -423,8 +435,9 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
             contact_phone: '',
             license_images: editing.license_images.map((url) => ({ url })),
             commission_pct: +(editing.booking_commission_rate * 100).toFixed(2),
+            product_commission_pct: +((editing.product_commission_rate ?? 0.08) * 100).toFixed(2),
           }
-        : { type: 'venue', status: 'reviewing', license_images: [{ url: '' }], commission_pct: 10 },
+        : { type: 'venue', status: 'reviewing', license_images: [{ url: '' }], commission_pct: 10, product_commission_pct: 8 },
     );
   }, [value, editing, form]);
 
@@ -447,6 +460,7 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
       license_images: (v.license_images ?? []).map((x) => x.url?.trim()).filter(Boolean),
       booking_commission_rate: +((v.commission_pct ?? 0) / 100).toFixed(4),
     };
+    if (productRateEditable && v.product_commission_pct !== undefined) body.product_commission_rate = +(v.product_commission_pct / 100).toFixed(4);
     const phone = v.contact_phone?.trim();
     if (phone) body.contact_phone = phone;
     else if (!editing) body.contact_phone = null;
@@ -510,6 +524,14 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
           rules={[{ required: true, message: '请填写佣金比例' }]}
         >
           <InputNumber className="num" min={0} max={100} step={1} precision={2} suffix="%" style={{ width: 180 }} />
+        </Form.Item>
+        <Form.Item
+          name="product_commission_pct"
+          label="商品佣金"
+          extra={productRateEditable ? '商户商品券按核销结算时，平台按这个比例抽佣（默认 8%）' : '只有管理员可以修改'}
+          rules={[{ required: productRateEditable, message: '请填写商品佣金比例' }]}
+        >
+          <InputNumber className="num" min={0} max={100} step={1} precision={2} suffix="%" style={{ width: 180 }} disabled={!productRateEditable} />
         </Form.Item>
 
         <div className="ant-form-item-label" style={{ paddingBottom: 8 }}>
