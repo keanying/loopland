@@ -1,9 +1,11 @@
 ﻿<#
 Flutter 卡住时的诊断脚本（Windows）。运行：
-  .\scripts\flutter-diag.ps1
+  .\scripts\flutter-diag.ps1                         默认检查 D:\dev\flutter（setup.ps1 装的），没有就检查 PATH 里的
+  .\scripts\flutter-diag.ps1 -FlutterRoot D:\xx\flutter   检查指定的 Flutter
 会打印一份摘要，并把详细日志写到 flutter-diag.log（在仓库根目录），把摘要整段发给开发同学即可。
 不会修改任何东西（只会结束它自己启动、超时的 flutter 进程）。
 #>
+param([string]$FlutterRoot = '')
 $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
@@ -30,8 +32,19 @@ function Run-Timed([string]$exe, [string]$argLine, [int]$seconds) {
 
 Write-Host '==== Flutter 诊断（把下面这段整个发给开发同学） ====' -ForegroundColor Cyan
 $cmd = Get-Command flutter -ErrorAction SilentlyContinue
-$froot = if ($cmd) { Split-Path (Split-Path $cmd.Source) } else { $null }
-Line 'flutter 命令' $(if ($cmd) { $cmd.Source } else { '找不到（不在 PATH 里）' })
+Line 'PATH 里的 flutter' $(if ($cmd) { $cmd.Source } else { '找不到（不在 PATH 里）' })
+$froot = $FlutterRoot
+if (-not $froot) {
+    foreach ($cand in 'D:\dev\flutter', (Join-Path $HOME 'dev\flutter')) {
+        if (Test-Path (Join-Path $cand 'bin\flutter.bat')) { $froot = $cand; break }
+    }
+}
+if (-not $froot -and $cmd) { $froot = Split-Path (Split-Path $cmd.Source) }
+Line '本次检查的 Flutter' $(if ($froot) { $froot } else { '无' })
+if ($froot) {
+    $tag = (& git -C $froot describe --tags --abbrev=0 2>$null)
+    Line 'Flutter 版本（git 标签）' "$tag"
+}
 $all = @(Get-Command flutter -All -ErrorAction SilentlyContinue | ForEach-Object Source)
 if ($all.Count -gt 1) { Line 'PATH 里有多个 flutter' ($all -join ' | ') }
 $dartCmd = Get-Command dart -ErrorAction SilentlyContinue
@@ -76,6 +89,31 @@ if (Test-Path $dartExe) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $d = Run-Timed $dartExe '--version' 60
     Line '自带 dart.exe --version' ("{0}（{1:N0} 秒）{2}" -f $d[0], $sw.Elapsed.TotalSeconds, $d[1].Trim())
+}
+
+try {
+    $mp = Get-MpComputerStatus -ErrorAction Stop
+    Line 'Windows Defender 实时保护' $(if ($mp.RealTimeProtectionEnabled) { '开' } else { '关' })
+} catch { Line 'Windows Defender 实时保护' '读取不到' }
+$probe = Join-Path $cache 'diag-write-test.tmp'
+try { 'x' | Set-Content $probe -ErrorAction Stop; Remove-Item $probe; Line 'bin\cache 可写' '是' } catch { Line 'bin\cache 可写' "否：$_" }
+
+# 工具快照不存在时，单独跑一次编译命令（flutter.bat 编译失败只说 Unable to create dart snapshot，不说原因）
+$snapshot = Join-Path $cache 'flutter_tools.snapshot'
+$toolsDir = Join-Path $froot 'packages\flutter_tools'
+$pkgCfg = Join-Path $toolsDir '.dart_tool\package_config.json'
+if (-not (Test-Path $snapshot) -and (Test-Path $dartExe) -and (Test-Path $pkgCfg)) {
+    Write-Host '单独编译 Flutter 工具，看真正的报错（最多 5 分钟）…' -ForegroundColor Cyan
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    $tmpSnap = Join-Path $env:TEMP 'flutter_tools.diag.snapshot'
+    $c = Run-Timed $dartExe "--verbosity=error --snapshot=`"$tmpSnap`" --snapshot-kind=app-jit --packages=`"$pkgCfg`" --no-enable-mirrors `"$(Join-Path $toolsDir 'bin\flutter_tools.dart')`"" 300
+    Line '编译 Flutter 工具' ("{0}（{1:N0} 秒）" -f $c[0], $sw.Elapsed.TotalSeconds)
+    Line '临时快照是否生成' $(if (Test-Path $tmpSnap) { '是（说明编译本身没问题，多半是写入 bin\cache 被拦了）' } else { '否' })
+    Remove-Item $tmpSnap -ErrorAction SilentlyContinue
+    Write-Host '---- 编译输出（最后 30 行） ----'
+    ($c[1] -split "`n") | Where-Object { $_.Trim() } | Select-Object -Last 30 | ForEach-Object { Write-Host "  $_" }
+} elseif (-not (Test-Path $pkgCfg)) {
+    Line 'flutter_tools 依赖' '还没装（package_config.json 不存在）'
 }
 
 Write-Host '运行 flutter --verbose --version（最多 3 分钟）…' -ForegroundColor Cyan
