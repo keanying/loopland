@@ -71,10 +71,11 @@ function Invoke-Checked {
 }
 
 # 安装软件后，把系统和用户的 PATH 重新读进当前窗口
+$script:PreferBin = $null   # 本脚本装的 Flutter 的 bin：当前窗口里始终排在最前面
 function Update-SessionPath {
     $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
     $user = [Environment]::GetEnvironmentVariable('Path', 'User')
-    $env:Path = ($machine, $user | Where-Object { $_ }) -join ';'
+    $env:Path = (@($script:PreferBin) + @($machine, $user) | Where-Object { $_ }) -join ';'
 }
 function Set-UserEnv($name, $value) {
     [Environment]::SetEnvironmentVariable($name, $value, 'User')
@@ -195,8 +196,43 @@ function Select-FlutterMirror([string]$archive) {
     return $best
 }
 
+# 让 $keep 成为唯一生效的 Flutter：从用户 PATH 删掉其他 Flutter；系统 PATH 里的需要管理员权限，给出命令
+function Use-OnlyFlutter([string]$keep) {
+    $keepBin = Join-Path $keep 'bin'
+    $isOther = { param($dir) $dir -and ($dir.TrimEnd('\') -ne $keepBin) -and (Test-Path (Join-Path $dir 'flutter.bat')) }
+    $user = @([Environment]::GetEnvironmentVariable('Path', 'User') -split ';' | Where-Object { $_ })
+    $removed = @($user | Where-Object { & $isOther $_ })
+    $newUser = @($keepBin) + @($user | Where-Object { -not (& $isOther $_) -and ($_.TrimEnd('\') -ne $keepBin) })
+    [Environment]::SetEnvironmentVariable('Path', ($newUser -join ';'), 'User')
+    foreach ($d in $removed) { Info "已从用户 PATH 删掉旧的 Flutter：$d" }
+    $machine = @([Environment]::GetEnvironmentVariable('Path', 'Machine') -split ';' | Where-Object { & $isOther $_ })
+    if ($machine.Count -gt 0) {
+        Warn "系统 PATH 里还有旧的 Flutter：$($machine -join '、')。它会排在新版前面（新开的终端和 IDE 会用到旧版）。"
+        Warn '请用「以管理员身份运行」打开 PowerShell，执行下面这一行后重新打开终端：'
+        $cmd = '$p=[Environment]::GetEnvironmentVariable(''Path'',''Machine'') -split '';'' | ? { $_ -and (-not (Test-Path (Join-Path $_ ''flutter.bat'')) -or $_ -like ''' + $keepBin + '*'') }; [Environment]::SetEnvironmentVariable(''Path'', ($p -join '';''), ''Machine'')'
+        Write-Host "      $cmd" -ForegroundColor Yellow
+    }
+    $script:PreferBin = $keepBin
+    Update-SessionPath
+}
+
 function Step-Flutter {
     Say "Flutter（需要 ≥ $NeedFlutter）"
+    # 本脚本以前装过的（$ToolsDir\flutter）优先：PATH 里可能还排着一个旧版本
+    $mine = Join-Path $ToolsDir 'flutter'
+    if (Test-Path (Join-Path $mine 'bin\flutter.bat')) {
+        $script:PreferBin = Join-Path $mine 'bin'
+        Update-SessionPath
+        $mv = Get-FlutterVersion
+        if ($mv -and $mv -ge $NeedFlutter) {
+            Info "使用 $mine（Flutter $mv）"
+            Use-OnlyFlutter $mine
+            Step-FlutterConfig
+            return
+        }
+        $script:PreferBin = $null
+        Update-SessionPath
+    }
     # 不运行 flutter 命令判断版本：第一次运行要编译工具，旧进程还可能占着锁，看起来像卡死
     $v = Get-FlutterVersion
     $oldRoot = Get-FlutterRoot
@@ -235,13 +271,8 @@ function Step-Flutter {
     Info "解压到 $ToolsDir…"
     if (Have 'tar.exe') { Invoke-Checked 'tar.exe' @('-xf', $zip, '-C', $ToolsDir) } else { Expand-Archive $zip -DestinationPath $ToolsDir -Force }
     Remove-Item $zip -Force
-    Add-UserPath (Join-Path $dest 'bin')
-    # 用户 PATH 排在系统 PATH 后面：旧 Flutter 如果在系统 PATH 里，还会先被找到
-    $env:Path = "$(Join-Path $dest 'bin');$env:Path"
-    Info "已加入 PATH：$dest\bin"
-    if ($oldRoot -and ($oldRoot -ne $dest)) {
-        Warn "旧的 Flutter $v 还在 $oldRoot。请在「系统属性 → 环境变量」的 Path 里删掉 $oldRoot\bin，避免 IDE 和新开的终端用到旧版本。"
-    }
+    Info "已安装到 $dest"
+    Use-OnlyFlutter $dest
     Step-FlutterConfig
 }
 function Get-FlutterRoot {
