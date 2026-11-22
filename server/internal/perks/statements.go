@@ -11,6 +11,7 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
+	"github.com/keanying/loopland/server/internal/webhook"
 )
 
 // AdminRef is a compact back-office account.
@@ -21,12 +22,14 @@ type AdminRef struct {
 
 // StatementLine is one line of a statement.
 type StatementLine struct {
-	Type      string    `json:"type"`
-	RefNo     string    `json:"ref_no"`
-	User      *UserRef  `json:"user"`
-	AmountAmt int64     `json:"amount_amt"`
-	CreatedAt time.Time `json:"created_at"`
-	Voided    bool      `json:"voided"`
+	Type      string   `json:"type"`
+	RefNo     string   `json:"ref_no"`
+	User      *UserRef `json:"user"`
+	AmountAmt int64    `json:"amount_amt"`
+	// SubsidyAmt is the official promotion subsidy of a product line.
+	SubsidyAmt int64     `json:"subsidy_amt"`
+	CreatedAt  time.Time `json:"created_at"`
+	Voided     bool      `json:"voided"`
 }
 
 // Statement is a weekly merchant statement.
@@ -43,6 +46,10 @@ type Statement struct {
 	BookingQty           int             `json:"booking_qty"`
 	BookingAmt           int64           `json:"booking_amt"`
 	BookingCommissionAmt int64           `json:"booking_commission_amt"`
+	ProductQty           int             `json:"product_qty"`
+	ProductAmt           int64           `json:"product_amt"`
+	ProductCommissionAmt int64           `json:"product_commission_amt"`
+	ProductSubsidyAmt    int64           `json:"product_subsidy_amt"`
 	NetAmt               int64           `json:"net_amt"`
 	Status               string          `json:"status"`
 	ConfirmedBy          *AdminRef       `json:"confirmed_by"`
@@ -56,7 +63,7 @@ type Statement struct {
 
 const statementCols = `s.id, s.statement_no, m.id, m.merchant_name, s.period_start_date, s.period_end_date, s.redemption_qty, s.voided_qty, s.redemption_amt,
 	s.redemption_direction, s.booking_qty, s.booking_amt, s.booking_commission_amt, s.net_amt, s.statement_status, a.id, a.username, s.confirm_time,
-	s.pay_time, s.create_time`
+	s.pay_time, s.create_time, s.product_qty, s.product_amt, s.product_commission_amt, s.product_subsidy_amt`
 
 const statementFrom = ` FROM src.src_fin_loop_statement s JOIN src.src_mer_loop_merchant m ON m.id=s.merchant_id
 	LEFT JOIN src.src_sys_loop_admin a ON a.id=s.confirm_admin_id `
@@ -68,7 +75,7 @@ func scanStatement(r pgx.Row) (Statement, error) {
 	var aname *string
 	err := r.Scan(&x.ID, &x.StatementNo, &x.Merchant.ID, &x.Merchant.Name, &start, &end, &x.RedemptionQty, &x.VoidedQty, &x.RedemptionAmt,
 		&x.RedemptionDirection, &x.BookingQty, &x.BookingAmt, &x.BookingCommissionAmt, &x.NetAmt, &x.Status, &aid, &aname, &x.ConfirmedAt,
-		&x.PaidAt, &x.CreatedAt)
+		&x.PaidAt, &x.CreatedAt, &x.ProductQty, &x.ProductAmt, &x.ProductCommissionAmt, &x.ProductSubsidyAmt)
 	x.PeriodStart, x.PeriodEnd = start.Format(time.DateOnly), end.Format(time.DateOnly)
 	if aid != nil {
 		x.ConfirmedBy = &AdminRef{ID: *aid, Username: *aname}
@@ -87,7 +94,7 @@ func (s *Service) LoadStatement(ctx context.Context, q db.Querier, scope *int64,
 	if err != nil || !lines {
 		return x, err
 	}
-	rows, err := q.Query(ctx, `SELECT l.line_type, l.ref_no, u.id, u.nickname, l.amount_amt, l.occur_time, l.is_voided
+	rows, err := q.Query(ctx, `SELECT l.line_type, l.ref_no, u.id, u.nickname, l.amount_amt, l.subsidy_amt, l.occur_time, l.is_voided
 		FROM src.src_fin_loop_statement_line l LEFT JOIN src.src_usr_loop_user u ON u.id=l.user_id
 		WHERE l.statement_id=$1 ORDER BY l.occur_time, l.id`, id)
 	if err != nil {
@@ -97,7 +104,7 @@ func (s *Service) LoadStatement(ctx context.Context, q db.Querier, scope *int64,
 		var l StatementLine
 		var uid *int64
 		var nick *string
-		err := r.Scan(&l.Type, &l.RefNo, &uid, &nick, &l.AmountAmt, &l.CreatedAt, &l.Voided)
+		err := r.Scan(&l.Type, &l.RefNo, &uid, &nick, &l.AmountAmt, &l.SubsidyAmt, &l.CreatedAt, &l.Voided)
 		if uid != nil {
 			l.User = &UserRef{ID: *uid, Nickname: *nick}
 		}
@@ -111,13 +118,30 @@ func (s *Service) LoadStatement(ctx context.Context, q db.Querier, scope *int64,
 
 // Statements lists statements.
 func (s *Service) Statements(ctx context.Context, merchantID int64, status string, p httpx.Page) ([]Statement, int, error) {
-	where := `($1 = 0 OR s.merchant_id=$1) AND ($2 = '' OR s.statement_status=$2)`
+	return s.statements(ctx, merchantID, status, -1, p)
+}
+
+// StatementsBefore lists statements older than id beforeID (0: from the
+// newest; the open API cursor), by id descending.
+func (s *Service) StatementsBefore(ctx context.Context, merchantID int64, status string, beforeID int64, limit int) ([]Statement, error) {
+	items, _, err := s.statements(ctx, merchantID, status, beforeID, httpx.Page{Page: 1, Size: limit})
+	return items, err
+}
+
+// statements: beforeID < 0 orders by period (admin pages), else by id.
+func (s *Service) statements(ctx context.Context, merchantID int64, status string, beforeID int64, p httpx.Page) ([]Statement, int, error) {
+	order := `s.period_start_date DESC, s.id DESC`
+	if beforeID >= 0 {
+		order = `s.id DESC`
+	}
+	beforeID = max(beforeID, 0)
+	where := `($1 = 0 OR s.merchant_id=$1) AND ($2 = '' OR s.statement_status=$2) AND ($3 = 0 OR s.id < $3)`
 	var total int
-	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_fin_loop_statement s WHERE `+where, merchantID, status).Scan(&total); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_fin_loop_statement s WHERE `+where, merchantID, status, beforeID).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT `+statementCols+statementFrom+` WHERE `+where+` ORDER BY s.period_start_date DESC, s.id DESC LIMIT $3 OFFSET $4`,
-		merchantID, status, p.Size, p.Offset())
+	rows, err := s.Pool.Query(ctx, `SELECT `+statementCols+statementFrom+` WHERE `+where+` ORDER BY `+order+` LIMIT $4 OFFSET $5`,
+		merchantID, status, beforeID, p.Size, p.Offset())
 	if err != nil {
 		return nil, 0, err
 	}
@@ -182,8 +206,9 @@ func (s *Service) Generate(ctx context.Context, start time.Time, failIfExists bo
 		}
 		for _, m := range merchants {
 			var id int64
-			err := tx.QueryRow(ctx, `INSERT INTO src.src_fin_loop_statement (statement_no, merchant_id, period_start_date, period_end_date, booking_commission_rate)
-				SELECT $1, id, $3, $4, booking_commission_rate FROM src.src_mer_loop_merchant WHERE id=$2
+			err := tx.QueryRow(ctx, `INSERT INTO src.src_fin_loop_statement (statement_no, merchant_id, period_start_date, period_end_date, booking_commission_rate,
+					product_commission_rate)
+				SELECT $1, id, $3, $4, booking_commission_rate, product_commission_rate FROM src.src_mer_loop_merchant WHERE id=$2
 				ON CONFLICT (merchant_id, period_start_date) DO NOTHING RETURNING id`, statementNo(start, m), m, start, end).Scan(&id)
 			if db.IsNoRows(err) {
 				continue
@@ -192,6 +217,13 @@ func (s *Service) Generate(ctx context.Context, start time.Time, failIfExists bo
 				return err
 			}
 			if err := fill(ctx, tx, id, m, start, end, withBookings); err != nil {
+				return err
+			}
+			x, err := s.LoadStatement(ctx, tx, nil, id, true)
+			if err != nil {
+				return err
+			}
+			if err := webhook.Emit(ctx, tx, m, webhook.StatementCreated, x); err != nil {
 				return err
 			}
 			ids = append(ids, id)
@@ -211,7 +243,12 @@ func fill(ctx context.Context, tx pgx.Tx, id, merchant int64, start, end time.Ti
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO src.src_fin_loop_statement_line (statement_id, line_type, ref_id, ref_no, user_id, amount_amt, is_voided, occur_time)
 		SELECT $1, 'redemption', r.id, r.redemption_no, r.user_id, r.settle_price_amt, r.redemption_status='voided', r.create_time
-		FROM src.src_mer_loop_redemption r WHERE r.statement_id=$1 ON CONFLICT (line_type, ref_id) DO NOTHING`, id); err != nil {
+		FROM src.src_mer_loop_redemption r WHERE r.statement_id=$1 AND r.redemption_type='drop' ON CONFLICT (line_type, ref_id) DO NOTHING`, id); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO src.src_fin_loop_statement_line (statement_id, line_type, ref_id, ref_no, user_id, amount_amt, subsidy_amt, is_voided, occur_time)
+		SELECT $1, 'product', r.id, r.redemption_no, r.user_id, r.product_amt, r.product_subsidy_amt, r.redemption_status='voided', r.create_time
+		FROM src.src_mer_loop_redemption r WHERE r.statement_id=$1 AND r.redemption_type='product' ON CONFLICT (line_type, ref_id) DO NOTHING`, id); err != nil {
 		return err
 	}
 	if withBookings {
@@ -228,15 +265,17 @@ func fill(ctx context.Context, tx pgx.Tx, id, merchant int64, start, end time.Ti
 
 // recompute sets a statement's totals from its lines:
 //
-//	redemption signed = Σ price (merchant_pays) − Σ price (platform_pays), valid only
-//	commission        = round(booking_amt × booking_commission_rate)
-//	net_amt           = redemption signed − (booking_amt − commission)
+//	redemption signed  = Σ price (merchant_pays) − Σ price (platform_pays), valid only
+//	commission         = round(booking_amt × booking_commission_rate)
+//	product commission = round(product_amt × product_commission_rate)
+//	net_amt            = redemption signed − (booking_amt − commission)
+//	                     − (product_amt − product commission) − product_subsidy_amt
 //
 // so net_amt > 0 means the merchant pays the platform.
 func recompute(ctx context.Context, tx pgx.Tx, id int64) error {
-	var redeemed, voided, bookings int
-	var signed, bookingAmt int64
-	var rate float64
+	var redeemed, voided, bookings, products int
+	var signed, bookingAmt, productAmt, subsidy int64
+	var rate, productRate float64
 	if err := tx.QueryRow(ctx, `SELECT
 			count(*) FILTER (WHERE l.line_type='redemption' AND NOT l.is_voided)::int,
 			count(*) FILTER (WHERE l.line_type='redemption' AND l.is_voided)::int,
@@ -244,20 +283,26 @@ func recompute(ctx context.Context, tx pgx.Tx, id int64) error {
 				FILTER (WHERE l.line_type='redemption' AND NOT l.is_voided), 0)::bigint,
 			count(*) FILTER (WHERE l.line_type='booking')::int,
 			COALESCE(sum(l.amount_amt) FILTER (WHERE l.line_type='booking'), 0)::bigint,
-			(SELECT booking_commission_rate::float8 FROM src.src_fin_loop_statement WHERE id=$1)
+			(SELECT booking_commission_rate::float8 FROM src.src_fin_loop_statement WHERE id=$1),
+			count(*) FILTER (WHERE l.line_type='product' AND NOT l.is_voided)::int,
+			COALESCE(sum(l.amount_amt) FILTER (WHERE l.line_type='product' AND NOT l.is_voided), 0)::bigint,
+			COALESCE(sum(l.subsidy_amt) FILTER (WHERE l.line_type='product' AND NOT l.is_voided), 0)::bigint,
+			(SELECT product_commission_rate::float8 FROM src.src_fin_loop_statement WHERE id=$1)
 		FROM src.src_fin_loop_statement_line l LEFT JOIN src.src_mer_loop_redemption r ON l.line_type='redemption' AND r.id=l.ref_id
-		WHERE l.statement_id=$1`, id).Scan(&redeemed, &voided, &signed, &bookings, &bookingAmt, &rate); err != nil {
+		WHERE l.statement_id=$1`, id).Scan(&redeemed, &voided, &signed, &bookings, &bookingAmt, &rate, &products, &productAmt, &subsidy, &productRate); err != nil {
 		return err
 	}
 	commission := int64(math.Round(float64(bookingAmt) * rate))
+	productCommission := int64(math.Round(float64(productAmt) * productRate))
 	direction, amt := "merchant_pays", signed
 	if signed < 0 {
 		direction, amt = "platform_pays", -signed
 	}
-	net := signed - (bookingAmt - commission)
+	net := signed - (bookingAmt - commission) - (productAmt - productCommission) - subsidy
 	_, err := tx.Exec(ctx, `UPDATE src.src_fin_loop_statement SET redemption_qty=$2, voided_qty=$3, redemption_amt=$4, redemption_direction=$5,
-			booking_qty=$6, booking_amt=$7, booking_commission_amt=$8, net_amt=$9, update_time=now() WHERE id=$1`,
-		id, redeemed, voided, amt, direction, bookings, bookingAmt, commission, net)
+			booking_qty=$6, booking_amt=$7, booking_commission_amt=$8, net_amt=$9, product_qty=$10, product_amt=$11, product_commission_amt=$12,
+			product_subsidy_amt=$13, update_time=now() WHERE id=$1`,
+		id, redeemed, voided, amt, direction, bookings, bookingAmt, commission, net, products, productAmt, productCommission, subsidy)
 	return err
 }
 

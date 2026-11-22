@@ -66,11 +66,14 @@ type Perk struct {
 	Rules       string `json:"rules"`
 }
 
-// CouponSource is where a coupon came from.
+// CouponSource is where a coupon came from: a drop (drop_id) or a bought
+// product (product_id, order_id).
 type CouponSource struct {
-	Type   string `json:"type"`
-	DropID int64  `json:"drop_id"`
-	Name   string `json:"name"`
+	Type      string `json:"type"`
+	DropID    int64  `json:"drop_id,omitempty"`
+	ProductID int64  `json:"product_id,omitempty"`
+	OrderID   int64  `json:"order_id,omitempty"`
+	Name      string `json:"name"`
 }
 
 // Coupon is a user's coupon.
@@ -81,28 +84,33 @@ type Coupon struct {
 	Merchant   MerchantRef  `json:"merchant"`
 	Source     CouponSource `json:"source"`
 	Status     string       `json:"status"`
+	UsesTotal  int          `json:"uses_total"`
+	UsesLeft   int          `json:"uses_left"`
 	ObtainedAt time.Time    `json:"obtained_at"`
 	ExpiresAt  time.Time    `json:"expires_at"`
 	UsedAt     *time.Time   `json:"used_at"`
 	UsedStore  *string      `json:"used_store"`
 
-	userID int64
+	userID   int64
+	venueIDs []int64
 }
 
 // couponStatusSQL is the effective status (expired as soon as it passes
 // expire_time, before the job marks it).
 const couponStatusSQL = `(CASE WHEN c.coupon_status='unused' AND c.expire_time <= now() THEN 'expired' ELSE c.coupon_status END)`
 
-const couponCols = `c.id, c.coupon_code, c.perk_json, m.id, m.merchant_name, c.source_type, c.drop_id, c.source_name,
-	` + couponStatusSQL + `, c.create_time, c.expire_time, c.use_time, c.use_store_name, c.user_id`
+const couponCols = `c.id, c.coupon_code, c.perk_json, m.id, m.merchant_name, c.source_type, COALESCE(c.drop_id, 0), COALESCE(c.product_id, 0),
+	COALESCE(c.product_order_id, 0), c.source_name, ` + couponStatusSQL + `, c.use_qty, c.left_use_qty, c.create_time, c.expire_time, c.use_time,
+	c.use_store_name, c.user_id, c.venue_ids`
 
 const couponFrom = ` FROM src.src_mkt_loop_coupon c JOIN src.src_mer_loop_merchant m ON m.id=c.merchant_id `
 
 func scanCoupon(r pgx.Row) (Coupon, error) {
 	var c Coupon
 	var perk []byte
-	err := r.Scan(&c.ID, &c.Code, &perk, &c.Merchant.ID, &c.Merchant.Name, &c.Source.Type, &c.Source.DropID, &c.Source.Name,
-		&c.Status, &c.ObtainedAt, &c.ExpiresAt, &c.UsedAt, &c.UsedStore, &c.userID)
+	err := r.Scan(&c.ID, &c.Code, &perk, &c.Merchant.ID, &c.Merchant.Name, &c.Source.Type, &c.Source.DropID, &c.Source.ProductID,
+		&c.Source.OrderID, &c.Source.Name, &c.Status, &c.UsesTotal, &c.UsesLeft, &c.ObtainedAt, &c.ExpiresAt, &c.UsedAt, &c.UsedStore,
+		&c.userID, &c.venueIDs)
 	_ = json.Unmarshal(perk, &c.Perk)
 	return c, err
 }
@@ -288,16 +296,19 @@ func (s *Service) QR(ctx context.Context, user, id int64) (string, error) {
 		return "", httpx.Conflict("coupon_expired", "这张券已过期")
 	case "voided":
 		return "", httpx.Conflict("coupon_voided", "这张券已作废")
+	case "refunded":
+		return "", httpx.Conflict("coupon_refunded", "这张券已退款")
 	}
 	return s.QRPayload(id, time.Now()), nil
 }
 
 // ---------------------------------------------------------------- jobs
 
-// ExpireCoupons marks unused coupons past their expiry.
+// ExpireCoupons marks unused coupons past their expiry. Refundable product
+// coupons are left for the 02:00 automatic refund (商品券过期未使用自动退款).
 func (s *Service) ExpireCoupons(ctx context.Context) error {
 	_, err := s.Pool.Exec(ctx, `UPDATE src.src_mkt_loop_coupon SET coupon_status='expired', update_time=now()
-		WHERE coupon_status='unused' AND expire_time <= now()`)
+		WHERE coupon_status='unused' AND expire_time <= now() AND NOT (source_type='product' AND is_refundable)`)
 	return err
 }
 

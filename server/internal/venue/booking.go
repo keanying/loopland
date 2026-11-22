@@ -16,6 +16,7 @@ import (
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
+	"github.com/keanying/loopland/server/internal/webhook"
 )
 
 // Slot is one bookable period of a day.
@@ -64,9 +65,14 @@ type held struct {
 	courts     int
 }
 
+// occupancy is what holds the venue's courts between from and to: active
+// bookings and external blocks (开放平台占场).
 func occupancy(ctx context.Context, q db.Querier, venue int64, from, to time.Time) ([]held, error) {
 	rows, err := q.Query(ctx, `SELECT b.start_time, b.end_time, b.court_qty FROM src.src_ord_loop_booking b
-		WHERE b.venue_id=$1 AND `+activeBooking+` AND b.start_time < $3 AND b.end_time > $2`, venue, from, to)
+		WHERE b.venue_id=$1 AND `+activeBooking+` AND b.start_time < $3 AND b.end_time > $2
+		UNION ALL
+		SELECT k.start_time, k.end_time, k.court_qty FROM src.src_mer_loop_venue_block k
+		WHERE k.venue_id=$1 AND k.start_time < $3 AND k.end_time > $2`, venue, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -212,6 +218,18 @@ func (s *Service) Booking(ctx context.Context, q db.Querier, user, id int64) (Bo
 	return bs[0], nil
 }
 
+// MerchantBooking loads one booking of a merchant (open API; others are 404).
+func (s *Service) MerchantBooking(ctx context.Context, merchantID, id int64) (Booking, error) {
+	bs, err := s.queryBookings(ctx, s.Pool, `b.id=$1 AND b.merchant_id=$2`, id, merchantID)
+	if err != nil {
+		return Booking{}, err
+	}
+	if len(bs) == 0 {
+		return Booking{}, httpx.NotFound("订场")
+	}
+	return bs[0], nil
+}
+
 // MyBookings is GET /v1/me/bookings.
 func (s *Service) MyBookings(ctx context.Context, user int64, status string) ([]Booking, error) {
 	bs, err := s.queryBookings(ctx, s.Pool, `b.user_id=$1 AND ($2='' OR b.booking_status=$2) ORDER BY b.create_time DESC LIMIT 100`, user, status)
@@ -220,6 +238,17 @@ func (s *Service) MyBookings(ctx context.Context, user int64, status string) ([]
 
 // AdminBookings is GET /admin/v1/bookings (merchant: the staff scope).
 func (s *Service) AdminBookings(ctx context.Context, merchant *int64, venue int64, status, date string, p httpx.Page) ([]Booking, int, error) {
+	return s.bookingsBefore(ctx, merchant, venue, status, date, -1, p)
+}
+
+// BookingsBefore lists a merchant's bookings older than id beforeID (0:
+// from the newest), by id descending (open API cursor).
+func (s *Service) BookingsBefore(ctx context.Context, merchant int64, venue int64, status, date string, beforeID int64, limit int) ([]Booking, error) {
+	bs, _, err := s.bookingsBefore(ctx, &merchant, venue, status, date, beforeID, httpx.Page{Page: 1, Size: limit})
+	return bs, err
+}
+
+func (s *Service) bookingsBefore(ctx context.Context, merchant *int64, venue int64, status, date string, beforeID int64, p httpx.Page) ([]Booking, int, error) {
 	var from, to *time.Time
 	if date != "" {
 		d, err := time.ParseInLocation("2006-01-02", date, clock.Shanghai)
@@ -230,12 +259,16 @@ func (s *Service) AdminBookings(ctx context.Context, merchant *int64, venue int6
 		from, to = &d, &e
 	}
 	where := `($1::bigint IS NULL OR b.merchant_id=$1) AND ($2=0 OR b.venue_id=$2) AND ($3='' OR b.booking_status=$3)
-		AND ($4::timestamptz IS NULL OR (b.start_time >= $4 AND b.start_time < $5))`
+		AND ($4::timestamptz IS NULL OR (b.start_time >= $4 AND b.start_time < $5)) AND ($6 = 0 OR b.id < $6)`
+	order := `b.id DESC`
+	if beforeID < 0 { // admin pages: newest bookings first
+		order, beforeID = `b.create_time DESC, b.id DESC`, 0
+	}
 	var total int
-	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ord_loop_booking b WHERE `+where, merchant, venue, status, from, to).Scan(&total); err != nil {
+	if err := s.Pool.QueryRow(ctx, `SELECT count(*) FROM src.src_ord_loop_booking b WHERE `+where, merchant, venue, status, from, to, beforeID).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	bs, err := s.queryBookings(ctx, s.Pool, where+` ORDER BY b.create_time DESC LIMIT $6 OFFSET $7`, merchant, venue, status, from, to, p.Size, p.Offset())
+	bs, err := s.queryBookings(ctx, s.Pool, where+` ORDER BY `+order+` LIMIT $7 OFFSET $8`, merchant, venue, status, from, to, beforeID, p.Size, p.Offset())
 	return bs, total, err
 }
 
@@ -406,18 +439,22 @@ func (s *Service) Cancel(ctx context.Context, user, id int64) (Booking, error) {
 				return err
 			}
 			if orderNo != nil {
-				return billing.CloseUnpaid(ctx, tx, *orderNo)
+				if err := billing.CloseUnpaid(ctx, tx, *orderNo); err != nil {
+					return err
+				}
 			}
-			return nil
 		case "paid":
 			if time.Now().After(start.Add(-time.Duration(hours) * time.Hour)) {
 				return httpx.Conflict("cancel_too_late", fmt.Sprintf("开始前 %d 小时内不能自助取消，可以联系客服处理", hours))
 			}
 			refundNo = orderNo
-			return s.markRefunding(ctx, tx, id, orderNo, "用户取消订场")
+			if err := s.markRefunding(ctx, tx, id, orderNo, "用户取消订场"); err != nil {
+				return err
+			}
 		default:
 			return httpx.Conflict("invalid_status", "当前状态不能取消")
 		}
+		return s.emitBooking(ctx, tx, id, webhook.BookingCancelled)
 	})
 	if err != nil {
 		return Booking{}, err
@@ -550,6 +587,9 @@ func (f bookingFulfiller) Paid(ctx context.Context, tx pgx.Tx, o billing.Order) 
 	if err != nil {
 		return false, err
 	}
+	if err := f.s.emitBooking(ctx, tx, id, webhook.BookingPaid); err != nil {
+		return false, err
+	}
 	return false, inbox.Notify(ctx, tx, o.UserID, inbox.System, "订场成功",
 		fmt.Sprintf("「%s」%s 的场地已为你预留，记得准时到场。", name, start.In(clock.Shanghai).Format("01-02 15:04")),
 		map[string]any{"type": "booking_paid", "booking_id": id, "venue_id": venue})
@@ -571,9 +611,25 @@ func (f bookingFulfiller) Refunded(ctx context.Context, tx pgx.Tx, o billing.Ord
 	if err != nil {
 		return err
 	}
+	if err := f.s.emitBooking(ctx, tx, id, webhook.BookingRefunded); err != nil {
+		return err
+	}
 	return inbox.Notify(ctx, tx, o.UserID, inbox.System, "订场已退款",
 		fmt.Sprintf("「%s」的订场费用 ¥%.2f 已原路退回（%s）。", name, float64(o.AmountFen)/100, reason),
 		map[string]any{"type": "booking_refunded", "booking_id": id})
+}
+
+// emitBooking pushes a booking event to the merchant's apps.
+func (s *Service) emitBooking(ctx context.Context, tx pgx.Tx, id int64, typ string) error {
+	bs, err := s.queryBookings(ctx, tx, `b.id=$1`, id)
+	if err != nil || len(bs) == 0 {
+		return err
+	}
+	var merchant int64
+	if err := tx.QueryRow(ctx, `SELECT merchant_id FROM src.src_ord_loop_booking WHERE id=$1`, id).Scan(&merchant); err != nil {
+		return err
+	}
+	return webhook.Emit(ctx, tx, merchant, typ, bs[0])
 }
 
 // ExpireBookings expires unpaid bookings after booking.pay_timeout_min

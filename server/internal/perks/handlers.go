@@ -27,9 +27,9 @@ func (h *Handler) Routes(mux *http.ServeMux, auth func(httpx.HandlerFunc) http.H
 func (h *Handler) coupons(w http.ResponseWriter, r *http.Request) error {
 	st := r.URL.Query().Get("status")
 	switch st {
-	case "", "unused", "used", "expired", "voided":
+	case "", "unused", "used", "expired", "voided", "refunded":
 	default:
-		return httpx.BadRequest("invalid_status", "status 只能是 unused / used / expired")
+		return httpx.BadRequest("invalid_status", "status 只能是 unused / used / expired / refunded")
 	}
 	items, err := h.Svc.MyCoupons(r.Context(), httpx.UserID(r.Context()), st)
 	if err != nil {

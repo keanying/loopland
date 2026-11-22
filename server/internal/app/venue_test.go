@@ -184,7 +184,15 @@ func TestMerchantsAndStaff(t *testing.T) {
 	st.must("GET", fmt.Sprintf("/admin/v1/merchants/%d", m1.ID), nil, nil)
 	st.expectErr("GET", fmt.Sprintf("/admin/v1/merchants/%d", m2.ID), nil, 404, "not_found")
 	st.expectErr("POST", "/admin/v1/merchants", map[string]any{"name": "x", "type": "brand"}, 403, "forbidden")
-	st.expectErr("GET", "/admin/v1/venues", nil, 403, "forbidden")
+	// 第五批 商户自助: staff list their own venues (none yet) but cannot create one.
+	var own struct {
+		Total int `json:"total"`
+	}
+	st.must("GET", "/admin/v1/venues", nil, &own)
+	if own.Total != 0 {
+		t.Fatalf("staff venues: %+v", own)
+	}
+	st.expectErr("POST", "/admin/v1/venues", map[string]any{"name": "x"}, 403, "forbidden")
 	st.expectErr("POST", fmt.Sprintf("/admin/v1/merchants/%d/staff", m1.ID), map[string]string{"username": "s2", "password": "staff-password-2"}, 403, "forbidden")
 	st.must("GET", "/admin/v1/bookings", nil, nil)
 }

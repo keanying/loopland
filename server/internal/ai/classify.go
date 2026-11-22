@@ -10,7 +10,7 @@ import (
 )
 
 var targetNames = map[string]string{moderation.Post: "动态", moderation.Comment: "评论", moderation.Nickname: "昵称", moderation.Avatar: "头像",
-	moderation.CrewName: "跑团名称", moderation.CrewAvatar: "跑团头像", moderation.Bio: "个人简介", moderation.Meetup: "组局"}
+	moderation.CrewName: "跑团名称", moderation.CrewAvatar: "跑团头像", moderation.Bio: "个人简介", moderation.Meetup: "组局", moderation.Product: "商户商品"}
 
 // Classifier adapts the service to moderation.Classifier: the small model
 // scores the text, the vision model (when configured) also looks at the

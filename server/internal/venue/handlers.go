@@ -2,6 +2,7 @@ package venue
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -189,10 +190,12 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, ops, scoped, adminOnly func(ht
 	mux.Handle("POST /admin/v1/merchants/{id}/reveal-phone", adminOnly(h.revealPhone))
 	mux.Handle("POST /admin/v1/merchants/{id}/staff", adminOnly(h.createStaff))
 
-	mux.Handle("GET /admin/v1/venues", ops(h.venues))
+	// Merchant staff see and partly edit their own venues (商户自助改场馆, venue.self).
+	mux.Handle("GET /admin/v1/venues", scoped(h.venues))
 	mux.Handle("POST /admin/v1/venues", ops(h.createVenue))
-	mux.Handle("GET /admin/v1/venues/{id}", ops(h.venue))
-	mux.Handle("PATCH /admin/v1/venues/{id}", ops(h.patchVenue))
+	mux.Handle("GET /admin/v1/venues/{id}", scoped(h.venue))
+	mux.Handle("PATCH /admin/v1/venues/{id}", scoped(h.patchVenue))
+	mux.Handle("GET /admin/v1/venues/{id}/blocks", scoped(h.blocks))
 	mux.Handle("GET /admin/v1/venues/{id}/qr", ops(h.qr))
 	mux.Handle("POST /admin/v1/venues/{id}/qr/rotate", ops(h.rotateQR))
 	mux.Handle("GET /admin/v1/venues/{id}/owners", ops(h.owners))
@@ -236,9 +239,20 @@ func (h *AdminHandler) merchant(w http.ResponseWriter, r *http.Request) error {
 	return httpx.OK(w, d)
 }
 
+// adminOnlyFields: product_commission_rate is set by admin only.
+func adminOnlyFields(r *http.Request, in MerchantInput) error {
+	if ad, _ := httpx.AdminFrom(r.Context()); in.ProductCommissionRate != nil && ad.Role != "admin" {
+		return httpx.Forbidden("forbidden", "只有管理员可以修改商品佣金比例")
+	}
+	return nil
+}
+
 func (h *AdminHandler) createMerchant(w http.ResponseWriter, r *http.Request) error {
 	var in MerchantInput
 	if err := httpx.Decode(r, &in); err != nil {
+		return err
+	}
+	if err := adminOnlyFields(r, in); err != nil {
 		return err
 	}
 	var m Merchant
@@ -268,13 +282,16 @@ func (h *AdminHandler) patchMerchant(w http.ResponseWriter, r *http.Request) err
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
+	if err := adminOnlyFields(r, in); err != nil {
+		return err
+	}
 	var m Merchant
 	err = pgx.BeginFunc(r.Context(), h.Svc.Pool, func(tx pgx.Tx) error {
 		if err := h.Svc.UpdateMerchant(r.Context(), tx, id, in); err != nil {
 			return err
 		}
 		if err := h.audit(r.Context(), tx, "merchant.update", "merchant:"+itoa(id), map[string]any{"name": in.Name, "status": in.Status,
-			"phone_changed": in.phoneSet}); err != nil {
+			"phone_changed": in.phoneSet, "product_commission_rate": in.ProductCommissionRate}); err != nil {
 			return err
 		}
 		m, err = h.Svc.Merchant(r.Context(), tx, id)
@@ -328,8 +345,11 @@ func (h *AdminHandler) createStaff(w http.ResponseWriter, r *http.Request) error
 
 func (h *AdminHandler) venues(w http.ResponseWriter, r *http.Request) error {
 	q := r.URL.Query()
-	var merchant *int64
-	if n, err := strconv.ParseInt(q.Get("merchant_id"), 10, 64); err == nil && n > 0 {
+	merchant, err := h.Scope(r.Context())
+	if err != nil {
+		return err
+	}
+	if n, err := strconv.ParseInt(q.Get("merchant_id"), 10, 64); err == nil && n > 0 && merchant == nil {
 		merchant = &n
 	}
 	items, total, err := h.Svc.AdminVenues(r.Context(), merchant, q.Get("sport"), q.Get("q"), httpx.GetPage(r))
@@ -343,6 +363,17 @@ func (h *AdminHandler) venue(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathID(r, "id")
 	if err != nil {
 		return err
+	}
+	scope, err := h.Scope(r.Context())
+	if err != nil {
+		return err
+	}
+	if scope != nil {
+		v, err := h.Svc.OwnAdminVenue(r.Context(), *scope, id)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, v)
 	}
 	v, err := h.Svc.AdminVenue(r.Context(), id)
 	if err != nil {
@@ -386,6 +417,31 @@ func (h *AdminHandler) patchVenue(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
+	scope, err := h.Scope(r.Context())
+	if err != nil {
+		return err
+	}
+	if scope != nil {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		if err != nil {
+			return err
+		}
+		err = pgx.BeginFunc(r.Context(), h.Svc.Pool, func(tx pgx.Tx) error {
+			in, err := h.Svc.SelfUpdate(r.Context(), tx, *scope, id, body)
+			if err != nil {
+				return err
+			}
+			return h.audit(r.Context(), tx, "venue.self_update", "venue:"+itoa(id), map[string]any{"input": in})
+		})
+		if err != nil {
+			return err
+		}
+		v, err := h.Svc.OwnAdminVenue(r.Context(), *scope, id)
+		if err != nil {
+			return err
+		}
+		return httpx.OK(w, v)
+	}
 	in, err := h.Svc.InputOf(r.Context(), id)
 	if err != nil {
 		return err
@@ -394,6 +450,24 @@ func (h *AdminHandler) patchVenue(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	return h.saveVenue(w, r, id, in)
+}
+
+// blocks is GET /admin/v1/venues/{id}/blocks?date= (外部占场 on the
+// booking page; merchant staff: their own venues).
+func (h *AdminHandler) blocks(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	scope, err := h.Scope(r.Context())
+	if err != nil {
+		return err
+	}
+	items, err := h.Svc.Blocks(r.Context(), scope, id, r.URL.Query().Get("date"))
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, httpx.NewItems(items))
 }
 
 func (h *AdminHandler) qr(w http.ResponseWriter, r *http.Request) error {

@@ -31,12 +31,14 @@ import (
 	"github.com/keanying/loopland/server/internal/jobs"
 	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/moderation"
+	"github.com/keanying/loopland/server/internal/openapi"
 	"github.com/keanying/loopland/server/internal/perks"
 	"github.com/keanying/loopland/server/internal/platform/config"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/platform/secure"
 	"github.com/keanying/loopland/server/internal/play"
+	"github.com/keanying/loopland/server/internal/product"
 	"github.com/keanying/loopland/server/internal/providers"
 	"github.com/keanying/loopland/server/internal/realtime"
 	"github.com/keanying/loopland/server/internal/shop"
@@ -44,6 +46,7 @@ import (
 	"github.com/keanying/loopland/server/internal/territory"
 	"github.com/keanying/loopland/server/internal/user"
 	"github.com/keanying/loopland/server/internal/venue"
+	"github.com/keanying/loopland/server/internal/webhook"
 )
 
 // App is the assembled service.
@@ -63,6 +66,11 @@ type App struct {
 	AI *ai.Service
 	// Perks is 第四批 part B: drops, coupons, redemptions, statements.
 	Perks *perks.Service
+	// Products is 第五批 part A: merchant products, product orders, promotions.
+	Products *product.Service
+	// OpenAPI and Webhooks are 第五批 part B: the merchant open platform.
+	OpenAPI  *openapi.Service
+	Webhooks *webhook.Dispatcher
 }
 
 // Options allow tests to replace external services.
@@ -138,6 +146,13 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	commSvc.Billing = billSvc
 	commSvc.MeetupCancelled = venueSvc.CancelMeetupBookings
 	billSvc.Register(billing.BizRaceFee, commSvc.RaceFeeFulfiller())
+	// 第五批: merchant products and promotions; the open platform and webhooks.
+	productSvc := &product.Service{Pool: pool, Mod: mod, Billing: billSvc, Config: store, Log: log}
+	mod.Register(moderation.Product, productSvc.Applier())
+	billSvc.Register(billing.BizProduct, productSvc.Fulfiller())
+	venueSvc.Products = productSvc
+	hooks := &webhook.Dispatcher{Pool: pool, Box: box, Log: log}
+	openSvc := &openapi.Service{Pool: pool, Redis: rdb, Box: box, Webhooks: hooks, Products: productSvc, Perks: perksSvc, Venues: venueSvc, Dev: cfg.Dev()}
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 
 	mux := http.NewServeMux()
@@ -201,6 +216,12 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	shopSvc := &shop.Service{Pool: pool}
 	(&shop.Handler{Svc: shopSvc}).Routes(mux, authed)
 	(&shop.AdminHandler{Svc: shopSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
+	(&product.Handler{Svc: productSvc}).Routes(mux, authed)
+	(&product.AdminHandler{Svc: productSvc, Audit: admin.Audit, Scope: admin.MerchantScope}).Routes(mux, product.Guards{
+		Read: adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleMerchant), Merchant: adminAPI.Guard(admin.RoleMerchant),
+		Ops: adminAPI.Guard(admin.RoleAdmin, admin.RoleOps), Admin: adminAPI.Guard(admin.RoleAdmin)})
+	(&openapi.AdminHandler{Svc: openSvc, Audit: admin.Audit, Scope: admin.MerchantScope}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleMerchant))
+	openSvc.Routes(mux)
 	(&venue.Handler{Svc: venueSvc}).Routes(mux, authed)
 	(&venue.AdminHandler{Svc: venueSvc, Audit: admin.Audit, Scope: admin.MerchantScope}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps),
 		adminAPI.Guard(admin.RoleAdmin, admin.RoleOps, admin.RoleMerchant), adminAPI.Guard(admin.RoleAdmin))
@@ -208,14 +229,18 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 
 	return &App{
 		Handler: withMiddleware(cors(mux, cfg), log),
-		Jobs:    &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs(), perksSvc.Jobs(), venueSvc.Jobs())},
-		Hub:     hub,
-		Play:    playSvc,
-		Config:  store, Pool: pool, Redis: rdb,
+		Jobs: &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs(), perksSvc.Jobs(),
+			venueSvc.Jobs(), productSvc.Jobs(), hooks.Jobs())},
+		Hub:    hub,
+		Play:   playSvc,
+		Config: store, Pool: pool, Redis: rdb,
 		Providers:  reg,
 		Moderation: mod,
 		AI:         aiSvc,
 		Perks:      perksSvc,
+		Products:   productSvc,
+		OpenAPI:    openSvc,
+		Webhooks:   hooks,
 	}, nil
 }
 

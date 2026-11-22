@@ -77,6 +77,8 @@ func run(cfg config.Config, log *slog.Logger) error {
 	go a.Providers.Watch(ctx, 30*time.Second)
 	if !cfg.JobsOff {
 		go a.Jobs.Run(ctx, time.Minute)
+		// Webhook deliveries go out within seconds (the job tick retries too).
+		go a.Webhooks.Run(ctx, 5*time.Second)
 	}
 
 	srv := &http.Server{

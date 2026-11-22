@@ -214,6 +214,29 @@ func (a *API) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if stuckRefunds > 0 {
 		todos = append(todos, todo{"booking_refund", fmt.Sprintf("%d 笔订场退款超过 1 小时未到账", stuckRefunds), stuckRefunds, 1, "/merchant/bookings?status=refunding"})
 	}
+	// 商户商品与开放平台 (第五批): products waiting for a reviewer, merchant
+	// applications to official promotions, and (admin only) apps whose
+	// webhook deliveries failed in the last 24 hours.
+	if me, _ := httpx.AdminFrom(ctx); me.Role != RoleMerchant {
+		var productReview, promotionApply, webhookFailed int
+		if err := a.Pool.QueryRow(ctx, `SELECT
+				(SELECT count(*) FROM src.src_cnt_loop_review_task WHERE target_type='product' AND review_status='pending'),
+				(SELECT count(*) FROM src.src_mkt_loop_promotion_entry e JOIN src.src_mkt_loop_promotion pr ON pr.id=e.promotion_id
+				 WHERE e.entry_status='pending_platform' AND pr.promotion_status <> 'cancelled' AND pr.end_time > now()),
+				(SELECT count(DISTINCT open_app_id) FROM src.src_mer_loop_webhook_delivery WHERE delivery_status='failed' AND update_time > now() - interval '24 hours')`).
+			Scan(&productReview, &promotionApply, &webhookFailed); err != nil {
+			return err
+		}
+		if productReview > 0 {
+			todos = append(todos, todo{"product_review", fmt.Sprintf("%d 个商品待审核", productReview), productReview, 1, "/review?target_type=product"})
+		}
+		if promotionApply > 0 {
+			todos = append(todos, todo{"promotion_apply", fmt.Sprintf("%d 个活动报名待审核", promotionApply), promotionApply, 2, "/merchant/promotions?tab=applications"})
+		}
+		if webhookFailed > 0 && me.Role == RoleAdmin {
+			todos = append(todos, todo{"webhook_failed", fmt.Sprintf("%d 个开放平台应用最近 24 小时 Webhook 投递失败", webhookFailed), webhookFailed, 2, "/merchant/merchants"})
+		}
+	}
 	return httpx.OK(w, map[string]any{"today": t, "last_week": lw, "trend": trend, "todos": todos,
 		"pending_reviews": pendingReviews, "pending_reviews_wow": pendingWoW})
 }

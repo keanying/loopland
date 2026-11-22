@@ -29,6 +29,9 @@ const (
 	CrewAvatar = "crew_avatar"
 	Bio        = "bio"
 	Meetup     = "meetup"
+	// Product is a merchant product (第五批): new submissions and content
+	// changes of on-sale products; there is no author user.
+	Product = "product"
 )
 
 // Settings are maintained in the admin console (敏感词与审核设置) and stored
