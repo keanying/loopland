@@ -52,6 +52,8 @@ LOOPLAND_LIVE_API=http://localhost:8080 flutter test integration_live   # App �
 
 ## 接入真实服务
 
+第一次在新电脑上跑：Windows 运行 `.\scripts\setup.ps1`，Linux / macOS 运行 `scripts/setup.sh`（装好全部工具、配国内镜像、装依赖并启动，详见 `docs/本地启动.md`）。
+
 见 **`docs/上线接入清单.md`**：每家服务去哪申请、拿到什么、填到哪里。第三方服务（短信、验证码、一键登录、实名、微信、支付宝、Apple、AI、邮件、高德）的 Key 在管理端「系统配置」页面填写，加密存库、保存即生效、可逐项测试连接（`docs/api/系统配置.md`）。后端系统级配置 `server/config.yaml`（本地）/ `server/config.prod.example.yaml`（正式环境模板），正式环境缺系统级配置会拒绝启动并列出缺项；`make doctor`（或部署环境里的 `loopland-doctor`）逐项检查生效的配置。
 
 ## 上线前需要准备

@@ -18,4 +18,4 @@
 - **密钥**：不提交到仓库，不发到聊天里。
 - **测试**：后端 `cd server && go test ./...`（需要本机 PostgreSQL+PostGIS 和 Redis）；管理端 `pnpm run lint && pnpm run build`；App `flutter analyze && flutter test`。
 - **启动入口**：后端只有一个入口 `server/main.go`（`go run .` 启动 API，`go run . seed|doctor|help`），`server/internal/cmd/*` 放各子命令；IDE 运行配置在 `.run/`（IDEA/GoLand）和 `.vscode/`，新增子命令要同步。管理端用 **pnpm**（不要提交 package-lock.json）。
-- 本地启动见 `docs/本地启动.md`（Linux / Windows），上线接入见 `docs/上线接入清单.md`。
+- 新电脑一键安装：`scripts/setup.ps1`（Windows）/ `scripts/setup.sh`（Linux、macOS）；日常启动 `scripts/dev.*`。本地启动见 `docs/本地启动.md`（Linux / Windows），上线接入见 `docs/上线接入清单.md`。
