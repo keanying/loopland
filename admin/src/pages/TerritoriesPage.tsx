@@ -139,8 +139,8 @@ export default function TerritoriesPage() {
           />
         }
       />
-      <Row gutter={[20, 20]}>
-        <Col xs={24} xl={15} ref={mapRef}>
+      <Row gutter={[20, 20]} className="band">
+        <Col xs={24} lg={15} ref={mapRef}>
           <Panel
             grey
             title={
@@ -170,7 +170,7 @@ export default function TerritoriesPage() {
             }
             style={{ display: 'flex', flexDirection: 'column' }}
           >
-            <div style={{ position: 'relative', flex: 1 }}>
+            <div className="band-grow" style={{ position: 'relative', flex: 1 }}>
               {picking && <PickBanner text={dialog === 'boss' ? '点击地图选择怪兽中心' : '点击地图选择宝箱位置'} onCancel={() => setPicking(false)} />}
               {geo.data ? (
                 <TerritoryMap
@@ -200,7 +200,7 @@ export default function TerritoriesPage() {
             </div>
           </Panel>
         </Col>
-        <Col xs={24} xl={9}>
+        <Col xs={24} lg={9}>
           {selBoss || selChest ? <MapObjectCard boss={selBoss} chest={selChest} onClose={() => setObj(null)} /> : <TerritoryDetail id={selectedId} />}
         </Col>
       </Row>

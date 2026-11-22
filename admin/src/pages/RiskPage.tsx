@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Col, Empty, Input, Modal, Pagination, Row, Segmented, Select, Skeleton, Slider, Space, Switch, Tag, Tooltip } from 'antd';
+import { Button, Col, Drawer, Empty, Input, Modal, Pagination, Row, Segmented, Select, Skeleton, Slider, Space, Switch, Tag, Tooltip } from 'antd';
 import {
   AimOutlined,
   ApiOutlined,
@@ -67,10 +67,16 @@ export default function RiskPage() {
   const items = useMemo(() => [...(list.data?.items ?? [])].sort((a, b) => b.confidence - a.confidence), [list.data]);
   const selectedId = alertParam ?? items[0]?.id ?? null;
   const high = (openCount.data?.items ?? []).filter((a) => a.confidence >= 0.9).length;
+  // 判定规则放在抽屉里：页面本身正好一屏，告警列表贴到屏幕底部
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   return (
     <>
-      <PageHeader title="风控防作弊" sub="疑似作弊的运动不发能量、不圈地，人工确认后再结算或作废" />
+      <PageHeader
+        title="风控防作弊"
+        sub="疑似作弊的运动不发能量、不圈地，人工确认后再结算或作废"
+        extra={<Button onClick={() => setRulesOpen(true)}>判定规则</Button>}
+      />
       <Row gutter={[16, 16]}>
         <Col xs={12} xl={6}>
           <Stat value={openCount.data?.total ?? '—'} label="待人工确认" />
@@ -87,7 +93,7 @@ export default function RiskPage() {
       </Row>
 
       <Row gutter={[20, 20]} className="split-fill">
-        <Col xs={24} xl={9}>
+        <Col xs={24} lg={9}>
           <Panel
             title="告警"
             extra={
@@ -154,12 +160,14 @@ export default function RiskPage() {
             )}
           </Panel>
         </Col>
-        <Col xs={24} xl={15}>
+        <Col xs={24} lg={15}>
           {selectedId ? <AlertDetail id={selectedId} /> : <Panel grey><Empty description="选择左侧的一条告警" style={{ padding: 80 }} /></Panel>}
         </Col>
       </Row>
 
-      <RulesEditor />
+      <Drawer title="判定规则" width={760} open={rulesOpen} onClose={() => setRulesOpen(false)} destroyOnHidden>
+        <RulesEditor />
+      </Drawer>
     </>
   );
 }

@@ -93,8 +93,8 @@ export default function SettlementPage() {
         sub={staff ? '本商户每周的核销和订场结算；有疑问请联系平台运营' : '每周一 03:00 生成上周结算单（核销 + 订场），逐家确认、线下打款后标记已付款；风控作废和已退款的不结算'}
         extra={<MerchantNav />}
       />
-      <Row gutter={[20, 20]}>
-        <Col xs={24} xl={16}>
+      <Row gutter={[20, 20]} className="band">
+        <Col xs={24} lg={16}>
           <Panel
             title="近 7 天核销"
             extra={
@@ -130,11 +130,13 @@ export default function SettlementPage() {
                 ]}
               />
             ) : (
-              <Chart option={chartOption(days, metric)} style={{ height: 280 }} />
+              <div className="band-grow chart-box">
+                <Chart option={chartOption(days, metric)} style={{ height: '100%' }} />
+              </div>
             )}
           </Panel>
         </Col>
-        <Col xs={24} xl={8}>
+        <Col xs={24} lg={8}>
           <Panel title="近 7 天" grey>
             <Row gutter={[10, 10]}>
               <Col span={12}>

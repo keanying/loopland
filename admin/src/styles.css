@@ -47,14 +47,14 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
   .main { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 0 0 4px 0; }
   .main .page-header { position: sticky; top: 0; z-index: 20; background: #fff; padding: 4px 0 12px; margin-bottom: -8px; }
   /* 不显示外层滚动条（内容超出一屏时仍可用滚轮滚动） */
-  .main { scrollbar-width: none; }
+  .main { scrollbar-width: none; overflow-x: hidden; }
   .main::-webkit-scrollbar { display: none; }
 
   /* 列表卡片固定大小：页面最后一张带表格的卡片占满剩余高度，
      表格在卡片里滚动（表头吸顶），分页固定在卡片底部。
      也可以给任意卡片加 className="fill" 手动开启。 */
   .main > .panel.fill,
-  .main > .panel:last-child:has(.ant-table-wrapper) { flex: 1 0 0; min-height: 360px; height: auto; display: flex; flex-direction: column; }
+  .main > .panel:last-child:has(.ant-table-wrapper) { flex: 1 1 0; min-height: 220px; height: auto; display: flex; flex-direction: column; }
   .main > .panel.fill > *,
   .main > .panel:last-child:has(.ant-table-wrapper) > * { flex-shrink: 0; }
   /* 卡片到表格之间的每一层（标签页、加载层等）都撑满并把高度传下去 */
@@ -366,13 +366,20 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .redeem-input input::placeholder, input.redeem-input::placeholder { font-size: 15px; letter-spacing: 0; text-transform: none; }
 .panel-head .ant-segmented { max-width: 100%; overflow-x: auto; }
 
-/* 左列表右详情（内容审核、风控）：宽屏时占满剩余高度，左右各自在卡片里滚动，
-   列表的筛选栏和分页固定。窄屏仍整页滚动。 */
-@media (min-width: 1200px) {
-  .main > .split-fill { flex: 1 0 0; min-height: 460px; flex-wrap: nowrap; }
-  .main > .split-fill > .ant-col { display: flex; flex-direction: column; min-height: 0; }
-  .main > .split-fill > .ant-col > .panel { flex: 1 1 0; min-height: 0; height: auto !important; position: static !important; overflow-y: auto; scrollbar-width: thin; }
-  .main > .split-fill > .ant-col > .panel:has(> .split-scroll) { display: flex; flex-direction: column; overflow: hidden; }
-  .main > .split-fill > .ant-col > .panel:has(> .split-scroll) > * { flex-shrink: 0; }
-  .main > .split-fill .split-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; margin: 0 -6px; padding: 2px 6px; }
+/* 左列表右详情（内容审核、风控）和「上方大块 + 下方列表」（地图与领地、核销结算）：
+   宽屏时整页正好一屏。.split-fill 占满剩余高度；.band（地图、图表那一行）和下面的列表卡片
+   按 3:2 分剩余高度，地图和图表跟着窗口高度伸缩；各卡片在自己里面滚动。窄屏仍整页滚动。 */
+.chart-box { height: 280px; }
+@media (min-width: 992px) {
+  .main > :is(.split-fill, .band) { flex: 1 1 0; min-height: 240px; flex-wrap: nowrap; }
+  .main > .split-fill { min-height: 320px; }
+  .main > .band { flex-grow: 3; }
+  .main > .band ~ .panel:last-child { flex-grow: 2; }
+  .main > :is(.split-fill, .band) > .ant-col { display: flex; flex-direction: column; min-height: 0; }
+  .main > :is(.split-fill, .band) > .ant-col > .panel { flex: 1 1 0; min-height: 0; height: auto !important; position: static !important; overflow-y: auto; scrollbar-width: thin; }
+  .main > :is(.split-fill, .band) > .ant-col > .panel:has(> .split-scroll, > .band-grow) { display: flex !important; flex-direction: column; overflow: hidden; }
+  .main > :is(.split-fill, .band) > .ant-col > .panel:has(> .split-scroll, > .band-grow) > * { flex-shrink: 0; }
+  .main > :is(.split-fill, .band) .split-scroll { flex: 1 1 0; min-height: 0; overflow-y: auto; scrollbar-width: thin; margin: 0 -6px; padding: 2px 6px; }
+  .main > .band .band-grow { flex: 1 1 0 !important; min-height: 0; height: auto; }
+  .main > .band .map-wrap { min-height: 0; }
 }

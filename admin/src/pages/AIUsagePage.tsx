@@ -113,6 +113,8 @@ export default function AIUsagePage() {
   const feature = params.get('feature') ?? '';
   const status = params.get('status') ?? '';
   const page = Number(params.get('page') ?? 1);
+  // 两个视图：用量概览（统计、图表、各功能）/ 调用记录（分页列表，占满一屏）
+  const view = params.get('view') === 'calls' ? 'calls' : 'overview';
   const [metric, setMetric] = useState<Metric>('calls');
   const [asTable, setAsTable] = useState(false);
 
@@ -155,21 +157,33 @@ export default function AIUsagePage() {
         title="AI 用量"
         sub="各 AI 功能的调用量、Token、失败率、耗时和估算费用；调用记录只有元数据，不含对话内容"
         extra={
-          <Segmented
-            size="large"
-            value={days}
-            onChange={(v) => set({ days: v === 7 ? null : String(v), page: null })}
-            options={[
-              { label: '近 7 天', value: 7 },
-              { label: '近 14 天', value: 14 },
-              { label: '近 30 天', value: 30 },
-            ]}
-          />
+          <>
+            {view === 'overview' && (
+              <Segmented
+                value={days}
+                onChange={(v) => set({ days: v === 7 ? null : String(v), page: null })}
+                options={[
+                  { label: '近 7 天', value: 7 },
+                  { label: '近 14 天', value: 14 },
+                  { label: '近 30 天', value: 30 },
+                ]}
+              />
+            )}
+            <Segmented
+              size="large"
+              value={view}
+              onChange={(v) => set({ view: v === 'calls' ? 'calls' : null })}
+              options={[
+                { label: '用量概览', value: 'overview' },
+                { label: '调用记录', value: 'calls' },
+              ]}
+            />
+          </>
         }
       />
 
-      {usage.isError && <Alert type="error" showIcon message={`加载失败：${(usage.error as Error).message}`} style={{ marginBottom: 16 }} />}
-      {!u ? (
+      {view === 'overview' && usage.isError && <Alert type="error" showIcon message={`加载失败：${(usage.error as Error).message}`} style={{ marginBottom: 16 }} />}
+      {view !== 'overview' ? null : !u ? (
         <Skeleton active paragraph={{ rows: 12 }} />
       ) : (
         <>
@@ -284,7 +298,7 @@ export default function AIUsagePage() {
                       dataIndex: 'feature',
                       render: (f: string) => (
                         <div>
-                          <a onClick={() => set({ feature: f, page: null })}>
+                          <a onClick={() => set({ feature: f, page: null, view: 'calls' })}>
                             <b>{featureName(f)}</b>
                           </a>
                           <div className="muted" style={{ fontSize: 12 }}>
@@ -327,91 +341,92 @@ export default function AIUsagePage() {
         </>
       )}
 
-      <Panel
-        title="调用记录"
-        style={{ marginTop: 20, height: 'auto' }}
-        extra={
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Select
-              size="small"
-              value={feature}
-              style={{ width: 140 }}
-              aria-label="按功能筛选"
-              onChange={(v) => set({ feature: v || null, page: null })}
-              options={[{ value: '', label: '全部功能' }, ...AI_FEATURE_ORDER.map((f) => ({ value: f, label: AI_FEATURE[f].text }))]}
-            />
-            <Segmented
-              size="small"
-              value={status}
-              onChange={(v) => set({ status: String(v) || null, page: null })}
-              options={[
-                { label: '全部', value: '' },
-                { label: '成功', value: 'ok' },
-                { label: '失败', value: 'failed' },
-              ]}
-            />
+      {view === 'calls' && (
+        <Panel
+          title="调用记录"
+          extra={
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Select
+                size="small"
+                value={feature}
+                style={{ width: 140 }}
+                aria-label="按功能筛选"
+                onChange={(v) => set({ feature: v || null, page: null })}
+                options={[{ value: '', label: '全部功能' }, ...AI_FEATURE_ORDER.map((f) => ({ value: f, label: AI_FEATURE[f].text }))]}
+              />
+              <Segmented
+                size="small"
+                value={status}
+                onChange={(v) => set({ status: String(v) || null, page: null })}
+                options={[
+                  { label: '全部', value: '' },
+                  { label: '成功', value: 'ok' },
+                  { label: '失败', value: 'failed' },
+                ]}
+              />
+            </div>
+          }
+        >
+          <div className="panel-hint" style={{ marginBottom: 8 }}>
+            只记录功能、用户、模型、Token、耗时和错误，不含提问和回答内容；投诉核查请到用户详情里「查看 AI 对话」（仅管理员，记审计）。
           </div>
-        }
-      >
-        <div className="panel-hint" style={{ marginBottom: 8 }}>
-          只记录功能、用户、模型、Token、耗时和错误，不含提问和回答内容；投诉核查请到用户详情里「查看 AI 对话」（仅管理员，记审计）。
-        </div>
-        <Table<AICall>
-          rowKey="id"
-          size="small"
-          loading={calls.isFetching && !calls.data}
-          dataSource={calls.data?.items ?? []}
-          scroll={{ x: 960 }}
-          locale={{ emptyText: <Empty description="没有符合条件的调用" /> }}
-          pagination={{
-            current: page,
-            pageSize: PAGE_SIZE,
-            total: calls.data?.total ?? 0,
-            showSizeChanger: false,
-            showTotal: (n) => `共 ${num(n)} 条`,
-            onChange: (p) => set({ page: p === 1 ? null : String(p) }),
-          }}
-          columns={[
-            { title: '时间', dataIndex: 'created_at', width: 150, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm:ss')}</span> },
-            { title: '功能', dataIndex: 'feature', render: (f: string) => <Tag bordered={false}>{featureName(f)}</Tag> },
-            {
-              title: '用户',
-              dataIndex: 'user',
-              render: (x: AICall['user']) =>
-                x ? (
-                  <Link to={`/users?id=${x.id}`}>
-                    {x.nickname} <span className="muted num">#{x.id}</span>
-                  </Link>
-                ) : (
-                  <span className="muted">系统</span>
-                ),
-            },
-            { title: '模型', dataIndex: 'model', render: (v: string) => <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>{v}</span> },
-            {
-              title: '状态',
-              dataIndex: 'status',
-              render: (v: string, r) =>
-                v === 'ok' ? (
-                  <Tag bordered={false} color="success">
-                    成功
-                  </Tag>
-                ) : (
-                  <Tooltip title={r.error}>
-                    <Tag bordered={false} color="error">
-                      失败
+          <Table<AICall>
+            rowKey="id"
+            size="small"
+            loading={calls.isFetching && !calls.data}
+            dataSource={calls.data?.items ?? []}
+            scroll={{ x: 960 }}
+            locale={{ emptyText: <Empty description="没有符合条件的调用" /> }}
+            pagination={{
+              current: page,
+              pageSize: PAGE_SIZE,
+              total: calls.data?.total ?? 0,
+              showSizeChanger: false,
+              showTotal: (n) => `共 ${num(n)} 条`,
+              onChange: (p) => set({ page: p === 1 ? null : String(p) }),
+            }}
+            columns={[
+              { title: '时间', dataIndex: 'created_at', width: 150, render: (v: string) => <span className="num">{dt(v, 'MM-DD HH:mm:ss')}</span> },
+              { title: '功能', dataIndex: 'feature', render: (f: string) => <Tag bordered={false}>{featureName(f)}</Tag> },
+              {
+                title: '用户',
+                dataIndex: 'user',
+                render: (x: AICall['user']) =>
+                  x ? (
+                    <Link to={`/users?id=${x.id}`}>
+                      {x.nickname} <span className="muted num">#{x.id}</span>
+                    </Link>
+                  ) : (
+                    <span className="muted">系统</span>
+                  ),
+              },
+              { title: '模型', dataIndex: 'model', render: (v: string) => <span style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12 }}>{v}</span> },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                render: (v: string, r) =>
+                  v === 'ok' ? (
+                    <Tag bordered={false} color="success">
+                      成功
                     </Tag>
-                    <span className="danger-text" style={{ fontSize: 12 }}>
-                      {(r.error ?? '').slice(0, 24)}
-                      {(r.error ?? '').length > 24 ? '…' : ''}
-                    </span>
-                  </Tooltip>
-                ),
-            },
-            { title: '输入 / 输出 Token', key: 'tok', align: 'right', render: (_, r) => <span className="num">{num(r.prompt_tokens)} / {num(r.completion_tokens)}</span> },
-            { title: '耗时', dataIndex: 'latency_ms', align: 'right', render: (v: number) => <span className={`num${v >= 10000 ? ' danger-text' : ''}`}>{ms(v)}</span> },
-          ]}
-        />
-      </Panel>
+                  ) : (
+                    <Tooltip title={r.error}>
+                      <Tag bordered={false} color="error">
+                        失败
+                      </Tag>
+                      <span className="danger-text" style={{ fontSize: 12 }}>
+                        {(r.error ?? '').slice(0, 24)}
+                        {(r.error ?? '').length > 24 ? '…' : ''}
+                      </span>
+                    </Tooltip>
+                  ),
+              },
+              { title: '输入 / 输出 Token', key: 'tok', align: 'right', render: (_, r) => <span className="num">{num(r.prompt_tokens)} / {num(r.completion_tokens)}</span> },
+              { title: '耗时', dataIndex: 'latency_ms', align: 'right', render: (v: number) => <span className={`num${v >= 10000 ? ' danger-text' : ''}`}>{ms(v)}</span> },
+            ]}
+          />
+        </Panel>
+      )}
     </>
   );
 }

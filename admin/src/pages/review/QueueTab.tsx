@@ -249,7 +249,7 @@ export default function QueueTab() {
       </Row>
 
       <Row gutter={[20, 20]} className="split-fill">
-        <Col xs={24} xl={10}>
+        <Col xs={24} lg={10}>
           <Panel
             title="审核队列"
             extra={
@@ -364,7 +364,7 @@ export default function QueueTab() {
             )}
           </Panel>
         </Col>
-        <Col xs={24} xl={14}>
+        <Col xs={24} lg={14}>
           {active ? (
             <TaskDetail t={active} writable={writable} busy={busy} pendingAction={decide.isPending ? decide.variables?.action : undefined} onAction={(a) => run(active, a)} />
           ) : (
