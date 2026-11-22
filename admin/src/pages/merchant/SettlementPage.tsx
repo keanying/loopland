@@ -363,7 +363,7 @@ function GenerateModal({ open, onClose }: { open: boolean; onClose: () => void }
 function StatementDrawer({ id, onClose }: { id: number | null; onClose: () => void }) {
   const { can } = useAuth();
   const who = useAdminNames();
-  const [type, setType] = useState<'all' | 'redemption' | 'booking' | 'voided'>('all');
+  const [type, setType] = useState<'all' | 'redemption' | 'booking' | 'product' | 'voided'>('all');
   const q = useQuery({ queryKey: ['statements', 'detail', id], queryFn: () => merchantApi.statement(id!), enabled: id !== null });
   const s = q.data;
   const lines = (s?.lines ?? []).filter((l) => (type === 'all' ? true : type === 'voided' ? l.voided : l.type === type));
@@ -420,6 +420,18 @@ function StatementDrawer({ id, onClose }: { id: number | null; onClose: () => vo
                 '本期没有订场'
               )}
             </Descriptions.Item>
+            {s.product_qty !== undefined && (
+              <Descriptions.Item label="商品券（V2 第五批）" span={2}>
+                {s.product_qty ? (
+                  <span className="num">
+                    核销 {s.product_qty} 次 · {yuan(s.product_amt ?? 0)} − 佣金 {yuan(s.product_commission_amt ?? 0)}
+                    {s.product_subsidy_amt ? ` + 官方活动补贴 ${yuan(s.product_subsidy_amt)}` : ''} = {yuan((s.product_amt ?? 0) - (s.product_commission_amt ?? 0) + (s.product_subsidy_amt ?? 0))}（平台付商户）
+                  </span>
+                ) : (
+                  '本期没有商品券核销'
+                )}
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="确认">
               {s.confirmed_at ? (
                 <span className="num">
@@ -442,6 +454,7 @@ function StatementDrawer({ id, onClose }: { id: number | null; onClose: () => vo
                   { label: `全部 ${s.lines.length}`, value: 'all' },
                   { label: `核销 ${count('redemption')}`, value: 'redemption' },
                   { label: `订场 ${count('booking')}`, value: 'booking' },
+                  ...(count('product') ? [{ label: `商品券 ${count('product')}`, value: 'product' }] : []),
                   { label: `风控作废 ${count('voided')}`, value: 'voided' },
                 ]}
               />
@@ -453,7 +466,7 @@ function StatementDrawer({ id, onClose }: { id: number | null; onClose: () => vo
               rowClassName={(l) => (l.voided ? 'row-disabled' : '')}
               pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (t) => `共 ${t} 条` }}
               columns={[
-                { title: '类型', dataIndex: 'type', render: (v: string, l) => <>{v === 'booking' ? <Tag bordered={false} color="purple">订场</Tag> : <Tag bordered={false}>核销</Tag>}{l.voided && <Tag bordered={false} color="error">风控作废 · 不结算</Tag>}</> },
+                { title: '类型', dataIndex: 'type', render: (v: string, l) => <>{v === 'booking' ? <Tag bordered={false} color="purple">订场</Tag> : v === 'product' ? <Tag bordered={false} color="orange">商品券</Tag> : <Tag bordered={false}>核销</Tag>}{l.voided && <Tag bordered={false} color="error">风控作废 · 不结算</Tag>}</> },
                 { title: '单号', dataIndex: 'ref_no', render: (v: string) => <span className="num">{v}</span> },
                 { title: '用户', key: 'user', render: (_, l) => l.user?.nickname ?? '—' },
                 { title: '金额', dataIndex: 'amount_amt', align: 'right', render: (v: number, l) => <span className="num">{l.voided ? <s>{yuan(v)}</s> : yuan(v)}</span> },

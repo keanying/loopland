@@ -58,7 +58,11 @@ export type TodoType =
   // V2 第四批 M-04
   | 'merchant_review'
   | 'booking_refund'
-  | 'statement_confirm';
+  | 'statement_confirm'
+  // V2 第五批: products waiting for manual review, activity applications to review, apps with failed webhooks (admin)
+  | 'product_review'
+  | 'promotion_apply'
+  | 'webhook_failed';
 
 export interface DashboardTodo {
   type: TodoType;
@@ -995,8 +999,21 @@ export interface AdminRef {
 /** pending-待审核 approved-已通过 rejected-未通过 */
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
-/** post-动态 comment-评论 nickname-昵称 avatar-头像 crew_name-跑团名称 crew_avatar-跑团头像 bio-简介 meetup-组局 */
-export type ReviewTargetType = 'post' | 'comment' | 'nickname' | 'avatar' | 'crew_name' | 'crew_avatar' | 'bio' | 'meetup';
+/** post-动态 comment-评论 nickname-昵称 avatar-头像 crew_name-跑团名称 crew_avatar-跑团头像 bio-简介 meetup-组局 product-商户商品（V2 第五批） */
+export type ReviewTargetType = 'post' | 'comment' | 'nickname' | 'avatar' | 'crew_name' | 'crew_avatar' | 'bio' | 'meetup' | 'product';
+
+/**
+ * V2 第五批: a `product` task's merchant and product summary. The contract only says products go through the
+ * same queue (task type `product`); these optional fields are what the queue shows when the server sends them.
+ */
+export interface ReviewProductInfo {
+  id: number;
+  type: 'package' | 'voucher' | 'pass' | string;
+  price_amt: number;
+  original_amt: number | null;
+  /** true: an on-sale product's content change (old content stays on sale until approved). */
+  is_change: boolean;
+}
 
 export interface ReviewTask {
   id: number;
@@ -1020,6 +1037,9 @@ export interface ReviewTask {
   user_violation_count?: number;
   /** The post carries an activity (so 「隐藏起终点后通过」 applies). */
   has_activity?: boolean;
+  /** V2 第五批 · product tasks: the merchant who submitted it (user is then the merchant account). */
+  merchant?: { id: number; name: string } | null;
+  product?: ReviewProductInfo | null;
 }
 
 /** ad-广告引流 contact-联系方式 porn-色情 politics-涉政 abuse-辱骂 fraud-诈骗 illegal-违法 privacy-隐私泄露 minor-未成年人 other-其他 */

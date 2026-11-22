@@ -113,6 +113,8 @@ interface MerchantRow {
   phone: string | null;
   license_images: string[];
   booking_commission_rate: number;
+  /** V2 第五批 (default 0.08). */
+  product_commission_rate: number;
   created_at: string;
 }
 
@@ -140,6 +142,7 @@ export const merchants: MerchantRow[] = (
   phone,
   license_images: Array.from({ length: licenses }, (_, k) => licenseImage(name, id * 10 + k)),
   booking_commission_rate: rate,
+  product_commission_rate: id === 1 ? 0.05 : 0.08,
   created_at: iso(NOW - days * DAY - id * 3 * HOUR),
 }));
 
@@ -241,6 +244,9 @@ function qrOf(v: VenueRow) {
   const payload = `LPV.${v.id}.${sig}`;
   return { payload, url: `https://l.loopland.cn/v/${payload}` };
 }
+
+/** 商户自助改场馆 (docs/api/v2-5 「商户自助改场馆」): the only fields a merchant account may send. */
+const VENUE_SELF_FIELDS = ['cover_url', 'tags', 'price_amt', 'slot_minutes', 'open_time', 'close_time', 'court_qty', 'owner_discount_rate', 'bookable'];
 
 const SPORTS: VenueSport[] = ['basketball', 'football', 'badminton', 'pickleball', 'tennis', 'swimming', 'climbing', 'gym'];
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -630,6 +636,7 @@ function merchantOut(m: MerchantRow): Merchant {
     contact_phone: maskPhone(m.phone),
     license_images: [...m.license_images],
     booking_commission_rate: m.booking_commission_rate,
+    product_commission_rate: m.product_commission_rate,
     venue_count: venues.filter((v) => v.merchant_id === m.id).length,
     drop_count: dropsOfMerchant(m.id).filter((d) => d.status !== 'ended').length,
     today_redemptions: redemptions.filter((r) => r.merchant_id === m.id && r.at >= TODAY && !r.voided).length,
@@ -659,6 +666,8 @@ function merchantInput(b: Record<string, unknown>, base?: MerchantRow): Omit<Mer
   if (!Array.isArray(images) || images.length > 9 || images.some((u) => typeof u !== 'string' || !IMG_RE.test(u))) fail(400, 'invalid_body', '资质图片最多 9 张，需要是 http(s) 地址');
   const rate = Number(get('booking_commission_rate', base?.booking_commission_rate ?? 0));
   if (!Number.isFinite(rate) || rate < 0 || rate > 1) fail(400, 'invalid_body', '订场佣金比例应在 0–1 之间');
+  const prate = Number(get('product_commission_rate', base?.product_commission_rate ?? 0.08));
+  if (!Number.isFinite(prate) || prate < 0 || prate > 1) fail(400, 'invalid_body', '商品佣金比例应在 0–1 之间');
   const contact = get('contact_name', base?.contact_name ?? null);
   return {
     name,
@@ -668,6 +677,7 @@ function merchantInput(b: Record<string, unknown>, base?: MerchantRow): Omit<Mer
     phone,
     license_images: images as string[],
     booking_commission_rate: +rate.toFixed(4),
+    product_commission_rate: +prate.toFixed(4),
   };
 }
 
@@ -722,6 +732,7 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
     }],
     ['POST', /^\/merchants$/, ({ body, role, adminId }) => {
       requireRole(role, STAFF);
+      if ('product_commission_rate' in body && role !== 'admin') fail(403, 'forbidden', '只有管理员可以改商品佣金');
       const v = merchantInput(body);
       const m: MerchantRow = { id: Math.max(...merchants.map((x) => x.id)) + 1, created_at: new Date().toISOString(), ...v };
       merchants.push(m);
@@ -730,6 +741,7 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
     }],
     ['PATCH', /^\/merchants\/(\d+)$/, ({ m: mm, body, role, adminId }) => {
       requireRole(role, STAFF);
+      if ('product_commission_rate' in body && role !== 'admin') fail(403, 'forbidden', '只有管理员可以改商品佣金');
       const m = merchants.find((x) => x.id === Number(mm[1]));
       if (!m) fail(404, 'not_found', '商户不存在');
       const before = m.status;
@@ -761,9 +773,11 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
     }],
 
     // ---- 场馆
-    ['GET', /^\/venues$/, ({ q, role }) => {
-      requireRole(role, STAFF);
-      const mid = q.get('merchant_id');
+    ['GET', /^\/venues$/, (ctx) => {
+      const { q, role } = ctx;
+      requireRole(role, [...STAFF, 'merchant']);
+      // V2 第五批 商户自助改场馆: merchant accounts only see their own venues.
+      const mid = role === 'merchant' ? String(scopeOf(ctx)) : q.get('merchant_id');
       const sport = q.get('sport') || '';
       const kw = (q.get('q') || '').trim();
       const list = venues
@@ -779,10 +793,16 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       log(adminId, 'venue.create', `venue:${v.id}`, { name: v.name, merchant_id: v.merchant_id });
       return venueOut(v);
     }],
-    ['PATCH', /^\/venues\/(\d+)$/, ({ m, body, role, adminId }) => {
-      requireRole(role, STAFF);
+    ['PATCH', /^\/venues\/(\d+)$/, (ctx) => {
+      const { m, body, role, adminId } = ctx;
+      requireRole(role, [...STAFF, 'merchant']);
+      const scope = scopeOf(ctx);
       const v = venues.find((x) => x.id === Number(m[1]));
-      if (!v) fail(404, 'not_found', '场馆不存在');
+      if (!v || (scope !== null && v.merchant_id !== scope)) fail(404, 'not_found', '场馆不存在');
+      if (scope !== null) {
+        const bad = Object.keys(body).filter((k) => !VENUE_SELF_FIELDS.includes(k));
+        if (bad.length) fail(403, 'field_not_allowed', `商户不能修改：${bad.join(', ')}（位置、名称等请联系平台运营）`);
+      }
       Object.assign(v, venueInput(body, v));
       log(adminId, 'venue.update', `venue:${v.id}`, { fields: Object.keys(body) });
       return venueOut(v);

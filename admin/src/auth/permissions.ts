@@ -13,6 +13,10 @@ import type { AdminRole } from '../api/types';
  *   V2 本地生活与商户 (docs/api/v2-4-本地生活与商户.md): 商户 / 场馆 / 订场 → admin + ops
  *   (完整联系电话、商户员工账号、订场退款 → admin); 核销结算 → admin; 核销台 / 核销记录 → admin + ops +
  *   merchant; merchant 只看本商户的核销、订场和结算单，看不到总览。投放 / 联名活动 / 能量商城 → admin + ops。
+ *   V2 商户商品与开放平台 (docs/api/v2-5-商户商品与开放平台.md): 商品 product.read → admin + ops + merchant,
+ *   product.write → merchant only (the platform never creates / edits merchant products), product.ban → admin + ops,
+ *   product_order.refund → admin; 官方活动 promotion.manage → admin + ops, promotion.join → merchant;
+ *   开放平台 openapi.manage → admin + merchant; 商户自助改场馆 venue.self → merchant.
  * The server stays the final judge (403 forbidden).
  */
 export type Permission =
@@ -78,7 +82,23 @@ export type Permission =
   /** 投放 (M-25) / 联名活动 (M-26) / 能量商城 (E-05): view. */
   | 'perks.read'
   /** Create / edit / pause / resume drops, brand campaigns and shop items. */
-  | 'perks.write';
+  | 'perks.write'
+  /** V2 第五批 · 商品 and 商品订单: view (merchant: own products only). */
+  | 'product.read'
+  /** Create / edit / submit / on-off sale / delete products (merchant accounts only). */
+  | 'product.write'
+  /** 强制下架 (platform). */
+  | 'product.ban'
+  /** Refund unused product coupons. */
+  | 'product_order.refund'
+  /** 官方活动: create, publish, pick products, review applications. */
+  | 'promotion.manage'
+  /** 官方活动 (merchant side): apply, accept / decline invitations, withdraw. */
+  | 'promotion.join'
+  /** 开放平台 apps (merchant: own; admin: all, can disable). */
+  | 'openapi.manage'
+  /** 商户自助改场馆: the whitelisted fields of the merchant's own venues. */
+  | 'venue.self';
 
 const OPS: Permission[] = [
   'users.read',
@@ -113,13 +133,16 @@ const OPS: Permission[] = [
   'redemption.read',
   'perks.read',
   'perks.write',
+  'product.read',
+  'product.ban',
+  'promotion.manage',
 ];
 
 const MATRIX: Record<AdminRole, Permission[]> = {
-  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage', 'settings.providers', 'moderation.settings', 'user.ai_messages', 'merchant.reveal_phone', 'merchant.staff', 'booking.refund', 'settlement.read', 'settlement.write'],
+  admin: [...OPS, 'order.refund', 'gameplay.publish', 'admins.manage', 'settings.providers', 'moderation.settings', 'user.ai_messages', 'merchant.reveal_phone', 'merchant.staff', 'booking.refund', 'settlement.read', 'settlement.write', 'product_order.refund', 'openapi.manage'],
   ops: OPS,
   reviewer: ['dashboard.read', 'users.read', 'user.write', 'risk.read', 'risk.resolve', 'review.read', 'review.write'],
-  merchant: ['redeem', 'redemption.read', 'booking.read', 'settlement.read'],
+  merchant: ['redeem', 'redemption.read', 'booking.read', 'settlement.read', 'product.read', 'product.write', 'promotion.join', 'openapi.manage', 'venue.self'],
 };
 
 export function can(role: AdminRole | undefined, p: Permission): boolean {

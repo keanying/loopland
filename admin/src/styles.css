@@ -366,6 +366,23 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .redeem-input input::placeholder, input.redeem-input::placeholder { font-size: 15px; letter-spacing: 0; text-transform: none; }
 .panel-head .ant-segmented { max-width: 100%; overflow-x: auto; }
 
+/* V2 第五批「商户商品与开放平台」· 商品 / 商品订单 / 官方活动 / 开放平台 (pages/merchant) */
+.prod-cell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.prod-thumb { width: 56px; height: 42px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--card); display: block; }
+.prod-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-box { background: var(--card); border-radius: 16px; padding: 14px 14px 2px; margin-bottom: 14px; }
+.prod-box-title { font-weight: 800; margin-bottom: 10px; }
+.prod-diff { display: grid; grid-template-columns: 72px 1fr 1fr; gap: 6px 12px; font-size: 13px; }
+.prod-diff .hd { color: var(--muted); font-size: 12px; }
+.promo-banner { width: 100%; max-height: 160px; object-fit: cover; border-radius: 16px; display: block; }
+.code-block { background: #17171c; color: #e9e9ee; border-radius: 14px; padding: 14px 16px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.6; white-space: pre; overflow-x: auto; margin: 0; }
+.secret-box { background: var(--card); border-radius: 14px; padding: 12px 14px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; word-break: break-all; }
+.secret-box .ant-typography { margin: 0; }
+.scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; width: 100%; }
+.scope-grid .ant-checkbox-wrapper { background: var(--card); border-radius: 12px; padding: 8px 10px; margin: 0; align-items: flex-start; }
+.scope-grid .ant-checkbox-wrapper .muted { display: block; font-size: 12px; }
+
 /* 左列表右详情（内容审核、风控）和「上方大块 + 下方列表」（地图与领地、核销结算）：
    宽屏时整页正好一屏。.split-fill 占满剩余高度；.band（地图、图表那一行）和下面的列表卡片
    按 3:2 分剩余高度，地图和图表跟着窗口高度伸缩；各卡片在自己里面滚动。窄屏仍整页滚动。 */

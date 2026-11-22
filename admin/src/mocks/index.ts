@@ -28,6 +28,7 @@ import { communityRoutes, pendingReviews } from './community';
 import { aiRoutes } from './ai';
 import { mapSupplies, perkRoutes } from './perks';
 import { merchantOf, merchantRoutes, merchantTodos } from './merchant';
+import { commerceRoutes, commerceTodos } from './commerce';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -284,7 +285,7 @@ const routes: [string, RegExp, Handler][] = [
     return { id: a.id, username: a.username, role: a.role, ...(a.role === 'merchant' ? { merchant_id: merchantOf(a.id) } : {}) };
   }],
 
-  ['GET', /^\/dashboard$/, (): Dashboard => {
+  ['GET', /^\/dashboard$/, ({ role }): Dashboard => {
     const open = db.riskAlerts.filter((a) => a.status === 'open').length;
     const refunds = db.orders.filter((o) => o.status === 'refund_requested').length;
     const renew = db.orders.filter((o) => o.status === 'renew_failed').length;
@@ -296,6 +297,7 @@ const routes: [string, RegExp, Handler][] = [
     const reviews = pendingReviews();
     if (reviews) todos.push({ type: 'review', title: `${reviews} 条内容待审核`, count: reviews, priority: 1, link: '/review' });
     todos.push(...merchantTodos()); // V2 第四批 M-04
+    todos.push(...commerceTodos(role)); // V2 第五批: product_review / promotion_apply / webhook_failed (admin)
     return {
       today: { active_users: db.trend.active_users[last], activities: 31620, new_territories: db.trend.new_territories[last], pending_risk: open },
       last_week: { active_users: db.trend.active_users[last - 7], activities: 30380, new_territories: db.trend.new_territories[last - 7], pending_risk: open + 2 },
@@ -829,6 +831,9 @@ const routes: [string, RegExp, Handler][] = [
 
   // V2 第三批「AI」(docs/api/v2-3-AI.md 「管理端 · AI 用量」)
   ...aiRoutes(log),
+
+  // V2 第五批「商户商品与开放平台」· 商品 / 商品订单 / 官方活动 / 开放平台
+  ...commerceRoutes(log),
 
   // V2 第四批「本地生活与商户」· 商户 / 场馆 / 订场 / 核销 / 结算
   ...merchantRoutes(log),
