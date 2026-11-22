@@ -22,12 +22,14 @@ type AdminRef struct {
 
 // StatementLine is one line of a statement.
 type StatementLine struct {
-	Type      string    `json:"type"`
-	RefNo     string    `json:"ref_no"`
-	User      *UserRef  `json:"user"`
-	AmountAmt int64     `json:"amount_amt"`
-	CreatedAt time.Time `json:"created_at"`
-	Voided    bool      `json:"voided"`
+	Type      string   `json:"type"`
+	RefNo     string   `json:"ref_no"`
+	User      *UserRef `json:"user"`
+	AmountAmt int64    `json:"amount_amt"`
+	// SubsidyAmt is the official promotion subsidy of a product line.
+	SubsidyAmt int64     `json:"subsidy_amt"`
+	CreatedAt  time.Time `json:"created_at"`
+	Voided     bool      `json:"voided"`
 }
 
 // Statement is a weekly merchant statement.
@@ -92,7 +94,7 @@ func (s *Service) LoadStatement(ctx context.Context, q db.Querier, scope *int64,
 	if err != nil || !lines {
 		return x, err
 	}
-	rows, err := q.Query(ctx, `SELECT l.line_type, l.ref_no, u.id, u.nickname, l.amount_amt, l.occur_time, l.is_voided
+	rows, err := q.Query(ctx, `SELECT l.line_type, l.ref_no, u.id, u.nickname, l.amount_amt, l.subsidy_amt, l.occur_time, l.is_voided
 		FROM src.src_fin_loop_statement_line l LEFT JOIN src.src_usr_loop_user u ON u.id=l.user_id
 		WHERE l.statement_id=$1 ORDER BY l.occur_time, l.id`, id)
 	if err != nil {
@@ -102,7 +104,7 @@ func (s *Service) LoadStatement(ctx context.Context, q db.Querier, scope *int64,
 		var l StatementLine
 		var uid *int64
 		var nick *string
-		err := r.Scan(&l.Type, &l.RefNo, &uid, &nick, &l.AmountAmt, &l.CreatedAt, &l.Voided)
+		err := r.Scan(&l.Type, &l.RefNo, &uid, &nick, &l.AmountAmt, &l.SubsidyAmt, &l.CreatedAt, &l.Voided)
 		if uid != nil {
 			l.User = &UserRef{ID: *uid, Nickname: *nick}
 		}

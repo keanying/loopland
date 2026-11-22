@@ -40,6 +40,12 @@ type UserRef struct {
 	Nickname string `json:"nickname"`
 }
 
+// PayRef is the payment order of a product order.
+type PayRef struct {
+	OrderNo string `json:"order_no"`
+	Channel string `json:"channel"`
+}
+
 // Order is ProductOrder.
 type Order struct {
 	ID           int64          `json:"id"`
@@ -53,10 +59,13 @@ type Order struct {
 	Promotion    *PromotionRef  `json:"promotion"`
 	Status       string         `json:"status"`
 	Coupons      []perks.Coupon `json:"coupons"`
-	PayExpiresAt time.Time      `json:"pay_expires_at"`
-	PaidAt       *time.Time     `json:"paid_at"`
-	CreatedAt    time.Time      `json:"created_at"`
-	User         *UserRef       `json:"user,omitempty"`
+	// Pay is the payment order (as on bookings; the dev mock payment
+	// /v1/dev/orders/{no}/pay takes its order_no).
+	Pay          *PayRef    `json:"pay"`
+	PayExpiresAt time.Time  `json:"pay_expires_at"`
+	PaidAt       *time.Time `json:"paid_at"`
+	CreatedAt    time.Time  `json:"created_at"`
+	User         *UserRef   `json:"user,omitempty"`
 
 	userID     int64
 	payOrderNo *string
@@ -65,7 +74,7 @@ type Order struct {
 
 const orderCols = `po.id, po.order_no, po.product_id, po.product_title, po.product_type, po.image_url, po.merchant_id, m.merchant_name, po.qty,
 	po.unit_price_amt, po.amount_amt, po.refund_amt, po.promotion_id, pr.promotion_title, po.order_status, po.pay_expire_time, po.paid_time,
-	po.create_time, po.user_id, u.nickname, po.pay_order_no, po.is_refundable`
+	po.create_time, po.user_id, u.nickname, po.pay_order_no, po.is_refundable, po.channel`
 
 const orderFrom = ` FROM src.src_ord_loop_product_order po JOIN src.src_mer_loop_merchant m ON m.id=po.merchant_id
 	JOIN src.src_usr_loop_user u ON u.id=po.user_id LEFT JOIN src.src_mkt_loop_promotion pr ON pr.id=po.promotion_id `
@@ -79,10 +88,13 @@ func (s *Service) queryOrders(ctx context.Context, q db.Querier, withUser bool, 
 		var o Order
 		var promoID *int64
 		var promoTitle *string
-		var nick string
+		var nick, channel string
 		err := r.Scan(&o.ID, &o.OrderNo, &o.Product.ID, &o.Product.Title, &o.Product.Type, &o.Product.Image, &o.Merchant.ID, &o.Merchant.Name, &o.Qty,
 			&o.UnitPriceAmt, &o.AmountAmt, &o.RefundAmt, &promoID, &promoTitle, &o.Status, &o.PayExpiresAt, &o.PaidAt,
-			&o.CreatedAt, &o.userID, &nick, &o.payOrderNo, &o.refundable)
+			&o.CreatedAt, &o.userID, &nick, &o.payOrderNo, &o.refundable, &channel)
+		if o.payOrderNo != nil {
+			o.Pay = &PayRef{OrderNo: *o.payOrderNo, Channel: channel}
+		}
 		if promoID != nil && promoTitle != nil {
 			o.Promotion = &PromotionRef{ID: *promoID, Title: *promoTitle}
 		}

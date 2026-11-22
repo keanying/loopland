@@ -187,6 +187,7 @@ seed 是通过后端接口写演示数据的，需要先把后端跑起来：
 	if ad != nil {
 		seedVenues(users, ad)
 		seedPerks(users, ad)
+		seedProducts(users, ad)
 	}
 	fmt.Println("seed done")
 }

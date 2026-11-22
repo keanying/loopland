@@ -853,16 +853,14 @@ func (s *Service) review(ctx context.Context, tx pgx.Tx, id int64, c Content, pe
 	if sc.Blocked {
 		outcome = moderation.OutcomeReject
 	}
-	switch outcome {
-	case moderation.OutcomeApprove:
-		if err := s.approve(ctx, tx, id); err != nil {
+	if !pending { // under review until the outcome applies (approve → on_sale, reject → rejected)
+		if _, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET product_status='reviewing', review_note=NULL, update_time=now() WHERE id=$1`, id); err != nil {
 			return err
 		}
-	case moderation.OutcomeReview:
-		if !pending {
-			if _, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET product_status='reviewing', review_note=NULL, update_time=now() WHERE id=$1`, id); err != nil {
-				return err
-			}
+	}
+	if outcome == moderation.OutcomeApprove {
+		if err := s.approve(ctx, tx, id); err != nil {
+			return err
 		}
 	}
 	return s.Mod.File(ctx, tx, moderation.Product, id, 0, c.text(), c.Images, sc, outcome)
