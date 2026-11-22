@@ -266,25 +266,60 @@ function Get-FlutterVersion {
     return $null
 }
 # 之前没跑完的 flutter / flutter doctor 会占着 bin\cache\lockfile，新命令会一直等它
+# 之前没跑完的 flutter / flutter doctor 会占着锁：Windows 上 flutter.bat 先拿 bin\cache\flutter.bat.lock
+# （拿不到就一声不吭地一直等），Dart 工具再拿 bin\cache\lockfile。
 function Clear-FlutterLock {
     $root = Get-FlutterRoot
     if (-not $root) { return }
-    $stale = @(Get-Process dart, dartaotruntime -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -like "$root*" })
-    if ($stale.Count -gt 0) {
-        Warn "结束 $($stale.Count) 个之前没退出的 Flutter 进程（IDE 的 Dart 分析服务会自动重启）"
-        $stale | Stop-Process -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
+    $procs = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.ProcessId -ne $PID -and (
+                ($_.ExecutablePath -and $_.ExecutablePath -like "$root\*") -or
+                ($_.Name -eq 'cmd.exe' -and $_.CommandLine -and $_.CommandLine -like "*$root\bin\*"))
+        })
+    if ($procs.Count -gt 0) {
+        Warn "结束 $($procs.Count) 个之前没退出的 Flutter 进程（$(($procs | ForEach-Object Name | Sort-Object -Unique) -join '、')；IDE 的 Dart 分析服务会自动重启）"
+        $procs | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        Start-Sleep -Seconds 2
     }
-    Remove-Item (Join-Path $root 'bin\cache\lockfile') -Force -ErrorAction SilentlyContinue
+    foreach ($f in 'flutter.bat.lock', 'lockfile') {
+        $lock = Join-Path $root "bin\cache\$f"
+        if (Test-Path $lock) {
+            Remove-Item $lock -Force -ErrorAction SilentlyContinue
+            if (Test-Path $lock) {
+                Warn "$lock 还被别的程序占着：请先关掉 GoLand / Android Studio / VS Code 等打开了 Flutter 项目的程序，再重新运行本脚本。"
+            }
+        }
+    }
 }
+
+# 运行 flutter，输出直接显示；每分钟提示一次还在运行，超过 $Minutes 分钟就停止并给出排查办法
+function Invoke-FlutterWatched([string[]]$Arguments, [int]$Minutes = 20) {
+    $bat = Join-Path (Get-FlutterRoot) 'bin\flutter.bat'
+    $argLine = '/d /c ""' + $bat + '" ' + ($Arguments -join ' ') + '"'
+    $p = Start-Process -FilePath 'cmd.exe' -ArgumentList $argLine -NoNewWindow -PassThru
+    $null = $p.Handle   # 先取一次句柄，否则进程结束后 ExitCode 读不到（PowerShell 已知问题）
+    $sw = [Diagnostics.Stopwatch]::StartNew()
+    while (-not $p.WaitForExit(60000)) {
+        $m = [int]$sw.Elapsed.TotalMinutes
+        if ($m -ge $Minutes) {
+            Get-CimInstance Win32_Process -Filter "ParentProcessId=$($p.Id)" -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Die ("flutter $($Arguments -join ' ') 超过 $Minutes 分钟没有结束，已停止。请在新的 PowerShell 窗口运行下面的命令看卡在哪一步，把最后几行发给开发同学：`n" +
+                "    & '$bat' --verbose --version")
+        }
+        Info "flutter $($Arguments -join ' ') 仍在运行（已 $m 分钟）…第一次会编译 Flutter 工具、下载文件；长时间没有任何新输出时，多半是被 IDE 或旧进程占着锁"
+    }
+    if ($p.ExitCode -ne 0) { Die "flutter $($Arguments -join ' ') 失败（退出码 $($p.ExitCode)）" }
+}
+
 function Step-FlutterConfig {
     Clear-FlutterLock
     Info '运行 flutter --version（第一次要编译 Flutter 工具并下载 Dart SDK，可能要几分钟，下面会显示进度）…'
-    Invoke-Checked 'flutter' @('--version')
+    Invoke-FlutterWatched @('--version')
     Invoke-Quiet 'flutter' @('config', '--no-analytics') | Out-Null
     Invoke-Quiet 'dart' @('--disable-analytics') | Out-Null
     Info '下载 Flutter 运行需要的文件（第一次要几分钟）…'
-    Invoke-Checked 'flutter' @('precache')
+    Invoke-FlutterWatched @('precache') 30
 }
 
 function Step-Docker {
