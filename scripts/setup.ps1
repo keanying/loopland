@@ -11,6 +11,9 @@
   .\scripts\setup.ps1 -WithAndroid        顺带安装 Android Studio（开发安卓 App 需要）
   .\scripts\setup.ps1 -App chrome         最后再启动 App（chrome / windows / emulator-5554 …）
   .\scripts\setup.ps1 -ToolsDir D:\dev    Flutter SDK 装在哪个目录下（默认 D:\dev，没有 D 盘就用 用户目录\dev）
+  .\scripts\setup.ps1 -FlutterMirror https://mirrors.tuna.tsinghua.edu.cn/flutter
+                                          指定 Flutter 下载镜像（默认自动测速，选最快的）
+下载中断（Ctrl+C 或断网）后重新运行会接着下载，不会从头开始。
 
 第一次运行如果提示「禁止运行脚本」，先执行：
   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
@@ -22,7 +25,8 @@ param(
     [switch]$NoMirror,
     [switch]$WithAndroid,
     [string]$App = '',
-    [string]$ToolsDir = ''
+    [string]$ToolsDir = '',
+    [string]$FlutterMirror = ''
 )
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest 的进度条在 5.1 里会让下载慢很多
@@ -159,40 +163,85 @@ function Step-Node {
     if (-not $NoMirror) { Invoke-Quiet 'pnpm' @('config', 'set', 'registry', 'https://registry.npmmirror.com') | Out-Null }
 }
 
+# Flutter 下载镜像：先各下 2 MB 测速，选最快的（同一个文件，断点续传可以换镜像接着下）
+$FlutterMirrors = @(
+    'https://storage.flutter-io.cn',
+    'https://mirrors.tuna.tsinghua.edu.cn/flutter',
+    'https://mirrors.ustc.edu.cn/flutter',
+    'https://mirrors.cernet.edu.cn/flutter',
+    'https://storage.googleapis.com'
+)
+function Measure-Mirror([string]$url) {
+    if (-not (Have 'curl.exe')) { return 0 }
+    $r = Invoke-Quiet 'curl.exe' @('-sL', '--fail', '-r', '0-2097151', '--connect-timeout', '5', '--max-time', '10', '-o', 'NUL', '-w', '%{speed_download}', $url)
+    $speed = 0.0
+    $text = "$($r.Output | Select-Object -Last 1)".Trim()
+    if ($r.Code -eq 0 -and [double]::TryParse($text, [Globalization.NumberStyles]::Float, [Globalization.CultureInfo]::InvariantCulture, [ref]$speed)) { return $speed }
+    return 0
+}
+function Select-FlutterMirror([string]$archive) {
+    if ($FlutterMirror) { return $FlutterMirror.TrimEnd('/') }
+    $list = if ($NoMirror) { @('https://storage.googleapis.com') } else { $FlutterMirrors }
+    if ($list.Count -eq 1) { return $list[0] }
+    Info '测试各个 Flutter 镜像的下载速度…'
+    $best = $null; $bestSpeed = 0
+    foreach ($m in $list) {
+        $speed = Measure-Mirror "$m/flutter_infra_release/releases/$archive"
+        Info ("  {0,-48} {1}" -f $m, $(if ($speed -gt 0) { '{0:N0} KB/s' -f ($speed / 1KB) } else { '连不上' }))
+        if ($speed -gt $bestSpeed) { $best = $m; $bestSpeed = $speed }
+    }
+    if (-not $best) { Die '所有 Flutter 镜像都连不上，请检查网络（或用 -FlutterMirror 指定一个可用的地址）。' }
+    if ($bestSpeed -lt 200KB) { Warn ('最快的镜像也只有 {0:N0} KB/s，下载会比较久；可以换个网络（如手机热点）后重新运行，会接着下载。' -f ($bestSpeed / 1KB)) }
+    return $best
+}
+
 function Step-Flutter {
     Say "Flutter（需要 ≥ $NeedFlutter）"
     # 不运行 flutter 命令判断版本：第一次运行要编译工具，旧进程还可能占着锁，看起来像卡死
     $v = Get-FlutterVersion
-    if ($v -and $v -ge $NeedFlutter) { Info "已安装 Flutter $v（$(Get-FlutterRoot)）"; Step-FlutterConfig; return }
-    if ($v) { Info "Flutter $v 版本不够，安装 $NeedFlutter" }
-    $base = if ($NoMirror) { 'https://storage.googleapis.com' } else { 'https://storage.flutter-io.cn' }
+    $oldRoot = Get-FlutterRoot
+    if ($v -and $v -ge $NeedFlutter) { Info "已安装 Flutter $v（$oldRoot）"; Step-FlutterConfig; return }
+    if ($v) { Info "Flutter $v（$oldRoot）版本不够，安装 $NeedFlutter" }
     Info '查询 Flutter 版本列表…'
-    $rel = Invoke-RestMethod "$base/flutter_infra_release/releases/releases_windows.json"
+    $rel = $null
+    $jsonBases = if ($NoMirror) { @('https://storage.googleapis.com') } else { $FlutterMirrors }
+    foreach ($jb in $jsonBases) {
+        try { $rel = Invoke-RestMethod -TimeoutSec 20 "$jb/flutter_infra_release/releases/releases_windows.json"; break } catch { $rel = $null }
+    }
+    if (-not $rel) { Die '查不到 Flutter 版本列表，请检查网络。' }
     $pick = $rel.releases | Where-Object { $_.channel -eq 'stable' -and $_.version -like "$($NeedFlutter.Major).$($NeedFlutter.Minor).*" } | Select-Object -First 1
     if (-not $pick) { $pick = $rel.releases | Where-Object { $_.hash -eq $rel.current_release.stable } | Select-Object -First 1 }
     if (-not $pick) { Die '没有找到可用的 Flutter 稳定版' }
+    $mirror = Select-FlutterMirror $pick.archive
+    if (-not $NoMirror) { Set-UserEnv 'FLUTTER_STORAGE_BASE_URL' $mirror }   # 之后 Flutter 下载引擎文件也走这个镜像
     $dest = Join-Path $ToolsDir 'flutter'
+    $zip = Join-Path $env:TEMP ([IO.Path]::GetFileName($pick.archive))
+    $url = "$mirror/flutter_infra_release/releases/$($pick.archive)"
+    Info "下载 Flutter $($pick.version)（约 1.8 GB）：$url"
+    Info "中断后重新运行会接着下载（临时文件：$zip）"
+    if (Have 'curl.exe') { Invoke-Checked 'curl.exe' @('-L', '--fail', '--retry', '5', '--retry-delay', '3', '-C', '-', '-o', $zip, $url) } else { Invoke-WebRequest $url -OutFile $zip }
+    if ($pick.sha256) {
+        Info '校验文件…'
+        $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+        if ($hash -ne $pick.sha256.ToLower()) { Remove-Item $zip -Force; Die 'Flutter 安装包校验失败（下载不完整或镜像文件有误），已删除，请重新运行。' }
+    }
     if (Test-Path (Join-Path $dest 'bin\flutter.bat')) {
-        Warn "$dest 已存在但版本不够（$v），先改名为 flutter.old 再装新版"
+        Warn "$dest 已存在但版本不够，改名为 flutter.old"
         $old = "$dest.old"
         if (Test-Path $old) { Remove-Item $old -Recurse -Force }
         Rename-Item $dest $old
     }
     New-Item -ItemType Directory -Force -Path $ToolsDir | Out-Null
-    $zip = Join-Path $env:TEMP ([IO.Path]::GetFileName($pick.archive))
-    $url = "$($rel.base_url)/$($pick.archive)"
-    Info "下载 Flutter $($pick.version)（约 1 GB）：$url"
-    if (Have 'curl.exe') { Invoke-Checked 'curl.exe' @('-L', '--fail', '-C', '-', '-o', $zip, $url) } else { Invoke-WebRequest $url -OutFile $zip }
-    if ($pick.sha256) {
-        Info '校验文件…'
-        $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-        if ($hash -ne $pick.sha256.ToLower()) { Remove-Item $zip -Force; Die 'Flutter 安装包校验失败（下载不完整），请重新运行。' }
-    }
     Info "解压到 $ToolsDir…"
     if (Have 'tar.exe') { Invoke-Checked 'tar.exe' @('-xf', $zip, '-C', $ToolsDir) } else { Expand-Archive $zip -DestinationPath $ToolsDir -Force }
     Remove-Item $zip -Force
     Add-UserPath (Join-Path $dest 'bin')
+    # 用户 PATH 排在系统 PATH 后面：旧 Flutter 如果在系统 PATH 里，还会先被找到
+    $env:Path = "$(Join-Path $dest 'bin');$env:Path"
     Info "已加入 PATH：$dest\bin"
+    if ($oldRoot -and ($oldRoot -ne $dest)) {
+        Warn "旧的 Flutter $v 还在 $oldRoot。请在「系统属性 → 环境变量」的 Path 里删掉 $oldRoot\bin，避免 IDE 和新开的终端用到旧版本。"
+    }
     Step-FlutterConfig
 }
 function Get-FlutterRoot {

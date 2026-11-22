@@ -11,6 +11,7 @@
 #   scripts/setup.sh --no-mirror      不配置国内镜像（海外网络）
 #   scripts/setup.sh --app chrome     最后再启动 App（chrome / linux / macos / 设备 ID）
 #   LOOPLAND_TOOLS=~/tools scripts/setup.sh   工具装到别的目录
+#   FLUTTER_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/flutter scripts/setup.sh   指定 Flutter 镜像（默认自动测速）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -26,7 +27,7 @@ while [ $# -gt 0 ]; do
     --no-docker) NO_DOCKER=1 ;;
     --no-mirror) NO_MIRROR=1 ;;
     --app) shift; APP_DEVICE="${1:-}" ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "未知参数：$1（--help 查看用法）" >&2; exit 2 ;;
   esac
   shift
@@ -150,10 +151,15 @@ step_flutter() {
     [ -z "$v" ] && v="$(git -C "$root" describe --tags --abbrev=0 2>/dev/null | sed -nE 's/^([0-9]+\.[0-9]+).*/\1/p' || true)"
   fi
   if [ -n "$v" ] && ver_ge "$v" "$NEED_FLUTTER"; then info "已安装 Flutter $v"; flutter_config; return; fi
-  local base="https://storage.googleapis.com"; [ "$NO_MIRROR" = 0 ] && base="https://storage.flutter-io.cn"
+  local mirrors="https://storage.googleapis.com"
+  [ "$NO_MIRROR" = 0 ] && mirrors="https://storage.flutter-io.cn https://mirrors.tuna.tsinghua.edu.cn/flutter https://mirrors.ustc.edu.cn/flutter https://mirrors.cernet.edu.cn/flutter https://storage.googleapis.com"
   local os=linux; [ "$OS" = Darwin ] && os=macos
-  local json
-  json="$(fetch -s "$base/flutter_infra_release/releases/releases_$os.json")"
+  local json="" base
+  for base in $mirrors; do
+    json="$(fetch -s --max-time 20 "$base/flutter_infra_release/releases/releases_$os.json" 2>/dev/null || true)"
+    [ -n "$json" ] && break
+  done
+  [ -n "$json" ] || die "查不到 Flutter 版本列表，请检查网络"
   # 取 3.50.x 的稳定版（macOS 还要匹配 CPU 架构）；没有就取当前稳定版
   local archive
   archive="$(printf '%s' "$json" | python3 -c '
@@ -166,9 +172,25 @@ print(rs[0]["archive"] + " " + rs[0]["sha256"] if rs else "")
 ' "$NEED_FLUTTER" "$([ "$GOARCH" = arm64 ] && echo arm64 || echo x64)")"
   [ -n "$archive" ] || die "没有找到可用的 Flutter 稳定版"
   local file="${archive%% *}" sum="${archive##* }"
+  # 各镜像下 2 MB 测速，选最快的；FLUTTER_MIRROR=... 可以直接指定
+  base="${FLUTTER_MIRROR:-}"
+  if [ -z "$base" ]; then
+    local best=0 m speed
+    info "测试各个 Flutter 镜像的下载速度…"
+    for m in $mirrors; do
+      speed="$(curl -sL --fail -r 0-2097151 --connect-timeout 5 --max-time 10 -o /dev/null -w '%{speed_download}' "$m/flutter_infra_release/releases/$file" 2>/dev/null)" || speed=0
+      speed="${speed%%.*}"; speed="$((10#${speed:-0}))"
+      info "  $m  $([ "${speed:-0}" -gt 0 ] && echo "$((speed / 1024)) KB/s" || echo 连不上)"
+      if [ "${speed:-0}" -gt "$best" ]; then best="$speed"; base="$m"; fi
+    done
+    [ -n "$base" ] || die "所有 Flutter 镜像都连不上，请检查网络（或用 FLUTTER_MIRROR=地址 指定）"
+    [ "$best" -lt 204800 ] && warn "最快的镜像也只有 $((best / 1024)) KB/s，下载会比较久；中断后重新运行会接着下载"
+  fi
+  [ "$NO_MIRROR" = 0 ] && sed -i.bak "s#^export FLUTTER_STORAGE_BASE_URL=.*#export FLUTTER_STORAGE_BASE_URL=$base#" "$ENV_FILE" && rm -f "$ENV_FILE.bak" && export FLUTTER_STORAGE_BASE_URL="$base"
   local url="$base/flutter_infra_release/releases/$file" tmp="/tmp/$(basename "$file")"
   info "下载 Flutter（约 1 GB）：$url"
-  fetch -C - -o "$tmp" "$url"
+  info "中断后重新运行会接着下载（临时文件：$tmp）"
+  fetch --retry-delay 3 -C - -o "$tmp" "$url"
   if have sha256sum; then echo "$sum  $tmp" | sha256sum -c --quiet - || { rm -f "$tmp"; die "Flutter 安装包校验失败，请重新运行"; }; fi
   mkdir -p "$TOOLS"
   [ -d "$TOOLS/flutter" ] && { warn "$TOOLS/flutter 版本不够，改名为 flutter.old"; rm -rf "$TOOLS/flutter.old"; mv "$TOOLS/flutter" "$TOOLS/flutter.old"; }
