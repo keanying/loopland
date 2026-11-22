@@ -8,7 +8,6 @@ import 'package:loopland/widgets/nav_shell.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/fixtures.dart';
-import 'fake_backend.dart';
 import 'test_helpers.dart';
 
 void main() {
