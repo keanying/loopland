@@ -303,7 +303,13 @@ class _MapPageState extends ConsumerState<MapPage> {
                 icon: Icons.sports_esports_outlined, label: '玩法', color: LL.card, fg: LL.text, onTap: () => context.push('/games')),
             if (ai) ...[
               const SizedBox(height: 10),
-              _SideButton(icon: Icons.auto_awesome_rounded, label: 'AI', color: LL.lavender, fg: LL.ink, onTap: () => context.push('/ai')),
+              _SideButton(
+                  icon: Icons.auto_awesome_rounded,
+                  leading: const AIMark(),
+                  label: '圈圈',
+                  color: LL.lavender,
+                  fg: LL.ink,
+                  onTap: () => context.push('/ai')),
             ],
           ]),
         ),
@@ -349,8 +355,9 @@ class _MapPageState extends ConsumerState<MapPage> {
 }
 
 class _SideButton extends StatelessWidget {
-  const _SideButton({required this.icon, required this.label, required this.color, required this.fg, required this.onTap});
+  const _SideButton({required this.icon, this.leading, required this.label, required this.color, required this.fg, required this.onTap});
   final IconData icon;
+  final Widget? leading; // 替代 icon（如「圈圈」的带 AI 角标图标）
   final String label;
   final Color color, fg;
   final VoidCallback onTap;
@@ -365,8 +372,8 @@ class _SideButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: fg, size: 22),
-            const SizedBox(width: 8),
+            leading ?? Icon(icon, color: fg, size: 22),
+            SizedBox(width: leading != null ? 14 : 8),
             Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w900, fontSize: 17)),
           ]),
         ),

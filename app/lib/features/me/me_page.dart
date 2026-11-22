@@ -14,6 +14,7 @@ import '../../run/uploader.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/nav_shell.dart';
+import '../ai/ai_widgets.dart';
 import '../run/result_page.dart';
 import '../social/my_social_card.dart';
 import '../social/social_providers.dart';
@@ -145,8 +146,9 @@ class MePage extends ConsumerWidget {
             if (ref.watch(aiEnabledProvider))
               _MenuTile(
                 icon: Icons.auto_awesome_rounded,
+                leading: const AIMark(size: 20),
                 color: LL.lavender,
-                title: 'AI 助手圈圈',
+                title: '圈圈',
                 sub: '去哪抢地、怪兽怎么打、今天跑多少合适',
                 onTap: () => context.push('/ai'),
               ),
@@ -245,8 +247,9 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
 }
 
 class _MenuTile extends StatelessWidget {
-  const _MenuTile({required this.icon, required this.color, required this.title, this.sub, required this.onTap});
+  const _MenuTile({required this.icon, this.leading, required this.color, required this.title, this.sub, required this.onTap});
   final IconData icon;
+  final Widget? leading; // 替代 icon（如「圈圈」的带 AI 角标图标）
   final Color color;
   final String title;
   final String? sub;
@@ -262,8 +265,9 @@ class _MenuTile extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
+            alignment: Alignment.center,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: LL.ink, size: 22),
+            child: leading ?? Icon(icon, color: LL.ink, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(

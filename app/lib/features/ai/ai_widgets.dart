@@ -41,6 +41,35 @@ class AIBadge extends StatelessWidget {
       );
 }
 
+/// 「圈圈」入口的图标：星芒加一个小「AI」角标，一眼能认出是 AI 助手。
+class AIMark extends StatelessWidget {
+  const AIMark({super.key, this.size = 22, this.color = LL.ink});
+  final double size;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: size,
+        height: size,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Icon(Icons.auto_awesome_rounded, size: size, color: color),
+          Positioned(
+            right: -size * 0.45,
+            top: -size * 0.3,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: size * 0.14, vertical: size * 0.02),
+              decoration: BoxDecoration(
+                color: LL.ink,
+                borderRadius: BorderRadius.circular(size),
+                border: Border.all(color: LL.lime, width: 1),
+              ),
+              child: Text('AI',
+                  style: TextStyle(color: LL.lime, fontSize: size * 0.4, fontWeight: FontWeight.w900, height: 1.1)),
+            ),
+          ),
+        ]),
+      );
+}
+
 IconData aiRouteIcon(String type) => switch (type) {
       'capture' => Icons.flag_outlined,
       'defend' => Icons.shield_outlined,
