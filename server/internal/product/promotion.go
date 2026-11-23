@@ -3,12 +3,14 @@ package product
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -462,11 +464,44 @@ func (s *Service) PickEntry(ctx context.Context, tx pgx.Tx, adminID, promotionID
 	if status == "active" {
 		decide = time.Now()
 	}
-	return s.insertEntry(ctx, tx, `INSERT INTO src.src_mkt_loop_promotion_entry (promotion_id, product_id, merchant_id, promo_price_amt, platform_subsidy_amt,
+	id, err := s.insertEntry(ctx, tx, `INSERT INTO src.src_mkt_loop_promotion_entry (promotion_id, product_id, merchant_id, promo_price_amt, platform_subsidy_amt,
 			promo_stock_qty, sort_no, source_type, entry_status, decide_time, create_admin_id)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,'platform',$8,$9,$10) RETURNING id`, p.Merchant.ID, event,
 		promotionID, p.ID, p.Merchant.ID, price, subsidy, in.PromoStockQty, sortNo, status, decide, adminID)
+	if err != nil {
+		return 0, err
+	}
+	b, err := s.entryBrief(ctx, tx, id)
+	if err != nil {
+		return 0, err
+	}
+	m := adminmsg.Msg{Category: adminmsg.CatPromotion, Level: adminmsg.Info,
+		Title: "商品「" + b.product + "」已加入「" + b.promotion + "」", Body: "平台按原价把商品加入了官方活动，可在「我的报名」里查看或退出。",
+		Link: "/merchant/promotions?tab=mine", RefType: "promotion_entry", RefID: id}
+	if status == "pending_merchant" {
+		m.Title = "「" + b.promotion + "」邀请你的商品「" + b.product + "」参加，活动价 " + adminmsg.Yuan(int64(price))
+		m.Body = fmt.Sprintf("原价 %s，活动价 %s；同意后商品按活动价在活动期间售卖。", adminmsg.Yuan(int64(p.PriceAmt)), adminmsg.Yuan(int64(price)))
+		m.Link = "/merchant/promotions?tab=invites"
+	}
+	s.Msg.ToMerchant(ctx, b.merchantID, m)
+	return id, nil
 }
+
+// entryBrief names an entry in messages.
+type entryBrief struct {
+	product, promotion, merchant string
+	merchantID, promotionID      int64
+}
+
+func (s *Service) entryBrief(ctx context.Context, q db.Querier, id int64) (entryBrief, error) {
+	var b entryBrief
+	err := q.QueryRow(ctx, `SELECT p.product_title, pr.promotion_title, m.merchant_name, m.id, pr.id FROM src.src_mkt_loop_promotion_entry e
+		JOIN src.src_mer_loop_product p ON p.id=e.product_id JOIN src.src_mkt_loop_promotion pr ON pr.id=e.promotion_id
+		JOIN src.src_mer_loop_merchant m ON m.id=e.merchant_id WHERE e.id=$1`, id).Scan(&b.product, &b.promotion, &b.merchant, &b.merchantID, &b.promotionID)
+	return b, err
+}
+
+func promotionLink(id int64) string { return fmt.Sprintf("/merchant/promotions?id=%d", id) }
 
 func (s *Service) insertEntry(ctx context.Context, tx pgx.Tx, sql string, merchant int64, event string, args ...any) (int64, error) {
 	var id int64
@@ -534,9 +569,21 @@ func (s *Service) Apply(ctx context.Context, tx pgx.Tx, a Actor, promotionID int
 	if a.AdminID != 0 {
 		admin = a.AdminID
 	}
-	return s.insertEntry(ctx, tx, `INSERT INTO src.src_mkt_loop_promotion_entry (promotion_id, product_id, merchant_id, promo_price_amt, promo_stock_qty,
+	id, err := s.insertEntry(ctx, tx, `INSERT INTO src.src_mkt_loop_promotion_entry (promotion_id, product_id, merchant_id, promo_price_amt, promo_stock_qty,
 			source_type, entry_status, create_admin_id) VALUES ($1,$2,$3,$4,$5,'merchant','pending_platform',$6) RETURNING id`, a.MerchantID, "",
 		promotionID, p.ID, a.MerchantID, price, in.PromoStockQty, admin)
+	if err != nil {
+		return 0, err
+	}
+	b, err := s.entryBrief(ctx, tx, id)
+	if err != nil {
+		return 0, err
+	}
+	s.Msg.ToPlatform(ctx, adminmsg.Msg{Category: adminmsg.CatPromotion, Level: adminmsg.Info,
+		Title: "商户「" + b.merchant + "」报名「" + b.promotion + "」：商品「" + b.product + "」",
+		Body:  fmt.Sprintf("原价 %s，报名活动价 %s，待审核。", adminmsg.Yuan(int64(p.PriceAmt)), adminmsg.Yuan(int64(price))),
+		Link:  promotionLink(promotionID), RefType: "promotion_entry", RefID: id}, false)
+	return id, nil
 }
 
 // Entry actions: the platform's (approve, reject, remove, patch) and the
@@ -574,6 +621,9 @@ func (s *Service) EntryAction(ctx context.Context, tx pgx.Tx, scope *int64, id i
 	set := func(to, event string) error {
 		if _, err := tx.Exec(ctx, `UPDATE src.src_mkt_loop_promotion_entry SET entry_status=$2, note=CASE WHEN $3 = '' THEN note ELSE $3 END,
 			decide_time=now(), update_time=now() WHERE id=$1`, id, to, note); err != nil {
+			return err
+		}
+		if err := s.notifyEntry(ctx, tx, id, action, note); err != nil {
 			return err
 		}
 		if event == "" {
@@ -660,6 +710,43 @@ func (s *Service) EntryAction(ctx context.Context, tx pgx.Tx, scope *int64, id i
 		return err
 	}
 	return bad("未知操作")
+}
+
+// notifyEntry sends the message of an entry action: the platform's
+// decisions go to the merchant, the merchant's decline / withdraw to the
+// platform (accepting an invitation sends nothing).
+func (s *Service) notifyEntry(ctx context.Context, q db.Querier, id int64, action, note string) error {
+	if action == EntryAccept {
+		return nil
+	}
+	b, err := s.entryBrief(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	ref := func(m adminmsg.Msg) adminmsg.Msg {
+		m.Category, m.RefType, m.RefID = adminmsg.CatPromotion, "promotion_entry", id
+		return m
+	}
+	head := "商品「" + b.product + "」报名「" + b.promotion + "」"
+	mine := "/merchant/promotions?tab=mine"
+	switch action {
+	case EntryApprove:
+		s.Msg.ToMerchant(ctx, b.merchantID, ref(adminmsg.Msg{Level: adminmsg.Success, Title: head + "已通过",
+			Body: "活动期间商品按活动价售卖。", Link: mine}))
+	case EntryReject:
+		s.Msg.ToMerchant(ctx, b.merchantID, ref(adminmsg.Msg{Level: adminmsg.Warning, Title: head + "未通过：" + note,
+			Body: "原因：" + note + "。", Link: mine}))
+	case EntryRemove:
+		s.Msg.ToMerchant(ctx, b.merchantID, ref(adminmsg.Msg{Level: adminmsg.Warning,
+			Title: "商品「" + b.product + "」已被移出「" + b.promotion + "」：" + note, Body: "原因：" + note + "。商品恢复按原价售卖。", Link: mine}))
+	case EntryDecline:
+		s.Msg.ToPlatform(ctx, ref(adminmsg.Msg{Level: adminmsg.Info, Title: "商户「" + b.merchant + "」拒绝了「" + b.promotion + "」的邀请",
+			Body: "商品「" + b.product + "」不参加这个活动。", Link: promotionLink(b.promotionID)}), false)
+	case EntryWithdraw:
+		s.Msg.ToPlatform(ctx, ref(adminmsg.Msg{Level: adminmsg.Info, Title: "商户「" + b.merchant + "」退出了「" + b.promotion + "」",
+			Body: "商品「" + b.product + "」已退出活动。", Link: promotionLink(b.promotionID)}), false)
+	}
+	return nil
 }
 
 // PendingApplications counts merchant applications waiting for the

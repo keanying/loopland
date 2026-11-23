@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/perks"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/product"
@@ -18,6 +19,8 @@ const PageSize = 50
 // Routes registers /open/v1.
 func (s *Service) Routes(mux *http.ServeMux) {
 	g := s.guard
+	// images (signed over the raw multipart body)
+	mux.Handle("POST /open/v1/media", s.guardBody("products", media.MaxBytes+1<<20, media.ErrTooLarge, s.upload))
 	// products
 	mux.Handle("GET /open/v1/products", g("products", s.products))
 	mux.Handle("POST /open/v1/products", g("products", s.createProduct))
@@ -60,6 +63,24 @@ func (s *Service) Routes(mux *http.ServeMux) {
 }
 
 func merchantOf(r *http.Request) int64 { return callerOf(r.Context()).app.Merchant.ID }
+
+// upload is POST /open/v1/media: a product image of the app's merchant.
+func (s *Service) upload(w http.ResponseWriter, r *http.Request) error {
+	if s.Media == nil {
+		return media.ErrUnavailable
+	}
+	a := callerOf(r.Context()).app
+	im, err := s.Media.Accept(w, r, media.Uploader{OpenAppID: a.ID, MerchantID: a.Merchant.ID}, media.AdminDailyLimit, func(purpose string) error {
+		if purpose != "product" {
+			return httpx.BadRequest("invalid_body", "purpose 只能是 product")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return httpx.OK(w, im)
+}
 
 func actorOf(r *http.Request) product.Actor {
 	a := callerOf(r.Context()).app

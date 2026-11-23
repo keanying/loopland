@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -239,6 +240,8 @@ type Dispatcher struct {
 	// addresses (dev only: local receivers). Otherwise such targets are
 	// refused, so a merchant cannot make the platform call internal services.
 	AllowPrivate bool
+	// Msg tells the merchant's staff when a delivery finally failed.
+	Msg *adminmsg.Notifier
 }
 
 // checkTarget resolves the webhook host and refuses internal addresses.
@@ -350,13 +353,14 @@ var errStopped = errors.New("应用已停用或商户已暂停合作，停止推
 func (d *Dispatcher) attempt(ctx context.Context, id int64, manual bool) (bool, error) {
 	var url *string
 	var secretEnc, body []byte
-	var appStatus, merchantStatus, status, typ string
+	var appStatus, merchantStatus, status, typ, appName string
 	var attempts int
+	var appID, merchantID int64
 	err := d.Pool.QueryRow(ctx, `SELECT a.webhook_url, a.app_secret_enc, a.app_status, m.merchant_status, e.payload_json::text, e.event_type,
-			dl.delivery_status, dl.attempt_qty
+			dl.delivery_status, dl.attempt_qty, a.id, a.app_name, a.merchant_id
 		FROM src.src_mer_loop_webhook_delivery dl JOIN src.src_mer_loop_webhook_event e ON e.id=dl.event_id
 		JOIN src.src_mer_loop_open_app a ON a.id=dl.open_app_id JOIN src.src_mer_loop_merchant m ON m.id=a.merchant_id
-		WHERE dl.id=$1`, id).Scan(&url, &secretEnc, &appStatus, &merchantStatus, &body, &typ, &status, &attempts)
+		WHERE dl.id=$1`, id).Scan(&url, &secretEnc, &appStatus, &merchantStatus, &body, &typ, &status, &attempts, &appID, &appName, &merchantID)
 	if err != nil {
 		return false, err
 	}
@@ -388,12 +392,14 @@ func (d *Dispatcher) attempt(ctx context.Context, id int64, manual bool) (bool, 
 	}
 	attempts++
 	newStatus, next := "succeeded", (*time.Time)(nil)
+	finalFailure := false
 	if !ok {
 		switch {
 		case manual && status != "pending":
 			newStatus = "failed"
 		case attempts >= Attempts:
 			newStatus = "failed"
+			finalFailure = status == "pending"
 		default:
 			newStatus = "pending"
 			t := time.Now().Add(Backoff[min(attempts, len(Backoff))-1])
@@ -402,6 +408,16 @@ func (d *Dispatcher) attempt(ctx context.Context, id int64, manual bool) (bool, 
 	}
 	_, err = d.Pool.Exec(ctx, `UPDATE src.src_mer_loop_webhook_delivery SET delivery_status=$2, attempt_qty=$3, last_status_code=$4, last_error=$5,
 			next_retry_time=$6, last_attempt_time=now(), update_time=now() WHERE id=$1`, id, newStatus, attempts, lastCode, lastErr, next)
+	if err == nil && finalFailure {
+		why := ""
+		if lastErr != nil {
+			why = "最后一次错误：" + *lastErr + "。"
+		}
+		d.Msg.ToMerchant(ctx, merchantID, adminmsg.Msg{Category: adminmsg.CatOpenAPI, Level: adminmsg.Error,
+			Title: "应用「" + appName + "」有 1 条回调推送失败",
+			Body:  fmt.Sprintf("事件 %s 推送 %d 次都没有成功，已停止重试。%s请检查接收地址后在投递记录里重发。", typ, Attempts, why),
+			Link:  fmt.Sprintf("/merchant/open-apps?id=%d", appID), RefType: "open_app_webhook", RefID: appID, Dedupe: 24 * time.Hour})
+	}
 	return ok, err
 }
 

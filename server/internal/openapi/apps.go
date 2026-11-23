@@ -21,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
+	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/perks"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -45,6 +47,10 @@ type Service struct {
 	Products *product.Service
 	Perks    *perks.Service
 	Venues   *venue.Service
+	// Media stores POST /open/v1/media uploads.
+	Media *media.Handler
+	// Msg notifies merchant staff (应用被平台停用 / 启用).
+	Msg *adminmsg.Notifier
 	// Dev allows http:// webhook URLs (local receivers).
 	Dev bool
 	// Now is overridable in tests.
@@ -300,6 +306,11 @@ func (s *Service) SetStatus(ctx context.Context, tx pgx.Tx, scope *int64, id int
 			return httpx.Forbidden("forbidden", "这个应用被平台停用，请联系平台处理")
 		}
 		_, err = tx.Exec(ctx, `UPDATE src.src_mer_loop_open_app SET app_status='active', disable_type=NULL, update_time=now() WHERE id=$1`, id)
+		if err == nil && scope == nil && a.Status != "active" {
+			s.Msg.ToMerchant(ctx, a.Merchant.ID, adminmsg.Msg{Category: adminmsg.CatOpenAPI, Level: adminmsg.Info,
+				Title: "应用「" + a.Name + "」已被平台重新启用", Body: "接口调用和 Webhook 推送已恢复。", Link: "/merchant/open-apps",
+				RefType: "open_app", RefID: a.ID})
+		}
 		return err
 	}
 	by := "platform"
@@ -307,6 +318,11 @@ func (s *Service) SetStatus(ctx context.Context, tx pgx.Tx, scope *int64, id int
 		by = "merchant"
 	}
 	_, err = tx.Exec(ctx, `UPDATE src.src_mer_loop_open_app SET app_status='disabled', disable_type=$2, update_time=now() WHERE id=$1`, id, by)
+	if err == nil && scope == nil && a.Status == "active" {
+		s.Msg.ToMerchant(ctx, a.Merchant.ID, adminmsg.Msg{Category: adminmsg.CatOpenAPI, Level: adminmsg.Warning,
+			Title: "应用「" + a.Name + "」已被平台停用", Body: "接口调用会返回 403 app_disabled，Webhook 停止推送；如有疑问请联系平台。", Link: "/merchant/open-apps",
+			RefType: "open_app", RefID: a.ID})
+	}
 	return err
 }
 

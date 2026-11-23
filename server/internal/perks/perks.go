@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -33,6 +34,8 @@ type Service struct {
 	Log  *slog.Logger
 	// QRKey signs the rotating coupon QR payload (DeriveKey of the data key).
 	QRKey []byte
+	// Msg sends 管理端站内信 (statements).
+	Msg *adminmsg.Notifier
 }
 
 // DeriveKey derives the coupon QR signing key from the data key.

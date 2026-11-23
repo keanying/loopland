@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/inbox"
 	"github.com/keanying/loopland/server/internal/perks"
@@ -563,14 +564,17 @@ func couponRefund(paid, uses, left int) int {
 // refunded and the refund goes to the channel right after (retried by
 // RetryRefunds while the channel fails).
 func (s *Service) refund(ctx context.Context, id int64, sp refundSpec) (Order, error) {
-	var refundID int64
+	var refundID, merchantID int64
+	var orderNo string
+	var amount int
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		status, payNo, err := lockOrder(ctx, tx, sp.user, id)
 		if err != nil {
 			return err
 		}
 		var refundable bool
-		if err := tx.QueryRow(ctx, `SELECT is_refundable FROM src.src_ord_loop_product_order WHERE id=$1`, id).Scan(&refundable); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT is_refundable, order_no, merchant_id FROM src.src_ord_loop_product_order WHERE id=$1`, id).
+			Scan(&refundable, &orderNo, &merchantID); err != nil {
 			return err
 		}
 		if sp.requireRefundable && !refundable {
@@ -592,7 +596,7 @@ func (s *Service) refund(ctx context.Context, id int64, sp refundSpec) (Order, e
 		if err != nil {
 			return err
 		}
-		amount := 0
+		amount = 0
 		ids := make([]int64, 0, len(cs))
 		for _, c := range cs {
 			amount += couponRefund(int(c.paid), int(c.uses), int(c.left))
@@ -620,6 +624,12 @@ func (s *Service) refund(ctx context.Context, id int64, sp refundSpec) (Order, e
 	})
 	if err != nil {
 		return Order{}, err
+	}
+	if sp.typ == RefundAdmin {
+		s.Msg.ToMerchant(ctx, merchantID, adminmsg.Msg{Category: adminmsg.CatProduct, Level: adminmsg.Info,
+			Title: "订单 " + orderNo + " 已由平台退款 " + adminmsg.Yuan(int64(amount)) + "：" + sp.reason,
+			Body:  "未使用的券已作废，款项原路退回给用户。", Link: fmt.Sprintf("/merchant/product-orders?id=%d", id),
+			RefType: "product_order", RefID: id})
 	}
 	if err := s.completeRefund(ctx, refundID); err != nil {
 		s.Log.Error("product refund", "refund", refundID, "err", err) // stays refunding; RetryRefunds retries
