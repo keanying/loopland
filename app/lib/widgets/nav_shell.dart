@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../core/providers.dart';
 import '../core/theme.dart';
 import 'card_art.dart' show hasArt;
+import 'l_icons.dart';
 import 'nav_bar_cover.dart';
 import 'running_gecko.dart';
 
@@ -75,7 +76,7 @@ class _Bar extends StatefulWidget {
 }
 
 class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
-  static const _icons = [Icons.map_outlined, Icons.content_copy_outlined, Icons.play_arrow_rounded, Icons.groups_outlined, Icons.person_outline_rounded];
+  static const _icons = [LIcons.map, LIcons.codex, LIcons.play, LIcons.users, LIcons.user];
   static const _labels = ['领地', '图鉴', '开始', '社区', '我的'];
   static const button = 84.0; // 中间「开始」按钮直径（含外圈）
   static const ball = 44.0; // 选中圆球直径
@@ -157,7 +158,7 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
                       child: Center(
                         child: Opacity(
                           opacity: itemOpacity(i),
-                          child: Icon(_icons[i], color: LL.text3, size: 28),
+                          child: LIcon(_icons[i], color: LL.text3, size: 28),
                         ),
                       ),
                     ),
@@ -214,7 +215,7 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
                           ),
                           child: Opacity(
                             opacity: iconOpacity,
-                            child: Icon(_icons[showTo ? _to : _from], color: LL.ink, size: 24),
+                            child: LIcon(_icons[showTo ? _to : _from], color: LL.ink, size: 24),
                           ),
                         ),
                       ),

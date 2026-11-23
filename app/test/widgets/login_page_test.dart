@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loopland/features/login/login_page.dart';
+import 'package:loopland/widgets/l_icons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'fake_backend.dart';
@@ -28,12 +29,12 @@ void main() {
     expect(find.textContaining('请阅读并同意'), findsOneWidget);
     await t.tap(find.text('不同意'));
     await t.pumpAndSettle();
-    expect(find.byIcon(Icons.check), findsNothing);
+    expect(findLIcon(LIcons.check), findsNothing);
 
     // Tap the agreement row → checkbox checked.
     await t.tap(find.textContaining('我已阅读并同意'));
     await t.pump();
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(findLIcon(LIcons.check), findsOneWidget);
 
     await t.runAsync(() => precacheImage(const AssetImage('assets/media/login-poster.jpg'), t.element(find.byType(LoginPage))));
     await t.pump();

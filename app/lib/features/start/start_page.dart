@@ -8,29 +8,30 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../local/venue_section.dart';
 
 class SportInfo {
   const SportInfo(this.key, this.icon, this.desc, {this.tag});
   final String key;
-  final IconData icon;
+  final LGlyph icon;
   final String desc;
   final String? tag;
 }
 
 const gpsSportInfo = [
-  SportInfo('run', Icons.directions_run_rounded, '不用规划路线，随便跑。轨迹一交叉就自动圈下一块地，一次能连圈好几块。', tag: '核心'),
-  SportInfo('ride', Icons.directions_bike_rounded, '骑得远，圈得大。轨迹交叉同样能圈地，招募骑士。'),
-  SportInfo('hike', Icons.terrain_rounded, '山野徒步也能圈地，招募斥候，地图视野 +1。', tag: '热门'),
-  SportInfo('walk', Icons.directions_walk_rounded, '饭后健走一圈，也能圈下小区周边，招募农夫。'),
+  SportInfo('run', LIcons.run, '不用规划路线，随便跑。轨迹一交叉就自动圈下一块地，一次能连圈好几块。', tag: '核心'),
+  SportInfo('ride', LIcons.bike, '骑得远，圈得大。轨迹交叉同样能圈地，招募骑士。'),
+  SportInfo('hike', LIcons.mountain, '山野徒步也能圈地，招募斥候，地图视野 +1。', tag: '热门'),
+  SportInfo('walk', LIcons.walk, '饭后健走一圈，也能圈下小区周边，招募农夫。'),
 ];
 
 const homeSportInfo = [
-  SportInfo('strength', Icons.fitness_center_rounded, '按训练时长换能量，招募铁匠，建造费用 -6%。'),
-  SportInfo('yoga', Icons.self_improvement_rounded, '按练习时长换能量，招募修士，每天恢复能量。'),
-  SportInfo('rope', Icons.cable_rounded, '按次数换能量，招募药剂师。'),
-  SportInfo('hiit', Icons.local_fire_department_rounded, '高强度间歇训练，按时长换能量。'),
+  SportInfo('strength', LIcons.dumbbell, '按训练时长换能量，招募铁匠，建造费用 -6%。'),
+  SportInfo('yoga', LIcons.yoga, '按练习时长换能量，招募修士，每天恢复能量。'),
+  SportInfo('rope', LIcons.rope, '按次数换能量，招募药剂师。'),
+  SportInfo('hiit', LIcons.flame, '高强度间歇训练，按时长换能量。'),
 ];
 
 /// 开始：选运动。
@@ -175,7 +176,7 @@ class _SportTile extends StatelessWidget {
                   width: 54,
                   height: 54,
                   decoration: BoxDecoration(color: selected ? LL.lime : LL.card2, shape: BoxShape.circle),
-                  child: Icon(info.icon, color: selected ? LL.ink : LL.text, size: 28),
+                  child: LIcon(info.icon, color: selected ? LL.ink : LL.text, size: 28),
                 ),
                 const SizedBox(height: 10),
                 Text(sportName(info.key), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
@@ -236,7 +237,7 @@ class _DetailCard extends StatelessWidget {
         const SizedBox(height: 10),
         if (energy != null)
           Row(children: [
-            const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+            const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
             const SizedBox(width: 4),
             Text(energy!, style: const TextStyle(color: LL.text2)),
           ]),
@@ -244,7 +245,7 @@ class _DetailCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Row(children: [
-              const Icon(Icons.person_add_alt_1_rounded, color: LL.lavender, size: 18),
+              const LIcon(LIcons.userPlus, color: LL.lavender, size: 18),
               const SizedBox(width: 4),
               Text('招募 ${roles.join('、')}', style: const TextStyle(color: LL.text2)),
             ]),
@@ -253,7 +254,7 @@ class _DetailCard extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-              onPressed: onStart, icon: const Icon(Icons.play_arrow_rounded), label: Text(button)),
+              onPressed: onStart, icon: const LIcon(LIcons.play), label: Text(button)),
         ),
         if (secondary != null)
           Center(

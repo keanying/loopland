@@ -12,6 +12,7 @@ import '../../api/product_models.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_widgets.dart' show Tag;
 import '../social/social_widgets.dart' show mediaUrl;
 import 'product_pay.dart';
@@ -92,11 +93,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             onTap: () => context.push('/merchants/${p.merchant!.id}', extra: p.merchant!.name),
                             child: Row(children: [
-                              const Icon(Icons.storefront_outlined, color: LL.sky),
+                              const LIcon(LIcons.store, color: LL.sky),
                               const SizedBox(width: 10),
                               Expanded(child: Text(p.merchant!.name, style: const TextStyle(fontWeight: FontWeight.w800))),
                               const Text('全部商品', style: TextStyle(color: LL.text3, fontSize: 13)),
-                              const Icon(Icons.chevron_right_rounded, color: LL.text3),
+                              const LIcon(LIcons.chevronRight, color: LL.text3),
                             ]),
                           ),
                         ],
@@ -115,10 +116,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(vertical: 8),
                                         child: Row(children: [
-                                          const Icon(Icons.place_outlined, size: 18, color: LL.lime),
+                                          const LIcon(LIcons.pin, size: 18, color: LL.lime),
                                           const SizedBox(width: 8),
                                           Expanded(child: Text(v.name, style: const TextStyle(fontWeight: FontWeight.w700))),
-                                          const Icon(Icons.chevron_right_rounded, color: LL.text3),
+                                          const LIcon(LIcons.chevronRight, color: LL.text3),
                                         ]),
                                       ),
                                     ),
@@ -241,7 +242,7 @@ class _GalleryState extends State<_Gallery> {
           left: 16,
           top: 8,
           child: RoundIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
+            icon: LIcons.back,
             color: const Color(0xCC1B1B20),
             onTap: () => Navigator.of(context).maybePop(),
           ),
@@ -301,7 +302,7 @@ class _PriceBlock extends StatelessWidget {
         if (promo != null) ...[
           const SizedBox(height: 10),
           Row(children: [
-            const Icon(Icons.local_fire_department_rounded, color: promoColor, size: 18),
+            const LIcon(LIcons.flame, color: promoColor, size: 18),
             const SizedBox(width: 4),
             Expanded(
               child: Text(
@@ -341,7 +342,7 @@ class _QtyRow extends StatelessWidget {
         IconButton(
           key: const Key('qty_minus'),
           onPressed: qty > 1 ? () => onChanged(qty - 1) : null,
-          icon: const Icon(Icons.remove_circle_outline_rounded),
+          icon: const LIcon(LIcons.minusCircle),
         ),
         SizedBox(
           width: 28,
@@ -351,7 +352,7 @@ class _QtyRow extends StatelessWidget {
         IconButton(
           key: const Key('qty_plus'),
           onPressed: qty < max ? () => onChanged(qty + 1) : null,
-          icon: const Icon(Icons.add_circle_outline_rounded),
+          icon: const LIcon(LIcons.plusCircle),
         ),
       ]),
     );
@@ -498,7 +499,7 @@ class PromotionStrip extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
               child: Row(children: [
-                const Icon(Icons.local_fire_department_rounded, color: promoColor),
+                const LIcon(LIcons.flame, color: promoColor),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -513,7 +514,7 @@ class PromotionStrip extends ConsumerWidget {
                   ]),
                 ),
                 if (list.length > 1) Text('${list.length} 个活动', style: const TextStyle(color: LL.text3, fontSize: 12)),
-                const Icon(Icons.chevron_right_rounded, color: LL.text3),
+                const LIcon(LIcons.chevronRight, color: LL.text3),
               ]),
             ),
           ),
@@ -542,7 +543,7 @@ class PromotionsPage extends ConsumerWidget {
                 data: (list) => list.isEmpty
                     ? ListView(children: const [
                         SizedBox(height: 80),
-                        Icon(Icons.local_fire_department_outlined, color: LL.text3, size: 44),
+                        LIcon(LIcons.flame, color: LL.text3, size: 44),
                         SizedBox(height: 12),
                         Text('暂时没有进行中的官方活动', textAlign: TextAlign.center, style: TextStyle(color: LL.text2)),
                       ])

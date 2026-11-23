@@ -10,6 +10,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import 'media_picker.dart';
 import 'post_card.dart';
 import 'report_sheet.dart';
@@ -108,9 +109,9 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
       context: context,
       builder: (s) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.flag_outlined), title: const Text('举报'), onTap: () => Navigator.pop(s, 'report')),
+          ListTile(leading: const LIcon(LIcons.flag), title: const Text('举报'), onTap: () => Navigator.pop(s, 'report')),
           ListTile(
-            leading: Icon(rel.blocked ? Icons.lock_open_rounded : Icons.block_rounded, color: rel.blocked ? LL.text : LL.red),
+            leading: LIcon(rel.blocked ? LIcons.unlock : LIcons.block, color: rel.blocked ? LL.text : LL.red),
             title: Text(rel.blocked ? '取消拉黑' : '拉黑', style: TextStyle(color: rel.blocked ? LL.text : LL.red)),
             onTap: () => Navigator.pop(s, 'block'),
           ),
@@ -138,12 +139,12 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 child: Row(children: [
-                  RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
+                  RoundIconButton(icon: LIcons.back, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
                   const Spacer(),
                   if (self)
-                    RoundIconButton(icon: Icons.edit_outlined, tooltip: '编辑资料', onTap: () => context.push('/me/profile'))
+                    RoundIconButton(icon: LIcons.pencil, tooltip: '编辑资料', onTap: () => context.push('/me/profile'))
                   else
-                    RoundIconButton(icon: Icons.more_horiz_rounded, tooltip: '更多', onTap: () => _menu(p)),
+                    RoundIconButton(icon: LIcons.moreH, tooltip: '更多', onTap: () => _menu(p)),
                 ]),
               ),
               Expanded(
@@ -216,7 +217,7 @@ class _ProfileCard extends StatelessWidget {
         if (p.bio.isNotEmpty) ...[
           const SizedBox(height: 12),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Icon(Icons.local_fire_department_rounded, color: LL.orange, size: 18),
+            const LIcon(LIcons.flame, color: LL.orange, size: 18),
             const SizedBox(width: 6),
             Expanded(child: Text(p.bio, style: const TextStyle(color: LL.text, height: 1.4))),
           ]),
@@ -241,7 +242,7 @@ class _ProfileCard extends StatelessWidget {
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
                   onPressed: rel.anyBlock || u.isDeleted ? null : () => context.push(directChatPath(u.id)),
-                  icon: const Icon(Icons.mail_outline_rounded, size: 18),
+                  icon: const LIcon(LIcons.mail, size: 18),
                   label: const Text('私信'),
                 ),
               ),
@@ -593,7 +594,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: const BoxDecoration(color: LL.lime, shape: BoxShape.circle),
-                            child: const Icon(Icons.photo_camera_outlined, size: 18, color: LL.ink, semanticLabel: '更换头像'),
+                            child: const LIcon(LIcons.camera, size: 18, color: LL.ink, semanticLabel: '更换头像'),
                           ),
                         ),
                       ]),

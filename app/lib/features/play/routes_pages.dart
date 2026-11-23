@@ -8,6 +8,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
 
@@ -66,7 +67,7 @@ class _RouteCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: const BoxDecoration(color: LL.sky, shape: BoxShape.circle),
-            child: const Icon(Icons.explore_outlined, color: LL.ink),
+            child: const LIcon(LIcons.compass, color: LL.ink),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -86,7 +87,7 @@ class _RouteCard extends StatelessWidget {
         const SizedBox(height: 8),
         Row(children: [
           if (r.next != null) Expanded(child: Text('下一站：${r.next!.name}', style: const TextStyle(fontWeight: FontWeight.w700))) else const Spacer(),
-          const Icon(Icons.bolt_rounded, color: LL.yellow, size: 16),
+          const LIcon(LIcons.bolt, color: LL.yellow, size: 16),
           Text('+${r.rewardEnergy}', style: const TextStyle(fontWeight: FontWeight.w900)),
         ]),
       ]),
@@ -134,7 +135,7 @@ class RouteDetailPage extends ConsumerWidget {
                   LLCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     child: Row(children: [
-                      const Icon(Icons.bolt_rounded, color: LL.yellow),
+                      const LIcon(LIcons.bolt, color: LL.yellow),
                       const SizedBox(width: 6),
                       Expanded(child: Text('全部到达奖励 ${r.rewardEnergy} 能量', style: const TextStyle(fontWeight: FontWeight.w800))),
                       if (r.completed) Text('已于 ${Fmt.dateTime(r.completedAt)} 完成', style: const TextStyle(color: LL.lime, fontSize: 12)),
@@ -148,7 +149,7 @@ class RouteDetailPage extends ConsumerWidget {
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: r.completed ? null : () => context.push('/start/gps?sport=run'),
-                    icon: const Icon(Icons.flag_outlined),
+                    icon: const LIcon(LIcons.flag),
                     label: Text(r.completed ? '这条路线已完成' : (r.next == null ? '去打卡' : '去打卡 · 下一站 ${r.next!.name}')),
                   ),
                 ),
@@ -210,7 +211,7 @@ class _CheckpointRow extends StatelessWidget {
                 border: Border.all(color: color, width: 2),
               ),
               child: c.isDone
-                  ? const Icon(Icons.check_rounded, size: 16, color: LL.sky)
+                  ? const LIcon(LIcons.check, size: 16, color: LL.sky)
                   : Text('${c.index + 1}', style: TextStyle(fontWeight: FontWeight.w900, color: c.isNext ? LL.ink : color, fontSize: 13)),
             ),
             if (!last) Expanded(child: Container(width: 2, color: c.isDone ? LL.sky : LL.border)),
@@ -304,7 +305,7 @@ class CampaignCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Icon(c.completed ? Icons.check_rounded : Icons.chevron_right_rounded, size: 18, color: color),
+                LIcon(c.completed ? LIcons.check : LIcons.chevronRight, size: 18, color: color),
                 const SizedBox(width: 4),
                 Expanded(child: Text(r, style: const TextStyle(height: 1.4))),
               ]),
@@ -320,7 +321,7 @@ class CampaignCard extends StatelessWidget {
           ),
         const SizedBox(height: 10),
         Row(children: [
-          const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+          const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
           Text('+${c.rewardEnergy} 能量', style: const TextStyle(fontWeight: FontWeight.w900)),
           if (c.rewardMedal != null) Text(' · 奖牌「${c.rewardMedal!.name}」', style: const TextStyle(fontWeight: FontWeight.w700)),
           const Spacer(),

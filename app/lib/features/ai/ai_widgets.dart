@@ -6,6 +6,7 @@ import '../../api/ai_models.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 import '../social/social_widgets.dart';
 import 'ai_providers.dart';
 
@@ -20,30 +21,38 @@ class AILabel extends StatelessWidget {
         label: text,
         excludeSemantics: true,
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.auto_awesome_rounded, size: 12, color: color),
+          LIcon(LIcons.quan, size: 14, color: color),
           const SizedBox(width: 3),
           Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
         ]),
       );
 }
 
-/// Round lavender "AI" badge (assistant avatar).
+/// 「圈圈」的头像：深紫圆底上的圈圈形象（品牌双环 + 小脸）。
 class AIBadge extends StatelessWidget {
   const AIBadge({super.key, this.size = 44});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(color: LL.lavender, shape: BoxShape.circle),
-        child: Text('AI', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: size * 0.32)),
+  Widget build(BuildContext context) => Semantics(
+        label: '圈圈',
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFF26223A),
+            shape: BoxShape.circle,
+            border: Border.all(color: LL.lavender.withValues(alpha: 0.7), width: 1.5),
+          ),
+          child: QuanMark(size: size * 0.74),
+        ),
       );
 }
 
-/// 「圈圈」入口的图标：星芒加一个小「AI」角标，一眼能认出是 AI 助手。
+/// 「圈圈」入口的图标：圈圈形象加一个小「AI」角标，一眼能认出是 AI 助手。
+/// 放在薰衣紫底上，[color] 是空心圈的颜色。
 class AIMark extends StatelessWidget {
-  const AIMark({super.key, this.size = 22, this.color = LL.ink});
+  const AIMark({super.key, this.size = 24, this.color = LL.ink});
   final double size;
   final Color color;
   @override
@@ -51,10 +60,10 @@ class AIMark extends StatelessWidget {
         width: size,
         height: size,
         child: Stack(clipBehavior: Clip.none, children: [
-          Icon(Icons.auto_awesome_rounded, size: size, color: color),
+          QuanMark(size: size, ringColor: color),
           Positioned(
-            right: -size * 0.45,
-            top: -size * 0.3,
+            right: -size * 0.5,
+            top: -size * 0.42,
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: size * 0.14, vertical: size * 0.02),
               decoration: BoxDecoration(
@@ -70,11 +79,11 @@ class AIMark extends StatelessWidget {
       );
 }
 
-IconData aiRouteIcon(String type) => switch (type) {
-      'capture' => Icons.flag_outlined,
-      'defend' => Icons.shield_outlined,
-      'boss' => Icons.whatshot_rounded,
-      _ => Icons.loop_rounded,
+LGlyph aiRouteIcon(String type) => switch (type) {
+      'capture' => LIcons.flag,
+      'defend' => LIcons.shield,
+      'boss' => LIcons.flame,
+      _ => LIcons.loopRoute,
     };
 
 Color aiRouteColor(String type) => switch (type) {
@@ -127,7 +136,7 @@ class AskAIButton extends ConsumerWidget {
             child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.auto_awesome_rounded, color: LL.ink, size: 16),
+                QuanMark(size: 18, ringColor: LL.ink),
                 SizedBox(width: 4),
                 Text('问 AI', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: 13)),
               ]),
@@ -139,7 +148,7 @@ class AskAIButton extends ConsumerWidget {
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(foregroundColor: LL.lavender, side: const BorderSide(color: LL.lavender)),
       onPressed: open,
-      icon: const Icon(Icons.auto_awesome_rounded),
+      icon: const LIcon(LIcons.quan),
       label: const Text('问 AI'),
     );
   }
@@ -172,7 +181,7 @@ class AIRouteCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Icon(aiRouteIcon(r.type), color: color, size: 18),
+              LIcon(aiRouteIcon(r.type), color: color, size: 18),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(r.title.isEmpty ? 'AI 路线' : r.title,
@@ -200,7 +209,7 @@ class AIRouteCard extends StatelessWidget {
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: color, foregroundColor: LL.ink),
                 onPressed: onStart,
-                icon: const Icon(Icons.play_arrow_rounded),
+                icon: const LIcon(LIcons.play),
                 label: const Text('一键开跑'),
               ),
             ),
@@ -256,7 +265,7 @@ class AITerritoryCard extends StatelessWidget {
               ]),
             ),
             Text('在地图上看', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w800)),
-            Icon(Icons.chevron_right_rounded, color: color, size: 18),
+            LIcon(LIcons.chevronRight, color: color, size: 18),
           ]),
         ),
       ),
@@ -284,7 +293,7 @@ class AIBossCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              const Icon(Icons.whatshot_rounded, color: LL.orange, size: 18),
+              const LIcon(LIcons.flame, color: LL.orange, size: 18),
               const SizedBox(width: 6),
               Expanded(child: Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14))),
               if (left != null && left > Duration.zero)
@@ -346,7 +355,7 @@ class AIReportBlock extends StatelessWidget {
         decoration: BoxDecoration(color: const Color(0xFF26223A), borderRadius: BorderRadius.circular(18)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.auto_awesome_rounded, size: 16, color: LL.lavender),
+            const QuanMark(size: 18),
             const SizedBox(width: 6),
             const Text('AI 战报', style: TextStyle(color: LL.lavender, fontWeight: FontWeight.w900, fontSize: 13)),
             const Spacer(),

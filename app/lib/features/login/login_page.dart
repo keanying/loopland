@@ -14,6 +14,7 @@ import '../../core/sdk_config.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 
 /// Shared by the login screens: the user-agreement checkbox state.
 final agreedProvider = NotifierProvider<_Agreed, bool>(_Agreed.new);
@@ -166,7 +167,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 if (SdkConfig.current.isDev)
                   TextButton(onPressed: () => context.push('/dev/env'), child: const Text('环境检查')),
                 RoundIconButton(
-                  icon: _playing ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  icon: _playing ? LIcons.pause : LIcons.play,
                   onTap: _togglePlay,
                   color: const Color(0x99222226),
                   tooltip: _playing ? '暂停背景视频' : '播放背景视频',
@@ -215,7 +216,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _busy ? null : _apple,
-                    icon: const Icon(Icons.apple, size: 22),
+                    icon: const LIcon(LIcons.apple, size: 22),
                     style: OutlinedButton.styleFrom(backgroundColor: const Color(0x66222226)),
                     label: const Text('通过 Apple 登录'),
                   ),
@@ -293,7 +294,7 @@ class _AgreementRowState extends State<AgreementRow> {
                 color: agreed ? LL.lime : Colors.transparent,
                 border: Border.all(color: agreed ? LL.lime : LL.text2, width: 1.5),
               ),
-              child: agreed ? const Icon(Icons.check, size: 15, color: LL.ink) : null,
+              child: agreed ? const LIcon(LIcons.check, size: 15, color: LL.ink) : null,
             ),
           ),
         ),

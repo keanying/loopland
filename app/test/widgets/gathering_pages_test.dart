@@ -20,6 +20,7 @@ import 'package:loopland/realtime/realtime_client.dart';
 import 'package:loopland/realtime/realtime_providers.dart';
 import 'package:loopland/run/location_source.dart';
 import 'package:loopland/run/run_controller.dart';
+import 'package:loopland/widgets/l_icons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/fixtures.dart';
@@ -38,7 +39,7 @@ class _Stub extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(
           child: Column(children: [
-            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const Icon(Icons.arrow_back_ios_new_rounded)),
+            IconButton(onPressed: () => Navigator.of(context).maybePop(), icon: const LIcon(LIcons.back)),
             Expanded(child: Center(child: Text('STUB $loc'))),
           ]),
         ),
@@ -88,7 +89,7 @@ Future<void> shot(WidgetTester t, String name) async {
 
 /// Taps the BackHeader back button of the top page.
 Future<void> back(WidgetTester t) async {
-  await t.tap(find.byIcon(Icons.arrow_back_ios_new_rounded).last);
+  await t.tap(findLIcon(LIcons.back).last);
   await idle(t, 2);
   await t.pump(const Duration(milliseconds: 400));
 }
@@ -494,7 +495,7 @@ void main() {
     await idle(t);
     expect(find.textContaining('名称和头像修改后立即生效'), findsOneWidget);
     await t.enterText(find.byKey(const Key('crew_name')), '城西夜跑团');
-    await tapAndIdle(t, find.byIcon(Icons.photo_camera_outlined));
+    await tapAndIdle(t, findLIcon(LIcons.camera));
     expect(fake.calls, contains('POST /v1/media'));
     await tapAndIdle(t, find.text('申请'));
     await tapAndIdle(t, find.text('保存'));

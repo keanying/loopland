@@ -14,6 +14,7 @@ import '../../pay/payment_service.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
 import '../local/booking_flow.dart' show ChannelPicker, PayFlow;
@@ -67,7 +68,7 @@ class _RacesPageState extends ConsumerState<RacesPage> {
                   color: LL.lime,
                   onTap: () => context.push('/league'),
                   child: const Row(children: [
-                    Icon(Icons.shield_moon_outlined, color: LL.ink),
+                    LIcon(LIcons.shieldMoon, color: LL.ink),
                     SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -75,7 +76,7 @@ class _RacesPageState extends ConsumerState<RacesPage> {
                         Text('同城区跑团每周比拼新圈面积', style: TextStyle(color: Color(0xFF3A3F1A), fontSize: 13)),
                       ]),
                     ),
-                    Icon(Icons.chevron_right_rounded, color: LL.ink),
+                    LIcon(LIcons.chevronRight, color: LL.ink),
                   ]),
                 ),
                 const SizedBox(height: 12),
@@ -219,12 +220,12 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
                     if (r.myEntry != null) ...[_MyResult(race: r), const SizedBox(height: 12)],
                     LLCard(
                       child: Column(children: [
-                        _Row(Icons.straighten_rounded, '距离', '${Fmt.km(r.distanceM, digits: r.distanceM % 1000 == 0 ? 0 : 1)} km'),
-                        _Row(Icons.schedule_rounded, '比赛时间', '${Fmt.dateTime(r.startTime)} – ${Fmt.dateTime(r.endTime)}'),
-                        _Row(Icons.how_to_reg_outlined, '报名截止', Fmt.dateTime(r.signupEndTime)),
-                        if (r.place != null) _Row(Icons.place_outlined, '地点', r.place!.name),
-                        _Row(Icons.payments_outlined, '报名费', r.isPaid ? Fmt.yuan(r.feeAmt) : '免费'),
-                        _Row(Icons.groups_outlined, '名额',
+                        _Row(LIcons.ruler, '距离', '${Fmt.km(r.distanceM, digits: r.distanceM % 1000 == 0 ? 0 : 1)} km'),
+                        _Row(LIcons.clock, '比赛时间', '${Fmt.dateTime(r.startTime)} – ${Fmt.dateTime(r.endTime)}'),
+                        _Row(LIcons.userCheck, '报名截止', Fmt.dateTime(r.signupEndTime)),
+                        if (r.place != null) _Row(LIcons.pin, '地点', r.place!.name),
+                        _Row(LIcons.wallet, '报名费', r.isPaid ? Fmt.yuan(r.feeAmt) : '免费'),
+                        _Row(LIcons.users, '名额',
                             '已报名 ${Fmt.thousands(r.signedCount)}${r.capacity > 0 ? ' / ${Fmt.thousands(r.capacity)}' : ''}'),
                       ]),
                     ),
@@ -244,7 +245,7 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(color: LL.yellow.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
                             child: const Row(children: [
-                              Icon(Icons.watch_outlined, color: LL.yellow, size: 18),
+                              LIcon(LIcons.watch, color: LL.yellow, size: 18),
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text('本赛事要求穿戴设备（手表 / 手环）数据，只用手机记录的运动不计成绩。',
@@ -401,7 +402,7 @@ class _MyResult extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(LL.radius)),
       child: Row(children: [
-        Icon(e.finished ? Icons.emoji_events_rounded : Icons.how_to_reg_rounded, color: dark ? LL.ink : LL.text, size: 32),
+        LIcon(e.finished ? LIcons.trophy : LIcons.userCheck, color: dark ? LL.ink : LL.text, size: 32),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -418,13 +419,13 @@ class _MyResult extends StatelessWidget {
 
 class _Row extends StatelessWidget {
   const _Row(this.icon, this.label, this.value);
-  final IconData icon;
+  final LGlyph icon;
   final String label, value;
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(children: [
-          Icon(icon, size: 18, color: LL.text3),
+          LIcon(icon, size: 18, color: LL.text3),
           const SizedBox(width: 8),
           SizedBox(width: 68, child: Text(label, style: const TextStyle(color: LL.text3))),
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700))),

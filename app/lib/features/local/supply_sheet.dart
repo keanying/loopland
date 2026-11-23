@@ -12,6 +12,7 @@ import '../../api/perks_models.dart';
 import '../../claim/geo.dart';
 import '../../core/theme.dart';
 import '../../widgets/cosmetics.dart';
+import '../../widgets/l_icons.dart';
 import '../play/locate.dart';
 import 'coupons_pages.dart';
 
@@ -134,7 +135,7 @@ class _SupplySheetState extends ConsumerState<SupplySheet> {
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: LL.pink, foregroundColor: LL.ink),
               onPressed: _busy ? null : _claim,
-              icon: const Icon(Icons.redeem_rounded),
+              icon: const LIcon(LIcons.gift),
               label: Text(_busy ? '正在确认位置…' : '领取'),
             ),
         ]),

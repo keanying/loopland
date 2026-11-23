@@ -14,6 +14,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_providers.dart';
 import '../social/image_viewer.dart';
 import '../social/social_widgets.dart';
@@ -189,23 +190,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           if (c?.peer != null)
             ListTile(
-              leading: const Icon(Icons.person_outline_rounded),
+              leading: const LIcon(LIcons.user),
               title: const Text('查看主页'),
               onTap: () => Navigator.pop(s, 'profile'),
             ),
           if (c?.refType == 'meetup' && c?.refId != null)
             ListTile(
-              leading: const Icon(Icons.event_outlined),
+              leading: const LIcon(LIcons.calendar),
               title: const Text('组局详情'),
               onTap: () => Navigator.pop(s, 'ref'),
             ),
           ListTile(
-            leading: Icon((c?.muted ?? false) ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
+            leading: LIcon((c?.muted ?? false) ? LIcons.bellRing : LIcons.bellOff),
             title: Text((c?.muted ?? false) ? '取消免打扰' : '消息免打扰'),
             onTap: () => Navigator.pop(s, 'mute'),
           ),
           ListTile(
-            leading: const Icon(Icons.delete_outline_rounded, color: LL.red),
+            leading: const LIcon(LIcons.trash, color: LL.red),
             title: Text((c?.isGroup ?? false) ? '退出群聊' : '删除会话', style: const TextStyle(color: LL.red)),
             onTap: () => Navigator.pop(s, 'delete'),
           ),
@@ -269,7 +270,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           BackHeader(
             title: title,
             subtitle: [?subtitle, if (c?.muted ?? false) '免打扰'].join(' · '),
-            trailing: RoundIconButton(icon: Icons.more_horiz_rounded, tooltip: '更多', onTap: _menu),
+            trailing: RoundIconButton(icon: LIcons.moreH, tooltip: '更多', onTap: _menu),
           ),
           const Divider(),
           Expanded(
@@ -450,7 +451,7 @@ class _PostBody extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(color: LL.lavender, borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.article_outlined, color: LL.ink),
+              child: const LIcon(LIcons.doc, color: LL.ink),
             ),
             const SizedBox(width: 10),
             Flexible(
@@ -460,7 +461,7 @@ class _PostBody extends StatelessWidget {
                     maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 12)),
               ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: LL.text3),
+            const LIcon(LIcons.chevronRight, color: LL.text3),
           ]),
         ),
       ),
@@ -491,12 +492,12 @@ class _ErrorBanner extends StatelessWidget {
         border: Border.all(color: LL.red.withValues(alpha: 0.5)),
       ),
       child: Row(children: [
-        const Icon(Icons.error_outline_rounded, color: LL.red, size: 20),
+        const LIcon(LIcons.alert, color: LL.red, size: 20),
         const SizedBox(width: 8),
         Expanded(
           child: Text([error.displayMessage, ?hint].join(' '), style: const TextStyle(color: LL.text, fontSize: 13, height: 1.4)),
         ),
-        IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded, size: 18, color: LL.text3)),
+        IconButton(onPressed: onClose, icon: const LIcon(LIcons.close, size: 18, color: LL.text3)),
       ]),
     );
   }
@@ -522,7 +523,7 @@ class _Composer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
       decoration: const BoxDecoration(color: LL.night, border: Border(top: BorderSide(color: LL.border))),
       child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        RoundIconButton(icon: Icons.image_outlined, size: 46, tooltip: '发图片', onTap: enabled && !sending ? onImage : null),
+        RoundIconButton(icon: LIcons.image, size: 46, tooltip: '发图片', onTap: enabled && !sending ? onImage : null),
         const SizedBox(width: 8),
         Expanded(
           child: TextField(
@@ -543,7 +544,7 @@ class _Composer extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         RoundIconButton(
-          icon: sending ? Icons.hourglass_top_rounded : Icons.send_rounded,
+          icon: sending ? LIcons.hourglass : LIcons.send,
           size: 46,
           color: LL.lime,
           fg: LL.ink,

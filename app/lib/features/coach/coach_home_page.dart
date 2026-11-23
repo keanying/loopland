@@ -7,6 +7,7 @@ import '../../coach/workout.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'coach_session_page.dart';
 
 /// `/coach?sport=` — AI 跟练 course list: tabs by sport (跳绳 / HIIT / 普拉提 /
@@ -47,7 +48,7 @@ class _CoachHomePageState extends ConsumerState<CoachHomePage> {
             trailing: TextButton.icon(
               key: const Key('coach-manual-entry'),
               onPressed: () => context.push('/train/${_manualSport(sport)}'),
-              icon: const Icon(Icons.edit_note_rounded, size: 20),
+              icon: const LIcon(LIcons.editNote, size: 20),
               label: const Text('手动记录'),
             ),
           ),
@@ -73,7 +74,7 @@ class _CoachHomePageState extends ConsumerState<CoachHomePage> {
                     const Padding(
                       padding: EdgeInsets.only(bottom: 10),
                       child: Row(children: [
-                        Icon(Icons.info_outline_rounded, size: 16, color: LL.text3),
+                        LIcon(LIcons.info, size: 16, color: LL.text3),
                         SizedBox(width: 6),
                         Expanded(child: Text('课程库暂时无法更新，先用内置课程', style: TextStyle(color: LL.text3, fontSize: 12))),
                       ]),
@@ -89,7 +90,7 @@ class _CoachHomePageState extends ConsumerState<CoachHomePage> {
                     ),
                   if (energy != null)
                     Row(children: [
-                      const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+                      const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
                       const SizedBox(width: 4),
                       Expanded(child: Text('$energy · 居家训练只换能量，不圈地', style: const TextStyle(color: LL.text2, fontSize: 13))),
                     ]),
@@ -131,9 +132,9 @@ class _WorkoutCard extends StatelessWidget {
             ]),
             const SizedBox(height: 6),
             Wrap(spacing: 12, runSpacing: 4, children: [
-              if (w.estMinutes > 0) _Meta(icon: Icons.schedule_rounded, text: '约 ${w.estMinutes} 分钟'),
-              _Meta(icon: Icons.layers_rounded, text: '${w.steps.length} 个动作 · ${w.totalSets} 组'),
-              if (w.usesCamera) const _Meta(icon: Icons.videocam_rounded, text: '摄像头自动计数', color: LL.lime),
+              if (w.estMinutes > 0) _Meta(icon: LIcons.clock, text: '约 ${w.estMinutes} 分钟'),
+              _Meta(icon: LIcons.layers, text: '${w.steps.length} 个动作 · ${w.totalSets} 组'),
+              if (w.usesCamera) const _Meta(icon: LIcons.videocam, text: '摄像头自动计数', color: LL.lime),
             ]),
             const SizedBox(height: 12),
             for (final s in w.steps)
@@ -149,7 +150,7 @@ class _WorkoutCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(children: [
               const Spacer(),
-              FilledButton.icon(onPressed: onTap, icon: const Icon(Icons.play_arrow_rounded), label: const Text('开始跟练')),
+              FilledButton.icon(onPressed: onTap, icon: const LIcon(LIcons.play), label: const Text('开始跟练')),
             ]),
           ]),
         ),
@@ -172,12 +173,12 @@ class _Tag extends StatelessWidget {
 
 class _Meta extends StatelessWidget {
   const _Meta({required this.icon, required this.text, this.color = LL.text2});
-  final IconData icon;
+  final LGlyph icon;
   final String text;
   final Color color;
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: color),
+        LIcon(icon, size: 15, color: color),
         const SizedBox(width: 4),
         Text(text, style: TextStyle(color: color, fontSize: 12)),
       ]);
@@ -188,7 +189,7 @@ class _PrivacyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const LLCard(
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(Icons.privacy_tip_outlined, color: LL.lavender, size: 20),
+          LIcon(LIcons.shieldAlert, color: LL.lavender, size: 20),
           SizedBox(width: 10),
           Expanded(
             child: Text(

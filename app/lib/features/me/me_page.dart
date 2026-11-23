@@ -13,6 +13,7 @@ import '../../run/run_store.dart';
 import '../../run/uploader.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../ai/ai_widgets.dart';
 import '../run/result_page.dart';
@@ -54,11 +55,11 @@ class MePage extends ConsumerWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(u.nickname, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
                   Row(children: [
-                    const Icon(Icons.bolt_rounded, color: LL.yellow, size: 16),
+                    const LIcon(LIcons.bolt, color: LL.yellow, size: 16),
                     Text(' LV.${u.level} · ${u.energy} 能量', style: const TextStyle(color: LL.text2)),
                     if (u.membership?.active == true) ...[
                       const SizedBox(width: 6),
-                      const Icon(Icons.workspace_premium_rounded, color: LL.lime, size: 16),
+                      const LIcon(LIcons.crown, color: LL.lime, size: 16),
                     ],
                   ]),
                   if (u.crew != null) Text('「${u.crew!.name}」', style: const TextStyle(color: LL.lavender)),
@@ -99,7 +100,7 @@ class MePage extends ConsumerWidget {
                         style: const TextStyle(color: LL.text2)),
                   ]),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: LL.text3),
+                const LIcon(LIcons.chevronRight, color: LL.text3),
               ]),
             ),
             const SizedBox(height: 12),
@@ -137,7 +138,7 @@ class MePage extends ConsumerWidget {
             const SizedBox(height: 12),
             if (!u.isMinor)
               _MenuTile(
-                icon: Icons.workspace_premium_outlined,
+                icon: LIcons.crown,
                 color: LL.lime,
                 title: u.membership?.active == true ? '会员 · ${u.membership!.planName ?? ''}' : '开通会员',
                 sub: u.membership?.active == true ? '到期 ${Fmt.date(u.membership!.expiresAt)}' : '手绘 / 3D 地图、高级数据等体验权益',
@@ -145,46 +146,46 @@ class MePage extends ConsumerWidget {
               ),
             if (ref.watch(aiEnabledProvider))
               _MenuTile(
-                icon: Icons.auto_awesome_rounded,
+                icon: LIcons.quan,
                 leading: const AIMark(size: 20),
                 color: LL.lavender,
                 title: '圈圈',
                 sub: '去哪抢地、怪兽怎么打、今天跑多少合适',
                 onTap: () => context.push('/ai'),
               ),
-            _MenuTile(icon: Icons.history_rounded, color: LL.sky, title: '运动记录', onTap: () => context.push('/activities')),
+            _MenuTile(icon: LIcons.history, color: LL.sky, title: '运动记录', onTap: () => context.push('/activities')),
             _MenuTile(
-              icon: Icons.receipt_long_outlined,
+              icon: LIcons.receipt,
               color: LL.lime,
               title: '我的订单',
               sub: '订场、团购套餐的订单与退款',
               onTap: () => context.push('/me/orders'),
             ),
             _MenuTile(
-              icon: Icons.confirmation_number_outlined,
+              icon: LIcons.ticket,
               color: LL.pink,
               title: '卡券包',
               sub: '运动领到的联名券、买到的团购券',
               onTap: () => context.push('/me/coupons'),
             ),
-            _MenuTile(icon: Icons.notifications_none_rounded, color: LL.pink, title: '消息', onTap: () => context.push('/inbox')),
+            _MenuTile(icon: LIcons.bell, color: LL.pink, title: '消息', onTap: () => context.push('/inbox')),
             _MenuTile(
-              icon: Icons.verified_user_outlined,
+              icon: LIcons.shieldCheck,
               color: LL.yellow,
               title: '实名认证',
               sub: u.realnameVerified ? '已认证' : '未认证',
               onTap: () => context.push('/realname'),
             ),
-            _MenuTile(icon: Icons.block_rounded, color: LL.orange, title: '黑名单', onTap: () => context.push('/me/blocks')),
-            _MenuTile(icon: Icons.settings_outlined, color: LL.text2, title: '设置与隐私', onTap: () => context.push('/settings')),
+            _MenuTile(icon: LIcons.block, color: LL.orange, title: '黑名单', onTap: () => context.push('/me/blocks')),
+            _MenuTile(icon: LIcons.sliders, color: LL.text2, title: '设置与隐私', onTap: () => context.push('/settings')),
             const SizedBox(height: 12),
             // 本地生活（设计稿 08）：订场 · 联名活动 · 能量商城
             Row(children: const [
-              Expanded(child: _LocalTile('订场', '合作场馆', Icons.event_available_rounded, LL.lime, '/local?tab=booking')),
+              Expanded(child: _LocalTile('订场', '合作场馆', LIcons.calendarCheck, LL.lime, '/local?tab=booking')),
               SizedBox(width: 8),
-              Expanded(child: _LocalTile('联名福利', '品牌活动', Icons.local_offer_outlined, LL.pink, '/local?tab=campaigns')),
+              Expanded(child: _LocalTile('联名福利', '品牌活动', LIcons.tag, LL.pink, '/local?tab=campaigns')),
               SizedBox(width: 8),
-              Expanded(child: _LocalTile('能量商城', '能量换装扮', Icons.storefront_outlined, LL.sky, '/local?tab=shop')),
+              Expanded(child: _LocalTile('能量商城', '能量换装扮', LIcons.store, LL.sky, '/local?tab=shop')),
             ]),
           ]),
         ),
@@ -232,7 +233,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
     return LLCard(
       color: const Color(0xFF26223A),
       child: Row(children: [
-        const Icon(Icons.cloud_upload_outlined, color: LL.lavender),
+        const LIcon(LIcons.upload, color: LL.lavender),
         const SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -248,7 +249,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
 
 class _MenuTile extends StatelessWidget {
   const _MenuTile({required this.icon, this.leading, required this.color, required this.title, this.sub, required this.onTap});
-  final IconData icon;
+  final LGlyph icon;
   final Widget? leading; // 替代 icon（如「圈圈」的带 AI 角标图标）
   final Color color;
   final String title;
@@ -267,7 +268,7 @@ class _MenuTile extends StatelessWidget {
             height: 40,
             alignment: Alignment.center,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: leading ?? Icon(icon, color: LL.ink, size: 22),
+            child: leading ?? LIcon(icon, color: LL.ink, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -276,7 +277,7 @@ class _MenuTile extends StatelessWidget {
               if (sub != null) Text(sub!, style: const TextStyle(color: LL.text2, fontSize: 12)),
             ]),
           ),
-          const Icon(Icons.chevron_right_rounded, color: LL.text3),
+          const LIcon(LIcons.chevronRight, color: LL.text3),
         ]),
       ),
     );
@@ -286,7 +287,7 @@ class _MenuTile extends StatelessWidget {
 class _LocalTile extends StatelessWidget {
   const _LocalTile(this.title, this.sub, this.icon, this.color, this.path);
   final String title, sub, path;
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   @override
   Widget build(BuildContext context) => LLCard(
@@ -294,7 +295,7 @@ class _LocalTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         onTap: () => context.push(path),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: color),
+          LIcon(icon, color: color),
           const SizedBox(height: 6),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
           Text(sub, style: const TextStyle(color: LL.text3, fontSize: 12)),

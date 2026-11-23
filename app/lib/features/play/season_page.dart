@@ -9,19 +9,20 @@ import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
 
 String km2(double m2) => (m2 / 1e6).toStringAsFixed(2);
 
 /// Medal glyph + colour by medal type.
-(IconData, Color) medalLook(String type) => switch (type) {
-      'defends' => (Icons.shield_outlined, LL.lime),
-      'loops_single' => (Icons.autorenew_rounded, LL.lavender),
-      'boss_defeats' => (Icons.whatshot_outlined, LL.orange),
-      'chests' => (Icons.inventory_2_outlined, LL.yellow),
-      'routes' => (Icons.explore_outlined, LL.sky),
-      _ => (Icons.route_outlined, LL.pink),
+(LGlyph, Color) medalLook(String type) => switch (type) {
+      'defends' => (LIcons.shield, LL.lime),
+      'loops_single' => (LIcons.refresh, LL.lavender),
+      'boss_defeats' => (LIcons.flame, LL.orange),
+      'chests' => (LIcons.chest, LL.yellow),
+      'routes' => (LIcons.compass, LL.sky),
+      _ => (LIcons.route, LL.pink),
     };
 
 /// 赛季：段位卡（距下一段还差）、我的 / 跑团排名、赛事中心等入口、奖牌 / 赛季任务 / 排行。
@@ -92,7 +93,7 @@ class _SeasonPageState extends ConsumerState<SeasonPage> {
     final parts = season.name.split(' ');
     return ListView(padding: EdgeInsets.fromLTRB(16, 8, 16, bottom), children: [
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, onTap: () => Navigator.of(context).maybePop()),
+        RoundIconButton(icon: LIcons.back, onTap: () => Navigator.of(context).maybePop()),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -128,17 +129,17 @@ class _SeasonPageState extends ConsumerState<SeasonPage> {
       Row(children: [
         Expanded(
           child: _EntryTile(
-              icon: Icons.emoji_events_outlined, color: LL.sky, title: '赛事中心', sub: '城区联赛', onTap: () => context.push('/league')),
+              icon: LIcons.trophy, color: LL.sky, title: '赛事中心', sub: '城区联赛', onTap: () => context.push('/league')),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _EntryTile(
-              icon: Icons.storefront_outlined, color: LL.pink, title: '本地生活', sub: '订场 · 联名', onTap: () => context.push('/local')),
+              icon: LIcons.store, color: LL.pink, title: '本地生活', sub: '订场 · 联名', onTap: () => context.push('/local')),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _EntryTile(
-              icon: Icons.bolt_rounded,
+              icon: LIcons.bolt,
               color: LL.yellow,
               title: '能量商城',
               sub: '${Fmt.thousands(user?.energy ?? 0)} 可用',
@@ -266,7 +267,7 @@ class _RankBox extends StatelessWidget {
 
 class _EntryTile extends StatelessWidget {
   const _EntryTile({required this.icon, required this.color, required this.title, required this.sub, required this.onTap});
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final String title, sub;
   final VoidCallback onTap;
@@ -279,7 +280,7 @@ class _EntryTile extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: LL.ink, size: 20),
+            child: LIcon(icon, color: LL.ink, size: 20),
           ),
           const SizedBox(height: 10),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
@@ -339,7 +340,7 @@ class _MedalCard extends StatelessWidget {
               width: 62,
               height: 62,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF121214)),
-              child: Icon(icon, color: color, size: 32),
+              child: LIcon(icon, color: color, size: 32),
             ),
           ]),
         ),
@@ -372,7 +373,7 @@ class _Tasks extends StatelessWidget {
           child: LLCard(
             padding: const EdgeInsets.all(14),
             child: Row(children: [
-              Icon(t.completed ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              LIcon(t.completed ? LIcons.checkCircleFilled : LIcons.ring,
                   color: t.completed ? LL.lime : LL.text3, size: 26),
               const SizedBox(width: 12),
               Expanded(
@@ -386,7 +387,7 @@ class _Tasks extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Row(children: [
-                const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+                const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
                 Text('+${t.rewardEnergy}', style: TextStyle(fontWeight: FontWeight.w900, color: t.completed ? LL.text3 : LL.text)),
               ]),
             ]),

@@ -17,6 +17,7 @@ import '../../map/territory_map.dart';
 import '../../run/run_controller.dart';
 import '../../run/uploader.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/monster_art.dart';
 import 'result_page.dart';
 
@@ -92,17 +93,17 @@ class _RunPageState extends ConsumerState<RunPage> {
     }
     for (final c in _nearby.chests) {
       if (haversine(pos, c.center) <= c.radiusM) {
-        out.add(const _HintChip(icon: Icons.inventory_2_rounded, text: '经过能量宝箱，结算时自动开启', color: LL.yellow));
+        out.add(const _HintChip(icon: LIcons.chest, text: '经过能量宝箱，结算时自动开启', color: LL.yellow));
       }
     }
     for (final c in _nearby.checkpoints) {
       if (c.isNext && haversine(pos, c.center) <= c.radiusM) {
-        out.add(_HintChip(icon: Icons.explore_rounded, text: '到达打卡点「${c.name}」', color: LL.sky));
+        out.add(_HintChip(icon: LIcons.compass, text: '到达打卡点「${c.name}」', color: LL.sky));
       }
     }
     for (final g in ref.read(runControllerProvider).guide?.targets ?? const <GuideTarget>[]) {
       if (haversine(pos, g.center) <= 80) {
-        out.add(_HintChip(icon: Icons.flag_rounded, text: '到达路线目标「${g.name}」', color: LL.lavender));
+        out.add(_HintChip(icon: LIcons.flagFilled, text: '到达路线目标「${g.name}」', color: LL.lavender));
       }
     }
     return out;
@@ -188,7 +189,7 @@ class _RunPageState extends ConsumerState<RunPage> {
             top: top + 10,
             child: Row(children: [
               _Chip(
-                icon: Icons.satellite_alt_rounded,
+                icon: LIcons.signal,
                 text: s.lastFix == null
                     ? '搜索 GPS…'
                     : (s.lastFix!.accuracy ?? 99) <= 20
@@ -197,11 +198,11 @@ class _RunPageState extends ConsumerState<RunPage> {
                 color: s.lastFix == null ? LL.text3 : ((s.lastFix!.accuracy ?? 99) <= 20 ? LL.lime : LL.orange),
               ),
               const SizedBox(width: 8),
-              _Chip(icon: Icons.flag_rounded, text: _goalText(s, now), color: LL.lavender),
+              _Chip(icon: LIcons.flagFilled, text: _goalText(s, now), color: LL.lavender),
               const Spacer(),
               if (!_follow)
                 RoundIconButton(
-                  icon: Icons.my_location_rounded,
+                  icon: LIcons.locate,
                   tooltip: '跟随我的位置',
                   onTap: () {
                     setState(() => _follow = true);
@@ -269,7 +270,7 @@ class _RunPageState extends ConsumerState<RunPage> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(color: const Color(0xFF26223A), borderRadius: BorderRadius.circular(18)),
             child: Row(children: [
-              const Icon(Icons.all_inclusive_rounded, color: LL.lavender),
+              const LIcon(LIcons.loops, color: LL.lavender),
               const SizedBox(width: 10),
               Expanded(
                 child: Text.rich(TextSpan(children: [
@@ -303,14 +304,14 @@ class _RunPageState extends ConsumerState<RunPage> {
           if (paused)
             _BigButton(
               label: '继续',
-              icon: Icons.play_arrow_rounded,
+              icon: LIcons.play,
               color: LL.lime,
               onTap: () => ref.read(runControllerProvider.notifier).resume(),
             )
           else
             _BigButton(
               label: '暂停',
-              icon: Icons.pause_rounded,
+              icon: LIcons.pause,
               color: LL.text,
               onTap: s.phase == RunPhase.running ? () => ref.read(runControllerProvider.notifier).pause() : null,
             ),
@@ -375,7 +376,7 @@ class _RunPageState extends ConsumerState<RunPage> {
 
 class _Chip extends StatelessWidget {
   const _Chip({required this.icon, required this.text, required this.color});
-  final IconData icon;
+  final LGlyph icon;
   final String text;
   final Color color;
   @override
@@ -383,7 +384,7 @@ class _Chip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(color: LL.night.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(18)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: color),
+          LIcon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
         ]),
@@ -393,7 +394,7 @@ class _Chip extends StatelessWidget {
 class _BigButton extends StatelessWidget {
   const _BigButton({required this.label, required this.icon, required this.color, this.onTap});
   final String label;
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final VoidCallback? onTap;
   @override
@@ -405,7 +406,7 @@ class _BigButton extends StatelessWidget {
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onTap,
-          child: SizedBox(width: 76, height: 76, child: Icon(icon, size: 38, color: LL.ink)),
+          child: SizedBox(width: 76, height: 76, child: LIcon(icon, size: 38, color: LL.ink)),
         ),
       ),
       const SizedBox(height: 6),
@@ -463,7 +464,7 @@ class _LongPressButtonState extends State<LongPressButton> with SingleTickerProv
                   width: 76,
                   height: 76,
                   decoration: BoxDecoration(shape: BoxShape.circle, color: enabled ? LL.red : LL.card2),
-                  child: const Icon(Icons.stop_rounded, size: 38, color: LL.text),
+                  child: const LIcon(LIcons.stop, size: 38, color: LL.text),
                 ),
                 SizedBox(
                   width: 76,
@@ -509,7 +510,7 @@ class _Countdown extends StatelessWidget {
 class _HintChip extends StatelessWidget {
   const _HintChip({this.leading, this.icon, required this.text, required this.color});
   final Widget? leading;
-  final IconData? icon;
+  final LGlyph? icon;
   final String text;
   final Color color;
   @override
@@ -521,7 +522,7 @@ class _HintChip extends StatelessWidget {
           border: Border.all(color: color, width: 1.5),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          leading ?? Icon(icon, color: color, size: 22),
+          leading ?? LIcon(icon, color: color, size: 22),
           const SizedBox(width: 8),
           Flexible(child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14))),
         ]),

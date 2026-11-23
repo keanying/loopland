@@ -13,6 +13,7 @@ import '../../auth/social_login.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
 
@@ -110,11 +111,11 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
           const Text('分享到', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 16),
           Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-            if (wx) _Channel(icon: Icons.chat_rounded, color: const Color(0xFF2DC100), label: '微信', onTap: _busy ? null : () => _wechat(WeChatScene.session)),
-            if (wx) _Channel(icon: Icons.camera_rounded, color: const Color(0xFF2DC100), label: '朋友圈', onTap: _busy ? null : () => _wechat(WeChatScene.timeline)),
-            _Channel(icon: Icons.image_outlined, color: LL.lime, label: '生成海报', onTap: _busy ? null : _poster),
-            _Channel(icon: Icons.link_rounded, color: LL.sky, label: '复制链接', onTap: _busy ? null : _copy),
-            _Channel(icon: Icons.ios_share_rounded, color: LL.lavender, label: '更多', onTap: _busy ? null : _system),
+            if (wx) _Channel(icon: LIcons.chat, color: const Color(0xFF2DC100), label: '微信', onTap: _busy ? null : () => _wechat(WeChatScene.session)),
+            if (wx) _Channel(icon: LIcons.moments, color: const Color(0xFF2DC100), label: '朋友圈', onTap: _busy ? null : () => _wechat(WeChatScene.timeline)),
+            _Channel(icon: LIcons.image, color: LL.lime, label: '生成海报', onTap: _busy ? null : _poster),
+            _Channel(icon: LIcons.link, color: LL.sky, label: '复制链接', onTap: _busy ? null : _copy),
+            _Channel(icon: LIcons.shareOut, color: LL.lavender, label: '更多', onTap: _busy ? null : _system),
           ]),
         ]),
       ),
@@ -124,7 +125,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
 
 class _Channel extends StatelessWidget {
   const _Channel({required this.icon, required this.color, required this.label, this.onTap});
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final String label;
   final VoidCallback? onTap;
@@ -139,7 +140,7 @@ class _Channel extends StatelessWidget {
               width: 52,
               height: 52,
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: LL.ink),
+              child: LIcon(icon, color: LL.ink),
             ),
             const SizedBox(height: 6),
             Text(label, style: const TextStyle(fontSize: 12, color: LL.text2)),

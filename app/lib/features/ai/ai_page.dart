@@ -17,6 +17,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../chat/pick_image.dart';
 import '../social/social_widgets.dart';
 import 'ai_providers.dart';
@@ -328,9 +329,9 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('拍照'), onTap: () => Navigator.pop(s, 'camera')),
+            ListTile(leading: const LIcon(LIcons.camera), title: const Text('拍照'), onTap: () => Navigator.pop(s, 'camera')),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
+              leading: const LIcon(LIcons.images),
               title: const Text('从相册选择'),
               onTap: () => Navigator.pop(s, 'gallery'),
             ),
@@ -492,7 +493,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
         children: [
           Row(
             children: [
-              RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
+              RoundIconButton(icon: LIcons.back, tooltip: '返回', onTap: () => Navigator.of(context).maybePop()),
               const SizedBox(width: 12),
               const AIBadge(),
               const SizedBox(width: 12),
@@ -512,7 +513,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
               ),
               PopupMenuButton<String>(
                 tooltip: '更多',
-                icon: const Icon(Icons.more_vert_rounded, color: LL.text2),
+                icon: const LIcon(LIcons.moreV, color: LL.text2),
                 color: LL.card2,
                 onSelected: (v) {
                   if (v == 'about' && info != null) _about(info);
@@ -567,7 +568,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.info_outline_rounded, size: 13, color: LL.text3),
+            const LIcon(LIcons.info, size: 13, color: LL.text3),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -749,7 +750,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline_rounded, color: LL.red, size: 18),
+                    const LIcon(LIcons.alert, color: LL.red, size: 18),
                     const SizedBox(width: 8),
                     Flexible(child: Text(failure.message, style: const TextStyle(fontSize: 13))),
                     TextButton(onPressed: _sending ? null : failure.retry, child: const Text('重试')),
@@ -796,9 +797,11 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
     child: Align(
       alignment: Alignment.centerLeft,
       child: InputChip(
-        avatar: Icon(c.type == 'boss' ? Icons.whatshot_rounded : Icons.flag_outlined, size: 16, color: LL.lavender),
+        avatar: LIcon(c.type == 'boss' ? LIcons.flame : LIcons.flag, size: 16, color: LL.lavender),
         label: Text('关于${c.type == 'boss' ? '怪兽' : '领地'}「${c.name.isEmpty ? '#${c.id}' : c.name}」'),
         onDeleted: () => setState(() => _ctx = null),
+        deleteIcon: const LIcon(LIcons.close, size: 16),
+        deleteButtonTooltipMessage: '移除',
         backgroundColor: const Color(0xFF26223A),
         side: BorderSide.none,
         labelStyle: const TextStyle(color: LL.lavender, fontSize: 12, fontWeight: FontWeight.w700),
@@ -830,7 +833,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
                 alignment: Alignment.center,
                 child: a.uploading
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.error_outline_rounded, color: LL.red),
+                    : const LIcon(LIcons.alert, color: LL.red),
               ),
             Positioned(
               top: 2,
@@ -840,7 +843,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
                 child: Container(
                   padding: const EdgeInsets.all(2),
                   decoration: const BoxDecoration(color: Color(0xCC0E0E10), shape: BoxShape.circle),
-                  child: const Icon(Icons.close_rounded, size: 14, color: LL.text, semanticLabel: '移除图片'),
+                  child: const LIcon(LIcons.close, size: 14, color: LL.text, semanticLabel: '移除图片'),
                 ),
               ),
             ),
@@ -858,7 +861,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
       child: Row(
         children: [
           if (vision) ...[
-            RoundIconButton(icon: Icons.photo_camera_outlined, size: 48, tooltip: '发图片', onTap: _sending ? null : _pickPhoto),
+            RoundIconButton(icon: LIcons.camera, size: 48, tooltip: '发图片', onTap: _sending ? null : _pickPhoto),
             const SizedBox(width: 8),
           ],
           Expanded(
@@ -890,7 +893,7 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
           ),
           const SizedBox(width: 8),
           RoundIconButton(
-            icon: _sending ? Icons.more_horiz_rounded : Icons.arrow_forward_rounded,
+            icon: _sending ? LIcons.moreH : LIcons.arrowRight,
             size: 48,
             color: LL.lime,
             fg: LL.ink,

@@ -15,6 +15,7 @@ import '../../core/privacy.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../login/consent_page.dart';
 
 const visibilityNames = {'public': '公开', 'followers': '仅粉丝', 'crew': '仅跑团', 'private': '仅自己'};
@@ -109,6 +110,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               trailing: DropdownButton<String>(
                 value: s.trackVisibility,
                 underline: const SizedBox.shrink(),
+                icon: const LIcon(LIcons.chevronDown, size: 20),
                 items: [
                   for (final e in visibilityNames.entries) DropdownMenuItem(value: e.key, child: Text(e.value)),
                 ],
@@ -159,7 +161,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ListTile(
               title: const Text('导出我的数据'),
               subtitle: const Text('账号资料、运动记录（含轨迹）、领地、图鉴、订单', style: TextStyle(color: LL.text3, fontSize: 12)),
-              trailing: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download_rounded),
+              trailing: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const LIcon(LIcons.download),
               onTap: _busy ? null : _export,
             ),
             ListTile(
@@ -171,13 +173,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
           ]),
           _group('协议', [
-            ListTile(title: const Text('用户协议'), trailing: const Icon(Icons.chevron_right), onTap: () => openLegal(context, privacy: false)),
-            ListTile(title: const Text('隐私政策'), trailing: const Icon(Icons.chevron_right), onTap: () => openLegal(context, privacy: true)),
+            ListTile(title: const Text('用户协议'), trailing: const LIcon(LIcons.chevronRight), onTap: () => openLegal(context, privacy: false)),
+            ListTile(title: const Text('隐私政策'), trailing: const LIcon(LIcons.chevronRight), onTap: () => openLegal(context, privacy: true)),
             if (Env.isDev)
               ListTile(
                 title: const Text('环境检查'),
                 subtitle: const Text('开发环境：查看各 SDK 配置情况', style: TextStyle(color: LL.text3, fontSize: 12)),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: const LIcon(LIcons.chevronRight),
                 onTap: () => context.push('/dev/env'),
               ),
           ]),

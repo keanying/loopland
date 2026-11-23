@@ -9,6 +9,7 @@ import '../../map/territory_map.dart';
 import '../../run/location_source.dart';
 import '../../run/run_controller.dart' show locationSourceProvider;
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 
 /// Current position (GCJ-02) without prompting toasts; null when there is
 /// no permission or no fix.
@@ -98,14 +99,14 @@ class _PlacePickerPageState extends ConsumerState<PlacePickerPage> {
                 child: Center(
                   child: Padding(
                     padding: EdgeInsets.only(bottom: 44),
-                    child: Icon(Icons.location_on_rounded, color: LL.lime, size: 48, shadows: [Shadow(blurRadius: 8)]),
+                    child: LIcon(LIcons.pinFilled, color: LL.lime, size: 48, shadows: [Shadow(blurRadius: 8)]),
                   ),
                 ),
               ),
               Positioned(
                 right: 12,
                 bottom: 12,
-                child: RoundIconButton(icon: Icons.my_location_rounded, tooltip: '我的位置', onTap: () => _locate()),
+                child: RoundIconButton(icon: LIcons.locate, tooltip: '我的位置', onTap: () => _locate()),
               ),
             ]),
           ),
@@ -119,7 +120,7 @@ class _PlacePickerPageState extends ConsumerState<PlacePickerPage> {
                 key: const Key('place_name'),
                 controller: _name,
                 inputFormatters: [LengthLimitingTextInputFormatter(30)],
-                decoration: const InputDecoration(hintText: '地点名称，如 世纪公园 3 号门', prefixIcon: Icon(Icons.place_outlined)),
+                decoration: const InputDecoration(hintText: '地点名称，如 世纪公园 3 号门', prefixIcon: LIcon(LIcons.pin)),
               ),
               const SizedBox(height: 12),
               FilledButton(onPressed: _confirm, child: const Text('确定')),

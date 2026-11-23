@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../api/community_models.dart';
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 import 'social_widgets.dart';
 
 /// Full-screen swipe viewer with pinch zoom.
@@ -61,7 +62,7 @@ class _ImageViewerState extends State<ImageViewer> {
               IconButton(
                 tooltip: '关闭',
                 onPressed: () => Navigator.of(context).maybePop(),
-                icon: const Icon(Icons.close_rounded, color: LL.text),
+                icon: const LIcon(LIcons.close, color: LL.text),
               ),
               const Spacer(),
               if (n > 1)

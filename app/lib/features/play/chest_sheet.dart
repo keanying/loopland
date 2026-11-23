@@ -7,6 +7,7 @@ import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/monster_art.dart';
 import '../local/coupons_pages.dart';
 import 'locate.dart';
@@ -130,7 +131,7 @@ class _ChestSheetState extends ConsumerState<ChestSheet> {
             if (o == null && !_gone)
               FilledButton.icon(
                 onPressed: _busy ? null : _open,
-                icon: const Icon(Icons.lock_open_rounded),
+                icon: const LIcon(LIcons.unlock),
                 label: Text(_busy ? '正在确认位置…' : '打开宝箱'),
               )
             else

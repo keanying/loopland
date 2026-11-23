@@ -13,6 +13,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'booking_flow.dart' show ChannelPicker, PayFlow;
 import 'coupons_pages.dart' show CouponCard, openCoupon;
 import 'perks_providers.dart';
@@ -290,7 +291,7 @@ Future<void> showProductOrderResult(BuildContext context, ProductOrder o) => sho
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
               child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Icon(paid ? Icons.check_circle_rounded : Icons.hourglass_top_rounded, color: paid ? LL.lime : LL.yellow, size: 56),
+                LIcon(paid ? LIcons.checkCircleFilled : LIcons.hourglass, color: paid ? LL.lime : LL.yellow, size: 56),
                 const SizedBox(height: 8),
                 Text(paid ? '购买成功' : '等待支付结果',
                     textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),

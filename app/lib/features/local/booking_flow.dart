@@ -11,6 +11,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'local_providers.dart';
 import 'venue_widgets.dart';
 
@@ -263,7 +264,7 @@ Future<void> showBookingResult(BuildContext context, Booking b) => showModalBott
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Icon(b.isPaid ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+            LIcon(b.isPaid ? LIcons.checkCircleFilled : LIcons.hourglass,
                 color: b.isPaid ? LL.lime : LL.yellow, size: 56),
             const SizedBox(height: 8),
             Text(b.isPaid ? '预订成功' : '等待支付结果', textAlign: TextAlign.center,

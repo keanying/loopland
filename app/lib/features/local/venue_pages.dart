@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../claim/geo.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_widgets.dart' show SectionHeader, Tag;
 import '../social/social_widgets.dart' show UserAvatar, openProfile;
 import 'booking_flow.dart';
@@ -147,7 +148,7 @@ class _VenueDetailPageState extends ConsumerState<VenueDetailPage> {
                   child: OutlinedButton.icon(
                     key: const Key('venue_scan'),
                     onPressed: _busy || v.checkedInToday ? null : () => _checkin(v, qr: true),
-                    icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                    icon: const LIcon(LIcons.scan, size: 18),
                     label: const Text('扫码'),
                   ),
                 ),
@@ -184,7 +185,7 @@ class _VenueDetailPageState extends ConsumerState<VenueDetailPage> {
     if (o == null) {
       return const LLCard(
         child: Row(children: [
-          Icon(Icons.emoji_events_outlined, color: LL.text3, size: 36),
+          LIcon(LIcons.trophy, color: LL.text3, size: 36),
           SizedBox(width: 12),
           Expanded(child: Text('暂无馆主 · 先签到先得\n本周积分第一的人成为下周馆主', style: TextStyle(color: LL.text2, height: 1.5))),
         ]),
@@ -219,7 +220,7 @@ class _VenueDetailPageState extends ConsumerState<VenueDetailPage> {
               Text('馆主订场享${v.discountText}', style: const TextStyle(color: LL.lime, fontSize: 13)),
           ]),
         ),
-        const Icon(Icons.workspace_premium_rounded, color: LL.yellow, size: 30),
+        const LIcon(LIcons.crown, color: LL.yellow, size: 30),
       ]),
     );
   }

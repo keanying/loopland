@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../run/location_source.dart';
 import '../../run/run_controller.dart' show locationSourceProvider;
+import '../../widgets/l_icons.dart';
 import 'venue_checkin.dart';
 import 'venue_widgets.dart';
 
@@ -81,7 +82,7 @@ class _VenueCheckinSectionState extends ConsumerState<VenueCheckinSection> {
             key: const Key('start_scan'),
             style: FilledButton.styleFrom(backgroundColor: LL.ink, foregroundColor: LL.lavender, minimumSize: const Size(0, 48)),
             onPressed: _scan,
-            icon: const Icon(Icons.qr_code_scanner_rounded),
+            icon: const LIcon(LIcons.scan),
             label: const Text('扫码'),
           ),
         ]),
@@ -91,7 +92,7 @@ class _VenueCheckinSectionState extends ConsumerState<VenueCheckinSection> {
         const Expanded(child: Text('附近场馆', style: TextStyle(color: LL.text2, fontWeight: FontWeight.w700, fontSize: 15))),
         TextButton.icon(
           onPressed: () => context.push('/local'),
-          icon: const Icon(Icons.event_available_rounded, size: 18),
+          icon: const LIcon(LIcons.calendarCheck, size: 18),
           label: const Text('订场'),
         ),
       ]),

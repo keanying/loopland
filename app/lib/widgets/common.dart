@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../api/errors.dart';
 import '../core/theme.dart';
+import 'l_icons.dart';
 
 void showError(BuildContext context, Object e) {
   final m = ScaffoldMessenger.maybeOf(context);
@@ -121,7 +122,7 @@ class ChipTabs extends StatelessWidget {
 
 class RoundIconButton extends StatelessWidget {
   const RoundIconButton({super.key, required this.icon, this.onTap, this.size = 48, this.color = LL.card, this.fg = LL.text, this.badge = false, this.tooltip});
-  final IconData icon;
+  final LGlyph icon;
   final VoidCallback? onTap;
   final double size;
   final Color color;
@@ -141,7 +142,7 @@ class RoundIconButton extends StatelessWidget {
           width: size,
           height: size,
           child: Stack(alignment: Alignment.center, children: [
-            Icon(icon, color: fg, size: size * 0.46),
+            LIcon(icon, color: fg, size: size * 0.46),
             if (badge)
               Positioned(
                 right: size * 0.22,
@@ -167,7 +168,7 @@ class BackHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(children: [
-        RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, onTap: () => Navigator.of(context).maybePop()),
+        RoundIconButton(icon: LIcons.back, onTap: () => Navigator.of(context).maybePop()),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -217,7 +218,7 @@ class EnergyBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(color: LL.card, borderRadius: BorderRadius.circular(24)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.bolt_rounded, color: LL.yellow, size: 20),
+        const LIcon(LIcons.bolt, color: LL.yellow, size: 20),
         const SizedBox(width: 4),
         Text(_fmt(energy), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
       ]),
@@ -333,7 +334,7 @@ class ErrorBox extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.cloud_off_rounded, color: LL.text3, size: 40),
+          const LIcon(LIcons.cloudOff, color: LL.text3, size: 40),
           const SizedBox(height: 12),
           Text(errorText(error), textAlign: TextAlign.center, style: const TextStyle(color: LL.text2)),
           if (onRetry != null) ...[

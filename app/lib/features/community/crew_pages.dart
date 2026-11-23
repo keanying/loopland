@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../play/relay_card.dart';
 import 'community_page.dart';
 import 'crew_extras.dart';
@@ -64,7 +65,7 @@ class _CrewSearchPageState extends ConsumerState<CrewSearchPage> {
                   controller: _q,
                   textInputAction: TextInputAction.search,
                   onSubmitted: (_) => _search(),
-                  decoration: const InputDecoration(hintText: '跑团名称', prefixIcon: Icon(Icons.search_rounded)),
+                  decoration: const InputDecoration(hintText: '跑团名称', prefixIcon: LIcon(LIcons.search)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -279,7 +280,7 @@ class CrewDetailPage extends ConsumerWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => showInviteSheet(context, c),
-                        icon: const Icon(Icons.person_add_alt_rounded),
+                        icon: const LIcon(LIcons.userPlus),
                         label: const Text('邀请成员'),
                       ),
                     ),
@@ -287,7 +288,7 @@ class CrewDetailPage extends ConsumerWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => context.push('/crews/${c.id}/edit'),
-                        icon: const Icon(Icons.edit_outlined),
+                        icon: const LIcon(LIcons.pencil),
                         label: const Text('编辑跑团'),
                       ),
                     ),
@@ -407,6 +408,7 @@ class _CrewManagePageState extends ConsumerState<CrewManagePage> {
                           trailing: m.role == 'leader' || m.user.id == me?.id
                               ? null
                               : PopupMenuButton<String>(
+                                  icon: const LIcon(LIcons.moreV, color: LL.text2),
                                   onSelected: (v) => v == 'kick' ? _kick(m) : _transfer(m),
                                   itemBuilder: (_) => const [
                                     PopupMenuItem(value: 'transfer', child: Text('转让团长')),

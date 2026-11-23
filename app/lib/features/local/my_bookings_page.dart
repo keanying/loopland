@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart' show channelNames, paymentServiceProvider;
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_widgets.dart' show Tag;
 import 'local_providers.dart';
 import 'product_orders_pages.dart' show ProductOrdersList;
@@ -263,10 +264,10 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
                         LLCard(
                           onTap: () => context.push('/meetups/${b.meetupId}'),
                           child: const Row(children: [
-                            Icon(Icons.sports_tennis_rounded, color: LL.lavender),
+                            LIcon(LIcons.tennis, color: LL.lavender),
                             SizedBox(width: 10),
                             Expanded(child: Text('这次订场属于你发起的约球局')),
-                            Icon(Icons.chevron_right_rounded, color: LL.text3),
+                            LIcon(LIcons.chevronRight, color: LL.text3),
                           ]),
                         ),
                       ],

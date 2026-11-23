@@ -8,6 +8,7 @@ import '../../api/product_models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_widgets.dart' show Tag;
 import '../social/social_widgets.dart' show mediaUrl;
 
@@ -22,10 +23,10 @@ const _artColors = [
   [LL.pink, LL.orange],
 ];
 
-IconData productTypeIcon(String type) => switch (type) {
-      'voucher' => Icons.local_activity_outlined,
-      'pass' => Icons.style_outlined,
-      _ => Icons.redeem_rounded,
+LGlyph productTypeIcon(String type) => switch (type) {
+      'voucher' => LIcons.ticket,
+      'pass' => LIcons.cards,
+      _ => LIcons.gift,
     };
 
 /// Friendly text for the purchase errors of `POST /v1/products/{id}/orders`.
@@ -58,7 +59,7 @@ class ProductImage extends StatelessWidget {
       height: h,
       decoration: BoxDecoration(gradient: LinearGradient(colors: c, begin: Alignment.topLeft, end: Alignment.bottomRight)),
       alignment: Alignment.center,
-      child: Icon(productTypeIcon(type), color: LL.ink.withValues(alpha: 0.75), size: (h ?? 80) * 0.38),
+      child: LIcon(productTypeIcon(type), color: LL.ink.withValues(alpha: 0.75), size: (h ?? 80) * 0.38),
     );
     final u = url;
     final child = u == null
@@ -205,7 +206,7 @@ class _ProductSectionState extends State<ProductSection> {
           child: TextButton.icon(
             key: const Key('products_toggle'),
             onPressed: () => setState(() => _all = !_all),
-            icon: Icon(_all ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 18),
+            icon: LIcon(_all ? LIcons.chevronUp : LIcons.chevronDown, size: 18),
             label: Text(_all ? '收起' : '展开全部 ${list.length} 个'),
           ),
         ),

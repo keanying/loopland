@@ -10,6 +10,7 @@ import '../../core/theme.dart';
 import '../../map/amap_map.dart';
 import '../../run/device.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 
 final _deviceProbeProvider = FutureProvider.autoDispose<DeviceInfo>((ref) => collectDevice('env-check'));
 
@@ -106,7 +107,7 @@ class EnvCheckPage extends ConsumerWidget {
   Widget _check(SdkCheck s) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(s.configured ? Icons.check_circle : Icons.error_outline,
+          LIcon(s.configured ? LIcons.checkCircleFilled : LIcons.alert,
               size: 18, color: s.configured ? LL.lime : (s.required ? LL.orange : LL.text3)),
           const SizedBox(width: 8),
           Expanded(

@@ -14,6 +14,7 @@ import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
 import '../community/place_picker.dart';
@@ -95,7 +96,7 @@ class _MeetupsPageState extends ConsumerState<MeetupsPage> {
             trailing: FilledButton.icon(
               style: FilledButton.styleFrom(minimumSize: const Size(80, 46)),
               onPressed: _create,
-              icon: const Icon(Icons.add_rounded),
+              icon: const LIcon(LIcons.plus),
               label: const Text('发起'),
             ),
           ),
@@ -126,7 +127,7 @@ class _MeetupsPageState extends ConsumerState<MeetupsPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(children: [
-              const Icon(Icons.location_off_outlined, color: LL.text3, size: 16),
+              const LIcon(LIcons.pinOff, color: LL.text3, size: 16),
               const SizedBox(width: 6),
               const Expanded(child: Text('没有拿到定位，按开始时间排序', style: TextStyle(color: LL.text3, fontSize: 12))),
               TextButton(onPressed: _locate, child: const Text('重新定位')),
@@ -255,13 +256,13 @@ class _MeetupDetailPageState extends ConsumerState<MeetupDetailPage> {
                     const SizedBox(height: 12),
                     LLCard(
                       child: Column(children: [
-                        _InfoRow(icon: Icons.schedule_rounded, label: '时间', value: timeRangeText(m.startTime, m.endTime)),
+                        _InfoRow(icon: LIcons.clock, label: '时间', value: timeRangeText(m.startTime, m.endTime)),
                         _InfoRow(
-                            icon: Icons.place_outlined,
+                            icon: LIcons.pin,
                             label: '地点',
                             value: [m.place?.name ?? '-', if (m.distanceM != null) Fmt.distance(m.distanceM!)].join(' · ')),
-                        _InfoRow(icon: Icons.groups_outlined, label: '人数', value: '${m.joinedCount} / ${m.capacity} 人'),
-                        if (m.requirement.isNotEmpty) _InfoRow(icon: Icons.rule_rounded, label: '要求', value: m.requirement),
+                        _InfoRow(icon: LIcons.users, label: '人数', value: '${m.joinedCount} / ${m.capacity} 人'),
+                        if (m.requirement.isNotEmpty) _InfoRow(icon: LIcons.rules, label: '要求', value: m.requirement),
                       ]),
                     ),
                     // D-11: booked venue / time (or「给这个局订场」for the creator).
@@ -300,7 +301,7 @@ class _MeetupDetailPageState extends ConsumerState<MeetupDetailPage> {
     Widget? primary, secondary;
     if (creator || m.joined) {
       primary = FilledButton.icon(
-          onPressed: () => _chat(m), icon: const Icon(Icons.forum_outlined), label: const Text('进群聊'));
+          onPressed: () => _chat(m), icon: const LIcon(LIcons.chats), label: const Text('进群聊'));
       if (live) {
         secondary = OutlinedButton(
           onPressed: _busy
@@ -382,13 +383,13 @@ class _Hero extends StatelessWidget {
 
 class _InfoRow extends StatelessWidget {
   const _InfoRow({required this.icon, required this.label, required this.value});
-  final IconData icon;
+  final LGlyph icon;
   final String label, value;
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 18, color: LL.text3),
+          LIcon(icon, size: 18, color: LL.text3),
           const SizedBox(width: 8),
           SizedBox(width: 40, child: Text(label, style: const TextStyle(color: LL.text3))),
           Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w700))),
@@ -409,7 +410,7 @@ class _Notice extends StatelessWidget {
           border: Border.all(color: color.withValues(alpha: 0.6)),
         ),
         child: Row(children: [
-          Icon(Icons.info_outline_rounded, color: color, size: 18),
+          LIcon(LIcons.info, color: color, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 13, height: 1.4))),
         ]),
@@ -578,11 +579,11 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
                 decoration: const InputDecoration(hintText: '说明（≤ 300 字）：路线、配速、装备…'),
               ),
               const SizedBox(height: 10),
-              _PickTile(icon: Icons.play_circle_outline_rounded, label: '开始', value: fmt.format(_start), onTap: _pickStart),
-              _PickTile(icon: Icons.stop_circle_outlined, label: '结束', value: fmt.format(_end), onTap: _pickEnd),
+              _PickTile(icon: LIcons.playCircle, label: '开始', value: fmt.format(_start), onTap: _pickStart),
+              _PickTile(icon: LIcons.stopCircle, label: '结束', value: fmt.format(_end), onTap: _pickEnd),
               _PickTile(
                 key: const Key('meetup_place'),
-                icon: Icons.place_outlined,
+                icon: LIcons.pin,
                 label: '地点',
                 value: _place?.name ?? '在地图上选择',
                 onTap: _pickPlace,
@@ -592,7 +593,7 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
                   key: const Key('meetup_book_toggle'),
                   padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
                   child: Row(children: [
-                    const Icon(Icons.event_available_rounded, color: LL.lime),
+                    const LIcon(LIcons.calendarCheck, color: LL.lime),
                     const SizedBox(width: 10),
                     const Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -607,7 +608,7 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
                 if (_bookVenue)
                   _PickTile(
                     key: const Key('meetup_pick_venue'),
-                    icon: Icons.stadium_outlined,
+                    icon: LIcons.venue,
                     label: '场地',
                     value: _pick == null
                         ? '选择场馆和时段'
@@ -618,17 +619,17 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
               LLCard(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(children: [
-                  const Icon(Icons.groups_outlined, color: LL.text3),
+                  const LIcon(LIcons.users, color: LL.text3),
                   const SizedBox(width: 10),
                   const Text('人数', style: TextStyle(color: LL.text2)),
                   const Spacer(),
                   IconButton(
                       onPressed: _capacity > 2 ? () => setState(() => _capacity--) : null,
-                      icon: const Icon(Icons.remove_circle_outline)),
+                      icon: const LIcon(LIcons.minusCircle)),
                   Text('$_capacity', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
                   IconButton(
                       onPressed: _capacity < 50 ? () => setState(() => _capacity++) : null,
-                      icon: const Icon(Icons.add_circle_outline)),
+                      icon: const LIcon(LIcons.plusCircle)),
                 ]),
               ),
               const SizedBox(height: 10),
@@ -652,7 +653,7 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
 
 class _PickTile extends StatelessWidget {
   const _PickTile({super.key, required this.icon, required this.label, required this.value, required this.onTap});
-  final IconData icon;
+  final LGlyph icon;
   final String label, value;
   final VoidCallback onTap;
   @override
@@ -662,12 +663,12 @@ class _PickTile extends StatelessWidget {
           onTap: onTap,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           child: Row(children: [
-            Icon(icon, color: LL.text3),
+            LIcon(icon, color: LL.text3),
             const SizedBox(width: 10),
             Text(label, style: const TextStyle(color: LL.text2)),
             const SizedBox(width: 16),
             Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w800))),
-            const Icon(Icons.chevron_right_rounded, color: LL.text3),
+            const LIcon(LIcons.chevronRight, color: LL.text3),
           ]),
         ),
       );

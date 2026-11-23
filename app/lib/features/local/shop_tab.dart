@@ -13,6 +13,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cosmetics.dart';
+import '../../widgets/l_icons.dart';
 
 /// 能量商城 tab body (scrolls by itself).
 class ShopTab extends ConsumerStatefulWidget {
@@ -159,7 +160,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('可用能量', style: TextStyle(color: LL.ink, fontSize: 12, fontWeight: FontWeight.w800)),
                       Row(children: [
-                        const Icon(Icons.bolt_rounded, color: LL.ink, size: 24),
+                        const LIcon(LIcons.bolt, color: LL.ink, size: 24),
                         Text(Fmt.thousands(energy),
                             key: const Key('shop_energy'),
                             style: const TextStyle(color: LL.ink, fontSize: 28, fontWeight: FontWeight.w900)),
@@ -174,7 +175,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(color: LL.ink.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
                   child: const Row(children: [
-                    Icon(Icons.info_outline_rounded, size: 15, color: LL.ink),
+                    LIcon(LIcons.info, size: 15, color: LL.ink),
                     SizedBox(width: 6),
                     Expanded(
                       child: Text('能量只能运动获得，不能充值、不能转让',
@@ -297,7 +298,7 @@ class ShopItemCard extends StatelessWidget {
           foregroundColor: cant ? LL.text3 : LL.ink,
         ),
         onPressed: busy ? null : onBuy,
-        icon: const Icon(Icons.bolt_rounded, size: 16),
+        icon: const LIcon(LIcons.bolt, size: 16),
         label: Text(cant ? '能量不足 ${Fmt.thousands(it.priceEnergy)}' : '${Fmt.thousands(it.priceEnergy)} 兑换',
             style: const TextStyle(fontSize: 13, fontFamily: 'Roboto')),
       );

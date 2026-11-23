@@ -13,6 +13,7 @@ import '../../claim/geo.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/place_picker.dart' show quietLocation;
 import 'booking_flow.dart';
 import 'venue_widgets.dart';
@@ -163,7 +164,7 @@ class _BookingTabState extends ConsumerState<BookingTab> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(children: [
-            const Icon(Icons.location_off_outlined, color: LL.text3, size: 16),
+            const LIcon(LIcons.pinOff, color: LL.text3, size: 16),
             const SizedBox(width: 6),
             const Expanded(child: Text('没有拿到定位，暂不按距离排序', style: TextStyle(color: LL.text3, fontSize: 12))),
             TextButton(onPressed: _locate, child: const Text('重新定位')),
@@ -205,7 +206,7 @@ class _BookingTabState extends ConsumerState<BookingTab> {
               ),
               const SizedBox(width: 10),
               Expanded(child: Text(_tipText(m), style: const TextStyle(height: 1.45))),
-              const Icon(Icons.chevron_right_rounded, color: LL.text2),
+              const LIcon(LIcons.chevronRight, color: LL.text2),
             ]),
           ),
         ),
@@ -250,7 +251,7 @@ class _BookingTabState extends ConsumerState<BookingTab> {
               Align(
                 child: TextButton.icon(
                   onPressed: () => context.push('/venues/${v.id}'),
-                  icon: const Icon(Icons.emoji_events_outlined, size: 18),
+                  icon: const LIcon(LIcons.trophy, size: 18),
                   label: const Text('场馆详情 · 馆主榜'),
                 ),
               ),

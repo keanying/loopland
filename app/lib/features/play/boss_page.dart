@@ -14,6 +14,7 @@ import '../../realtime/realtime_client.dart';
 import '../../realtime/realtime_providers.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/monster_art.dart';
 import '../ai/ai_widgets.dart';
 import 'locate.dart';
@@ -160,7 +161,7 @@ class _BossPageState extends ConsumerState<BossPage> {
     final energy = _energy ?? user?.energy ?? 0;
     return ListView(padding: EdgeInsets.fromLTRB(16, 8, 16, 32 + MediaQuery.paddingOf(context).bottom), children: [
       Row(children: [
-        RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, onTap: () => Navigator.of(context).maybePop()),
+        RoundIconButton(icon: LIcons.back, onTap: () => Navigator.of(context).maybePop()),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -186,7 +187,7 @@ class _BossPageState extends ConsumerState<BossPage> {
           Expanded(
             child: FilledButton.icon(
               onPressed: () => _engage(b),
-              icon: const Icon(Icons.play_arrow_rounded),
+              icon: const LIcon(LIcons.play),
               label: const Text('去运动出战'),
             ),
           ),
@@ -203,7 +204,7 @@ class _BossPageState extends ConsumerState<BossPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                 ),
                 onPressed: cooling || _busy || noEnergy ? null : () => _strike(b),
-                icon: const Icon(Icons.bolt_rounded),
+                icon: const LIcon(LIcons.bolt),
                 label: Text(cooling ? '冷却 ${left.inSeconds + 1}s' : (noEnergy ? '能量不足' : '发起合击')),
               );
             },
@@ -225,7 +226,7 @@ class _BossPageState extends ConsumerState<BossPage> {
         LLCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(children: [
-            const Icon(Icons.local_fire_department_rounded, color: LL.orange),
+            const LIcon(LIcons.flame, color: LL.orange),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -354,7 +355,7 @@ class _StrikeResultCard extends StatelessWidget {
         color: const Color(0xFF2A1A14),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(children: [
-          const Icon(Icons.bolt_rounded, color: LL.orange),
+          const LIcon(LIcons.bolt, color: LL.orange),
           const SizedBox(width: 8),
           Expanded(
             child: Text.rich(TextSpan(children: [
@@ -403,7 +404,7 @@ class _ResultCard extends StatelessWidget {
                       width: 72,
                       height: 86,
                       decoration: BoxDecoration(color: LL.ink, borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.bolt_rounded, color: LL.yellow, size: 40),
+                      child: const LIcon(LIcons.bolt, color: LL.yellow, size: 40),
                     )
                   else
                     CardArt(artKey: r.item, width: 72),
@@ -450,7 +451,7 @@ class _DropTable extends ConsumerWidget {
                   width: 36,
                   height: 43,
                   decoration: BoxDecoration(color: LL.card2, borderRadius: BorderRadius.circular(8)),
-                  child: Icon(d.kind == 'energy' ? Icons.bolt_rounded : Icons.egg_alt_rounded, color: LL.yellow, size: 20),
+                  child: LIcon(d.kind == 'energy' ? LIcons.bolt : LIcons.egg, color: LL.yellow, size: 20),
                 ),
               const SizedBox(width: 12),
               Expanded(

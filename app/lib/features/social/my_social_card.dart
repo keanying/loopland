@@ -6,6 +6,7 @@ import '../../api/community_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
 
@@ -48,7 +49,7 @@ class MySocialCard extends ConsumerWidget {
           flex: 4,
           child: FilledButton.icon(
             onPressed: () => context.push<Post>('/posts/new'),
-            icon: const Icon(Icons.add_rounded),
+            icon: const LIcon(LIcons.plus),
             label: const Text('发动态'),
           ),
         ),
@@ -58,7 +59,7 @@ class MySocialCard extends ConsumerWidget {
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(side: const BorderSide(color: LL.border), backgroundColor: LL.card),
             onPressed: () => context.push('/me/collections'),
-            icon: const Icon(Icons.bookmark_border_rounded, size: 20),
+            icon: const LIcon(LIcons.bookmark, size: 20),
             label: const Text('收藏'),
           ),
         ),
@@ -68,7 +69,7 @@ class MySocialCard extends ConsumerWidget {
           child: OutlinedButton.icon(
             style: OutlinedButton.styleFrom(side: const BorderSide(color: LL.border), backgroundColor: LL.card),
             onPressed: id == null ? null : () => context.push('/users/$id'),
-            icon: const Icon(Icons.person_outline_rounded, size: 20),
+            icon: const LIcon(LIcons.user, size: 20),
             label: const Text('主页'),
           ),
         ),

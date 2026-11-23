@@ -10,6 +10,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../community/place_picker.dart' show quietLocation;
 import 'local_providers.dart';
 import 'qr_scan_page.dart';
@@ -117,7 +118,7 @@ class CheckinResultSheet extends ConsumerWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Icon(Icons.verified_rounded, color: LL.lime, size: 56),
+          const LIcon(LIcons.verified, color: LL.lime, size: 56),
           const SizedBox(height: 6),
           const Text('签到成功', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
           if (v != null) Text(v.name, textAlign: TextAlign.center, style: const TextStyle(color: LL.text2)),
@@ -134,7 +135,7 @@ class CheckinResultSheet extends ConsumerWidget {
             color: LL.card2,
             padding: const EdgeInsets.all(12),
             child: Row(children: [
-              const Icon(Icons.emoji_events_outlined, color: LL.yellow),
+              const LIcon(LIcons.trophy, color: LL.yellow),
               const SizedBox(width: 10),
               Expanded(child: Text(ownerLine, style: const TextStyle(height: 1.4))),
             ]),
@@ -211,7 +212,7 @@ class CheckinCouponCard extends StatelessWidget {
                   Text('${Fmt.date(c.expiresAt)} 前有效 · 已放进卡券包', style: const TextStyle(color: Color(0xFF3A1A2A), fontSize: 12)),
               ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: LL.ink),
+            const LIcon(LIcons.chevronRight, color: LL.ink),
           ]),
         ),
       ),
