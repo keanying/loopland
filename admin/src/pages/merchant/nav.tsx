@@ -9,7 +9,8 @@ export function MerchantNav() {
   const navigate = useNavigate();
   const current = items.find((i) => loc.pathname === i.to || loc.pathname.startsWith(i.to + '/'))?.to;
   if (items.length < 2) return null;
-  return <Segmented className="mer-nav" value={current} onChange={(v) => navigate(String(v))} options={items.map((i) => ({ label: i.label, value: i.to }))} />;
+  // 当前页不在标签里（如平台账号打开某商户的「开放平台」）时不高亮任何标签，而不是默认高亮第一个
+  return <Segmented className="mer-nav" value={current ?? ''} onChange={(v) => navigate(String(v))} options={items.map((i) => ({ label: i.label, value: i.to }))} />;
 }
 
 /** /merchant → the first page of the group this role may open. */
