@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Checkbox, Col, Empty, InputNumber, Pagination, Row, Segmented, Select, Skeleton, Space, Tag, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, EyeInvisibleOutlined, FlagFilled, HighlightOutlined, StopOutlined, WarningFilled } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { ReviewDecideAction, ReviewStatus, ReviewTargetType, ReviewTask } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -15,6 +14,7 @@ import { toastOk } from '../../utils/notify';
 import { previewState } from './preview';
 import { ReasonModal, RiskBadge, TargetTag, Thumbs } from './shared';
 import { AIChip, AIVerdict } from './ai';
+import { Glyph } from '../../components/Glyph';
 
 /** How the reviewed text reads for each target type. */
 const TEXT_LABEL: Record<string, string> = {
@@ -323,10 +323,10 @@ export default function QueueTab() {
                   全选本页
                 </Checkbox>
                 {checked.size > 0 && <b>已选 {checked.size} 条</b>}
-                <Button size="small" icon={<CheckOutlined />} disabled={!checked.size || !writable} loading={batch.isPending && !rejecting} onClick={confirmBatchApprove}>
+                <Button size="small" icon={<Glyph name="check" size={14} />} disabled={!checked.size || !writable} loading={batch.isPending && !rejecting} onClick={confirmBatchApprove}>
                   批量通过
                 </Button>
-                <Button size="small" danger icon={<CloseOutlined />} disabled={!checked.size || !writable} onClick={() => setRejecting('batch')}>
+                <Button size="small" danger icon={<Glyph name="close" size={14} />} disabled={!checked.size || !writable} onClick={() => setRejecting('batch')}>
                   批量驳回
                 </Button>
                 <span className="rv-keys">
@@ -449,7 +449,7 @@ function QueueItem({ t, active, checked, selectable, onClick, onCheck }: { t: Re
           <RiskBadge score={t.risk_score} />
           <AIChip ai={t.ai} />
           {t.report_count > 0 && (
-            <Tag bordered={false} color="red" icon={<FlagFilled />} style={{ marginInlineEnd: 0 }}>
+            <Tag bordered={false} color="red" icon={<Glyph name="flagFilled" size={12} />} style={{ marginInlineEnd: 0 }}>
               被举报 {t.report_count}
             </Tag>
           )}
@@ -605,7 +605,7 @@ function TaskDetail({ t, writable, busy, pendingAction, onAction }: { t: ReviewT
               {reasons.length ? (
                 reasons.map((r, i) => (
                   <div className="rv-reason" key={i}>
-                    <WarningFilled style={{ color: t.risk_score >= 70 ? 'var(--red)' : '#d99a0b' }} />
+                    <Glyph name="warning" size="1em" style={{ color: t.risk_score >= 70 ? 'var(--red)' : '#d99a0b' }} />
                     {r}
                   </div>
                 ))
@@ -665,11 +665,11 @@ function TaskDetail({ t, writable, busy, pendingAction, onAction }: { t: ReviewT
       {pending ? (
         <>
           <div className="decide-bar">
-            {btn('approve', '通过', 'A', <CheckOutlined />, '直接通过', { primary: true })}
-            {!isProduct && btn('approve_masked', '打码后通过', 'M', <HighlightOutlined />, maskEffect(t.target_type))}
-            {t.has_activity && btn('approve_hide_endpoints', '隐藏起终点后通过', 'H', <EyeInvisibleOutlined />, '把这条动态附带运动的起终点隐藏半径设为 500 m 后通过，避免暴露住址')}
-            {btn('reject', '驳回', 'R', <CloseOutlined />, isProduct ? '选择理由后驳回，原因写进商品的审核意见，通知商户' : '选择理由后驳回，通知作者', { danger: true })}
-            {!isProduct && btn('reject_mute', '驳回并禁言', 'B', <StopOutlined />, '驳回并禁言作者（默认 7 天，可改）', { danger: true })}
+            {btn('approve', '通过', 'A', <Glyph name="check" />, '直接通过', { primary: true })}
+            {!isProduct && btn('approve_masked', '打码后通过', 'M', <Glyph name="mosaic" />, maskEffect(t.target_type))}
+            {t.has_activity && btn('approve_hide_endpoints', '隐藏起终点后通过', 'H', <Glyph name="eyeOff" />, '把这条动态附带运动的起终点隐藏半径设为 500 m 后通过，避免暴露住址')}
+            {btn('reject', '驳回', 'R', <Glyph name="close" />, isProduct ? '选择理由后驳回，原因写进商品的审核意见，通知商户' : '选择理由后驳回，通知作者', { danger: true })}
+            {!isProduct && btn('reject_mute', '驳回并禁言', 'B', <Glyph name="block" />, '驳回并禁言作者（默认 7 天，可改）', { danger: true })}
           </div>
           <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             {writable ? `驳回后：${REJECT_EFFECT[t.target_type] ?? '对其他人隐藏'}。处理后自动跳到下一条。` : '当前角色不能审核'}

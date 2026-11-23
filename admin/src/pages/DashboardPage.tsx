@@ -2,7 +2,6 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Col, Empty, Row, Segmented, Skeleton, Table, Tag } from 'antd';
-import { AccountBookOutlined, ApiOutlined, ArrowRightOutlined, CrownOutlined, ExclamationCircleOutlined, FileDoneOutlined, GiftOutlined, SafetyOutlined, ShopOutlined, ShoppingOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import type { EChartsOption } from 'echarts';
 import { api } from '../api/admin';
@@ -15,6 +14,7 @@ import { Delta, PageHeader, Panel } from '../components/ui';
 import { bigNumber, change, dayjs } from '../utils/format';
 import { REVIEW_TARGET, REVIEW_TARGET_ORDER, TODO_TYPE } from '../utils/labels';
 import { BRAND } from '../theme';
+import { Glyph } from '../components/Glyph';
 
 type Metric = 'active_users' | 'distance_km' | 'new_territories';
 const METRIC: Record<Metric, { label: string; unit: string; title: string }> = {
@@ -49,16 +49,16 @@ function greeting(): string {
 }
 
 const TODO_ICON: Record<string, ReactNode> = {
-  risk: <SafetyOutlined />,
-  refund: <CrownOutlined />,
-  renew_failed: <CrownOutlined />,
-  review: <FileDoneOutlined />,
-  merchant_review: <ShopOutlined />,
-  booking_refund: <ShopOutlined />,
-  statement_confirm: <AccountBookOutlined />,
-  product_review: <ShoppingOutlined />,
-  promotion_apply: <GiftOutlined />,
-  webhook_failed: <ApiOutlined />,
+  risk: <Glyph name="shieldAlert" size="1em" />,
+  refund: <Glyph name="crown" size="1em" />,
+  renew_failed: <Glyph name="crown" size="1em" />,
+  review: <Glyph name="review" size="1em" />,
+  merchant_review: <Glyph name="store" size="1em" />,
+  booking_refund: <Glyph name="store" size="1em" />,
+  statement_confirm: <Glyph name="receipt" size="1em" />,
+  product_review: <Glyph name="bag" size="1em" />,
+  promotion_apply: <Glyph name="gift" size="1em" />,
+  webhook_failed: <Glyph name="code" size="1em" />,
 };
 
 function MetricCard({ value, unit, label, now, before, invert }: { value: number; unit?: string; label: string; now: number; before: number; invert?: boolean }) {
@@ -185,7 +185,7 @@ export default function DashboardPage() {
               {lw.new_territories ? `${today.new_territories >= lw.new_territories ? '多' : '少'} ${Math.abs(Math.round((change(today.new_territories, lw.new_territories) ?? 0) * 100))}%` : '—'}。
             </div>
             <Button type="primary" size="large" style={{ marginTop: 20 }} disabled={!first} onClick={() => first && navigate(todoRoute(first))}>
-              开始处理 <ArrowRightOutlined />
+              开始处理 <Glyph name="arrowRight" size="1em" />
             </Button>
             <svg width="180" height="120" viewBox="0 0 180 120" style={{ position: 'absolute', right: 28, bottom: 18, opacity: 0.9 }} aria-hidden="true">
               <path d="M10 104 C 50 98, 120 110, 172 100" stroke={BRAND.ink} strokeWidth="2" fill="none" />
@@ -233,7 +233,7 @@ export default function DashboardPage() {
             ) : (
               shownTodos.map((t, i) => (
                 <div className="todo-row" key={`${t.type}-${i}`} style={i === 0 ? { borderTop: 0 } : undefined}>
-                  <div className="todo-icon">{TODO_ICON[t.type] ?? <ExclamationCircleOutlined />}</div>
+                  <div className="todo-icon">{TODO_ICON[t.type] ?? <Glyph name="alert" size="1em" />}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{t.title}</div>
                     <div className="muted" style={{ fontSize: 12 }}>
@@ -313,7 +313,7 @@ export default function DashboardPage() {
               title="进行中的怪兽"
               extra={
                 <Link to="/operations" className="panel-hint">
-                  共 {bosses.data?.total ?? activeBosses.length} 只 · 查看全部 <ArrowRightOutlined />
+                  共 {bosses.data?.total ?? activeBosses.length} 只 · 查看全部 <Glyph name="arrowRight" size="1em" />
                 </Link>
               }
             >
@@ -356,7 +356,7 @@ function ReviewCard({ pending, wow, byType, todayDone, canReview }: { pending: n
       extra={
         canReview ? (
           <Link to="/review" className="panel-hint">
-            去审核队列 <ArrowRightOutlined />
+            去审核队列 <Glyph name="arrowRight" size="1em" />
           </Link>
         ) : undefined
       }
@@ -379,7 +379,7 @@ function ReviewCard({ pending, wow, byType, todayDone, canReview }: { pending: n
           {canReview && (
             <Link to="/review">
               <Button type="primary" style={{ marginTop: 14 }} disabled={!pending}>
-                开始审核 <ArrowRightOutlined />
+                开始审核 <Glyph name="arrowRight" size="1em" />
               </Button>
             </Link>
           )}

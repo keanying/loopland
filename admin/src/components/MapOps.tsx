@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useGameplayDefaults } from '../hooks/useGameplayDefaults';
 import { Alert, App, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Space } from 'antd';
-import { AimOutlined, CloseOutlined } from '@ant-design/icons';
 import { api } from '../api/admin';
 import type { BossCreate, ChestCreate, LatLng, MapBoss, MapChest } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -14,6 +13,7 @@ import { dt } from '../utils/format';
 import { BossBadge, HpBar } from './gameplay';
 import { bossKindName, timeLeft } from '../utils/gameplay';
 import { Panel, Tile } from './ui';
+import { Glyph } from './Glyph';
 
 type BBox = [number, number, number, number];
 
@@ -28,8 +28,8 @@ function invalidateObjects(qc: ReturnType<typeof useQueryClient>) {
 export function PickBanner({ text, onCancel }: { text: string; onCancel: () => void }) {
   return (
     <div className="pick-banner" role="status">
-      <AimOutlined /> {text}
-      <Button size="small" shape="round" icon={<CloseOutlined />} onClick={onCancel}>
+      <Glyph name="locate" size="1em" /> {text}
+      <Button size="small" shape="round" icon={<Glyph name="close" size={14} />} onClick={onCancel}>
         取消
       </Button>
     </div>
@@ -51,7 +51,7 @@ function CoordFields({ onPickOnMap }: { onPickOnMap: () => void }) {
       </Col>
       <Col span={6}>
         <Form.Item>
-          <Button block icon={<AimOutlined />} onClick={onPickOnMap}>
+          <Button block icon={<Glyph name="locate" />} onClick={onPickOnMap}>
             地图选点
           </Button>
         </Form.Item>
@@ -339,7 +339,7 @@ export function MapObjectCard({ boss, chest, onClose }: { boss?: MapBoss; chest?
 
   if (boss) {
     return (
-      <Panel title="怪兽" extra={<Button size="small" type="text" icon={<CloseOutlined />} onClick={onClose} aria-label="关闭" />}>
+      <Panel title="怪兽" extra={<Button size="small" type="text" icon={<Glyph name="close" size={14} />} onClick={onClose} aria-label="关闭" />}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <BossBadge kind={boss.kind} size={52} />
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -389,7 +389,7 @@ export function MapObjectCard({ boss, chest, onClose }: { boss?: MapBoss; chest?
   }
   if (chest) {
     return (
-      <Panel title="宝箱" extra={<Button size="small" type="text" icon={<CloseOutlined />} onClick={onClose} aria-label="关闭" />}>
+      <Panel title="宝箱" extra={<Button size="small" type="text" icon={<Glyph name="close" size={14} />} onClick={onClose} aria-label="关闭" />}>
         <div style={{ fontSize: 20, fontWeight: 800 }}>宝箱 #{chest.id}</div>
         <div className="muted num" style={{ fontSize: 12 }}>
           {chest.center.lat.toFixed(5)}, {chest.center.lng.toFixed(5)}

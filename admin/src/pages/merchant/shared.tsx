@@ -2,13 +2,13 @@ import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Tag, Tooltip } from 'antd';
-import { CoffeeOutlined, HomeOutlined, ShopOutlined } from '@ant-design/icons';
 import { api } from '../../api/admin';
 import { type MerchantStatus, type MerchantType, type StatementStatus, type BookingStatus } from '../../api/merchant';
 import type { LatLng } from '../../api/types';
 import SvgMap from '../../components/map/SvgMap';
 import { yuan } from '../../utils/format';
 import { BOOKING_STATUS, MERCHANT_STATUS, STATEMENT_STATUS } from './labels';
+import { Glyph } from '../../components/Glyph';
 
 export function MerchantStatusTag({ status }: { status: MerchantStatus }) {
   const s = MERCHANT_STATUS[status];
@@ -39,9 +39,9 @@ export function StatementStatusTag({ status }: { status: StatementStatus }) {
   );
 }
 
-const TYPE_ICON: Record<MerchantType, ReactNode> = { venue: <HomeOutlined />, brand: <CoffeeOutlined />, store: <ShopOutlined /> };
+const TYPE_ICON: Record<MerchantType, ReactNode> = { venue: <Glyph name="venue" size="1em" />, brand: <Glyph name="coffee" size="1em" />, store: <Glyph name="store" size="1em" /> };
 export function MerchantIcon({ type }: { type: MerchantType }) {
-  return <span className="mer-icon">{TYPE_ICON[type] ?? <ShopOutlined />}</span>;
+  return <span className="mer-icon">{TYPE_ICON[type] ?? <Glyph name="store" size="1em" />}</span>;
 }
 
 /** net_amt: > 0 the merchant pays the platform, < 0 the platform pays the merchant. */

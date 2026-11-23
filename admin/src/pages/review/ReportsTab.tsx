@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Drawer, Empty, Input, InputNumber, Modal, Segmented, Select, Space, Table, Tag, Typography } from 'antd';
-import { FlagFilled } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { AdminReport, ReportHandle, ReportStatus, ReportTargetType } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,6 +11,7 @@ import { Panel } from '../../components/ui';
 import { ago, dt } from '../../utils/format';
 import { REPORT_REASON, REPORT_REMOVE_EFFECT, REPORT_STATUS, REPORT_TARGET } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
+import { Glyph } from '../../components/Glyph';
 
 const MUTE_PRESETS = [0, 1, 3, 7, 30];
 
@@ -120,7 +120,7 @@ export default function ReportsTab() {
             align: 'right',
             render: (v: number) => (
               <span className={`num${v >= 3 ? ' danger-text' : ''}`} style={{ fontWeight: v >= 3 ? 700 : 400 }}>
-                {v >= 3 && <FlagFilled style={{ marginRight: 4 }} />}
+                {v >= 3 && <Glyph name="flagFilled" size="1em" style={{ marginRight: 4 }} />}
                 {v} 人
               </span>
             ),

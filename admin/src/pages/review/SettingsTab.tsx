@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Col, Empty, Input, InputNumber, Modal, Row, Skeleton, Slider, Space, Spin, Switch, Tag } from 'antd';
-import { PlusOutlined, RobotOutlined, SnippetsOutlined } from '@ant-design/icons';
 import { api } from '../../api/admin';
 import type { ModerationSettings } from '../../api/types';
 import { num } from '../../utils/format';
 import { Panel } from '../../components/ui';
 import { toastOk } from '../../utils/notify';
 import { RiskBadge } from './shared';
+import { Glyph } from '../../components/Glyph';
 
 // ---- local copy of the server's text scoring (server/internal/moderation, Check) for the 试一试 box ----
 const rePhone = /1[3-9]\d{9}/;
@@ -107,14 +107,14 @@ function WordEditor({
         </div>
       }
       extra={
-        <Button size="small" icon={<SnippetsOutlined />} onClick={() => setPasting(true)}>
+        <Button size="small" icon={<Glyph name="clipboard" size={14} />} onClick={() => setPasting(true)}>
           批量粘贴
         </Button>
       }
     >
       <Space.Compact style={{ width: '100%', marginBottom: 10 }}>
         <Input placeholder="输入一个词，回车添加（逗号分隔可一次加多个）" value={input} maxLength={40} onChange={(e) => setInput(e.target.value)} onPressEnter={addInput} aria-label={`添加${title}`} />
-        <Button icon={<PlusOutlined />} onClick={addInput} disabled={!input.trim()}>
+        <Button icon={<Glyph name="plus" />} onClick={addInput} disabled={!input.trim()}>
           添加
         </Button>
       </Space.Compact>
@@ -341,7 +341,7 @@ export default function SettingsTab() {
             title="审核阈值"
             extra={
               <Space size={6}>
-                <RobotOutlined />
+                <Glyph name="quan" size="1em" />
                 <span style={{ fontSize: 13 }}>AI 审核</span>
                 <Switch checked={!!draft.ai_enabled} onChange={(v) => setDraft({ ...draft, ai_enabled: v })} aria-label="AI 审核" />
               </Space>
@@ -419,7 +419,7 @@ export default function SettingsTab() {
             ))}
             <div className="score-row">
               <span>
-                <RobotOutlined /> AI 判定分（{draft.ai_enabled ? '已开启' : '已关闭'}）
+                <Glyph name="quan" size="1em" /> AI 判定分（{draft.ai_enabled ? '已开启' : '已关闭'}）
               </span>
               <span className="num muted" style={{ textAlign: 'right' }}>
                 0–100

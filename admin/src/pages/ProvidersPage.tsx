@@ -3,26 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, Drawer, Empty, Form, Input, InputNumber, Modal, Row, Segmented, Select, Skeleton, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import type { Rule } from 'antd/es/form';
-import {
-  AlipayCircleOutlined,
-  ApiOutlined,
-  AppleOutlined,
-  CheckCircleFilled,
-  CloseCircleFilled,
-  CloudOutlined,
-  EditOutlined,
-  EnvironmentOutlined,
-  IdcardOutlined,
-  LinkOutlined,
-  LockOutlined,
-  MailOutlined,
-  MessageOutlined,
-  MobileOutlined,
-  PayCircleOutlined,
-  RobotOutlined,
-  SafetyCertificateOutlined,
-  WechatOutlined,
-} from '@ant-design/icons';
 import { api } from '../api/admin';
 import type { Items, Provider, ProviderCheck, ProviderField, ProviderSave, ProviderSecret } from '../api/types';
 import { InfoTip, PageHeader, Panel, Tile } from '../components/ui';
@@ -30,6 +10,7 @@ import { useAdminNames } from '../hooks/useAdminNames';
 import { ago, dt } from '../utils/format';
 import { PROVIDER_GROUPS, PROVIDER_SOURCE } from '../utils/labels';
 import { errorMessage, toastOk } from '../utils/notify';
+import { Glyph } from '../components/Glyph';
 
 // 系统配置 · 第三方服务 (docs/api/系统配置.md). Secrets never reach the browser in plain text:
 // the list gives {set, hint}; what the admin types is sent once on save and the inputs are
@@ -38,18 +19,18 @@ import { errorMessage, toastOk } from '../utils/notify';
 const QK = ['providers'];
 
 const ICON: Record<string, ReactNode> = {
-  aliyun: <CloudOutlined />,
-  sms: <MessageOutlined />,
-  captcha: <SafetyCertificateOutlined />,
-  oneclick: <MobileOutlined />,
-  realname: <IdcardOutlined />,
-  wechat_login: <WechatOutlined />,
-  wechat_pay: <PayCircleOutlined />,
-  alipay: <AlipayCircleOutlined />,
-  apple: <AppleOutlined />,
-  ai: <RobotOutlined />,
-  email: <MailOutlined />,
-  amap: <EnvironmentOutlined />,
+  aliyun: <Glyph name="cloud" size="1em" />,
+  sms: <Glyph name="chat" size="1em" />,
+  captcha: <Glyph name="shieldCheck" size="1em" />,
+  oneclick: <Glyph name="phone" size="1em" />,
+  realname: <Glyph name="idCard" size="1em" />,
+  wechat_login: <Glyph name="chats" size="1em" />,
+  wechat_pay: <Glyph name="wallet" size="1em" />,
+  alipay: <Glyph name="yuan" size="1em" />,
+  apple: <Glyph name="apple" size="1em" />,
+  ai: <Glyph name="quan" size="1em" />,
+  email: <Glyph name="mail" size="1em" />,
+  amap: <Glyph name="pin" size="1em" />,
 };
 
 /** Tests that make a real (possibly paid) call; the input's own text comes from test_input. */
@@ -311,7 +292,7 @@ function CheckLine({ c }: { c: ProviderCheck | null }) {
   return (
     <div className="prov-check">
       <span className={okay ? 'prov-ok' : 'danger-text'}>
-        {okay ? <CheckCircleFilled /> : <CloseCircleFilled />} {okay ? '通过' : '未通过'}
+        {okay ? <Glyph name="checkCircleFilled" size="1em" /> : <Glyph name="closeCircleFilled" size="1em" />} {okay ? '通过' : '未通过'}
       </span>
       <Tooltip title={dt(c.time, 'YYYY-MM-DD HH:mm:ss')}>
         <span className="muted num"> · {ago(c.time)}</span>
@@ -339,7 +320,7 @@ function ProviderCard(props: {
   return (
     <div className={`prov-card${p.enabled ? '' : ' off'}`} data-code={p.code}>
       <div className="prov-head">
-        <div className="prov-icon">{ICON[p.code] ?? <ApiOutlined />}</div>
+        <div className="prov-icon">{ICON[p.code] ?? <Glyph name="code" size="1em" />}</div>
         <div className="prov-title">
           <div className="prov-name">
             {p.name}
@@ -354,7 +335,7 @@ function ProviderCard(props: {
       </div>
       {p.uses && (
         <div className="prov-uses">
-          <LinkOutlined /> 复用：{uses?.name ?? p.uses}
+          <Glyph name="link" size="1em" /> 复用：{uses?.name ?? p.uses}
           {uses && !uses.configured && <span className="danger-text"> · 尚未配置，配好之前不能启用</span>}
         </div>
       )}
@@ -374,10 +355,10 @@ function ProviderCard(props: {
         </div>
       </div>
       <div className="prov-actions">
-        <Button icon={<EditOutlined />} onClick={props.onEdit}>
+        <Button icon={<Glyph name="pencil" />} onClick={props.onEdit}>
           编辑配置
         </Button>
-        <Button icon={<ApiOutlined />} loading={testing} onClick={props.onTest}>
+        <Button icon={<Glyph name="signal" />} loading={testing} onClick={props.onTest}>
           测试连接
         </Button>
         {p.code === 'ai' && (
@@ -531,7 +512,7 @@ function ProviderForm({ p, uses, onCancel, onSaved }: { p: Provider; uses?: Prov
         <Alert
           type={uses && !uses.configured ? 'warning' : 'info'}
           showIcon
-          icon={<LinkOutlined />}
+          icon={<Glyph name="link" />}
           style={{ marginBottom: 12 }}
           message={`复用「${uses?.name ?? p.uses}」的凭证`}
           description={uses && !uses.configured ? `「${uses.name}」还没配置好，配好之前这个服务不能启用。` : undefined}
@@ -560,7 +541,7 @@ function ProviderForm({ p, uses, onCancel, onSaved }: { p: Provider; uses?: Prov
       )}
 
       <div className="prov-footnote">
-        <LockOutlined /> 敏感字段加密存库，页面和接口都不显示明文，审计日志只记字段名。「测试连接」用的是已保存的配置。
+        <Glyph name="lock" size="1em" /> 敏感字段加密存库，页面和接口都不显示明文，审计日志只记字段名。「测试连接」用的是已保存的配置。
       </div>
 
       <div className="prov-drawer-foot">

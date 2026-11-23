@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Col, Row, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import { perksApi, type Drop, type DropStatus, type DropType } from '../../api/perks';
 import { useAuth } from '../../auth/AuthContext';
 import { PageHeader, Panel, Tile } from '../../components/ui';
@@ -14,6 +13,7 @@ import { MerchantNav } from './nav';
 import { DROP_STATUS, DROP_TYPE, DROP_TYPES, SETTLE_DIRECTION_TEXT } from './perkLabels';
 import { DropTypeBadge } from './perkShared';
 import DropWizard from './DropWizard';
+import { Glyph } from '../../components/Glyph';
 
 function CapCell({ d }: { d: Drop }) {
   // daily_cap 0 = 不限 (backend)
@@ -122,7 +122,7 @@ export default function DropsPage() {
       <Panel
         title="投放"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} disabled={!writable} onClick={() => setEditing('new')}>
+          <Button type="primary" icon={<Glyph name="plus" />} disabled={!writable} onClick={() => setEditing('new')}>
             新建投放
           </Button>
         }

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Badge, Button, Checkbox, Col, Empty, Input, InputNumber, Row, Segmented, Select, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, CheckCircleOutlined, DeleteOutlined, PlusOutlined, RollbackOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { api } from '../api/admin';
 import type { BuildingConf, Config, EnergyRule, GameplayState, MedalConf, MedalType, RoleConf, SeasonTaskConf, SeasonTaskType, WorkoutConf } from '../api/types';
@@ -33,6 +32,7 @@ import {
 } from './gameplay/config';
 import { toastOk } from '../utils/notify';
 import { BRAND } from '../theme';
+import { Glyph } from '../components/Glyph';
 
 export default function GameplayPage() {
   const { modal } = App.useApp();
@@ -267,7 +267,7 @@ export default function GameplayPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <b style={{ fontSize: 15 }}>{b.name}</b>
                     <span className={ok ? 'num' : 'num danger-text'} style={{ fontWeight: 700 }}>
-                      合计 {sum}% {ok ? <CheckCircleOutlined style={{ color: BRAND.green }} /> : `· 差 ${Math.round((100 - sum) * 100) / 100}%`}
+                      合计 {sum}% {ok ? <Glyph name="checkCircle" size="1em" style={{ color: BRAND.green }} /> : `· 差 ${Math.round((100 - sum) * 100) / 100}%`}
                     </span>
                   </div>
                   {b.drops.map((d, di) => (
@@ -424,7 +424,7 @@ export default function GameplayPage() {
           <Panel
             title="赛季段位"
             extra={
-              <Button size="small" icon={<PlusOutlined />} disabled={!canEdit || draft.season.tiers.length >= 10} onClick={() => set((c) => c.season!.tiers.push({ name: '', min_km2: (c.season!.tiers.at(-1)?.min_km2 ?? 0) + 5 }))}>
+              <Button size="small" icon={<Glyph name="plus" size={14} />} disabled={!canEdit || draft.season.tiers.length >= 10} onClick={() => set((c) => c.season!.tiers.push({ name: '', min_km2: (c.season!.tiers.at(-1)?.min_km2 ?? 0) + 5 }))}>
                 添加段位
               </Button>
             }
@@ -491,7 +491,7 @@ export default function GameplayPage() {
                   key: 'op',
                   align: 'right',
                   render: (_, __, i) => (
-                    <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除段位" disabled={!canEdit || i === 0 || draft.season!.tiers.length <= 2} onClick={() => set((c) => c.season!.tiers.splice(i, 1))} />
+                    <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} aria-label="删除段位" disabled={!canEdit || i === 0 || draft.season!.tiers.length <= 2} onClick={() => set((c) => c.season!.tiers.splice(i, 1))} />
                   ),
                 },
               ]}
@@ -510,7 +510,7 @@ export default function GameplayPage() {
             extra={
               <Space>
                 <span className="panel-hint">每周一刷新</span>
-                <Button size="small" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.push({ key: '', name: '', type: 'weekly_count', target: 1, reward_energy: 50 }))}>
+                <Button size="small" icon={<Glyph name="plus" size={14} />} disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.push({ key: '', name: '', type: 'weekly_count', target: 1, reward_energy: 50 }))}>
                   添加任务
                 </Button>
               </Space>
@@ -566,7 +566,7 @@ export default function GameplayPage() {
                   title: '',
                   key: 'op',
                   align: 'right',
-                  render: (_, __, i) => <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除任务" disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.splice(i, 1))} />,
+                  render: (_, __, i) => <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} aria-label="删除任务" disabled={!canEdit} onClick={() => set((c) => c.season_tasks!.splice(i, 1))} />,
                 },
               ]}
             />
@@ -580,7 +580,7 @@ export default function GameplayPage() {
       <Panel
         title="奖牌"
         extra={
-          <Button size="small" icon={<PlusOutlined />} disabled={!canEdit} onClick={() => set((c) => (c.medals = [...(c.medals ?? []), { key: '', name: '', type: 'distance_km', target: 1, distance_km: 1 }]))}>
+          <Button size="small" icon={<Glyph name="plus" size={14} />} disabled={!canEdit} onClick={() => set((c) => (c.medals = [...(c.medals ?? []), { key: '', name: '', type: 'distance_km', target: 1, distance_km: 1 }]))}>
             添加奖牌
           </Button>
         }
@@ -655,7 +655,7 @@ export default function GameplayPage() {
                 title: '',
                 key: 'op',
                 align: 'right',
-                render: (_, __, i) => <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除奖牌" disabled={!canEdit} onClick={() => set((c) => c.medals!.splice(i, 1))} />,
+                render: (_, __, i) => <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} aria-label="删除奖牌" disabled={!canEdit} onClick={() => set((c) => c.medals!.splice(i, 1))} />,
               },
             ]}
           />
@@ -710,7 +710,7 @@ export default function GameplayPage() {
                 <span className="panel-hint">App 端姿态识别计次，画面不上传；只换能量、不圈地</span>
                 <Button
                   size="small"
-                  icon={<PlusOutlined />}
+                  icon={<Glyph name="plus" size={14} />}
                   disabled={!canEdit || draft.workouts.length >= 30}
                   onClick={() =>
                     set((c) =>
@@ -904,7 +904,7 @@ export default function GameplayPage() {
                 <Tooltip title={!state.previous ? '没有上一个版本' : !canPublish ? '只有管理员可以回滚' : `回到 ${state.previous.version}`}>
                   <Button
                     size="small"
-                    icon={<RollbackOutlined />}
+                    icon={<Glyph name="replay" size={14} />}
                     disabled={!canPublish || !state.previous}
                     loading={rollback.isPending}
                     onClick={() =>
@@ -1009,7 +1009,7 @@ function WorkoutCard({
           </Checkbox>
         </span>
         <span style={{ flex: 1 }} />
-        <Button size="small" type="text" danger icon={<DeleteOutlined />} disabled={!canEdit} onClick={onDelete} aria-label={`删除跟练 ${w.name}`} style={{ marginBottom: 6 }}>
+        <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} disabled={!canEdit} onClick={onDelete} aria-label={`删除跟练 ${w.name}`} style={{ marginBottom: 6 }}>
           删除
         </Button>
       </div>
@@ -1074,9 +1074,9 @@ function WorkoutCard({
                 <Input size="small" disabled={!canEdit} value={x.cue} maxLength={40} placeholder="语音提示，跟练时播报" style={{ flex: 1, minWidth: 160 }} className={cls(`${sp}.cue`)} onChange={(e) => onChange((y) => (y.steps[i].cue = e.target.value))} aria-label="语音提示" />
               </div>
               <Space size={0} className="wk-ops">
-                <Button size="small" type="text" icon={<ArrowUpOutlined />} aria-label="上移" disabled={!canEdit || i === 0} onClick={() => move(i, -1)} />
-                <Button size="small" type="text" icon={<ArrowDownOutlined />} aria-label="下移" disabled={!canEdit || i === w.steps.length - 1} onClick={() => move(i, 1)} />
-                <Button size="small" type="text" danger icon={<DeleteOutlined />} aria-label="删除动作" disabled={!canEdit || w.steps.length <= 1} onClick={() => onChange((y) => y.steps.splice(i, 1))} />
+                <Button size="small" type="text" icon={<Glyph name="arrowUp" size={14} />} aria-label="上移" disabled={!canEdit || i === 0} onClick={() => move(i, -1)} />
+                <Button size="small" type="text" icon={<Glyph name="arrowDown" size={14} />} aria-label="下移" disabled={!canEdit || i === w.steps.length - 1} onClick={() => move(i, 1)} />
+                <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} aria-label="删除动作" disabled={!canEdit || w.steps.length <= 1} onClick={() => onChange((y) => y.steps.splice(i, 1))} />
               </Space>
             </div>
           );
@@ -1085,7 +1085,7 @@ function WorkoutCard({
       <Button
         size="small"
         type="dashed"
-        icon={<PlusOutlined />}
+        icon={<Glyph name="plus" size={14} />}
         style={{ marginTop: 8 }}
         disabled={!canEdit || w.steps.length >= 20}
         onClick={() =>

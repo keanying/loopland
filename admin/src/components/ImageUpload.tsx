@@ -8,7 +8,8 @@ import type { UploadProps } from 'antd';
 import { api } from '../api/admin';
 import { ApiError } from '../api/client';
 import type { MediaPurpose } from '../api/types';
-import { DoodlePicture, IconEye, IconLink, IconTrash } from './icons';
+import { DoodlePicture } from './icons';
+import { Glyph } from './Glyph';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const EXT_RE = /\.(jpe?g|png|webp|heic|heif)$/i;
@@ -236,7 +237,7 @@ export function ImageUpload({ value, onChange, purpose, max = 9, shape = 'square
                 preview={{
                   mask: (
                     <span className="img-up-mask">
-                      <IconEye size={18} /> 预览
+                      <Glyph name="eye" size={18} /> 预览
                     </span>
                   ),
                 }}
@@ -245,7 +246,7 @@ export function ImageUpload({ value, onChange, purpose, max = 9, shape = 'square
               {!disabled && (
                 <Tooltip title="移除">
                   <button type="button" className="img-up-remove" aria-label={`移除第 ${i + 1} 张`} onClick={() => remove(i)}>
-                    <IconTrash size={14} />
+                    <Glyph name="trash" size={14} />
                   </button>
                 </Tooltip>
               )}
@@ -301,7 +302,7 @@ export function ImageUpload({ value, onChange, purpose, max = 9, shape = 'square
         </span>
         {!disabled && slotsLeft > 0 && !pasting && (
           <button type="button" className="img-up-paste-link" onClick={() => setPasting(true)}>
-            <IconLink size={14} /> 或粘贴图片网址
+            <Glyph name="link" size={14} /> 或粘贴图片网址
           </button>
         )}
       </div>

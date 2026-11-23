@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Empty, Progress, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { EnvironmentOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { Meetup, MeetupStatus, MeetupType } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,6 +11,7 @@ import { ago, dayjs } from '../../utils/format';
 import { MEETUP_STATUS, MEETUP_TYPE, REVIEW_STATUS } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
 import { ReasonModal } from '../review/shared';
+import { Glyph } from '../../components/Glyph';
 
 const CANCEL_REASONS = ['天气或场地原因', '内容违规', '发起人申请取消', '涉嫌营销或诈骗', '时间地点信息不实'];
 
@@ -117,7 +117,7 @@ export default function MeetupsTab() {
             render: (_, m) => (
               <Tooltip title={`${m.place.lat.toFixed(5)}, ${m.place.lng.toFixed(5)}`}>
                 <div style={{ fontSize: 13, maxWidth: 180 }}>
-                  <EnvironmentOutlined /> {m.place.name}
+                  <Glyph name="pin" size="1em" /> {m.place.name}
                   {m.district && <div className="muted" style={{ fontSize: 12 }}>{m.district}</div>}
                 </div>
               </Tooltip>

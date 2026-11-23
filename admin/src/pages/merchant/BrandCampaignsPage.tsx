@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, DatePicker, Drawer, Empty, Form, Input, InputNumber, Modal, Pagination, Progress, Radio, Row, Segmented, Select, Skeleton, Space, Table, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type BrandCampaign, type BrandCampaignInput, type BrandCampaignStatus, type Drop } from '../../api/perks';
 import { useAuth } from '../../auth/AuthContext';
@@ -16,6 +15,7 @@ import { toastOk } from '../../utils/notify';
 import { MerchantNav } from './nav';
 import { CAMPAIGN_STATUS, DROP_STATUS, DROP_TYPE, toFen, toYuan, yuanShort } from './perkLabels';
 import { DropTypeBadge } from './perkShared';
+import { Glyph } from '../../components/Glyph';
 
 const STATUS_TABS: { value: BrandCampaignStatus | ''; label: string }[] = [
   { value: '', label: '全部' },
@@ -189,7 +189,7 @@ export default function BrandCampaignsPage() {
       <Panel
         title="联名活动"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} disabled={!writable} onClick={() => setEditing('new')}>
+          <Button type="primary" icon={<Glyph name="plus" />} disabled={!writable} onClick={() => setEditing('new')}>
             新建联名活动
           </Button>
         }

@@ -6,7 +6,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { Alert, Button, Col, Descriptions, Drawer, Empty, Form, InputNumber, Row, Select, Space, Switch, Table, Tag, TimePicker } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
 import { merchantApi, type Venue, type VenueInput, type VenueSport } from '../../api/merchant';
 import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel } from '../../components/ui';
@@ -15,6 +14,7 @@ import { toastOk } from '../../utils/notify';
 import { VENUE_SPORT } from './labels';
 import { MerchantNav } from './nav';
 import { discountText, toFen, toYuan, useOwnVenues } from './util';
+import { Glyph } from '../../components/Glyph';
 
 const sportText = (s: string) => VENUE_SPORT[s as VenueSport] ?? s;
 /** The fields a merchant account may send (anything else → 403 field_not_allowed). */
@@ -78,7 +78,7 @@ export default function MyVenuesPage() {
               render: (_, v) => (
                 <Button
                   size="small"
-                  icon={<EditOutlined />}
+                  icon={<Glyph name="pencil" size={14} />}
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditing(v);

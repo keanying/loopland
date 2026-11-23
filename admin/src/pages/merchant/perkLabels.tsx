@@ -1,28 +1,28 @@
 // Labels and helpers of the 投放 / 联名活动 / 能量商城 pages (no components: see perkShared.tsx).
-import { CoffeeOutlined, GiftOutlined, HomeOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import type { BrandCampaignStatus, DropStatus, DropType, ShopItemType } from '../../api/perks';
+import { Glyph } from '../../components/Glyph';
 
 export const DROP_TYPES: DropType[] = ['supply', 'chest', 'stronghold'];
 
 export const DROP_TYPE: Record<DropType, { label: string; icon: ReactNode; short: string; how: string; claim: string }> = {
   supply: {
     label: '补给站',
-    icon: <CoffeeOutlined />,
+    icon: <Glyph name="cup" size="1em" />,
     short: '跑步路线经过即可领取，店员扫码核销',
     how: '在地图上画一个圆：运动轨迹经过范围内（运动结算时判定），或人在范围内点「领取」，就得一张券。每人每个补给站每天 1 张。',
     claim: '跑步经过补给站自动领取',
   },
   chest: {
     label: '宝箱',
-    icon: <GiftOutlined />,
+    icon: <Glyph name="gift" size="1em" />,
     short: '在地图上刷出商户宝箱，开启得券',
     how: '按投放位置刷出商户宝箱（沿用宝箱机制，深夜 23:00–05:00 不刷），走到宝箱附近开启得券——奖励是券，不是能量。',
     claim: '在地图上找到宝箱并开启',
   },
   stronghold: {
     label: '据点',
-    icon: <HomeOutlined />,
+    icon: <Glyph name="venue" size="1em" />,
     short: '绑定场馆，场馆签到得券',
     how: '绑定一个场馆：用户在场馆范围内定位签到或扫场馆二维码签到就得券，签到同时累积馆主积分（周榜第一成为馆主）。',
     claim: '到场馆签到领取',

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Form, Input, Modal, Select, Space, Switch, Table, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import { api } from '../api/admin';
 import type { AdminAccount, AdminCreate, AdminPatch, AdminRole } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -9,6 +8,7 @@ import { PageHeader, Panel } from '../components/ui';
 import { dt } from '../utils/format';
 import { ROLE_LABEL } from '../utils/labels';
 import { toastOk } from '../utils/notify';
+import { Glyph } from '../components/Glyph';
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as AdminRole[]).map((r) => ({ value: r, label: ROLE_LABEL[r] }));
 const ROLE_HINT: Record<AdminRole, string> = {
@@ -51,7 +51,7 @@ export default function AdminsPage() {
         title="后台账号"
         sub="四种角色：管理员、运营、审核员、商户对接。只有管理员能发布玩法配置、退款、管理账号"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
+          <Button type="primary" icon={<Glyph name="plus" />} onClick={() => setCreating(true)}>
             新建账号
           </Button>
         }

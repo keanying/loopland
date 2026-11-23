@@ -2,16 +2,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Col, Drawer, Empty, Input, Modal, Pagination, Row, Segmented, Select, Skeleton, Slider, Space, Switch, Tag, Tooltip } from 'antd';
-import {
-  AimOutlined,
-  ApiOutlined,
-  DashboardOutlined,
-  DisconnectOutlined,
-  EnvironmentOutlined,
-  MobileOutlined,
-  RiseOutlined,
-  WarningFilled,
-} from '@ant-design/icons';
 import type { EChartsOption } from 'echarts';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { RiskAction, RiskAlert, RiskAlertDetail, RiskResolution, RiskRules, RiskStatus, RiskType } from '../api/types';
@@ -22,14 +12,15 @@ import { ago, area, dayjs, dt, km } from '../utils/format';
 import { RISK_ACTION, RISK_TYPE, SPORT_LABEL } from '../utils/labels';
 import { toastOk } from '../utils/notify';
 import { BRAND } from '../theme';
+import { Glyph } from '../components/Glyph';
 
 const TYPE_ICON: Record<RiskType, ReactNode> = {
-  speed: <DashboardOutlined />,
-  mock_location: <EnvironmentOutlined />,
-  teleport: <RiseOutlined />,
-  missing_device_data: <DisconnectOutlined />,
-  multi_account: <MobileOutlined />,
-  device_tamper: <ApiOutlined />,
+  speed: <Glyph name="gauge" size="1em" />,
+  mock_location: <Glyph name="pinX" size="1em" />,
+  teleport: <Glyph name="jump" size="1em" />,
+  missing_device_data: <Glyph name="sensorOff" size="1em" />,
+  multi_account: <Glyph name="deviceShared" size="1em" />,
+  device_tamper: <Glyph name="phoneAlert" size="1em" />,
 };
 
 function resolutionText(r: RiskResolution, note?: string | null): string {
@@ -128,7 +119,7 @@ export default function RiskPage() {
             ) : (
               items.map((a) => (
                 <div key={a.id} className={`alert-item${a.id === selectedId ? ' active' : ''}`} onClick={() => update({ alert: String(a.id) })} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && update({ alert: String(a.id) })}>
-                  <div className="alert-icon">{TYPE_ICON[a.type] ?? <WarningFilled />}</div>
+                  <div className="alert-icon">{TYPE_ICON[a.type] ?? <Glyph name="warning" size="1em" />}</div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div>
                       <b>{RISK_TYPE[a.type] ?? a.type}</b>{' '}
@@ -291,7 +282,7 @@ function Evidence({ label, value, warn, sub }: { label: string; value: ReactNode
         {label}
       </div>
       <div style={{ fontWeight: 700, fontSize: 14, color: warn ? BRAND.red : undefined }}>
-        {warn && <WarningFilled style={{ marginRight: 4 }} />}
+        {warn && <Glyph name="warning" size="1em" style={{ marginRight: 4 }} />}
         {value}
       </div>
       {sub && (
@@ -562,7 +553,7 @@ function RulesEditor() {
         </Col>
       </Row>
       <div className="muted" style={{ fontSize: 12, marginTop: 10 }}>
-        <AimOutlined /> 规则影响新上传运动的自动判定：确定性作弊直接作废，疑似的进入上方人工复核队列。
+        <Glyph name="locate" size="1em" /> 规则影响新上传运动的自动判定：确定性作弊直接作废，疑似的进入上方人工复核队列。
       </div>
     </Panel>
   );

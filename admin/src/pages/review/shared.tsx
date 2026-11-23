@@ -2,10 +2,10 @@
 // click-to-enlarge preview, a reason dialog with preset reasons, the track sketch.
 import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Image, Input, Modal, Tag } from 'antd';
-import { WarningFilled } from '@ant-design/icons';
 import { BRAND } from '../../theme';
 import { REVIEW_TARGET } from '../../utils/labels';
 import { previewState } from './preview';
+import { Glyph } from '../../components/Glyph';
 
 function riskLevel(score: number): 0 | 1 | 2 | 3 {
   if (score >= 70) return 3;
@@ -18,7 +18,7 @@ export function RiskBadge({ score, large }: { score: number; large?: boolean }) 
   const lv = riskLevel(score);
   return (
     <span className={`risk-badge lv${lv}${large ? ' lg' : ''} num`} title="风险分 0–100">
-      {lv >= 2 && <WarningFilled />}风险 {score}
+      {lv >= 2 && <Glyph name="warning" size="1em" />}风险 {score}
     </span>
   );
 }

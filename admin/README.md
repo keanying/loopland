@@ -206,6 +206,14 @@ scripts/screenshots.cjs, scripts/screenshots-v2.cjs（devConfig.cjs 从配置里
 config.yaml, config.mock.yaml, config.local.example.yaml, loadConfig.ts（读取、合并、校验配置）
 ```
 
+### 图标
+
+和 App 用同一套图标（`app/lib/widgets/l_icons.dart` 的 `LIcons`），不用 `@ant-design/icons`：
+
+- `<Glyph name="plus" />`（`src/components/Glyph.tsx`）：默认 16 px（按钮里），小按钮 14、大按钮 18、侧栏 20，夹在文字里用 `size="1em"`；颜色 currentColor，有 `title` 才读给读屏软件。
+- `src/components/glyphs.ts` 由 `pnpm run glyphs`（`scripts/gen-glyphs.cjs`）从 App 的 Dart 文件生成，别手改；App 里还没有的（侧栏的四宫格 / 三条滑杆 / 齿轮 / 退出、风控告警类型、怪兽、二维码等）在 `glyphsAdmin.ts`，以后搬进 App 再删掉。
+- Ant Design 自己画的图标（下拉箭头、日期、分页、提示框和弹窗的状态图标等）：弹窗 / 抽屉的关闭按钮通过 ConfigProvider 换成 Glyph，其余由 `src/components/antdIcons.tsx` 按 `anticon-<名字>` 用同一批图形覆盖；加载转圈、表格排序箭头、图片预览工具栏、Empty 插画保持原样。
+
 去掉 mock：删除 `src/mocks/`、`config.mock.yaml` 和 `package.json` 里的 `dev:mock` / `build:mock`，并删掉 `src/api/client.ts` 里 `if (MOCK) {…}` 那段。
 
 ## V2 接口与约定的出入

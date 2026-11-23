@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Tooltip } from 'antd';
-import { AimOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import type { MapCheckpoint } from '../../api/types';
 import { bossKindName, bossColor } from '../../utils/gameplay';
 import type { LatLng } from '../../api/types';
 import { ALL_LAYERS, CHEST_COLOR, hpColor, ownerColor, rings, routeColor, routesOf, SUPPLY_COLOR, type MapProps } from './colors';
+import { Glyph } from '../Glyph';
 
 // Room for boss labels above and the legend below.
 const PAD = { x: 40, top: 56, bottom: 76 };
@@ -427,13 +427,13 @@ export default function SvgMap({
       )}
       <div className="map-tools">
         <Tooltip title="放大" placement="left">
-          <Button size="small" shape="circle" icon={<PlusOutlined />} onClick={() => zoom(1.4)} />
+          <Button size="small" shape="circle" icon={<Glyph name="plus" size={14} />} aria-label="放大" onClick={() => zoom(1.4)} />
         </Tooltip>
         <Tooltip title="缩小" placement="left">
-          <Button size="small" shape="circle" icon={<MinusOutlined />} onClick={() => zoom(1 / 1.4)} />
+          <Button size="small" shape="circle" icon={<Glyph name="minus" size={14} />} aria-label="缩小" onClick={() => zoom(1 / 1.4)} />
         </Tooltip>
         <Tooltip title="复位" placement="left">
-          <Button size="small" shape="circle" icon={<AimOutlined />} onClick={() => setView({ s: 1, tx: 0, ty: 0 })} />
+          <Button size="small" shape="circle" icon={<Glyph name="locate" size={14} />} aria-label="复位" onClick={() => setView({ s: 1, tx: 0, ty: 0 })} />
         </Tooltip>
       </div>
       <div className="map-legend">

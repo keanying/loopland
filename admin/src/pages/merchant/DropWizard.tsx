@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Col, DatePicker, Drawer, Empty, Form, Input, InputNumber, Radio, Row, Select, Space, Steps, Tag } from 'antd';
-import { AimOutlined, MinusOutlined, PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type Drop, type DropInput, type DropType, type SettleDirection } from '../../api/perks';
 import { api } from '../../api/admin';
@@ -13,6 +12,7 @@ import { toastOk } from '../../utils/notify';
 import { MERCHANT_STATUS } from './labels';
 import { CAMPAIGN_STATUS, DROP_TYPE, DROP_TYPES, NO_PAID_DRAW, SETTLE_DIRECTION_TEXT, toFen, toYuan } from './perkLabels';
 import { CouponPreview, DropTypeBadge } from './perkShared';
+import { Glyph } from '../../components/Glyph';
 
 const DEFAULT_CENTER = { lat: 31.232, lng: 121.505 };
 const RANGE_FORMAT = 'YYYY-MM-DD HH:mm';
@@ -383,7 +383,7 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
                   <Input maxLength={24} placeholder="滨江大道 · 东昌路口" />
                 </Form.Item>
                 <div className="muted" style={{ fontSize: 12, margin: '-4px 0 8px' }}>
-                  <AimOutlined /> 在地图上点击选点，或直接填坐标（GCJ-02）
+                  <Glyph name="locate" size="1em" /> 在地图上点击选点，或直接填坐标（GCJ-02）
                 </div>
                 <Row gutter={8}>
                   <Col span={8}>
@@ -470,11 +470,11 @@ export default function DropWizard({ value, defaultMerchantId, onClose }: { valu
           <div style={shown(3)}>
             <Form.Item label="每日核销上限" required extra="每天最多发出的券数；发完当天不再发，地图上不显示，App 显示「今日已领完」">
               <div className="cap-stepper">
-                <Button shape="circle" icon={<MinusOutlined />} aria-label="减少 10" onClick={() => form.setFieldsValue({ daily_cap: Math.max(1, (dailyCap ?? 0) - 10) })} />
+                <Button shape="circle" icon={<Glyph name="minus" />} aria-label="减少 10" onClick={() => form.setFieldsValue({ daily_cap: Math.max(1, (dailyCap ?? 0) - 10) })} />
                 <Form.Item name="daily_cap" noStyle rules={[{ required: true, message: '请填写每日上限' }]}>
                   <InputNumber className="num" min={1} max={100000} aria-label="每日核销上限" />
                 </Form.Item>
-                <Button shape="circle" icon={<PlusOutlined />} aria-label="增加 10" onClick={() => form.setFieldsValue({ daily_cap: Math.min(100000, (dailyCap ?? 0) + 10) })} />
+                <Button shape="circle" icon={<Glyph name="plus" />} aria-label="增加 10" onClick={() => form.setFieldsValue({ daily_cap: Math.min(100000, (dailyCap ?? 0) + 10) })} />
                 <span className="muted">张 / 天</span>
               </div>
             </Form.Item>

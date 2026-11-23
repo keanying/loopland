@@ -1,7 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Empty, Segmented, Space, Table, Tag } from 'antd';
-import { EnvironmentOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { ChestListItem, ChestStatus } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -11,6 +10,7 @@ import { Panel } from '../../components/ui';
 import { dt, num } from '../../utils/format';
 import { CHEST_SOURCE, CHEST_STATUS } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
+import { Glyph } from '../../components/Glyph';
 
 export default function ChestsTab() {
   const { modal } = App.useApp();
@@ -64,7 +64,7 @@ export default function ChestsTab() {
             ]}
           />
           <Link to="/territories">
-            <Button icon={<EnvironmentOutlined />}>去地图投放</Button>
+            <Button icon={<Glyph name="pin" />}>去地图投放</Button>
           </Link>
         </Space>
       }

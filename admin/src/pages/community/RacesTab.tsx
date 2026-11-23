@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, DatePicker, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Radio, Row, Select, Space, Switch, Table, Tag, Tooltip } from 'antd';
-import { AimOutlined, PlusOutlined, TrophyOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { Race, RaceEntry, RaceInput, RaceType } from '../../api/types';
@@ -13,6 +12,7 @@ import { dayjs, dt, duration, num, pace } from '../../utils/format';
 import { RACE_ENTRY_STATUS, RACE_SPORTS, RACE_STATUS, RACE_TYPE, SPORT_LABEL } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
 import { RANGE_FORMAT } from '../operations/shared';
+import { Glyph } from '../../components/Glyph';
 
 const DEFAULT_CENTER = { lat: 31.232, lng: 121.505 };
 
@@ -55,7 +55,7 @@ export default function RacesTab() {
     <Panel
       title="赛事"
       extra={
-        <Button type="primary" icon={<PlusOutlined />} disabled={!writable} onClick={() => setEditing('new')}>
+        <Button type="primary" icon={<Glyph name="plus" />} disabled={!writable} onClick={() => setEditing('new')}>
           新建赛事
         </Button>
       }
@@ -111,7 +111,7 @@ export default function RacesTab() {
             render: (_, r) =>
               r.medal ? (
                 <Space size={6} style={{ whiteSpace: 'nowrap' }}>
-                  {r.medal.image_url ? <Image src={r.medal.image_url} width={28} height={28} style={{ borderRadius: 14, objectFit: 'cover' }} alt="" /> : <TrophyOutlined />}
+                  {r.medal.image_url ? <Image src={r.medal.image_url} width={28} height={28} style={{ borderRadius: 14, objectFit: 'cover' }} alt="" /> : <Glyph name="medal" size="1em" />}
                   <span style={{ fontSize: 12 }}>{r.medal.name}</span>
                 </Space>
               ) : (
@@ -429,7 +429,7 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
             <Col xs={24} lg={11}>
               <b>集合地点</b>
               <div className="muted" style={{ fontSize: 12, margin: '2px 0 8px' }}>
-                <AimOutlined /> 在地图上点击选点，或直接填坐标（GCJ-02）
+                <Glyph name="locate" size="1em" /> 在地图上点击选点，或直接填坐标（GCJ-02）
               </div>
               <Form.Item name="place_name" label="地点名称" rules={[{ required: true, whitespace: true, message: '线下赛需要集合地点' }]}>
                 <Input maxLength={30} placeholder="世纪公园 3 号门" />

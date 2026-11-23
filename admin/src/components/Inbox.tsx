@@ -10,7 +10,8 @@ import { useAuth } from '../auth/AuthContext';
 import { MESSAGES_KEY, useMessageActions, useOpenMessage, useUnreadCount } from '../hooks/useMessages';
 import { ago, dt } from '../utils/format';
 import { MESSAGE_CATEGORY, MESSAGE_LEVEL } from '../utils/labels';
-import { CategoryIcon, DoodleInbox, IconArrowRight, IconBell, IconCheckAll } from './icons';
+import { CategoryIcon, DoodleInbox } from './icons';
+import { Glyph } from './Glyph';
 
 const LATEST = 8;
 
@@ -80,7 +81,7 @@ function Panel({ onClose }: { onClose: () => void }) {
           ]}
         />
         <span style={{ flex: 1 }} />
-        <Button size="small" type="text" className="inbox-readall" icon={<IconCheckAll size={16} />} disabled={!count} loading={readAll.isPending} onClick={() => readAll.mutate('')}>
+        <Button size="small" type="text" className="inbox-readall" icon={<Glyph name="checkAll" size={16} />} disabled={!count} loading={readAll.isPending} onClick={() => readAll.mutate('')}>
           全部已读
         </Button>
       </div>
@@ -103,7 +104,7 @@ function Panel({ onClose }: { onClose: () => void }) {
           navigate(unreadOnly ? '/messages?unread=true' : '/messages');
         }}
       >
-        查看全部 <IconArrowRight size={16} />
+        查看全部 <Glyph name="arrowRight" size={16} />
       </button>
     </div>
   );
@@ -119,7 +120,7 @@ export function InboxBell() {
   return (
     <Popover open={open} onOpenChange={setOpen} trigger="click" placement="bottomRight" arrow={false} content={<Panel onClose={() => setOpen(false)} />} styles={{ body: { padding: 0 } }} destroyOnHidden>
       <button type="button" className={'bell' + (open ? ' active' : '')} aria-label={n ? `消息，${n} 条未读` : '消息'} aria-haspopup="dialog" aria-expanded={open}>
-        <IconBell size={20} />
+        <Glyph name="notice" size={20} />
         {n > 0 && <span className="bell-count num">{badgeText(n)}</span>}
       </button>
     </Popover>

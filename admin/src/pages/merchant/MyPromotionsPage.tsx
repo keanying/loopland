@@ -6,7 +6,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { Alert, App, Button, Col, Empty, Form, Image, InputNumber, Modal, Row, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, LogoutOutlined, SendOutlined } from '@ant-design/icons';
 import { commerceApi, type EntryStatus, type Promotion, type PromotionEntry } from '../../api/commerce';
 import { PageHeader, Panel } from '../../components/ui';
 import { dt, num, yuan } from '../../utils/format';
@@ -17,6 +16,7 @@ import { EntryStatusTag, PriceText, PromotionStatusTag } from './commerceShared'
 import { MerchantNav } from './nav';
 import { ProductThumb } from './ProductsPage';
 import { toFen, urlParams } from './util';
+import { Glyph } from '../../components/Glyph';
 
 type View = 'open' | 'invites' | 'mine';
 const LIVE: EntryStatus[] = ['active', 'pending_merchant', 'pending_platform'];
@@ -201,7 +201,7 @@ export default function MyPromotionsPage() {
                 render: (_, p) => (
                   <Space size={6}>
                     {appliedIds.has(p.id) && <Tag bordered={false} color="blue">已报名</Tag>}
-                    <Button size="small" type="primary" icon={<SendOutlined />} onClick={() => setApplying(p)}>
+                    <Button size="small" type="primary" icon={<Glyph name="send" size={14} />} onClick={() => setApplying(p)}>
                       报名
                     </Button>
                   </Space>
@@ -234,10 +234,10 @@ export default function MyPromotionsPage() {
                 fixed: 'right',
                 render: (_, e) => (
                   <Space size={6}>
-                    <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => confirmAccept(e)}>
+                    <Button size="small" type="primary" icon={<Glyph name="check" size={14} />} onClick={() => confirmAccept(e)}>
                       接受
                     </Button>
-                    <Button size="small" icon={<CloseOutlined />} onClick={() => setDeclining(e)}>
+                    <Button size="small" icon={<Glyph name="close" size={14} />} onClick={() => setDeclining(e)}>
                       拒绝
                     </Button>
                   </Space>
@@ -306,7 +306,7 @@ export default function MyPromotionsPage() {
                       </Button>
                     </Space>
                   ) : LIVE.includes(e.status) && !['ended', 'cancelled'].includes(e.promotion?.status ?? '') ? (
-                    <Button size="small" danger icon={<LogoutOutlined />} onClick={() => confirmWithdraw(e)}>
+                    <Button size="small" danger icon={<Glyph name="logout" size={14} />} onClick={() => confirmWithdraw(e)}>
                       {e.status === 'pending_platform' ? '撤回' : '退出'}
                     </Button>
                   ) : (

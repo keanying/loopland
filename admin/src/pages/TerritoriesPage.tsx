@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Checkbox, Col, Empty, Input, InputNumber, Row, Segmented, Skeleton, Space, Switch, Table, Tag, Timeline, Tooltip } from 'antd';
-import { GiftOutlined, MinusOutlined, PlusOutlined, SearchOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { LatLng, Territory, TerritoryEvent, TerritoryListItem, TerritoryStatusFilter } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -14,6 +13,7 @@ import { PageHeader, Panel, Tile } from '../components/ui';
 import { ago, area, dt, km2 } from '../utils/format';
 import { TERRITORY_EVENT } from '../utils/labels';
 import { toastOk } from '../utils/notify';
+import { Glyph } from '../components/Glyph';
 
 type BBox = [number, number, number, number];
 
@@ -155,11 +155,11 @@ export default function TerritoriesPage() {
               canOps && (
                 <Space wrap>
                   <Tooltip title={!canOpsWrite ? '当前角色只能查看' : undefined}>
-                    <Button icon={<ThunderboltOutlined />} disabled={!canOpsWrite} onClick={() => openDialog('boss')}>
+                    <Button icon={<Glyph name="monster" />} disabled={!canOpsWrite} onClick={() => openDialog('boss')}>
                       召唤怪兽
                     </Button>
                   </Tooltip>
-                  <Button icon={<GiftOutlined />} disabled={!canOpsWrite} onClick={() => openDialog('chest')}>
+                  <Button icon={<Glyph name="chest" />} disabled={!canOpsWrite} onClick={() => openDialog('chest')}>
                     投放宝箱
                   </Button>
                   <Button disabled={!canOpsWrite} onClick={() => openDialog('scatter')}>
@@ -211,7 +211,7 @@ export default function TerritoriesPage() {
           <Space wrap>
             <Input
               allowClear
-              prefix={<SearchOutlined />}
+              prefix={<Glyph name="search" />}
               placeholder="领地名、ID 或归属人"
               style={{ width: 220 }}
               value={kw}
@@ -394,7 +394,7 @@ function TerritoryDetail({ id }: { id: number | null }) {
           </div>
         </div>
         <Space>
-          <Button shape="circle" icon={<MinusOutlined />} disabled={!editable || guard <= 0} onClick={() => setGuard((g) => clamp(g - 50))} aria-label="守卫值 -50" />
+          <Button shape="circle" icon={<Glyph name="minus" />} disabled={!editable || guard <= 0} onClick={() => setGuard((g) => clamp(g - 50))} aria-label="守卫值 -50" />
           <InputNumber
             className="num"
             min={0}
@@ -406,7 +406,7 @@ function TerritoryDetail({ id }: { id: number | null }) {
             onChange={(v) => setGuard(v ?? 0)}
             onBlur={() => setGuard((g) => clamp(g))}
           />
-          <Button shape="circle" icon={<PlusOutlined />} disabled={!editable || guard >= 2000} onClick={() => setGuard((g) => clamp(g + 50))} aria-label="守卫值 +50" />
+          <Button shape="circle" icon={<Glyph name="plus" />} disabled={!editable || guard >= 2000} onClick={() => setGuard((g) => clamp(g + 50))} aria-label="守卫值 +50" />
         </Space>
       </div>
       {guard !== t.guard && (

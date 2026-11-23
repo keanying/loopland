@@ -5,7 +5,6 @@ import type { EChartsOption } from 'echarts';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { Alert, App, Button, Col, DatePicker, Descriptions, Drawer, Empty, Modal, Row, Segmented, Select, Space, Table, Tag } from 'antd';
-import { CheckOutlined, FileAddOutlined, PayCircleOutlined } from '@ant-design/icons';
 import { merchantApi, type SettlementDay, type Statement, type StatementLine, type StatementStatus } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import Chart from '../../components/Chart';
@@ -18,6 +17,7 @@ import { SETTLE_DIRECTION, STATEMENT_STATUS } from './labels';
 import { MerchantNav } from './nav';
 import { NetAmount, StatementStatusTag } from './shared';
 import { urlParams, useMerchantOptions } from './util';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 /** Theme info violet: the second series colour used across the console (see AI 用量). */
@@ -156,7 +156,7 @@ export default function SettlementPage() {
               结算规则：核销需同时满足「当天有一条有效运动记录」和「到店扫码」；当天运动记录事后被风控作废的，那天的核销标记作废、不结算。订场款扣除佣金后结算给商户。
             </div>
             {writable && (
-              <Button block icon={<FileAddOutlined />} style={{ marginTop: 14 }} onClick={() => setGenerating(true)}>
+              <Button block icon={<Glyph name="receipt" />} style={{ marginTop: 14 }} onClick={() => setGenerating(true)}>
                 手动生成结算单
               </Button>
             )}
@@ -281,7 +281,7 @@ function StatementActions({ s, size }: { s: Statement; size?: 'small' | 'middle'
       <Button
         size={size}
         type="primary"
-        icon={<CheckOutlined />}
+        icon={<Glyph name="check" size={size === 'small' ? 14 : 16} />}
         loading={confirm.isPending}
         onClick={() =>
           modal.confirm({
@@ -300,7 +300,7 @@ function StatementActions({ s, size }: { s: Statement; size?: 'small' | 'middle'
     return (
       <Button
         size={size}
-        icon={<PayCircleOutlined />}
+        icon={<Glyph name="yuan" size={size === 'small' ? 14 : 16} />}
         loading={paid.isPending}
         onClick={() =>
           modal.confirm({

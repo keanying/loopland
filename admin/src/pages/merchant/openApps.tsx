@@ -3,12 +3,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Modal, Space, Table, Tag, Tooltip, Typography } from 'antd';
-import { ApiOutlined, ExclamationCircleFilled, PoweroffOutlined, ReloadOutlined, SendOutlined } from '@ant-design/icons';
 import { commerceApi, type OpenApp, type OpenAppWithSecret, type OpenCall, type WebhookDelivery } from '../../api/commerce';
 import { useAuth } from '../../auth/AuthContext';
 import { dt, num } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
 import { DELIVERY_STATUS, OPEN_ERROR, OPEN_SCOPE, WEBHOOK_EVENT } from './commerceLabels';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 const DOC = 'docs/api/v2-5-商户商品与开放平台.md';
@@ -56,7 +56,7 @@ export function SecretModal({ app, reset, onClose }: { app: OpenAppWithSecret | 
           <Alert
             type="warning"
             showIcon
-            icon={<ExclamationCircleFilled />}
+            icon={<Glyph name="alertFilled" size={24} />}
             message="App Secret 只显示这一次，关闭后无法再查看"
             description={`请立即复制并保存到你的系统配置里（不要发到聊天群或写进代码仓库）。丢失只能重置，重置后旧密钥立即失效。${reset ? '使用旧密钥的系统需要马上换成新的。' : ''}`}
           />
@@ -211,7 +211,7 @@ export function DeliveriesTable({ app, writable }: { app: OpenApp; writable: boo
         </span>
         {writable && (
           <Tooltip title={app.status !== 'active' ? '应用已停用，Webhook 停发' : !app.webhook_url ? '先在设置里填 Webhook 地址' : '发一条 ping 事件，检查地址和验签'}>
-            <Button size="small" icon={<SendOutlined />} disabled={disabled} loading={ping.isPending} onClick={() => ping.mutate()}>
+            <Button size="small" icon={<Glyph name="send" size={14} />} disabled={disabled} loading={ping.isPending} onClick={() => ping.mutate()}>
               发送测试 ping
             </Button>
           </Tooltip>
@@ -263,7 +263,7 @@ export function DeliveriesTable({ app, writable }: { app: OpenApp; writable: boo
             align: 'right',
             render: (_, d) =>
               writable && d.status !== 'succeeded' ? (
-                <Button size="small" icon={<ReloadOutlined />} disabled={disabled} loading={redeliver.isPending && redeliver.variables?.id === d.id} onClick={() => redeliver.mutate(d)}>
+                <Button size="small" icon={<Glyph name="refresh" size={14} />} disabled={disabled} loading={redeliver.isPending && redeliver.variables?.id === d.id} onClick={() => redeliver.mutate(d)}>
                   重发
                 </Button>
               ) : (
@@ -295,7 +295,7 @@ export function OpenAppsSection({ merchantId }: { merchantId: number }) {
     <section>
       <div className="mer-h3-row">
         <h3 className="mer-h3">
-          <ApiOutlined /> 开放平台应用 · {items.length}
+          <Glyph name="code" size="1em" /> 开放平台应用 · {items.length}
         </h3>
         <span className="muted" style={{ fontSize: 12 }}>商户在自己的「开放平台」页创建；平台只能停用</span>
       </div>
@@ -337,7 +337,7 @@ export function OpenAppsSection({ merchantId }: { merchantId: number }) {
                   <Button
                     size="small"
                     danger={a.status === 'active'}
-                    icon={<PoweroffOutlined />}
+                    icon={<Glyph name="power" size={14} />}
                     onClick={() =>
                       modal.confirm({
                         title: `${a.status === 'active' ? '停用' : '启用'}「${a.name}」？`,

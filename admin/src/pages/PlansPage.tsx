@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Checkbox, Col, Input, InputNumber, Modal, Row, Segmented, Skeleton, Space, Switch, Table, Tag, Tooltip } from 'antd';
-import { LockOutlined, SearchOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { AdminOrder, OrderStatus, Plan, PlanUpdate } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -10,6 +9,7 @@ import { PageHeader, Panel, Stat } from '../components/ui';
 import { bigNumber, dt, pct, yuan } from '../utils/format';
 import { CHANNEL_LABEL, ORDER_KIND, ORDER_STATUS, PERIOD_LABEL } from '../utils/labels';
 import { toastOk } from '../utils/notify';
+import { Glyph } from '../components/Glyph';
 
 type Tab = 'plans' | 'entitlements' | 'orders';
 
@@ -326,7 +326,7 @@ function EntitlementsTab() {
                 <b>{v}</b>
                 {e.locked && (
                   <Tooltip title="涉及对抗公平，锁死不可售卖">
-                    <Tag icon={<LockOutlined />} bordered={false}>
+                    <Tag icon={<Glyph name="lock" size={12} />} bordered={false}>
                       锁定
                     </Tag>
                   </Tooltip>
@@ -441,7 +441,7 @@ function OrdersTab() {
         <Space wrap>
           <Input
             allowClear
-            prefix={<SearchOutlined />}
+            prefix={<Glyph name="search" />}
             placeholder="订单号、用户昵称或 ID"
             style={{ width: 240 }}
             value={kw}
