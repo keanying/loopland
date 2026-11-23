@@ -1328,3 +1328,39 @@ export interface AIMessage {
   /** Soft-deleted by the user (「清空对话」); kept until the 180-day retention ends. */
   deleted?: boolean;
 }
+
+// ---------- V2 第六批「管理端图片上传与站内信」(docs/api/v2-6-管理端图片上传与站内信.md) ----------
+
+/** POST /admin/v1/media `purpose`. */
+export type MediaPurpose = 'product' | 'promotion_banner' | 'venue_cover' | 'merchant_license' | 'campaign_banner' | 'shop_item';
+
+export interface UploadedMedia {
+  id: number;
+  url: string;
+  width: number;
+  height: number;
+}
+
+export type MessageCategory = 'product' | 'promotion' | 'settlement' | 'openapi' | 'review' | 'system';
+export type MessageLevel = 'info' | 'success' | 'warning' | 'error';
+
+export interface AdminMessage {
+  id: number;
+  category: MessageCategory;
+  title: string;
+  body: string | null;
+  link: string | null;
+  level: MessageLevel;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface MessageList extends Paged<AdminMessage> {
+  unread_count: number;
+}
+
+export interface UnreadCount {
+  count: number;
+  by_category: Partial<Record<MessageCategory, number>>;
+}

@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Radio, Row, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, LinkOutlined, PlusOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
+import { EditOutlined, EyeOutlined, LinkOutlined, PlusOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
 import { merchantApi, type Merchant, type MerchantDetail, type MerchantInput, type MerchantStatus, type MerchantType } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
+import { ImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel, Tile } from '../../components/ui';
 import { date, dt, num, pct, yuan } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
 import { DROP_STATUS_LABEL, DROP_TYPE_LABEL, MERCHANT_STATUS, MERCHANT_STATUS_ORDER, MERCHANT_TYPE, VENUE_SPORT } from './labels';
 import { MerchantNav } from './nav';
 import { MerchantIcon, MerchantStatusTag } from './shared';
-import { IMAGE_URL, urlParams } from './util';
+import { urlParams } from './util';
 import { OpenAppsSection } from './openApps';
 
 const PAGE = 20;
@@ -405,7 +406,7 @@ interface FormValues {
   status: MerchantStatus;
   contact_name?: string;
   contact_phone?: string;
-  license_images: { url: string }[];
+  license_images: string[];
   commission_pct: number;
   /** V2 第五批 (admin only). */
   product_commission_pct?: number;
@@ -433,11 +434,11 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
             status: editing.status,
             contact_name: editing.contact_name ?? '',
             contact_phone: '',
-            license_images: editing.license_images.map((url) => ({ url })),
+            license_images: editing.license_images,
             commission_pct: +(editing.booking_commission_rate * 100).toFixed(2),
             product_commission_pct: +((editing.product_commission_rate ?? 0.08) * 100).toFixed(2),
           }
-        : { type: 'venue', status: 'reviewing', license_images: [{ url: '' }], commission_pct: 10, product_commission_pct: 8 },
+        : { type: 'venue', status: 'reviewing', license_images: [], commission_pct: 10, product_commission_pct: 8 },
     );
   }, [value, editing, form]);
 
@@ -457,7 +458,7 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
       type: v.type,
       status: v.status,
       contact_name: v.contact_name?.trim() || null,
-      license_images: (v.license_images ?? []).map((x) => x.url?.trim()).filter(Boolean),
+      license_images: (v.license_images ?? []).map((u) => u.trim()).filter(Boolean),
       booking_commission_rate: +((v.commission_pct ?? 0) / 100).toFixed(4),
     };
     if (productRateEditable && v.product_commission_pct !== undefined) body.product_commission_rate = +(v.product_commission_pct / 100).toFixed(4);
@@ -467,7 +468,7 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
     save.mutate(body);
   };
 
-  const noLicense = !images.some((x) => x?.url?.trim());
+  const noLicense = !images.some((u) => u?.trim());
 
   return (
     <Drawer
@@ -534,30 +535,9 @@ function MerchantForm({ value, onClose, onSaved }: { value: Merchant | 'new' | n
           <InputNumber className="num" min={0} max={100} step={1} precision={2} suffix="%" style={{ width: 180 }} disabled={!productRateEditable} />
         </Form.Item>
 
-        <div className="ant-form-item-label" style={{ paddingBottom: 8 }}>
-          <label>资质图片（营业执照、经营许可证等，最多 9 张）</label>
-        </div>
-        <Form.List name="license_images">
-          {(fields, { add, remove }) => (
-            <Space direction="vertical" style={{ width: '100%' }}>
-              {fields.map((f, i) => {
-                const url = images[i]?.url?.trim();
-                return (
-                  <div key={f.key} className="mer-img-row">
-                    <div className="mer-img-thumb">{url && IMAGE_URL.test(url) ? <Image src={url} width={64} height={46} alt="" /> : <span className="muted">预览</span>}</div>
-                    <Form.Item name={[f.name, 'url']} style={{ flex: 1, marginBottom: 0 }} rules={[{ pattern: IMAGE_URL, message: '需要是 http(s) 图片地址' }]}>
-                      <Input placeholder="https://… 图片地址（先上传到对象存储）" allowClear />
-                    </Form.Item>
-                    <Button aria-label="删除这张" icon={<DeleteOutlined />} onClick={() => remove(f.name)} />
-                  </div>
-                );
-              })}
-              <Button icon={<PlusOutlined />} disabled={fields.length >= 9} onClick={() => add({ url: '' })}>
-                添加一张
-              </Button>
-            </Space>
-          )}
-        </Form.List>
+        <Form.Item name="license_images" label="资质图片（营业执照、经营许可证等，最多 9 张）" style={{ marginBottom: 0 }}>
+          <ImageUpload purpose="merchant_license" max={9} label="资质图片" />
+        </Form.Item>
         {status === 'partner' && noLicense && <Alert style={{ marginTop: 14 }} type="warning" showIcon message="合作中的商户还没有资质图片" description="建议先补齐营业执照等资质再改为「合作中」。" />}
       </Form>
     </Drawer>

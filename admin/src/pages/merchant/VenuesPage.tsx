@@ -28,13 +28,14 @@ import {
 import { AimOutlined, DownloadOutlined, EditOutlined, PlusOutlined, QrcodeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { merchantApi, type Venue, type VenueInput, type VenueSport } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
+import { SingleImageUpload } from '../../components/ImageUpload';
 import { Avatar, PageHeader, Panel } from '../../components/ui';
 import { num, yuan } from '../../utils/format';
 import { toastError, toastOk } from '../../utils/notify';
 import { VENUE_SPORT, VENUE_SPORTS } from './labels';
 import { MerchantNav } from './nav';
 import { PointPicker } from './shared';
-import { discountText, IMAGE_URL, urlParams, useMerchantOptions } from './util';
+import { discountText, urlParams, useMerchantOptions } from './util';
 import { downloadVenueQr, qrDataUrl } from './qr';
 
 const PAGE = 20;
@@ -513,8 +514,8 @@ function VenueForm({ value, onClose }: { value: Venue | 'new' | null; onClose: (
             <Form.Item name="tags" label="标签" extra="最多 8 个，回车添加，如 室内、可租拍、夜场灯光" rules={[{ type: 'array', max: 8, message: '最多 8 个标签' }]}>
               <Select mode="tags" tokenSeparators={[',', '，', ' ']} placeholder="室内、可租拍" options={['室内', '室外', '可租拍', '夜场灯光', '空调', '新手友好', '有教练', '免费'].map((t) => ({ value: t }))} />
             </Form.Item>
-            <Form.Item name="cover_url" label="封面图地址（可选）" rules={[{ pattern: IMAGE_URL, message: '需要是 http(s) 图片地址' }]}>
-              <Input placeholder="https://…" allowClear />
+            <Form.Item name="cover_url" label="封面图（可选）">
+              <SingleImageUpload purpose="venue_cover" shape="cover" label="场馆封面" hint="建议 16:9" />
             </Form.Item>
 
             <div className="venue-book">

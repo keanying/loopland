@@ -54,7 +54,7 @@ module.exports = async function merchantShots({ browser, session, shot, BASE, pr
   await page.goto(`${BASE}/merchant/merchants?status=reviewing`);
   await page.waitForSelector('.ant-table-row');
   await page.locator('.ant-table-row', { hasText: '城市攀岩馆' }).locator('button:has-text("编辑")').click();
-  await page.waitForSelector(`${drawer} .mer-img-row`);
+  await page.waitForSelector(`${drawer} .img-up`);
   await page.waitForTimeout(500);
   await shot(page, `${no(2)}_商户_编辑`, { fullPage: false });
   await closeDrawer(page);

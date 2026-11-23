@@ -1,4 +1,4 @@
-import type { AdminRole, OrderStatus, RiskAction, RiskType, UserStatus } from '../api/types';
+import type { AdminRole, MessageCategory, MessageLevel, OrderStatus, RiskAction, RiskType, UserStatus } from '../api/types';
 
 export const ROLE_LABEL: Record<AdminRole, string> = {
   admin: '管理员',
@@ -405,4 +405,22 @@ export const WORKOUT_POSE: Record<string, { text: string; hint: string }> = {
   pushup: { text: '俯卧撑', hint: '肘角' },
   crunch: { text: '卷腹', hint: '躯干角' },
   none: { text: '不识别', hint: '只计时 / 手动计次' },
+};
+
+// V2 第六批 · 站内信 (docs/api/v2-6-管理端图片上传与站内信.md)
+export const MESSAGE_CATEGORIES: MessageCategory[] = ['product', 'promotion', 'settlement', 'openapi', 'review', 'system'];
+export const MESSAGE_CATEGORY: Record<MessageCategory, string> = {
+  product: '商品',
+  promotion: '官方活动',
+  settlement: '结算',
+  openapi: '开放平台',
+  review: '审核',
+  system: '系统',
+};
+/** Level → text + the colour of the dot / icon tint (brand palette: green, amber, red; info stays ink). */
+export const MESSAGE_LEVEL: Record<MessageLevel, { text: string; color: string; bg: string }> = {
+  info: { text: '通知', color: '#141414', bg: '#F2F2F4' },
+  success: { text: '成功', color: '#3D8B2F', bg: '#EAF5E2' },
+  warning: { text: '注意', color: '#B07A00', bg: '#FFF4D6' },
+  error: { text: '异常', color: '#D93A2B', bg: '#FDEEEC' },
 };

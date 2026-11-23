@@ -9,6 +9,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type BrandCampaign, type BrandCampaignInput, type BrandCampaignStatus, type Drop } from '../../api/perks';
 import { useAuth } from '../../auth/AuthContext';
+import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel, Tile } from '../../components/ui';
 import { bigNumber, dayjs, dt, num, pct } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
@@ -471,8 +472,8 @@ function CampaignModal({ value, onClose }: { value: BrandCampaign | 'new' | null
         <Form.Item name="description" label="活动说明（App「联名活动」展示）" rules={[{ max: 200, message: '最多 200 字' }]}>
           <Input.TextArea rows={2} maxLength={200} showCount placeholder="跑步路过补给站领热饮，每家门店每人每天限 1 张" />
         </Form.Item>
-        <Form.Item name="cover_url" label="封面图地址（可选）" rules={[{ pattern: /^https?:\/\//, message: '需要是 http(s) 地址' }]}>
-          <Input placeholder="https://cdn.../campaign.jpg" allowClear />
+        <Form.Item name="cover_url" label="封面图（可选）">
+          <SingleImageUpload purpose="campaign_banner" shape="banner" label="联名活动横幅" hint="建议 3:1" />
         </Form.Item>
         <Row gutter={12}>
           <Col span={16}>

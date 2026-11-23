@@ -9,6 +9,7 @@ import type { Dayjs } from 'dayjs';
 import { Alert, App, Badge, Button, Col, DatePicker, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Row, Segmented, Select, Space, Switch, Table, Tag, Tooltip } from 'antd';
 import { CheckOutlined, CloseOutlined, EditOutlined, PlusOutlined, RocketOutlined, StopOutlined } from '@ant-design/icons';
 import { commerceApi, type EntryStatus, type Promotion, type PromotionEntry, type PromotionInput, type PromotionStatus } from '../../api/commerce';
+import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel } from '../../components/ui';
 import { dt, num, yuan } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
@@ -17,7 +18,7 @@ import { discountLine, ENTRY_SOURCE, PROMOTION_STATUS, PROMOTION_STATUS_ORDER } 
 import { EntryStatusTag, PriceText, PromotionStatusTag } from './commerceShared';
 import { MerchantNav } from './nav';
 import { ProductThumb } from './ProductsPage';
-import { IMAGE_URL, toFen, toYuan, urlParams } from './util';
+import { toFen, toYuan, urlParams } from './util';
 
 const PAGE = 20;
 const LIVE: EntryStatus[] = ['active', 'pending_merchant', 'pending_platform'];
@@ -570,7 +571,6 @@ function PromotionForm({ value, onClose, onSaved }: { value: Promotion | 'new' |
   const [form] = Form.useForm<FormValues>();
   const editing = value && value !== 'new' ? value : null;
   const applyOpen = Form.useWatch('apply_open', form);
-  const banner = Form.useWatch('banner_url', form);
   useEffect(() => {
     if (!value) return;
     form.resetFields();
@@ -646,10 +646,9 @@ function PromotionForm({ value, onClose, onSaved }: { value: Promotion | 'new' |
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="banner_url" label="横幅图地址" rules={[{ pattern: IMAGE_URL, message: '需要是 http(s) 图片地址' }]} extra="App 首页「玩法」/ 本地生活入口展示，建议 3:1">
-          <Input placeholder="https://…" allowClear />
+        <Form.Item name="banner_url" label="横幅图" extra="App 首页「玩法」/ 本地生活入口展示">
+          <SingleImageUpload purpose="promotion_banner" shape="banner" label="活动横幅" hint="建议 3:1" />
         </Form.Item>
-        {banner && IMAGE_URL.test(banner) && <Image src={banner} className="promo-banner" style={{ marginBottom: 16 }} alt="横幅预览" />}
         <Form.Item name="description" label="活动说明" rules={[{ max: 1000, message: '最多 1000 字' }]}>
           <Input.TextArea rows={4} showCount maxLength={1000} />
         </Form.Item>

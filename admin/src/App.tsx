@@ -37,6 +37,8 @@ import PromotionsPage from './pages/merchant/PromotionsPage';
 import MyPromotionsPage from './pages/merchant/MyPromotionsPage';
 import MyVenuesPage from './pages/merchant/MyVenuesPage';
 import OpenAppsPage from './pages/merchant/OpenAppsPage';
+// V2 第六批「站内信」: every admin account
+import MessagesPage from './pages/MessagesPage';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { admin, loading } = useAuth();
@@ -161,6 +163,7 @@ export default function App() {
         <Route path="merchant/promotions" element={<PermSwitch items={[['promotion.manage', <PromotionsPage key="all" />], ['promotion.join', <MyPromotionsPage key="mine" />]]} />} />
         <Route path="merchant/open-apps" element={<RequirePerm perm="openapi.manage"><OpenAppsPage /></RequirePerm>} />
         <Route path="settings/ai-usage" element={<Navigate to="/ai-usage" replace />} />
+        <Route path="messages" element={<MessagesPage />} />
         <Route path="*" element={<Result status="404" title="页面不存在" />} />
       </Route>
     </Routes>

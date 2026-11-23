@@ -55,7 +55,9 @@ export default function MyPromotionsPage() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
   const update = urlParams(params, setParams);
-  const view = (['open', 'invites', 'mine'].includes(params.get('view') ?? '') ? params.get('view') : null) as View | null;
+  // `?tab=` comes from 站内信 links (/merchant/promotions?tab=invites | mine); `?view=` from the page itself.
+  const rawView = params.get('view') ?? params.get('tab') ?? '';
+  const view = (['open', 'invites', 'mine'].includes(rawView) ? rawView : null) as View | null;
   const mineStatus = (params.get('status') ?? '') as EntryStatus | '';
   const [applying, setApplying] = useState<Promotion | null>(null);
   const [declining, setDeclining] = useState<PromotionEntry | null>(null);
@@ -142,7 +144,7 @@ export default function MyPromotionsPage() {
         title={
           <Segmented
             value={current}
-            onChange={(v) => update({ view: String(v), status: null })}
+            onChange={(v) => update({ view: String(v), tab: null, status: null })}
             options={[
               { label: `可报名的活动 ${open.data?.items.length ?? ''}`, value: 'open' },
               { label: `平台邀请${invites.length ? ` ${invites.length}` : ''}`, value: 'invites' },

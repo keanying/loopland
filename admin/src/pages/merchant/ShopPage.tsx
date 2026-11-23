@@ -9,6 +9,7 @@ import type { Color } from 'antd/es/color-picker';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type ShopItem, type ShopItemInput, type ShopItemType } from '../../api/perks';
 import { useAuth } from '../../auth/AuthContext';
+import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel, Tile } from '../../components/ui';
 import { dayjs, dt, num } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
@@ -296,10 +297,10 @@ function ShopItemModal({ value, onClose }: { value: ShopItem | 'new' | null; onC
             </Row>
             <Form.Item
               name="image_url"
-              label={skin ? '图片地址（可选）' : '图片地址'}
-              rules={[{ required: !skin, message: '头像框和地图标记需要图片' }, { pattern: /^(https?:\/\/|data:image\/)/, message: '需要是 http(s) 地址' }]}
+              label={skin ? '图片（可选）' : '图片'}
+              rules={[{ required: !skin, message: '头像框和地图标记需要图片' }]}
             >
-              <Input placeholder="https://cdn.../item.png" allowClear />
+              <SingleImageUpload purpose="shop_item" label="商品图" hint="透明底 png 效果最好" />
             </Form.Item>
             {skin && (
               <Row gutter={12}>
@@ -345,7 +346,7 @@ function ShopItemModal({ value, onClose }: { value: ShopItem | 'new' | null; onC
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               {skin ? (
                 <SkinSwatch preview={{ fill, stroke, pattern }} size={160} label="领地皮肤实时预览" />
-              ) : image && /^(https?:\/\/|data:image\/)/.test(image) ? (
+              ) : image && /^(https?:\/\/|\/|data:image\/)/.test(image) ? (
                 <Image src={image} width={120} height={120} className="shop-thumb" alt="图片预览" />
               ) : (
                 <span className="shop-thumb" style={{ width: 120, height: 120 }} />

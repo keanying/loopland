@@ -5,15 +5,16 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { Alert, Button, Col, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Row, Select, Space, Switch, Table, Tag, TimePicker } from 'antd';
+import { Alert, Button, Col, Descriptions, Drawer, Empty, Form, InputNumber, Row, Select, Space, Switch, Table, Tag, TimePicker } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import { merchantApi, type Venue, type VenueInput, type VenueSport } from '../../api/merchant';
+import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel } from '../../components/ui';
 import { num, yuan } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
 import { VENUE_SPORT } from './labels';
 import { MerchantNav } from './nav';
-import { discountText, IMAGE_URL, toFen, toYuan, useOwnVenues } from './util';
+import { discountText, toFen, toYuan, useOwnVenues } from './util';
 
 const sportText = (s: string) => VENUE_SPORT[s as VenueSport] ?? s;
 /** The fields a merchant account may send (anything else → 403 field_not_allowed). */
@@ -110,7 +111,6 @@ function SelfVenueForm({ venue, onClose }: { venue: Venue | null; onClose: () =>
   const qc = useQueryClient();
   const [form] = Form.useForm<FormValues>();
   const bookable = Form.useWatch('bookable', form);
-  const cover = Form.useWatch('cover_url', form);
   useEffect(() => {
     if (!venue) return;
     form.resetFields();
@@ -213,10 +213,9 @@ function SelfVenueForm({ venue, onClose }: { venue: Venue | null; onClose: () =>
             <Form.Item name="tags" label="标签" style={{ marginTop: 16 }} extra="最多 8 个，回车添加" rules={[{ type: 'array', max: 8, message: '最多 8 个标签' }]}>
               <Select mode="tags" tokenSeparators={[',', '，', ' ']} placeholder="室内、可租拍" options={['室内', '室外', '可租拍', '夜场灯光', '空调', '新手友好', '有教练'].map((t) => ({ value: t }))} />
             </Form.Item>
-            <Form.Item name="cover_url" label="封面图地址" rules={[{ pattern: IMAGE_URL, message: '需要是 http(s) 图片地址' }]}>
-              <Input placeholder="https://…" allowClear />
+            <Form.Item name="cover_url" label="封面图">
+              <SingleImageUpload purpose="venue_cover" shape="cover" label="场馆封面" hint="建议 16:9" />
             </Form.Item>
-            {cover && IMAGE_URL.test(cover) && <Image src={cover} width={240} style={{ borderRadius: 12 }} alt="封面预览" />}
             <Alert type="info" showIcon style={{ marginTop: 16 }} message="改价格、时段只影响之后的预订；已支付的订单按原价和原时段履约" />
           </Form>
         </>
