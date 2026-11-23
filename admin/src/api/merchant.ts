@@ -129,6 +129,19 @@ export interface VenueQr {
   url: string;
 }
 
+/** 外部占场：商户自有系统通过开放平台同步过来的已售场地（docs/api/v2-5「占场」）。 */
+export interface VenueBlock {
+  id: number;
+  venue_id: number;
+  date: string;
+  start: string;
+  end: string;
+  court_qty: number;
+  external_ref: string | null;
+  note: string;
+  created_at: string;
+}
+
 export interface VenueOwnerWeek {
   week_start: string;
   user: UserBrief;
@@ -286,6 +299,7 @@ export const merchantApi = {
   venueQr: (id: number) => http.get<VenueQr>(`${A}/venues/${id}/qr`),
   rotateVenueQr: (id: number) => http.post<VenueQr>(`${A}/venues/${id}/qr/rotate`),
   venueOwners: (id: number) => http.get<Items<VenueOwnerWeek>>(`${A}/venues/${id}/owners`),
+  venueBlocks: (id: number, date: string) => http.get<Items<VenueBlock>>(`${A}/venues/${id}/blocks`, { date }),
 
   bookings: (p: BookingFilter) => http.get<Paged<Booking>>(`${A}/bookings`, { page_size: PAGE, ...p }),
   refundBooking: (id: number, reason: string) => http.post<Booking>(`${A}/bookings/${id}/refund`, { reason }),

@@ -834,6 +834,25 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       return { items };
     }],
 
+    // ---- 外部占场（开放平台同步过来的已售场地；按日期生成几条演示数据）
+    ['GET', /^\/venues\/(\d+)\/blocks$/, (ctx) => {
+      requireRole(ctx.role, [...STAFF, 'merchant']);
+      const scope = scopeOf(ctx);
+      const v = venues.find((x) => x.id === Number(ctx.m[1]));
+      if (!v || (scope !== null && v.merchant_id !== scope)) fail(404, 'not_found', '场馆不存在');
+      const date = ctx.q.get('date') || '';
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) fail(400, 'invalid_body', 'date 格式应为 YYYY-MM-DD');
+      if (!v.bookable) return { items: [] };
+      const d = Number(date.slice(8, 10));
+      const items = [
+        { id: v.id * 100 + d, venue_id: v.id, date, start: '18:00', end: '20:00', court_qty: 1, external_ref: `POS-${8800 + d}`, note: '前台散客', created_at: `${date}T09:12:00+08:00` },
+        ...(d % 2 === 0
+          ? [{ id: v.id * 100 + d + 50, venue_id: v.id, date, start: '07:00', end: '09:00', court_qty: 2, external_ref: `CLUB-${300 + d}`, note: '俱乐部包场', created_at: `${date}T06:40:00+08:00` }]
+          : []),
+      ].sort((a, b) => a.start.localeCompare(b.start));
+      return { items };
+    }],
+
     // ---- 订场
     ['GET', /^\/bookings$/, (ctx) => {
       requireRole(ctx.role, [...STAFF, 'merchant']);

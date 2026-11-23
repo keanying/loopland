@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import { Alert, App, Button, DatePicker, Descriptions, Drawer, Empty, Input, Modal, Select, Space, Table, Tag, Tooltip } from 'antd';
 import { merchantApi, type Booking, type BookingStatus } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
-import { PageHeader, Panel } from '../../components/ui';
+import { InfoTip, PageHeader, Panel } from '../../components/ui';
 import { dt, yuan } from '../../utils/format';
 import { CHANNEL_LABEL } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
@@ -42,6 +42,12 @@ export default function BookingsPage() {
   const own = useQuery({ queryKey: ['merchants', 'detail', admin?.merchant_id], queryFn: () => merchantApi.merchant(admin!.merchant_id!), enabled: staff && !!admin?.merchant_id, staleTime: 60_000 });
   const venueOptions = (staff ? own.data?.venues : allVenues.data?.items)?.filter((v) => v.bookable || v.id === venueId).map((v) => ({ value: v.id, label: v.name })) ?? [];
 
+  // 外部占场：选了场馆和日期才查（开放平台占场按场馆、按天）
+  const blocks = useQuery({
+    queryKey: ['venues', venueId, 'blocks', day],
+    queryFn: () => merchantApi.venueBlocks(venueId!, day),
+    enabled: !!venueId && !!day,
+  });
   const list = useQuery({
     queryKey: ['bookings', 'list', venueId, status, day, page],
     queryFn: () => merchantApi.bookings({ venue_id: venueId, status, date: day, page }),
@@ -123,6 +129,32 @@ export default function BookingsPage() {
           </Space>
         }
       >
+        {venueId && day ? (
+          <div className="ext-blocks" aria-label="外部占场">
+            <span className="ext-blocks-title">
+              外部占场
+              <InfoTip label="外部占场说明">商户自有系统（收银、订场软件）通过开放平台同步过来的已售场地，这些时段在 App 上不可预订。</InfoTip>
+            </span>
+            {blocks.isLoading ? (
+              <span className="muted">加载中…</span>
+            ) : (blocks.data?.items.length ?? 0) === 0 ? (
+              <span className="muted">当天没有外部占场</span>
+            ) : (
+              blocks.data!.items.map((b) => (
+                <span key={b.id} className="ext-block" title={b.note || undefined}>
+                  <b className="num">
+                    {b.start}–{b.end}
+                  </b>
+                  <span>{b.court_qty} 块场地</span>
+                  {b.external_ref && <span className="num muted">{b.external_ref}</span>}
+                  {b.note && <span className="muted">{b.note}</span>}
+                </span>
+              ))
+            )}
+          </div>
+        ) : venueId ? (
+          <div className="ext-blocks muted">选一个开场日期，可以看到当天的外部占场</div>
+        ) : null}
         <Table<Booking>
           rowKey="id"
           loading={list.isFetching}

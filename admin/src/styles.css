@@ -467,3 +467,8 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .img-up-paste { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .img-up-paste .ant-input-affix-wrapper, .img-up-paste > .ant-input { flex: 1 1 260px; }
 .img-up-paste-error { flex-basis: 100%; color: var(--red); font-size: 12px; }
+
+/* 场馆预订：外部占场（开放平台同步的已售场地） */
+.ext-blocks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; margin: -4px 0 12px; }
+.ext-blocks-title { font-weight: 700; margin-right: 4px; }
+.ext-block { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border-radius: 999px; padding: 4px 12px; }
