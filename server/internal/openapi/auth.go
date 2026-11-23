@@ -25,7 +25,10 @@ const (
 	NonceTTL        = 10 * time.Minute
 	RateLimit       = 120 // calls per app per minute
 	IdempotencyTTL  = 24 * time.Hour
-	maxBody         = 1 << 20
+	// IdempotencyPendingTTL bounds the "in progress" marker: if the process
+	// dies mid-request the key frees itself instead of blocking for 24 h.
+	IdempotencyPendingTTL = 2 * time.Minute
+	maxBody               = 1 << 20
 )
 
 func strconvItoa(n int64) string { return strconv.FormatInt(n, 10) }
@@ -284,7 +287,7 @@ func (s *Service) idempotent(w *recorder, r *http.Request, appID int64, idem str
 	}
 	ctx := r.Context()
 	key := fmt.Sprintf("open:idem:%d:%s", appID, idem)
-	ok, err := s.Redis.SetNX(ctx, key, "pending", IdempotencyTTL).Result()
+	ok, err := s.Redis.SetNX(ctx, key, "pending", IdempotencyPendingTTL).Result()
 	if err != nil {
 		return err
 	}
@@ -306,10 +309,18 @@ func (s *Service) idempotent(w *recorder, r *http.Request, appID int64, idem str
 		return nil
 	}
 	w.keepAll = true
+	bg := context.WithoutCancel(ctx)
+	// A panic in the handler must not leave the key locked: release it and
+	// let the panic reach the normal recovery (500).
+	defer func() {
+		if p := recover(); p != nil {
+			s.Redis.Del(bg, key)
+			panic(p)
+		}
+	}()
 	if err := h(w, r); err != nil {
 		httpx.WriteError(w, r, err)
 	}
-	bg := context.WithoutCancel(ctx)
 	if w.status == 0 {
 		w.status = http.StatusOK
 	}
