@@ -10,6 +10,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../ai/ai_widgets.dart';
 import 'image_viewer.dart';
 import 'post_card.dart';
@@ -192,12 +193,12 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       context: context,
       builder: (s) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(leading: const Icon(Icons.reply_rounded), title: const Text('回复'), onTap: () => Navigator.pop(s, 'reply')),
+          ListTile(leading: const LIcon(LIcons.reply), title: const Text('回复'), onTap: () => Navigator.pop(s, 'reply')),
           if (c.author.id != me)
-            ListTile(leading: const Icon(Icons.flag_outlined), title: const Text('举报'), onTap: () => Navigator.pop(s, 'report')),
+            ListTile(leading: const LIcon(LIcons.flag), title: const Text('举报'), onTap: () => Navigator.pop(s, 'report')),
           if (canDelete)
             ListTile(
-              leading: const Icon(Icons.delete_outline_rounded, color: LL.red),
+              leading: const LIcon(LIcons.trash, color: LL.red),
               title: const Text('删除', style: TextStyle(color: LL.red)),
               onTap: () => Navigator.pop(s, 'delete'),
             ),
@@ -250,7 +251,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
         child: Column(children: [
           BackHeader(
             title: '动态详情',
-            trailing: RoundIconButton(icon: Icons.near_me_outlined, tooltip: '分享', onTap: () => showShareSheet(context, ref, post)),
+            trailing: RoundIconButton(icon: LIcons.share, tooltip: '分享', onTap: () => showShareSheet(context, ref, post)),
           ),
           Expanded(
             child: CursorListView<Comment>(
@@ -535,7 +536,7 @@ class _CommentRow extends StatelessWidget {
               const SizedBox(width: 14),
               GestureDetector(
                 onTap: onMore,
-                child: const Icon(Icons.more_horiz_rounded, color: LL.text3, size: 18, semanticLabel: '更多'),
+                child: const LIcon(LIcons.moreH, color: LL.text3, size: 18, semanticLabel: '更多'),
               ),
             ]),
           ]),
@@ -548,7 +549,7 @@ class _CommentRow extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(left: 8),
               child: Column(children: [
-                Icon(c.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                LIcon(c.liked ? LIcons.heartFilled : LIcons.heart,
                     size: 20, color: c.liked ? LL.red : LL.text2),
                 Text('${c.likeCount}', style: const TextStyle(color: LL.text2, fontSize: 12)),
               ]),

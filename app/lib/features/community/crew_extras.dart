@@ -12,6 +12,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../chat/pick_image.dart';
 import 'community_page.dart';
 import 'gathering_providers.dart';
@@ -76,7 +77,7 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
                       Clipboard.setData(ClipboardData(text: i.code));
                       toast(context, '邀请码已复制');
                     },
-                    icon: const Icon(Icons.copy_rounded),
+                    icon: const LIcon(LIcons.copy),
                     label: const Text('复制'),
                   ),
                 ),
@@ -84,7 +85,7 @@ class _InviteSheetState extends ConsumerState<_InviteSheet> {
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () => SharePlus.instance.share(ShareParams(text: _text(i), subject: '圈圈 Loopland')),
-                    icon: const Icon(Icons.ios_share_rounded),
+                    icon: const LIcon(LIcons.shareOut),
                     label: const Text('分享'),
                   ),
                 ),
@@ -291,7 +292,7 @@ class _CrewEditPageState extends ConsumerState<CrewEditPage> {
                           decoration: const BoxDecoration(color: LL.lime, shape: BoxShape.circle),
                           child: _uploading
                               ? const Padding(padding: EdgeInsets.all(7), child: CircularProgressIndicator(strokeWidth: 2, color: LL.ink))
-                              : const Icon(Icons.photo_camera_outlined, size: 18, color: LL.ink),
+                              : const LIcon(LIcons.camera, size: 18, color: LL.ink),
                         ),
                       ),
                     ]),

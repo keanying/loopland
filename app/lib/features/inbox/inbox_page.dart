@@ -11,16 +11,17 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../chat/conversations_page.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
 
 /// Inbox categories (`GET /v1/inbox?category=`), in display order.
 const inboxCategories = [
-  ('interaction', '互动', Icons.favorite_rounded, LL.pink),
-  ('territory', '领地', Icons.flag_rounded, LL.yellow),
-  ('monster', '怪兽', Icons.whatshot_rounded, LL.orange),
-  ('system', '系统', Icons.campaign_rounded, LL.sky),
+  ('interaction', '互动', LIcons.heartFilled, LL.pink),
+  ('territory', '领地', LIcons.flagFilled, LL.yellow),
+  ('monster', '怪兽', LIcons.flame, LL.orange),
+  ('system', '系统', LIcons.megaphone, LL.sky),
 ];
 
 /// Where tapping a notification goes, from `data.type` and the ids in
@@ -265,7 +266,7 @@ class _CategoryTile extends StatelessWidget {
   const _CategoryTile(
       {super.key, required this.name, required this.icon, required this.color, required this.count, required this.selected, this.onTap});
   final String name;
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final int count;
   final bool selected;
@@ -287,7 +288,7 @@ class _CategoryTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, color: LL.ink, size: 22),
+                child: LIcon(icon, color: LL.ink, size: 22),
               ),
               Positioned(right: -10, top: -6, child: CountBadge(count: count)),
             ]),
@@ -317,7 +318,7 @@ class _InboxTile extends StatelessWidget {
           width: 46,
           height: 46,
           decoration: BoxDecoration(color: cat.$4, shape: BoxShape.circle),
-          child: Icon(cat.$3, color: LL.ink),
+          child: LIcon(cat.$3, color: LL.ink),
         ),
         const SizedBox(width: 12),
         Expanded(

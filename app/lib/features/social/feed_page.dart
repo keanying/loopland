@@ -8,6 +8,7 @@ import '../../api/community_models.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import 'post_card.dart';
 
 /// D-02 动态流 (`/community/feed?tab=following|recommend`): 关注 / 推荐,
@@ -56,7 +57,7 @@ class _FeedPageState extends ConsumerState<FeedPage> {
               child: Row(
                 children: [
                   RoundIconButton(
-                    icon: Icons.arrow_back_ios_new_rounded,
+                    icon: LIcons.back,
                     tooltip: '返回',
                     onTap: () => Navigator.of(context).maybePop(),
                   ),
@@ -65,12 +66,12 @@ class _FeedPageState extends ConsumerState<FeedPage> {
                     child: Text('动态', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
                   ),
                   RoundIconButton(
-                    icon: Icons.play_circle_outline_rounded,
+                    icon: LIcons.playCircle,
                     tooltip: '轨迹回放',
                     onTap: () => context.push('/replays'),
                   ),
                   const SizedBox(width: 8),
-                  RoundIconButton(icon: Icons.add_rounded, tooltip: '发动态', color: LL.lime, fg: LL.ink, onTap: _compose),
+                  RoundIconButton(icon: LIcons.plus, tooltip: '发动态', color: LL.lime, fg: LL.ink, onTap: _compose),
                 ],
               ),
             ),

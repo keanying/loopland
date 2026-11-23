@@ -18,6 +18,7 @@ import 'package:loopland/map/territory_map.dart';
 import 'package:loopland/run/run_controller.dart' show clockProvider;
 import 'package:loopland/run/run_store.dart';
 import 'package:loopland/run/uploader.dart';
+import 'package:loopland/widgets/l_icons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../coach/synthetic.dart';
@@ -253,9 +254,9 @@ void main() {
 
     // Mute: no more voice.
     final spoken = voice.spoken.length;
-    await t.tap(find.byIcon(Icons.volume_up_rounded));
+    await t.tap(findLIcon(LIcons.volume));
     await t.pump();
-    expect(find.byIcon(Icons.volume_off_rounded), findsOneWidget);
+    expect(findLIcon(LIcons.volumeOff), findsOneWidget);
 
     // Pause / resume during the timed step.
     await wait(t, 3200);
@@ -347,7 +348,7 @@ void main() {
     await t.tap(find.byKey(const Key('coach-main')));
     await t.pump();
     await wait(t, 1000);
-    await t.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+    await t.tap(findLIcon(LIcons.back));
     await t.pumpAndSettle();
     expect(find.text('结束训练？'), findsOneWidget);
     await t.tap(find.text('继续训练'));

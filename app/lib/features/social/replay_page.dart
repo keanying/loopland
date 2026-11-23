@@ -8,6 +8,7 @@ import '../../api/community_models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
 
@@ -120,7 +121,7 @@ class _ReplayPageState extends ConsumerState<ReplayPage> {
                 child: Row(
                   children: [
                     RoundIconButton(
-                      icon: Icons.arrow_back_ios_new_rounded,
+                      icon: LIcons.back,
                       tooltip: '返回',
                       onTap: () => Navigator.of(context).maybePop(),
                     ),
@@ -259,8 +260,8 @@ class _ReplayViewState extends State<ReplayView> with SingleTickerProviderStateM
                       width: 72,
                       height: 72,
                       decoration: const BoxDecoration(color: Color(0x66F4F4F5), shape: BoxShape.circle),
-                      child: Icon(
-                        _anim.isCompleted ? Icons.replay_rounded : Icons.play_arrow_rounded,
+                      child: LIcon(
+                        _anim.isCompleted ? LIcons.replay : LIcons.play,
                         color: LL.text,
                         size: 40,
                       ),
@@ -275,7 +276,7 @@ class _ReplayViewState extends State<ReplayView> with SingleTickerProviderStateM
             child: Column(
               children: [
                 _SideButton(
-                  icon: r.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  icon: r.liked ? LIcons.heartFilled : LIcons.heart,
                   color: r.liked ? LL.red : LL.text,
                   label: compactCount(r.likeCount),
                   tooltip: r.liked ? '取消点赞' : '点赞',
@@ -283,7 +284,7 @@ class _ReplayViewState extends State<ReplayView> with SingleTickerProviderStateM
                 ),
                 const SizedBox(height: 14),
                 _SideButton(
-                  icon: Icons.chat_bubble_outline_rounded,
+                  icon: LIcons.chat,
                   label: '评论',
                   tooltip: '查看动态',
                   onTap: () => context.push('/posts/${r.postId}'),
@@ -331,7 +332,7 @@ class _ReplayViewState extends State<ReplayView> with SingleTickerProviderStateM
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                         ),
                         onPressed: _export,
-                        icon: const Icon(Icons.movie_outlined, size: 18),
+                        icon: const LIcon(LIcons.film, size: 18),
                         label: const Text('导出 1080p 视频'),
                       ),
                     ],
@@ -350,7 +351,7 @@ class _ReplayViewState extends State<ReplayView> with SingleTickerProviderStateM
 
 class _SideButton extends StatelessWidget {
   const _SideButton({required this.icon, required this.label, required this.onTap, this.color = LL.text, this.tooltip});
-  final IconData icon;
+  final LGlyph icon;
   final String label;
   final VoidCallback onTap;
   final Color color;

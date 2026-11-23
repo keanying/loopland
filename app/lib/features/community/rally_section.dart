@@ -11,6 +11,7 @@ import '../../api/models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../play/locate.dart';
 import 'gathering_providers.dart';
 import 'gathering_widgets.dart';
@@ -38,7 +39,7 @@ class RallySection extends ConsumerWidget {
                     .push<Rally>(MaterialPageRoute(builder: (_) => RallyCreatePage(crewId: crew.id)));
                 if (r != null) ref.invalidate(ralliesProvider(crew.id));
               },
-              icon: const Icon(Icons.add_rounded),
+              icon: const LIcon(LIcons.plus),
               label: const Text('发起'),
             ),
         ]),
@@ -155,7 +156,7 @@ class _RallyCardState extends ConsumerState<RallyCard> {
           if (status != null) Tag(status) else if (r.checkedIn) const Tag('已签到', color: LL.lime) else if (r.joined) const Tag('已报名', color: LL.sky),
           if (widget.crew.isLeader && open)
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_horiz_rounded, color: LL.text3),
+              icon: const LIcon(LIcons.moreH, color: LL.text3),
               onSelected: (_) => _cancel(),
               itemBuilder: (_) => const [PopupMenuItem(value: 'cancel', child: Text('取消集结跑'))],
             ),
@@ -173,7 +174,7 @@ class _RallyCardState extends ConsumerState<RallyCard> {
           const Spacer(),
           if (r.conversationId != null && (r.joined || widget.crew.isLeader))
             RoundIconButton(
-              icon: Icons.forum_outlined,
+              icon: LIcons.chats,
               size: 42,
               tooltip: '群聊',
               onTap: () => context.push('/chat/${r.conversationId}'),
@@ -198,7 +199,7 @@ class _RallyCardState extends ConsumerState<RallyCard> {
                 child: FilledButton.icon(
                   style: FilledButton.styleFrom(minimumSize: const Size(0, 46)),
                   onPressed: _busy ? null : _checkin,
-                  icon: const Icon(Icons.where_to_vote_outlined),
+                  icon: const LIcon(LIcons.pinCheck),
                   label: const Text('到场签到'),
                 ),
               ),
@@ -248,7 +249,7 @@ class _BonusBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(children: [
-          Icon(Icons.bolt_rounded, size: 18, color: active ? LL.ink : LL.text3),
+          LIcon(LIcons.bolt, size: 18, color: active ? LL.ink : LL.text3),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -349,7 +350,7 @@ class _RallyCreatePageState extends ConsumerState<RallyCreatePage> {
               LLCard(
                 onTap: _pickStart,
                 child: Row(children: [
-                  const Icon(Icons.schedule_rounded, color: LL.text3),
+                  const LIcon(LIcons.clock, color: LL.text3),
                   const SizedBox(width: 10),
                   const Text('开始时间', style: TextStyle(color: LL.text2)),
                   const Spacer(),
@@ -364,7 +365,7 @@ class _RallyCreatePageState extends ConsumerState<RallyCreatePage> {
                   if (p != null && mounted) setState(() => _place = p);
                 },
                 child: Row(children: [
-                  const Icon(Icons.place_outlined, color: LL.text3),
+                  const LIcon(LIcons.pin, color: LL.text3),
                   const SizedBox(width: 10),
                   const Text('集合点', style: TextStyle(color: LL.text2)),
                   const SizedBox(width: 16),

@@ -11,6 +11,7 @@ import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/monster_art.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_report_card.dart';
@@ -49,13 +50,13 @@ class ResultPage extends ConsumerWidget {
                 Text('${sportName(a.sport)} · ${Fmt.dateTime(a.startedAt)}', style: const TextStyle(color: LL.text2)),
               ]),
             ),
-            RoundIconButton(icon: Icons.close_rounded, tooltip: '完成', onTap: () => context.go('/map')),
+            RoundIconButton(icon: LIcons.close, tooltip: '完成', onTap: () => context.go('/map')),
           ]),
           const SizedBox(height: 14),
           if (s.status == 'review')
             _Banner(
               color: const Color(0xFF3A3020),
-              icon: Icons.hourglass_top_rounded,
+              icon: LIcons.hourglass,
               iconColor: LL.yellow,
               title: '本次记录进入人工复核',
               body: '系统发现了一些异常，复核通过后会补发能量并圈地，结果会通过站内信通知你。',
@@ -64,7 +65,7 @@ class ResultPage extends ConsumerWidget {
           if (s.status == 'voided')
             _Banner(
               color: const Color(0xFF3A1D22),
-              icon: Icons.block_rounded,
+              icon: LIcons.block,
               iconColor: LL.red,
               title: '本次记录已作废',
               body: '风控判定这次记录不真实，不发放能量、不圈地。如有疑问请联系客服申诉。',
@@ -103,7 +104,7 @@ class ResultPage extends ConsumerWidget {
               LLCard(
                 color: LL.lavender,
                 child: Row(children: [
-                  const Icon(Icons.trending_up_rounded, color: LL.ink, size: 32),
+                  const LIcon(LIcons.trendUp, color: LL.ink, size: 32),
                   const SizedBox(width: 12),
                   Text('升级到 Lv.${s.levelUp!.to}！解锁更多建筑',
                       style: const TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: 17)),
@@ -117,7 +118,7 @@ class ResultPage extends ConsumerWidget {
               else ...[
                 for (final c in s.claims)
                   _Row(
-                    icon: c.kind == 'capture' ? Icons.flag_rounded : Icons.crop_square_rounded,
+                    icon: c.kind == 'capture' ? LIcons.flagFilled : LIcons.plot,
                     color: c.kind == 'capture' ? LL.orange : LL.lime,
                     title: c.kind == 'capture' ? '抢下 领地 #${c.territoryId}' : '新圈 领地 #${c.territoryId}',
                     trailing: Fmt.area(c.areaM2),
@@ -132,7 +133,7 @@ class ResultPage extends ConsumerWidget {
                 const _Section('攻击'),
                 for (final at in s.attacks)
                   _Row(
-                    icon: at.captured ? Icons.emoji_events_rounded : Icons.shield_outlined,
+                    icon: at.captured ? LIcons.trophy : LIcons.shield,
                     color: at.captured ? LL.lime : LL.orange,
                     title: '${at.owner?.nickname ?? '对手'} 的领地 #${at.territoryId}',
                     subtitle: at.captured
@@ -190,7 +191,7 @@ class ResultPage extends ConsumerWidget {
               style: FilledButton.styleFrom(backgroundColor: LL.lavender),
               onPressed: () => context.push('/posts/new',
                   extra: ComposeArgs(activity: a, aiReport: ai ? ref.read(aiReportProvider(a.id)).report : null)),
-              icon: const Icon(Icons.campaign_outlined),
+              icon: const LIcon(LIcons.megaphone),
               label: const Text('一键带上战报发动态'),
             ),
             const SizedBox(height: 10),
@@ -216,7 +217,7 @@ class ResultPage extends ConsumerWidget {
         for (final b in s.bossDamage)
           _Row(
             leading: _MonsterDot(name: b.name),
-            icon: Icons.whatshot_rounded,
+            icon: LIcons.flame,
             color: b.defeated ? LL.lime : LL.orange,
             title: '对${b.name}造成 ${Fmt.thousands(b.damage)} 伤害',
             subtitle: b.defeated ? '最后一击！怪兽被击退，掉落已发放' : '血量实时更新，叫上团友一起合击',
@@ -227,13 +228,13 @@ class ResultPage extends ConsumerWidget {
       if (s.chests.isNotEmpty) ...[
         const _Section('能量宝箱'),
         for (final c in s.chests)
-          _Row(icon: Icons.inventory_2_rounded, color: LL.yellow, title: '路过开启宝箱 #${c.chestId}', trailing: '+${c.energy}'),
+          _Row(icon: LIcons.chest, color: LL.yellow, title: '路过开启宝箱 #${c.chestId}', trailing: '+${c.energy}'),
       ],
       if (s.defended.isNotEmpty) ...[
         const _Section('守地成功'),
         for (final d in s.defended)
           _Row(
-            icon: Icons.shield_rounded,
+            icon: LIcons.shield,
             color: LL.lime,
             title: '加固 领地 #${d.territoryId}',
             subtitle: '守卫 ${d.guardBefore} → ${d.guardAfter}',
@@ -245,7 +246,7 @@ class ResultPage extends ConsumerWidget {
         const _Section('城市定向'),
         for (final r in s.routes)
           _Row(
-            icon: r.completed ? Icons.emoji_events_rounded : Icons.explore_rounded,
+            icon: r.completed ? LIcons.trophy : LIcons.compass,
             color: LL.sky,
             title: r.completed ? '${r.name} 全线完成！' : r.name,
             subtitle: r.reached.isEmpty ? '这次没有到达新的打卡点' : '打卡 ${r.reached.join('、')}',
@@ -256,7 +257,7 @@ class ResultPage extends ConsumerWidget {
       if (s.campaigns.isNotEmpty) ...[
         const _Section('限时活动'),
         for (final c in s.campaigns)
-          _Row(icon: Icons.local_fire_department_rounded, color: LL.orange, title: '完成「${c.title}」', trailing: '+${c.rewardEnergy}'),
+          _Row(icon: LIcons.flame, color: LL.orange, title: '完成「${c.title}」', trailing: '+${c.rewardEnergy}'),
       ],
       if (s.tasks.isNotEmpty) ...[
         const _Section('赛季任务'),
@@ -292,7 +293,7 @@ class ResultPage extends ConsumerWidget {
       if (s.rally != null) ...[
         const _Section('集结跑加成'),
         _Row(
-          icon: Icons.groups_rounded,
+          icon: LIcons.users,
           color: LL.lavender,
           title: '集结加成生效',
           subtitle: '这次运动的合击伤害和能量 ×${(1 + s.rally!.bonusRate).toStringAsFixed(1)}',
@@ -303,7 +304,7 @@ class ResultPage extends ConsumerWidget {
         const _Section('赛事完赛'),
         for (final r in s.races)
           _Row(
-            icon: Icons.military_tech_rounded,
+            icon: LIcons.medal,
             color: LL.yellow,
             title: '${r.title} 完赛！',
             subtitle: [
@@ -367,7 +368,7 @@ class _EnergyCard extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('获得能量', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w800)),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          const Icon(Icons.bolt_rounded, color: LL.ink, size: 36),
+          const LIcon(LIcons.bolt, color: LL.ink, size: 36),
           Text('+${s.energyGranted}', style: const TextStyle(color: LL.ink, fontSize: 40, fontWeight: FontWeight.w900, height: 1.1)),
         ]),
         if (s.energyCapped)
@@ -381,7 +382,7 @@ class _EnergyCard extends StatelessWidget {
 class _Banner extends StatelessWidget {
   const _Banner({required this.color, required this.icon, required this.iconColor, required this.title, required this.body, required this.flags});
   final Color color;
-  final IconData icon;
+  final LGlyph icon;
   final Color iconColor;
   final String title, body;
   final List<RiskFlag> flags;
@@ -393,7 +394,7 @@ class _Banner extends StatelessWidget {
         color: color,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(icon, color: iconColor),
+            LIcon(icon, color: iconColor),
             const SizedBox(width: 8),
             Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
           ]),
@@ -423,7 +424,7 @@ class _Section extends StatelessWidget {
 class _Row extends StatelessWidget {
   const _Row({required this.icon, required this.color, required this.title, this.subtitle, required this.trailing, this.onTap, this.leading});
   final Widget? leading;
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final String title;
   final String? subtitle;
@@ -442,7 +443,7 @@ class _Row extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, color: LL.ink, size: 22),
+                child: LIcon(icon, color: LL.ink, size: 22),
               ),
           const SizedBox(width: 12),
           Expanded(
@@ -519,7 +520,7 @@ class _TaskRow extends StatelessWidget {
         child: LLCard(
           padding: const EdgeInsets.all(12),
           child: Row(children: [
-            Icon(done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: done ? color : LL.text3),
+            LIcon(done ? LIcons.checkCircleFilled : LIcons.ring, color: done ? color : LL.text3),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

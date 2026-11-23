@@ -40,6 +40,8 @@ dependencies:
   # 界面
   video_player: 2.14.1
   flutter_svg: 2.5.0
+  # 自绘图标（lib/widgets/l_icons.dart）解析 SVG 路径
+  path_parsing: 1.1.0
   material_ui: 1.11.1
   share_plus: 13.3.1
   # 发布动态 / 头像选图

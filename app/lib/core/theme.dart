@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/l_icons.dart';
+
 /// Brand palette (docs/资料包/04_Logo与图标/README.md).
 class LL {
   LL._();
@@ -44,6 +46,11 @@ ThemeData buildTheme() {
     fontFamilyFallback: LL.fonts,
   );
   return base.copyWith(
+    // Material 自带的返回 / 关闭按钮（如 AppBar 自动加的返回）也用圈圈自己的图标
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (_) => const LIcon(LIcons.back),
+      closeButtonIconBuilder: (_) => const LIcon(LIcons.close),
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: LL.night,
       foregroundColor: LL.text,

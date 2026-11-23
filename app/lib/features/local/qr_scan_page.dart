@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 
 /// Opens the in-app scanner and returns the first QR content (or null).
 /// Overridden in tests.
@@ -57,7 +58,7 @@ class _QrScanPageState extends State<QrScanPage> {
             Row(children: [
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
+                icon: const LIcon(LIcons.close, color: Colors.white),
               ),
               Expanded(
                 child: Text(widget.title,
@@ -65,7 +66,7 @@ class _QrScanPageState extends State<QrScanPage> {
               ),
               IconButton(
                 onPressed: () => _ctrl.toggleTorch(),
-                icon: const Icon(Icons.flashlight_on_outlined, color: Colors.white),
+                icon: const LIcon(LIcons.flashlight, color: Colors.white),
                 tooltip: '手电筒',
               ),
             ]),

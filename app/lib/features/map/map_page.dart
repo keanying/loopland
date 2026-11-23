@@ -21,6 +21,7 @@ import '../../run/location_source.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cosmetics.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_widgets.dart';
@@ -230,14 +231,14 @@ class _MapPageState extends ConsumerState<MapPage> {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
                   Row(children: [
-                    const Icon(Icons.bolt_rounded, color: LL.yellow, size: 16),
+                    const LIcon(LIcons.bolt, color: LL.yellow, size: 16),
                     Text(' 今日能量 ${user?.energyToday ?? 0} · LV.${user?.level ?? 1}',
                         style: const TextStyle(color: LL.text2, fontSize: 13)),
                   ]),
                 ]),
               ),
               RoundIconButton(
-                icon: Icons.notifications_none_rounded,
+                icon: LIcons.bell,
                 size: 52,
                 badge: unread > 0,
                 tooltip: '消息',
@@ -297,14 +298,14 @@ class _MapPageState extends ConsumerState<MapPage> {
           right: 16,
           top: top + 150,
           child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            _SideButton(icon: Icons.castle_outlined, label: '建城', color: LL.lime, fg: LL.ink, onTap: _goCity),
+            _SideButton(icon: LIcons.castle, label: '建城', color: LL.lime, fg: LL.ink, onTap: _goCity),
             const SizedBox(height: 10),
             _SideButton(
-                icon: Icons.sports_esports_outlined, label: '玩法', color: LL.card, fg: LL.text, onTap: () => context.push('/games')),
+                icon: LIcons.gamepad, label: '玩法', color: LL.card, fg: LL.text, onTap: () => context.push('/games')),
             if (ai) ...[
               const SizedBox(height: 10),
               _SideButton(
-                  icon: Icons.auto_awesome_rounded,
+                  icon: LIcons.quan,
                   leading: const AIMark(),
                   label: '圈圈',
                   color: LL.lavender,
@@ -317,11 +318,11 @@ class _MapPageState extends ConsumerState<MapPage> {
           right: 16,
           bottom: bottom + 92,
           child: Column(children: [
-            RoundIconButton(icon: Icons.add_rounded, size: 52, tooltip: '放大', onTap: _map.zoomIn),
+            RoundIconButton(icon: LIcons.plus, size: 52, tooltip: '放大', onTap: _map.zoomIn),
             const SizedBox(height: 10),
-            RoundIconButton(icon: Icons.remove_rounded, size: 52, tooltip: '缩小', onTap: _map.zoomOut),
+            RoundIconButton(icon: LIcons.minus, size: 52, tooltip: '缩小', onTap: _map.zoomOut),
             const SizedBox(height: 10),
-            RoundIconButton(icon: Icons.my_location_rounded, size: 52, tooltip: '回到我的位置', onTap: _locate),
+            RoundIconButton(icon: LIcons.locate, size: 52, tooltip: '回到我的位置', onTap: _locate),
           ]),
         ),
         // Bottom stats
@@ -356,7 +357,7 @@ class _MapPageState extends ConsumerState<MapPage> {
 
 class _SideButton extends StatelessWidget {
   const _SideButton({required this.icon, this.leading, required this.label, required this.color, required this.fg, required this.onTap});
-  final IconData icon;
+  final LGlyph icon;
   final Widget? leading; // 替代 icon（如「圈圈」的带 AI 角标图标）
   final String label;
   final Color color, fg;
@@ -372,7 +373,7 @@ class _SideButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            leading ?? Icon(icon, color: fg, size: 22),
+            leading ?? LIcon(icon, color: fg, size: 22),
             SizedBox(width: leading != null ? 14 : 8),
             Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w900, fontSize: 17)),
           ]),
@@ -489,7 +490,7 @@ class TerritorySheet extends ConsumerWidget {
                 Navigator.pop(context);
                 context.push('/city/${t.id}');
               },
-              icon: const Icon(Icons.castle_outlined),
+              icon: const LIcon(LIcons.castle),
               label: const Text('去建设'),
             )
           else ...[
@@ -500,13 +501,13 @@ class TerritorySheet extends ConsumerWidget {
                       Navigator.pop(context);
                       context.push('/start/gps?sport=run&target=${t.id}&name=${Uri.encodeComponent(t.name)}');
                     },
-              icon: const Icon(Icons.flag_outlined),
+              icon: const LIcon(LIcons.flag),
               label: Text(t.relation == 'unowned' ? '去圈下这块地' : '导航去抢'),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
               onPressed: () => _navigate(context),
-              icon: const Icon(Icons.near_me_outlined),
+              icon: const LIcon(LIcons.navigate),
               label: const Text('用高德地图导航过去'),
             ),
             const SizedBox(height: 8),

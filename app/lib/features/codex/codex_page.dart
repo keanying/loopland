@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../play/companion_card.dart';
 
@@ -263,7 +264,7 @@ class _EggBanner extends StatelessWidget {
         border: Border.all(color: LL.lavender, width: 1.5),
       ),
       child: Row(children: [
-        const Icon(Icons.egg_alt_rounded, color: Color(0xFFF4E9D8), size: 52),
+        const LIcon(LIcons.egg, color: Color(0xFFF4E9D8), size: 52),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -341,8 +342,8 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
             LLProgress(value: d.progress!),
           ],
           const SizedBox(height: 16),
-          if (d.detailSource.isNotEmpty) _row(Icons.explore_outlined, '来源', d.detailSource),
-          if (d.detailEffect.isNotEmpty) _row(Icons.auto_awesome_outlined, '效果', d.detailEffect),
+          if (d.detailSource.isNotEmpty) _row(LIcons.compass, '来源', d.detailSource),
+          if (d.detailEffect.isNotEmpty) _row(LIcons.potion, '效果', d.detailEffect),
           if (comp != null && comp.hatched) ...[
             const SizedBox(height: 8),
             CompanionCard(companion: comp),
@@ -370,10 +371,10 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
     );
   }
 
-  Widget _row(IconData icon, String k, String v) => Padding(
+  Widget _row(LGlyph icon, String k, String v) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 18, color: LL.lime),
+          LIcon(icon, size: 18, color: LL.lime),
           const SizedBox(width: 8),
           Text('$k  ', style: const TextStyle(fontWeight: FontWeight.w800)),
           Expanded(child: Text(v, style: const TextStyle(color: LL.text2, height: 1.4))),

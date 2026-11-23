@@ -10,6 +10,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../play/defense_banner.dart';
 
 /// 建城：6 个建造位、建筑选择、角色驻扎，实时显示守卫值和每日能量。
@@ -239,7 +240,7 @@ class _EmptySlot extends StatelessWidget {
           painter: _DashedBorder(),
           child: Center(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.add_rounded, size: 34, color: onTap == null ? LL.text3 : LL.text2),
+              LIcon(LIcons.plus, size: 34, color: onTap == null ? LL.text3 : LL.text2),
               const SizedBox(height: 6),
               Text('建造', style: TextStyle(color: onTap == null ? LL.text3 : LL.text2)),
             ]),
@@ -384,7 +385,7 @@ class _BuildingRow extends StatelessWidget {
             ]),
           ),
           Row(children: [
-            const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+            const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
             Text('${b.cost}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
           ]),
         ]),
@@ -426,7 +427,7 @@ class _RolePicker extends StatelessWidget {
                             ? '${r.buffText} · 当前驻扎在领地 #${r.stationedAt}'
                             : r.buffText,
                         style: const TextStyle(color: LL.text2)),
-                    trailing: const Icon(Icons.chevron_right_rounded),
+                    trailing: const LIcon(LIcons.chevronRight),
                     onTap: () => Navigator.pop(context, r.key),
                   ),
               ]),

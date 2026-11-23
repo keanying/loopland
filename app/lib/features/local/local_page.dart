@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'booking_tab.dart';
 import 'campaigns_tab.dart';
 import 'product_pages.dart' show PromotionStrip;
@@ -43,7 +44,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
             child: Row(children: [
               IconButton(
                 onPressed: () => context.canPop() ? context.pop() : context.go('/me'),
-                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                icon: const LIcon(LIcons.back),
               ),
               const SizedBox(width: 4),
               const Expanded(
@@ -75,7 +76,7 @@ class _LocalPageState extends ConsumerState<LocalPage> {
                 TextButton.icon(
                   key: const Key('my_bookings'),
                   onPressed: () => context.push('/me/bookings'),
-                  icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                  icon: const LIcon(LIcons.receipt, size: 18),
                   label: const Text('我的订场'),
                 ),
               ]),

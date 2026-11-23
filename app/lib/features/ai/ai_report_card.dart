@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../api/errors.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'ai_providers.dart';
 import 'ai_widgets.dart';
 
@@ -31,7 +32,7 @@ class AIReportCard extends ConsumerWidget {
       decoration: BoxDecoration(color: LL.lime, borderRadius: BorderRadius.circular(26)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Icon(Icons.auto_awesome_rounded, color: LL.ink, size: 18),
+          const LIcon(LIcons.quan, color: LL.ink, size: 20),
           const SizedBox(width: 6),
           const Expanded(child: Text('AI 战报', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w900, fontSize: 15))),
           if (r != null)
@@ -40,7 +41,7 @@ class AIReportCard extends ConsumerWidget {
               onPressed: st.busy || left <= 0 ? null : () => _regenerate(context, ref),
               icon: st.regenerating
                   ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: LL.ink))
-                  : const Icon(Icons.refresh_rounded, size: 18),
+                  : const LIcon(LIcons.refresh, size: 18),
               label: Text(left > 0 ? '换一换 · 剩 $left 次' : '已换完'),
             ),
         ]),

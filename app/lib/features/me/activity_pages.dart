@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 
 final activityProvider =
     FutureProvider.autoDispose.family<Activity, int>((ref, id) => ref.watch(apiProvider).activity(id));
@@ -18,15 +19,15 @@ String statusText(String s) => switch (s) {
       _ => '',
     };
 
-IconData sportIcon(String s) => switch (s) {
-      'run' => Icons.directions_run_rounded,
-      'ride' => Icons.directions_bike_rounded,
-      'hike' => Icons.terrain_rounded,
-      'walk' => Icons.directions_walk_rounded,
-      'strength' => Icons.fitness_center_rounded,
-      'yoga' => Icons.self_improvement_rounded,
-      'rope' => Icons.cable_rounded,
-      _ => Icons.local_fire_department_rounded,
+LGlyph sportIcon(String s) => switch (s) {
+      'run' => LIcons.run,
+      'ride' => LIcons.bike,
+      'hike' => LIcons.mountain,
+      'walk' => LIcons.walk,
+      'strength' => LIcons.dumbbell,
+      'yoga' => LIcons.yoga,
+      'rope' => LIcons.rope,
+      _ => LIcons.flame,
     };
 
 /// 运动记录列表（分页）。
@@ -122,7 +123,7 @@ class ActivityTile extends StatelessWidget {
           width: 46,
           height: 46,
           decoration: BoxDecoration(color: gps ? LL.lime : LL.lavender, shape: BoxShape.circle),
-          child: Icon(sportIcon(a.sport), color: LL.ink),
+          child: LIcon(sportIcon(a.sport), color: LL.ink),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -219,7 +220,7 @@ class _ActivityDetailPageState extends ConsumerState<ActivityDetailPage> {
                     for (final c in a.claims)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: Icon(c.kind == 'capture' ? Icons.flag_rounded : Icons.crop_square_rounded,
+                        leading: LIcon(c.kind == 'capture' ? LIcons.flagFilled : LIcons.plot,
                             color: c.kind == 'capture' ? LL.orange : LL.lime),
                         title: Text('${c.kind == 'capture' ? '抢下' : '新圈'} 领地 #${c.territoryId}'),
                         trailing: Text(Fmt.area(c.areaM2)),

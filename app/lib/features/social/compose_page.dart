@@ -13,6 +13,7 @@ import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../ai/ai_widgets.dart';
 import 'media_picker.dart';
 import 'social_providers.dart';
@@ -233,7 +234,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Row(children: [
-              RoundIconButton(icon: Icons.close_rounded, tooltip: '关闭', onTap: () => Navigator.of(context).maybePop()),
+              RoundIconButton(icon: LIcons.close, tooltip: '关闭', onTap: () => Navigator.of(context).maybePop()),
               const SizedBox(width: 14),
               const Expanded(child: Text('发布动态', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900))),
               FilledButton(
@@ -308,7 +309,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                         aiGenerated: _report!.aiGenerated,
                         trailing: GestureDetector(
                           onTap: () => setState(() => _report = null),
-                          child: const Icon(Icons.close_rounded, size: 18, color: LL.text2, semanticLabel: '移除 AI 战报'),
+                          child: const LIcon(LIcons.close, size: 18, color: LL.text2, semanticLabel: '移除 AI 战报'),
                         ),
                       ),
                     ),
@@ -317,7 +318,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
                       ActionChip(
                         avatar: _reportBusy
                             ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: LL.lavender))
-                            : const Icon(Icons.auto_awesome_rounded, size: 16, color: LL.lavender),
+                            : const QuanMark(size: 18),
                         label: Text(_report == null ? 'AI 写战报' : '换一篇'),
                         onPressed: _activityId == null || _reportBusy ? null : _aiReport,
                         backgroundColor: const Color(0xFF26223A),
@@ -350,10 +351,10 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               ]),
               const SizedBox(height: 16),
               _Note(
-                icon: Icons.location_off_outlined,
+                icon: LIcons.pinOff,
                 text: hide ? '为保护隐私，轨迹起点和终点 200 m 内会自动隐藏' : '你在设置里关闭了「隐藏起终点」，完整轨迹会公开',
               ),
-              const _Note(icon: Icons.verified_outlined, text: '动态先过审核：内容安全的会立即发布，其余审核通过后其他人可见'),
+              const _Note(icon: LIcons.verified, text: '动态先过审核：内容安全的会立即发布，其余审核通过后其他人可见'),
             ]),
           ),
         ]),
@@ -379,7 +380,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
               border: Border.all(color: LL.text3, width: 1),
             ),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Icon(Icons.add_rounded, color: LL.text2, size: 30),
+              const LIcon(LIcons.plus, color: LL.text2, size: 30),
               Text(_images.isEmpty ? '添加照片' : '${_images.length}/$maxImages', style: const TextStyle(color: LL.text2, fontSize: 13)),
             ]),
           ),
@@ -416,7 +417,7 @@ class _ImageTile extends StatelessWidget {
               alignment: Alignment.center,
               child: img.error != null
                   ? const Column(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.refresh_rounded, color: LL.red),
+                      LIcon(LIcons.refresh, color: LL.red),
                       Text('上传失败，点击重试', style: TextStyle(color: LL.text, fontSize: 11)),
                     ])
                   : SizedBox(
@@ -434,7 +435,7 @@ class _ImageTile extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(3),
               decoration: const BoxDecoration(color: Color(0xCC0E0E10), shape: BoxShape.circle),
-              child: const Icon(Icons.close_rounded, size: 16, color: LL.text, semanticLabel: '移除'),
+              child: const LIcon(LIcons.close, size: 16, color: LL.text, semanticLabel: '移除'),
             ),
           ),
         ),
@@ -486,13 +487,13 @@ class _RunChoice extends StatelessWidget {
 
 class _Note extends StatelessWidget {
   const _Note({required this.icon, required this.text});
-  final IconData icon;
+  final LGlyph icon;
   final String text;
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 16, color: LL.text3),
+          LIcon(icon, size: 16, color: LL.text3),
           const SizedBox(width: 6),
           Expanded(child: Text(text, style: const TextStyle(color: LL.text3, fontSize: 12, height: 1.4))),
         ]),

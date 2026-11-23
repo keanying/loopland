@@ -15,6 +15,7 @@ import '../../run/device.dart';
 import '../../run/run_controller.dart';
 import '../../run/uploader.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'result_page.dart';
 
 /// 居家训练：力量 / 瑜伽 / HIIT 计时，跳绳计数。完成后按时长或次数换能量。
@@ -144,7 +145,7 @@ class _HomeTrainingPageState extends ConsumerState<HomeTrainingPage> {
                   const Text('训练时长', style: TextStyle(color: LL.text2)),
                 const SizedBox(height: 24),
                 Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.bolt_rounded, color: LL.yellow),
+                  const LIcon(LIcons.bolt, color: LL.yellow),
                   Text('预计 +${_estimate(cfg)} 能量', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ]),
                 const SizedBox(height: 6),

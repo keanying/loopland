@@ -14,6 +14,7 @@ import '../../api/perks_api.dart';
 import '../../api/perks_models.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'perks_providers.dart';
 
 String _md(DateTime? t) => t == null ? '-' : DateFormat('MM.dd').format(t.toLocal());
@@ -76,7 +77,7 @@ class _CouponsPageState extends ConsumerState<CouponsPage> {
                 data: (items) => items.isEmpty
                     ? ListView(children: [
                         const SizedBox(height: 80),
-                        const Icon(Icons.confirmation_number_outlined, color: LL.text3, size: 44),
+                        const LIcon(LIcons.ticket, color: LL.text3, size: 44),
                         const SizedBox(height: 12),
                         Text(
                           status == 'unused'
@@ -168,7 +169,7 @@ class CouponCard extends StatelessWidget {
               if (onTap != null)
                 const Padding(
                   padding: EdgeInsets.only(right: 10),
-                  child: Icon(Icons.chevron_right_rounded, color: LL.text3),
+                  child: LIcon(LIcons.chevronRight, color: LL.text3),
                 ),
             ]),
           ),
@@ -315,7 +316,7 @@ class _CouponDetail extends StatelessWidget {
                             textAlign: TextAlign.center, style: TextStyle(color: LL.text2, fontSize: 12)),
                       ])
                     : Column(children: [
-                        Icon(c.status == 'used' ? Icons.check_circle_outline_rounded : Icons.history_toggle_off_rounded,
+                        LIcon(c.status == 'used' ? LIcons.checkCircle : LIcons.history,
                             color: LL.text3, size: 40),
                         const SizedBox(height: 8),
                         Text(
@@ -340,7 +341,7 @@ class _CouponDetail extends StatelessWidget {
               color: const Color(0xFF26223A),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(children: const [
-                Icon(Icons.directions_run_rounded, color: LL.lavender),
+                LIcon(LIcons.run, color: LL.lavender),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text('核销需要当天有一条运动记录，今天还没运动的话，先跑一圈再来',
@@ -371,10 +372,10 @@ class _CouponDetail extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               onTap: () => context.push('/me/product-orders/${src.orderId}'),
               child: const Row(children: [
-                Icon(Icons.receipt_long_outlined, color: LL.sky),
+                LIcon(LIcons.receipt, color: LL.sky),
                 SizedBox(width: 10),
                 Expanded(child: Text('查看订单 · 未使用的券可在订单里退款', style: TextStyle(fontWeight: FontWeight.w700))),
-                Icon(Icons.chevron_right_rounded, color: LL.text3),
+                LIcon(LIcons.chevronRight, color: LL.text3),
               ]),
             ),
           ],
@@ -525,7 +526,7 @@ class _CouponQrPanelState extends ConsumerState<CouponQrPanel> with WidgetsBindi
       ),
       const SizedBox(height: 10),
       Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.autorenew_rounded, size: 16, color: _error != null ? LL.orange : LL.lime),
+        LIcon(LIcons.refresh, size: 16, color: _error != null ? LL.orange : LL.lime),
         const SizedBox(width: 4),
         Text(status,
             style: TextStyle(color: _error != null ? LL.orange : LL.text2, fontSize: 13, fontWeight: FontWeight.w700)),

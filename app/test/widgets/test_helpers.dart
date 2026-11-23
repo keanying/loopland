@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:loopland/core/theme.dart';
+import 'package:loopland/widgets/l_icons.dart';
 
 /// Loads a CJK font and the Material icon font so screenshots are readable
 /// (widget tests otherwise render every glyph as a box).
@@ -67,3 +68,6 @@ Future<void> idle(WidgetTester t, [int rounds = 3]) async {
     await t.pump(const Duration(milliseconds: 50));
   }
 }
+
+/// Finds an [LIcon] showing [glyph] (the app's replacement for `find.byIcon`).
+Finder findLIcon(LGlyph glyph) => find.byWidgetPredicate((w) => w is LIcon && w.icon == glyph);

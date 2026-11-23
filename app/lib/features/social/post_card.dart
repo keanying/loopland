@@ -6,6 +6,7 @@ import '../../api/community_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 import '../ai/ai_widgets.dart';
 import 'image_viewer.dart';
 import 'report_sheet.dart';
@@ -104,7 +105,7 @@ class PostHeader extends ConsumerWidget {
       ?trailing,
       PopupMenuButton<String>(
         tooltip: '更多',
-        icon: const Icon(Icons.more_vert_rounded, color: LL.text2),
+        icon: const LIcon(LIcons.moreV, color: LL.text2),
         color: LL.card2,
         onSelected: (v) async {
           switch (v) {
@@ -224,7 +225,7 @@ class RunThumb extends StatelessWidget {
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: onPlay,
-                    child: const SizedBox(width: 56, height: 56, child: Icon(Icons.play_arrow_rounded, color: LL.ink, size: 34)),
+                    child: const SizedBox(width: 56, height: 56, child: LIcon(LIcons.play, color: LL.ink, size: 34)),
                   ),
                 ),
               ),
@@ -257,7 +258,7 @@ class PostActionBar extends ConsumerWidget {
     final p = post;
     return Row(children: [
       ActionPill(
-        icon: p.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+        icon: p.liked ? LIcons.heartFilled : LIcons.heart,
         color: p.liked ? LL.red : LL.text,
         label: compactCount(p.likeCount),
         tooltip: p.liked ? '取消点赞' : '点赞',
@@ -265,11 +266,11 @@ class PostActionBar extends ConsumerWidget {
       ),
       if (showComment) ...[
         const SizedBox(width: 8),
-        ActionPill(icon: Icons.chat_bubble_outline_rounded, label: compactCount(p.commentCount), tooltip: '评论', onTap: onComment),
+        ActionPill(icon: LIcons.chat, label: compactCount(p.commentCount), tooltip: '评论', onTap: onComment),
       ],
       const SizedBox(width: 8),
       ActionPill(
-        icon: p.collected ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+        icon: p.collected ? LIcons.bookmarkFilled : LIcons.bookmark,
         color: p.collected ? LL.lime : LL.text,
         label: compactCount(p.collectCount),
         tooltip: p.collected ? '取消收藏' : '收藏',
@@ -277,7 +278,7 @@ class PostActionBar extends ConsumerWidget {
       ),
       const Spacer(),
       ActionPill(
-        icon: Icons.near_me_outlined,
+        icon: LIcons.share,
         label: compactCount(p.shareCount),
         tooltip: '分享',
         trailingIcon: true,
@@ -297,7 +298,7 @@ class ActionPill extends StatelessWidget {
     this.tooltip,
     this.trailingIcon = false,
   });
-  final IconData icon;
+  final LGlyph icon;
   final String label;
   final VoidCallback? onTap;
   final Color color;
@@ -306,7 +307,7 @@ class ActionPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final i = Icon(icon, size: 20, color: color);
+    final i = LIcon(icon, size: 20, color: color);
     final t = Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14));
     return Semantics(
       button: true,

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../api/models.dart';
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 import 'play_widgets.dart';
 
 /// 守地挑战: shown on my territory after an attack, until the deadline.
@@ -25,7 +26,7 @@ class DefenseBanner extends StatelessWidget {
             border: Border.all(color: LL.orange, width: 1.5),
           ),
           child: Row(children: [
-            const Icon(Icons.shield_outlined, color: LL.orange, size: 30),
+            const LIcon(LIcons.shield, color: LL.orange, size: 30),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

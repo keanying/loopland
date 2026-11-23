@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/theme.dart';
+import '../../widgets/l_icons.dart';
 
 /// "05:42:10", or "2 天 05:42" when more than a day is left.
 String formatCountdown(Duration d) {
@@ -74,7 +75,7 @@ class TimerPill extends StatelessWidget {
           border: Border.all(color: const Color(0xFFFF6A3D)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.timer_outlined, size: 16, color: color),
+          LIcon(LIcons.timer, size: 16, color: color),
           const SizedBox(width: 6),
           Countdown(
             until: until,

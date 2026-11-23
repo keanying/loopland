@@ -13,6 +13,7 @@ import '../../map/territory_map.dart';
 import '../../run/location_source.dart';
 import '../../run/run_controller.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_widgets.dart';
 import '../login/consent_page.dart';
@@ -276,7 +277,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(color: LL.night.withValues(alpha: 0.85), borderRadius: BorderRadius.circular(16)),
                         child: Row(children: [
-                          Icon(Icons.circle, color: _shownRoute == null ? LL.lime : aiRouteColor(_shownRoute!.type), size: 10),
+                          LIcon(LIcons.dot, color: _shownRoute == null ? LL.lime : aiRouteColor(_shownRoute!.type), size: 10),
                           const SizedBox(width: 6),
                           Text(
                             _shownRoute == null
@@ -297,7 +298,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
                   TextButton.icon(
                     style: TextButton.styleFrom(foregroundColor: LL.lavender, visualDensity: VisualDensity.compact),
                     onPressed: () => ref.invalidate(aiRoutesProvider(aiRoutesQuery(_me!, _sport, _aiKm))),
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    icon: const LIcon(LIcons.refresh, size: 18),
                     label: const Text('刷新 AI 路线'),
                   ),
               ]),
@@ -305,7 +306,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
               _GoalTile(
                 selected: _goal == 'free',
                 color: LL.lavender,
-                icon: Icons.gesture_rounded,
+                icon: LIcons.scribble,
                 title: '自由圈地 · 推荐',
                 sub: '随便跑，轨迹一交叉就自动圈地，可连圈多块',
                 onTap: () => setState(() => _goal = 'free'),
@@ -314,7 +315,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
               _GoalTile(
                 selected: _goal == 'distance',
                 color: LL.lime,
-                icon: Icons.straighten_rounded,
+                icon: LIcons.ruler,
                 title: '定距离 · $_distanceKm km',
                 sub: '达到距离会提醒你，可以继续跑',
                 onTap: () => setState(() => _goal = 'distance'),
@@ -325,7 +326,7 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
               _GoalTile(
                 selected: _goal == 'time',
                 color: LL.sky,
-                icon: Icons.timer_outlined,
+                icon: LIcons.timer,
                 title: '定时间 · $_minutes 分钟',
                 sub: '到时间会提醒你，可以继续跑',
                 onTap: () => setState(() => _goal = 'time'),
@@ -336,14 +337,14 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
               _GoalTile(
                 selected: _goal == 'target',
                 color: LL.pink,
-                icon: Icons.flag_outlined,
+                icon: LIcons.flag,
                 title: widget.targetId != null ? '抢 ${widget.targetName ?? '领地 #${widget.targetId}'}' : '抢指定领地',
                 sub: widget.targetId != null ? '围着它跑一圈，能量超过守卫值就能抢下' : '在「领地」地图上点一块地，选择「导航去抢」',
                 onTap: widget.targetId != null ? () => setState(() => _goal = 'target') : () => context.go('/map'),
               ),
               const SizedBox(height: 10),
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.circle, size: 10, color: _accuracy == null ? LL.text3 : (_accuracy! <= 20 ? LL.lime : LL.orange)),
+                LIcon(LIcons.dot, size: 10, color: _accuracy == null ? LL.text3 : (_accuracy! <= 20 ? LL.lime : LL.orange)),
                 const SizedBox(width: 6),
                 Text(
                   _accuracy == null
@@ -396,7 +397,7 @@ class _GoalTile extends StatelessWidget {
   });
   final bool selected;
   final Color color;
-  final IconData icon;
+  final LGlyph icon;
   final String title, sub;
   final VoidCallback onTap;
   final Widget? extra;
@@ -421,7 +422,7 @@ class _GoalTile extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                child: Icon(icon, color: LL.ink),
+                child: LIcon(icon, color: LL.ink),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -491,7 +492,7 @@ class _AiStatusTile extends StatelessWidget {
             decoration: const BoxDecoration(color: Color(0xFF26223A), shape: BoxShape.circle),
             child: loading
                 ? const Padding(padding: EdgeInsets.all(14), child: CircularProgressIndicator(strokeWidth: 2, color: LL.lavender))
-                : const Icon(Icons.auto_awesome_rounded, color: LL.lavender),
+                : const Center(child: QuanMark(size: 30)),
           ),
           const SizedBox(width: 14),
           Expanded(child: Text(text, style: const TextStyle(color: LL.text2, fontSize: 13))),
@@ -523,8 +524,8 @@ class _RouteDetail extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(
-              switch (t.type) { 'boss' => Icons.whatshot_rounded, 'chest' => Icons.inventory_2_outlined, _ => Icons.flag_outlined },
+            LIcon(
+              switch (t.type) { 'boss' => LIcons.flame, 'chest' => LIcons.chest, _ => LIcons.flag },
               size: 15,
               color: LL.text2,
             ),

@@ -14,6 +14,7 @@ import 'package:loopland/features/me/me_page.dart';
 import 'package:loopland/features/social/media_picker.dart';
 import 'package:loopland/features/social/share_sheet.dart';
 import 'package:loopland/features/social/social_routes.dart';
+import 'package:loopland/widgets/l_icons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/fixtures.dart';
@@ -392,7 +393,7 @@ void main() {
     await idle(t);
     expect(find.text('编辑资料'), findsOneWidget);
     expect(find.text('每天 5 公里'), findsOneWidget);
-    await t.tap(find.byIcon(Icons.photo_camera_outlined));
+    await t.tap(findLIcon(LIcons.camera));
     await idle(t);
     expect((fake.lastCall('POST', '/v1/media')!.data as FormData).fields.any((e) => e.key == 'purpose' && e.value == 'avatar'), isTrue);
     expect(patched.single, {'avatar_url': 'http://x/media/200.jpg'});

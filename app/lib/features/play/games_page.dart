@@ -7,6 +7,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'companion_card.dart';
 import 'play_providers.dart';
 
@@ -25,7 +26,7 @@ class _Game {
   });
   final String id, name, kind;
   final Color color;
-  final IconData icon;
+  final LGlyph icon;
   final String desc;
   final List<String> steps;
   final String reward, cta;
@@ -53,7 +54,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '城市争霸',
         kind: '核心玩法',
         color: LL.lime,
-        icon: Icons.fort_outlined,
+        icon: LIcons.castle,
         desc: '自由跑就能圈地，轨迹交叉自动占领。地块可以被抢、被夺回，地图上每块颜色都是一个真人。',
         steps: ['随便跑，路线一交叉就圈下一块', '守卫值低的地最容易被抢，被攻击后 24 小时内跑一圈经过就能加固', '赛季结束按新圈面积定段位、发赛季奖牌'],
         reward: '赛季段位 · 赛季奖牌',
@@ -64,7 +65,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '城区联赛',
         kind: '每周对抗',
         color: LL.lavender,
-        icon: Icons.shield_outlined,
+        icon: LIcons.shield,
         desc: '同一城区的跑团按本周成员新圈的面积排名，每周一 00:00 结算。你圈的每一块地都算进跑团的分。',
         steps: ['加入或创建一个跑团', '本周和团友一起去圈新地', '周一 00:00 结算，看看你们排第几'],
         reward: '城区排名 · 跑团荣誉',
@@ -75,7 +76,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '能量宝箱',
         kind: '每日刷新',
         color: LL.yellow,
-        icon: Icons.inventory_2_outlined,
+        icon: LIcons.chest,
         desc: '地图上每天 06:00 刷新金色宝箱（23:00–05:00 不刷新），跑步轨迹经过自动开启，也可以走到附近手动打开。',
         steps: ['在地图上找到金色宝箱', '跑步经过 ${chest.radiusM.round()} 米内自动开启', '药剂师在场时有概率能量翻倍'],
         reward: '能量 ${chest.energyMin}–${chest.energyMax} · 不计入每日上限',
@@ -86,7 +87,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '城市定向',
         kind: '打卡路线',
         color: LL.sky,
-        icon: Icons.explore_outlined,
+        icon: LIcons.compass,
         desc: '按顺序打卡一条路线上的城市地标，像一场城市寻宝。可以分多次跑完，走路、跑步、骑车都算。',
         steps: ['选一条路线，看清打卡点顺序', '运动时按顺序经过每个点自动打卡', '全部到达即完成，领取能量奖励'],
         reward: '能量 · 城市定向家奖牌',
@@ -97,7 +98,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '跑步伙伴',
         kind: '养成',
         color: LL.pink,
-        icon: Icons.pets_outlined,
+        icon: LIcons.buddy,
         desc: '孵化后的伙伴会陪你跑步，每跑 100 米涨经验，也可以喂能量。伙伴只陪伴，不提供对抗加成。',
         steps: ['跑步孵化伙伴蛋', '设为陪跑，一起跑就涨经验', '用能量喂它，升级更快'],
         reward: '伙伴等级 · 陪跑里程',
@@ -108,7 +109,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '跑团接力',
         kind: '团队',
         color: LL.lavender,
-        icon: Icons.timeline_rounded,
+        icon: LIcons.relay,
         desc: '团长发起 ${relay.defaultLegs} 棒接力，每位成员一次运动跑满 $legKm km 算一棒，限时接满全员得奖励。',
         steps: ['团长在跑团页发起接力', '每人最多跑一棒，单次 GPS 运动 ≥ $legKm km', '${relay.durationH ~/ 24} 天内接满，全员 +${relay.rewardEnergy} 能量'],
         reward: '全员 +${relay.rewardEnergy} 能量',
@@ -119,7 +120,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '限时活动',
         kind: '运营活动',
         color: LL.orange,
-        icon: Icons.local_fire_department_outlined,
+        icon: LIcons.flame,
         desc: '配速挑战、夜跑专场、距离挑战……活动期间完成一次符合规则的运动，结算时自动判定完成。',
         steps: ['看清活动规则和时间', '在活动期间去运动', '结算页会显示完成的活动和奖励'],
         reward: '能量 · 限定奖牌',
@@ -130,7 +131,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: 'AI 剧情夜跑',
         kind: 'AI 语音',
         color: LL.orange,
-        icon: Icons.headphones_outlined,
+        icon: LIcons.headphones,
         desc: 'AI 根据你今晚的路线和城市地标实时生成剧情，戴上耳机边听边跑。',
         steps: ['戴上耳机，选一个剧情主题', 'AI 按你的配速调整剧情节奏', '完成章节解锁收藏卡'],
         reward: '剧情收藏卡',
@@ -142,7 +143,7 @@ class _GamesPageState extends ConsumerState<GamesPage> {
         name: '轨迹绘画',
         kind: '创意',
         color: LL.lime,
-        icon: Icons.gesture_rounded,
+        icon: LIcons.scribble,
         desc: '用跑步轨迹在地图上画画，AI 识别你画的是什么，高分作品进入城市画廊。',
         steps: ['选一个本周主题', '跑出图形，AI 自动识别打分', '高分作品登上城市画廊'],
         reward: '画廊展示 · 能量',
@@ -302,7 +303,7 @@ class _Hero extends StatelessWidget {
             onPressed: onGo,
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Text(g.cta),
-              if (onGo != null) ...[const SizedBox(width: 8), const Icon(Icons.arrow_forward_rounded, size: 20)],
+              if (onGo != null) ...[const SizedBox(width: 8), const LIcon(LIcons.arrowRight, size: 20)],
             ]),
           ),
         ),
@@ -340,7 +341,7 @@ class _Tile extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(color: g.soon ? LL.card2 : g.color, shape: BoxShape.circle),
-                  child: Icon(g.icon, color: g.soon ? LL.text3 : LL.ink, size: 22),
+                  child: LIcon(g.icon, color: g.soon ? LL.text3 : LL.ink, size: 22),
                 ),
                 const Spacer(),
                 if (g.soon) const ComingSoon(),

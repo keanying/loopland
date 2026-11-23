@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import 'gathering_providers.dart';
 import 'gathering_widgets.dart';
@@ -46,14 +47,14 @@ class CommunityPage extends ConsumerWidget {
               subtitle: '跑团 · 组局 · 动态 · 赛事',
               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                 RoundIconButton(
-                    icon: Icons.notifications_none_rounded,
+                    icon: LIcons.bell,
                     size: 52,
                     tooltip: '消息',
                     badge: unread > 0,
                     onTap: () => context.push('/inbox')),
                 const SizedBox(width: 8),
                 RoundIconButton(
-                    icon: Icons.search_rounded, size: 52, tooltip: '找跑团', onTap: () => context.push('/crews/search')),
+                    icon: LIcons.search, size: 52, tooltip: '找跑团', onTap: () => context.push('/crews/search')),
               ]),
             ),
             const SizedBox(height: 8),
@@ -101,7 +102,7 @@ class CommunityPage extends ConsumerWidget {
       _EntryRow(
         key: const Key('entry_races'),
         color: LL.sky,
-        icon: Icons.emoji_events_outlined,
+        icon: LIcons.trophy,
         title: h.races.isEmpty ? '赛事 · 城区联赛' : '赛事 · ${h.races.first.title}',
         subtitle: h.races.isEmpty ? '线上赛、线下赛，完赛得奖牌' : '${h.races.length} 场报名中 / 进行中',
         onTap: () => context.push('/races'),
@@ -110,7 +111,7 @@ class CommunityPage extends ConsumerWidget {
       _EntryRow(
         key: const Key('entry_inbox'),
         color: LL.lime,
-        icon: Icons.chat_bubble_outline_rounded,
+        icon: LIcons.chat,
         title: '消息',
         subtitle: h.unreadInteraction + h.unreadChat == 0
             ? '互动、领地、怪兽、系统通知和私信'
@@ -226,7 +227,7 @@ class _HomeCrewCard extends StatelessWidget {
               decoration: BoxDecoration(color: const Color(0x22000000), borderRadius: BorderRadius.circular(16)),
               child: const Row(mainAxisSize: MainAxisSize.min, children: [
                 Text('集结跑 · 接力', style: TextStyle(color: LL.ink, fontWeight: FontWeight.w800)),
-                Icon(Icons.chevron_right_rounded, color: LL.ink, size: 18),
+                LIcon(LIcons.chevronRight, color: LL.ink, size: 18),
               ]),
             ),
           ]),
@@ -240,7 +241,7 @@ class _EntryRow extends StatelessWidget {
   const _EntryRow(
       {super.key, required this.color, required this.icon, required this.title, required this.subtitle, this.badge = 0, this.onTap});
   final Color color;
-  final IconData icon;
+  final LGlyph icon;
   final String title, subtitle;
   final int badge;
   final VoidCallback? onTap;
@@ -252,7 +253,7 @@ class _EntryRow extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: LL.ink),
+            child: LIcon(icon, color: LL.ink),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -262,7 +263,7 @@ class _EntryRow extends StatelessWidget {
             ]),
           ),
           CountBadge(count: badge),
-          const Icon(Icons.chevron_right_rounded, color: LL.text3),
+          const LIcon(LIcons.chevronRight, color: LL.text3),
         ]),
       );
 }

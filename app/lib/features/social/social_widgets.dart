@@ -10,6 +10,7 @@ import '../../claim/geo.dart';
 import '../../core/env.dart';
 import '../../core/theme.dart';
 import '../../widgets/cosmetics.dart';
+import '../../widgets/l_icons.dart';
 
 /// 1.3K / 18.6K / 1.2M style counts (as in the prototypes).
 String compactCount(int n) {
@@ -310,7 +311,7 @@ class NetImage extends StatelessWidget {
         loadingBuilder: (context, child, p) => p == null ? child : const ColoredBox(color: LL.card2),
         errorBuilder: (_, _, _) => const ColoredBox(
           color: LL.card2,
-          child: Center(child: Icon(Icons.image_outlined, color: LL.text3)),
+          child: Center(child: LIcon(LIcons.image, color: LL.text3)),
         ),
       );
 }

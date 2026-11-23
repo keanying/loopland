@@ -10,17 +10,18 @@ import '../../api/perks_models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../ai/ai_providers.dart';
 import '../social/social_widgets.dart' show mediaUrl;
 import 'perks_providers.dart';
 
 const _cardColors = [LL.lime, LL.pink, LL.sky, LL.lavender, LL.yellow];
 
-IconData dropIcon(String type) => switch (type) {
-      'supply' => Icons.local_cafe_rounded,
-      'chest' => Icons.inventory_2_rounded,
-      'stronghold' => Icons.sports_tennis_rounded,
-      _ => Icons.place_rounded,
+LGlyph dropIcon(String type) => switch (type) {
+      'supply' => LIcons.coffee,
+      'chest' => LIcons.chest,
+      'stronghold' => LIcons.tennis,
+      _ => LIcons.pinFilled,
     };
 
 Color dropColor(String type) => switch (type) {
@@ -61,7 +62,7 @@ class CampaignsTab extends ConsumerWidget {
               width: 40,
               height: 40,
               decoration: const BoxDecoration(color: LL.pink, shape: BoxShape.circle),
-              child: const Icon(Icons.confirmation_number_outlined, color: LL.ink, size: 22),
+              child: const LIcon(LIcons.ticket, color: LL.ink, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -71,7 +72,7 @@ class CampaignsTab extends ConsumerWidget {
                     style: const TextStyle(color: LL.text2, fontSize: 12)),
               ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: LL.text3),
+            const LIcon(LIcons.chevronRight, color: LL.text3),
           ]),
         ),
         const SizedBox(height: 12),
@@ -147,7 +148,7 @@ class BrandCampaignCard extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              const Icon(Icons.schedule_rounded, size: 15, color: LL.text2),
+              const LIcon(LIcons.clock, size: 15, color: LL.text2),
               const SizedBox(width: 4),
               Text(
                 [
@@ -196,7 +197,7 @@ class BrandCampaignCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(dropIcon(t), size: 18, color: dropColor(t)),
+                    LIcon(dropIcon(t), size: 18, color: dropColor(t)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text.rich(
@@ -273,7 +274,7 @@ class _DropRow extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
-                child: Icon(dropIcon(d.type), size: 18, color: LL.ink),
+                child: LIcon(dropIcon(d.type), size: 18, color: LL.ink),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -291,7 +292,7 @@ class _DropRow extends StatelessWidget {
                   ),
                 ]),
               ),
-              if (onTap != null) const Icon(Icons.map_outlined, color: LL.text3, size: 20),
+              if (onTap != null) const LIcon(LIcons.map, color: LL.text3, size: 20),
             ]),
           ),
         ),

@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
 
@@ -51,7 +52,7 @@ class ConversationTile extends StatelessWidget {
                 child: Text(c.isGroup ? '${c.displayTitle} · 群聊' : c.displayTitle,
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
               ),
-              if (c.muted) const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.notifications_off_outlined, size: 14, color: LL.text3)),
+              if (c.muted) const Padding(padding: EdgeInsets.only(left: 4), child: LIcon(LIcons.bellOff, size: 14, color: LL.text3)),
             ]),
             const SizedBox(height: 2),
             Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: LL.text2, fontSize: 13)),
@@ -104,12 +105,12 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
       builder: (s) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
-            leading: Icon(c.muted ? Icons.notifications_active_outlined : Icons.notifications_off_outlined),
+            leading: LIcon(c.muted ? LIcons.bellRing : LIcons.bellOff),
             title: Text(c.muted ? '取消免打扰' : '消息免打扰'),
             onTap: () => Navigator.pop(s, 'mute'),
           ),
           ListTile(
-            leading: const Icon(Icons.delete_outline_rounded, color: LL.red),
+            leading: const LIcon(LIcons.trash, color: LL.red),
             title: Text(c.isGroup ? '退出群聊' : '删除会话', style: const TextStyle(color: LL.red)),
             onTap: () => Navigator.pop(s, 'delete'),
           ),

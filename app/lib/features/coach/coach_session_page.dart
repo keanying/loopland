@@ -23,6 +23,7 @@ import '../../run/device.dart';
 import '../../run/run_controller.dart' show clockProvider;
 import '../../run/uploader.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../run/result_page.dart';
 import 'skeleton_painter.dart';
 
@@ -372,7 +373,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Row(children: [
-        RoundIconButton(icon: Icons.arrow_back_ios_new_rounded, onTap: () => Navigator.of(context).maybePop()),
+        RoundIconButton(icon: LIcons.back, onTap: () => Navigator.of(context).maybePop()),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -381,7 +382,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
           ]),
         ),
         RoundIconButton(
-          icon: muted ? Icons.volume_off_rounded : Icons.volume_up_rounded,
+          icon: muted ? LIcons.volumeOff : LIcons.volume,
           size: 40,
           tooltip: muted ? '语音提示已关闭' : '语音提示',
           onTap: () {
@@ -589,7 +590,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(color: const Color(0xFF16161B), borderRadius: BorderRadius.circular(32)),
       child: ListView(children: [
-        const Icon(Icons.emoji_events_rounded, color: LL.yellow, size: 44),
+        const LIcon(LIcons.trophy, color: LL.yellow, size: 44),
         const SizedBox(height: 8),
         Text(_s.setsDone == 0 ? '训练结束' : '训练完成！',
             textAlign: TextAlign.center, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
@@ -651,9 +652,9 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
     const ink = LL.ink;
     const sub = Color(0xFF55555E);
     final (label, icon) = switch (s.phase) {
-      CoachPhase.ready => ('开始', Icons.play_arrow_rounded),
-      CoachPhase.done => ('领取能量', Icons.bolt_rounded),
-      _ => s.paused ? ('继续', Icons.play_arrow_rounded) : ('暂停', Icons.pause_rounded),
+      CoachPhase.ready => ('开始', LIcons.play),
+      CoachPhase.done => ('领取能量', LIcons.bolt),
+      _ => s.paused ? ('继续', LIcons.play) : ('暂停', LIcons.pause),
     };
     final pausedLook = s.started && !done && !s.paused;
     return Container(
@@ -710,7 +711,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
                   onPressed: _busy ? null : _toggle,
                   icon: _busy
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Icon(icon),
+                      : LIcon(icon),
                   label: Text(label, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
                 ),
               ),
@@ -721,7 +722,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(color: ink, borderRadius: BorderRadius.circular(25)),
               child: Row(children: [
-                const Icon(Icons.bolt_rounded, color: LL.yellow, size: 18),
+                const LIcon(LIcons.bolt, color: LL.yellow, size: 18),
                 Text('+${_estimate(cfg)}',
                     key: const Key('coach-energy'),
                     style: const TextStyle(color: LL.yellow, fontWeight: FontWeight.w800, fontSize: 14)),

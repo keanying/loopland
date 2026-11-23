@@ -11,6 +11,7 @@ import '../../claim/geo.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
+import '../../widgets/l_icons.dart';
 import '../community/place_picker.dart' show quietLocation;
 import 'booking_flow.dart';
 import 'local_providers.dart';
@@ -161,7 +162,7 @@ class _MeetupBookingCardState extends ConsumerState<MeetupBookingCard> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(color: LL.lavender, borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.stadium_outlined, color: LL.ink),
+            child: const LIcon(LIcons.venue, color: LL.ink),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -171,7 +172,7 @@ class _MeetupBookingCardState extends ConsumerState<MeetupBookingCard> {
               if (b.status == 'pending_pay') const Text('待支付', style: TextStyle(color: LL.yellow, fontSize: 12)),
             ]),
           ),
-          const Icon(Icons.chevron_right_rounded, color: LL.text3),
+          const LIcon(LIcons.chevronRight, color: LL.text3),
         ]),
       );
     }
@@ -181,7 +182,7 @@ class _MeetupBookingCardState extends ConsumerState<MeetupBookingCard> {
       key: const Key('meetup_book_cta'),
       onTap: _book,
       child: const Row(children: [
-        Icon(Icons.event_available_rounded, color: LL.lime),
+        LIcon(LIcons.calendarCheck, color: LL.lime),
         SizedBox(width: 10),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -189,7 +190,7 @@ class _MeetupBookingCardState extends ConsumerState<MeetupBookingCard> {
             Text('订合作场馆的时段，局里的人都能看到场地', style: TextStyle(color: LL.text2, fontSize: 12)),
           ]),
         ),
-        Icon(Icons.chevron_right_rounded, color: LL.text3),
+        LIcon(LIcons.chevronRight, color: LL.text3),
       ]),
     );
   }

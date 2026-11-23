@@ -2,6 +2,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/theme.dart';
+import 'l_icons.dart';
 
 /// Card illustrations extracted from the prototype (05_原型源文件/CardArt).
 const _artKeys = {
@@ -37,7 +38,7 @@ class CardArt extends StatelessWidget {
       art = Container(
         color: locked ? LL.card2 : LL.lavender,
         alignment: Alignment.center,
-        child: Icon(Icons.auto_awesome_rounded, color: locked ? LL.text3 : LL.ink, size: width * 0.4),
+        child: LIcon(LIcons.quan, color: locked ? LL.text3 : LL.ink, size: width * 0.46),
       );
     } else if (locked) {
       art = ColoredBox(
@@ -92,7 +93,7 @@ class MedalArt extends StatelessWidget {
         border: Border.all(color: LL.ink, width: 2),
       ),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(Icons.military_tech_rounded, size: width * 0.5, color: obtained ? LL.ink : LL.text3),
+        LIcon(LIcons.medal, size: width * 0.5, color: obtained ? LL.ink : LL.text3),
         if (label.isNotEmpty)
           Text(obtained ? label : '?',
               style: TextStyle(fontWeight: FontWeight.w900, color: obtained ? LL.ink : LL.text3, fontSize: width * 0.13)),

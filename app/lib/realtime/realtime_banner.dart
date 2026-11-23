@@ -5,12 +5,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../api/models.dart';
 import '../core/theme.dart';
+import '../widgets/l_icons.dart';
 import 'realtime_providers.dart';
 
 /// What a banner shows and where tapping it goes.
 class BannerData {
   const BannerData({required this.icon, required this.color, required this.title, required this.body, required this.path});
-  final IconData icon;
+  final LGlyph icon;
   final Color color;
   final String title, body;
   final String path;
@@ -19,21 +20,21 @@ class BannerData {
   static BannerData? from(RealtimeEvent e) => switch (e) {
         TerritoryAttackedEvent(:final territoryId, :final captured, :final guardAfter) => captured
             ? BannerData(
-                icon: Icons.flag_rounded,
+                icon: LIcons.flagFilled,
                 color: LL.red,
                 title: '领地 #$territoryId 被抢走了',
                 body: '去看看，跑一圈把它夺回来',
                 path: '/city/$territoryId',
               )
             : BannerData(
-                icon: Icons.shield_outlined,
+                icon: LIcons.shield,
                 color: LL.orange,
                 title: '领地 #$territoryId 正在被攻击',
                 body: '守卫降到 $guardAfter · 24 小时内跑一圈经过这里即可加固',
                 path: '/city/$territoryId',
               ),
         RallyEvent(:final bossId, :final by) => BannerData(
-            icon: Icons.bolt_rounded,
+            icon: LIcons.bolt,
             color: const Color(0xFFFF6A3D),
             title: '合击召集',
             body: '${by?.nickname ?? '团友'} 正在合击怪兽，快来一起出手！',
@@ -116,7 +117,7 @@ class _RealtimeBannerHostState extends ConsumerState<RealtimeBannerHost> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(color: b.color, shape: BoxShape.circle),
-                          child: Icon(b.icon, color: LL.ink),
+                          child: LIcon(b.icon, color: LL.ink),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -126,7 +127,7 @@ class _RealtimeBannerHostState extends ConsumerState<RealtimeBannerHost> {
                             Text(b.body, style: const TextStyle(color: LL.text2, fontSize: 12)),
                           ]),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: LL.text3),
+                        const LIcon(LIcons.chevronRight, color: LL.text3),
                       ]),
                     ),
                   ),

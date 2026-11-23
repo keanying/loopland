@@ -7,6 +7,7 @@ import '../../api/gathering_models.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import '../social/social_widgets.dart' show mediaUrl;
 
 /// "今晚 19:30" / "明天 07:00" / "周六 07:00" / "11-28 07:00".
@@ -208,7 +209,7 @@ class RallyBrief extends StatelessWidget {
           width: 46,
           height: 46,
           decoration: const BoxDecoration(color: LL.lavender, shape: BoxShape.circle),
-          child: const Icon(Icons.directions_run_rounded, color: LL.ink),
+          child: const LIcon(LIcons.run, color: LL.ink),
         ),
         const SizedBox(width: 12),
         Expanded(

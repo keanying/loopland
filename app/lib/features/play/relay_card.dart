@@ -8,6 +8,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import '../../widgets/l_icons.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
 
@@ -50,7 +51,7 @@ class RelayCard extends ConsumerWidget {
           return LLCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Icon(Icons.timeline_rounded, color: LL.lavender),
+                const LIcon(LIcons.relay, color: LL.lavender),
                 const SizedBox(width: 8),
                 const Expanded(child: Text('跑团接力', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
                 if (r != null) Tag(r.status == 'completed' ? '上一场已完成' : '上一场未接满', color: r.status == 'completed' ? LL.lime : LL.card2, fg: r.status == 'completed' ? LL.ink : LL.text2),
@@ -78,7 +79,7 @@ class RelayCard extends ConsumerWidget {
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              const Icon(Icons.timeline_rounded, color: LL.lavender),
+              const LIcon(LIcons.relay, color: LL.lavender),
               const SizedBox(width: 8),
               Expanded(
                 child: Text('跑团接力 · ${r.runs.length}/${r.legs} 棒',
@@ -158,9 +159,9 @@ class _StartRelaySheetState extends State<_StartRelaySheet> {
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(children: [
           Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16))),
-          RoundIconButton(icon: Icons.remove_rounded, size: 40, color: LL.card2, onTap: minus),
+          RoundIconButton(icon: LIcons.minus, size: 40, color: LL.card2, onTap: minus),
           SizedBox(width: 72, child: Text(value, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18))),
-          RoundIconButton(icon: Icons.add_rounded, size: 40, color: LL.card2, onTap: plus),
+          RoundIconButton(icon: LIcons.plus, size: 40, color: LL.card2, onTap: plus),
         ]),
       );
 
