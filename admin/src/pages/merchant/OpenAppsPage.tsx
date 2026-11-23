@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Checkbox, Descriptions, Drawer, Empty, Form, Input, Select, Space, Table, Tabs, Tag, Tooltip, Typography } from 'antd';
-import { DeleteOutlined, EditOutlined, KeyOutlined, PlusOutlined, PoweroffOutlined, ReadOutlined } from '@ant-design/icons';
 import { commerceApi, type OpenApp, type OpenAppInput, type OpenAppWithSecret, type OpenScope } from '../../api/commerce';
 import { useAuth } from '../../auth/AuthContext';
 import { PageHeader, Panel } from '../../components/ui';
@@ -15,6 +14,7 @@ import { OPEN_SCOPE, OPEN_SCOPES, WEBHOOK_EVENT, WEBHOOK_EVENTS } from './commer
 import { MerchantNav } from './nav';
 import { AppStatusTag, CallsTable, DeliveriesTable, ScopeTags, SecretModal, SigningGuide } from './openApps';
 import { urlParams } from './util';
+import { Glyph } from '../../components/Glyph';
 
 const MAX_APPS = 5;
 const IP_RE = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}(\/([12]?\d|3[0-2]))?$/;
@@ -43,12 +43,12 @@ export default function OpenAppsPage() {
         title="应用"
         extra={
           <Space wrap>
-            <Button icon={<ReadOutlined />} onClick={() => setGuide(true)}>
+            <Button icon={<Glyph name="doc" />} onClick={() => setGuide(true)}>
               签名说明
             </Button>
             {staff && (
               <Tooltip title={items.length >= MAX_APPS ? `最多 ${MAX_APPS} 个应用，先删掉不用的` : undefined}>
-                <Button type="primary" icon={<PlusOutlined />} disabled={items.length >= MAX_APPS} onClick={() => setEditing('new')}>
+                <Button type="primary" icon={<Glyph name="plus" />} disabled={items.length >= MAX_APPS} onClick={() => setEditing('new')}>
                   新建应用
                 </Button>
               </Tooltip>
@@ -223,16 +223,16 @@ function AppDrawer({ app, open, writable, onClose, onEdit, onSecret }: { app: Op
         app &&
         writable && (
           <Space>
-            <Button icon={<EditOutlined />} onClick={() => onEdit(app)}>
+            <Button icon={<Glyph name="pencil" />} onClick={() => onEdit(app)}>
               编辑
             </Button>
-            <Button icon={<KeyOutlined />} loading={reset.isPending} onClick={() => confirmReset(app)}>
+            <Button icon={<Glyph name="key" />} loading={reset.isPending} onClick={() => confirmReset(app)}>
               重置密钥
             </Button>
-            <Button icon={<PoweroffOutlined />} danger={app.status === 'active'} loading={toggle.isPending} onClick={() => toggle.mutate(app)}>
+            <Button icon={<Glyph name="power" />} danger={app.status === 'active'} loading={toggle.isPending} onClick={() => toggle.mutate(app)}>
               {app.status === 'active' ? '停用' : '启用'}
             </Button>
-            <Button danger icon={<DeleteOutlined />} aria-label="删除应用" onClick={() => confirmDelete(app)} />
+            <Button danger icon={<Glyph name="trash" />} aria-label="删除应用" onClick={() => confirmDelete(app)} />
           </Space>
         )
       }

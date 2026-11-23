@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Button, Form, Input } from 'antd';
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../auth/AuthContext';
 import { MOCK } from '../config';
 import { errorMessage } from '../utils/notify';
 import Logo from '../components/Logo';
+import { Glyph } from '../components/Glyph';
 
 export default function LoginPage() {
   const { admin, login } = useAuth();
@@ -48,10 +48,10 @@ export default function LoginPage() {
         {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} />}
         <Form layout="vertical" requiredMark={false} onFinish={onFinish} initialValues={MOCK ? { username: 'admin', password: 'loopland' } : undefined}>
           <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input size="large" prefix={<UserOutlined />} autoComplete="username" placeholder="用户名" />
+            <Input size="large" prefix={<Glyph name="user" />} autoComplete="username" placeholder="用户名" />
           </Form.Item>
           <Form.Item name="password" label="密码" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password size="large" prefix={<LockOutlined />} autoComplete="current-password" placeholder="密码" />
+            <Input.Password size="large" prefix={<Glyph name="lock" />} autoComplete="current-password" placeholder="密码" />
           </Form.Item>
           <Button type="primary" htmlType="submit" size="large" block loading={busy} style={{ marginTop: 8 }}>
             登录

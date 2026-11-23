@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, DatePicker, Form, Input, InputNumber, Modal, Row, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { api } from '../../api/admin';
 import type { Campaign, CampaignInput, CampaignRules, CampaignType } from '../../api/types';
@@ -12,6 +11,7 @@ import { dayjs, dt, num } from '../../utils/format';
 import { CAMPAIGN_TYPE } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
 import { fromRange, PHASE_TAG, phaseOf, RANGE_FORMAT, toRange } from './shared';
+import { Glyph } from '../../components/Glyph';
 
 function rulesText(type: CampaignType, r: CampaignRules): string {
   const parts: string[] = [];
@@ -53,7 +53,7 @@ export default function CampaignsTab() {
     <Panel
       title="限时活动"
       extra={
-        <Button type="primary" icon={<PlusOutlined />} disabled={!editable} onClick={() => setEditing('new')}>
+        <Button type="primary" icon={<Glyph name="plus" />} disabled={!editable} onClick={() => setEditing('new')}>
           新建活动
         </Button>
       }

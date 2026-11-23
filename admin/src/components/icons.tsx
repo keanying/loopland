@@ -1,159 +1,21 @@
-// Line icons in the prototype's style (docs/资料包/05_原型源文件/Admin*.dc.html): 24px viewBox, 1.8px stroke,
-// round caps and joins, currentColor. Paths marked「原型」are copied from the prototype; the rest are drawn to
-// match. Plus two small doodles for empty states in the prototype's illustration style (thin black strokes).
-import type { CSSProperties, ReactNode } from 'react';
+// 站内信分类图标和空状态的两张小插画（原型插画风格：细黑线）。
+// 线条图标统一走 Glyph（和 App 的 LIcons 同一套图形）。这里原来的 IconBell / IconBag / … 已并进去：
+// 铃铛是 notice（管理端原型的页头铃铛），bag、code、review、checkAll、eye 进了 glyphsAdmin.ts（上传卡片用的是下面的 DoodlePicture），
+// flag、receipt、megaphone、arrowRight、link、trash、close 用 App 的同名图形。
 import type { MessageCategory } from '../api/types';
+import { Glyph, type GlyphName } from './Glyph';
 
-interface IconProps {
-  size?: number;
-  className?: string;
-  style?: CSSProperties;
-  strokeWidth?: number;
-}
-
-function Line({ size = 20, className, style, strokeWidth = 1.8, children }: IconProps & { children: ReactNode }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-      className={'line-icon' + (className ? ' ' + className : '')}
-      style={style}
-    >
-      {children}
-    </svg>
-  );
-}
-
-/** 原型：页头铃铛 */
-export const IconBell = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0" />
-  </Line>
-);
-
-/** 商品：购物袋 */
-export const IconBag = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M5.5 8h13l-1 12.5h-11z" />
-    <path d="M9 10V7a3 3 0 0 1 6 0v3" />
-  </Line>
-);
-
-/** 原型：旗子（活动） */
-export const IconFlag = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M5 21V4h11l-2 4 2 4H5" />
-  </Line>
-);
-
-/** 结算：小票 */
-export const IconReceipt = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z" />
-    <path d="M9 8h6M9 12h6M9 16h3" />
-  </Line>
-);
-
-/** 开放平台：尖括号 */
-export const IconCode = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14" />
-  </Line>
-);
-
-/** 原型：审核（文件 + 勾） */
-export const IconReview = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M6 3h9l4 4v14H6z" />
-    <path d="M9 13l2 2 4-4" />
-  </Line>
-);
-
-/** 系统通知：喇叭 */
-export const IconMegaphone = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M4 10v4h3l6 4.5v-13L7 10z" />
-    <path d="M16.5 9.5a3.5 3.5 0 0 1 0 5M19 7a7 7 0 0 1 0 10" />
-  </Line>
-);
-
-/** 原型：对勾；全部已读用两道 */
-export const IconCheckAll = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M2.5 12.5l4.5 4.5 8.5-9.5M12 16l1 1 8.5-9.5" />
-  </Line>
-);
-
-/** 原型：向右箭头 */
-export const IconArrowRight = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M5 12h14M13 6l6 6-6 6" />
-  </Line>
-);
-
-/** 上传：图片框 + 向上箭头 */
-export const IconImageUpload = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h7" />
-    <path d="M4 17l4.5-5 3.5 3.5 2.5-2.5L20 18" />
-    <path d="M18 9V2.5M15.2 5.3L18 2.5l2.8 2.8" />
-  </Line>
-);
-
-/** 链接（粘贴图片网址） */
-export const IconLink = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" />
-    <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />
-  </Line>
-);
-
-/** 查看大图 */
-export const IconEye = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z" />
-    <circle cx="12" cy="12" r="2.8" />
-  </Line>
-);
-
-/** 删除 */
-export const IconTrash = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10.5 11v5M13.5 11v5" />
-  </Line>
-);
-
-/** 原型：关闭 */
-export const IconClose = (p: IconProps) => (
-  <Line {...p}>
-    <path d="M6 6l12 12M18 6 6 18" />
-  </Line>
-);
+const CATEGORY_GLYPH: Partial<Record<MessageCategory, GlyphName>> = {
+  product: 'bag',
+  promotion: 'flag',
+  settlement: 'receipt',
+  openapi: 'code',
+  review: 'review',
+};
 
 /** One icon per 站内信 category. */
-export function CategoryIcon({ category, ...p }: IconProps & { category: MessageCategory }) {
-  switch (category) {
-    case 'product':
-      return <IconBag {...p} />;
-    case 'promotion':
-      return <IconFlag {...p} />;
-    case 'settlement':
-      return <IconReceipt {...p} />;
-    case 'openapi':
-      return <IconCode {...p} />;
-    case 'review':
-      return <IconReview {...p} />;
-    default:
-      return <IconMegaphone {...p} />;
-  }
+export function CategoryIcon({ category, size = 20 }: { category: MessageCategory; size?: number }) {
+  return <Glyph name={CATEGORY_GLYPH[category] ?? 'megaphone'} size={size} />;
 }
 
 /**

@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Col, Drawer, Empty, Input, InputNumber, Row, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { CommentOutlined, HeartOutlined, ShareAltOutlined, StarOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { AdminPost, ReviewStatus } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,6 +11,7 @@ import { area, dt, duration, km, num, pace } from '../../utils/format';
 import { REVIEW_STATUS, SPORT_LABEL, VISIBILITY } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
 import { ReasonModal, Thumbs, TrackSketch } from './shared';
+import { Glyph } from '../../components/Glyph';
 
 const TAKEDOWN_REASONS = ['含广告或引流', '含联系方式', '色情低俗', '辱骂攻击', '涉嫌诈骗', '违法违规', '侵犯他人隐私或肖像', '虚假运动数据'];
 
@@ -164,7 +164,7 @@ export default function PostsTab() {
             key: 'social',
             render: (_, p) => (
               <span className="num muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                <HeartOutlined /> {p.like_count} <CommentOutlined style={{ marginLeft: 6 }} /> {p.comment_count} <StarOutlined style={{ marginLeft: 6 }} /> {p.collect_count}
+                <Glyph name="heart" size="1em" /> {p.like_count} <Glyph name="chat" size="1em" style={{ marginLeft: 6 }} /> {p.comment_count} <Glyph name="bookmark" size="1em" style={{ marginLeft: 6 }} /> {p.collect_count}
               </span>
             ),
           },
@@ -286,10 +286,10 @@ function PostDetail({ p }: { p: AdminPost }) {
       )}
       <Row gutter={[8, 8]}>
         {[
-          { icon: <HeartOutlined />, l: '点赞', v: p.like_count },
-          { icon: <CommentOutlined />, l: '评论', v: p.comment_count },
-          { icon: <StarOutlined />, l: '收藏', v: p.collect_count },
-          { icon: <ShareAltOutlined />, l: '分享', v: p.share_count },
+          { icon: <Glyph name="heart" size="1em" />, l: '点赞', v: p.like_count },
+          { icon: <Glyph name="chat" size="1em" />, l: '评论', v: p.comment_count },
+          { icon: <Glyph name="bookmark" size="1em" />, l: '收藏', v: p.collect_count },
+          { icon: <Glyph name="share" size="1em" />, l: '分享', v: p.share_count },
         ].map((x) => (
           <Col span={6} key={x.l}>
             <div className="tile" style={{ textAlign: 'center' }}>

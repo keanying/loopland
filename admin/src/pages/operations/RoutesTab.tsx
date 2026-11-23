@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, DatePicker, Drawer, Form, Input, InputNumber, Row, Space, Table, Tag, Tooltip } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { api } from '../../api/admin';
 import type { MapCheckpoint, OrienteeringRoute, RouteCheckpoint, RouteInput } from '../../api/types';
@@ -12,6 +11,7 @@ import { Panel } from '../../components/ui';
 import { dayjs, dt, num } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
 import { fromRange, PHASE_TAG, phaseOf, RANGE_FORMAT, toRange } from './shared';
+import { Glyph } from '../../components/Glyph';
 
 const MIN_POINTS = 2;
 const MAX_POINTS = 12;
@@ -66,7 +66,7 @@ export default function RoutesTab() {
     <Panel
       title="城市定向"
       extra={
-        <Button type="primary" icon={<PlusOutlined />} disabled={!editable} onClick={() => setEditing('new')}>
+        <Button type="primary" icon={<Glyph name="plus" />} disabled={!editable} onClick={() => setEditing('new')}>
           新建路线
         </Button>
       }
@@ -291,7 +291,7 @@ function RouteDrawer({ value, onClose }: { value: OrienteeringRoute | 'new' | nu
             <b>
               打卡点 <span className="muted num">{points.length}/{MAX_POINTS}</span>
             </b>
-            <Button size="small" icon={<PlusOutlined />} disabled={points.length >= MAX_POINTS} onClick={() => add()}>
+            <Button size="small" icon={<Glyph name="plus" size={14} />} disabled={points.length >= MAX_POINTS} onClick={() => add()}>
               添加打卡点
             </Button>
           </div>
@@ -314,13 +314,13 @@ function RouteDrawer({ value, onClose }: { value: OrienteeringRoute | 'new' | nu
               <InputNumber size="small" className="num" value={p.radius_m} min={10} max={500} step={10} style={{ width: '100%' }} onChange={(v) => patch(p.uid, { radius_m: v })} />
               <Space size={2}>
                 <Tooltip title="上移">
-                  <Button size="small" type="text" icon={<ArrowUpOutlined />} disabled={i === 0} onClick={() => move(i, -1)} aria-label="上移" />
+                  <Button size="small" type="text" icon={<Glyph name="arrowUp" size={14} />} disabled={i === 0} onClick={() => move(i, -1)} aria-label="上移" />
                 </Tooltip>
                 <Tooltip title="下移">
-                  <Button size="small" type="text" icon={<ArrowDownOutlined />} disabled={i === points.length - 1} onClick={() => move(i, 1)} aria-label="下移" />
+                  <Button size="small" type="text" icon={<Glyph name="arrowDown" size={14} />} disabled={i === points.length - 1} onClick={() => move(i, 1)} aria-label="下移" />
                 </Tooltip>
                 <Tooltip title="删除">
-                  <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => setPoints((ps) => ps.filter((x) => x.uid !== p.uid))} aria-label="删除" />
+                  <Button size="small" type="text" danger icon={<Glyph name="trash" size={14} />} onClick={() => setPoints((ps) => ps.filter((x) => x.uid !== p.uid))} aria-label="删除" />
                 </Tooltip>
               </Space>
             </div>

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Col, Drawer, Empty, Input, Modal, Row, Segmented, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { EyeOutlined, RobotOutlined, SearchOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { UserAction, UserDetail, UserFilter, UserListItem } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -11,6 +10,7 @@ import { ago, bigNumber, date, dt, km, num, pct } from '../utils/format';
 import { RISK_TYPE, SOURCE_LABEL, USER_STATUS } from '../utils/labels';
 import { toastOk } from '../utils/notify';
 import AIMessagesDrawer from './users/AIMessagesDrawer';
+import { Glyph } from '../components/Glyph';
 
 function StatusTag({ status, deleteAfter }: { status: UserListItem['status']; deleteAfter?: string | null }) {
   const s = USER_STATUS[status] ?? { text: status, color: 'default' };
@@ -106,7 +106,7 @@ export default function UsersPage() {
           <Space wrap>
             <Input
               allowClear
-              prefix={<SearchOutlined />}
+              prefix={<Glyph name="search" />}
               placeholder="昵称、用户 ID 或手机尾号"
               style={{ width: 260 }}
               value={kw}
@@ -295,7 +295,7 @@ function UserDrawer({ id, onClose }: { id: number | null; onClose: () => void })
             </div>
             {u.phone_masked && can('user.reveal_phone') && !revealed && (
               <Tooltip title="查看会记录到审计日志">
-                <Button icon={<EyeOutlined />} loading={reveal.isPending} onClick={() => reveal.mutate(u.id)}>
+                <Button icon={<Glyph name="eye" />} loading={reveal.isPending} onClick={() => reveal.mutate(u.id)}>
                   查看完整号码
                 </Button>
               </Tooltip>
@@ -373,7 +373,7 @@ function UserDrawer({ id, onClose }: { id: number | null; onClose: () => void })
                 <div style={{ fontWeight: 700 }}>AI 助手对话</div>
                 <div className="tile-l">投诉核查用，仅管理员可看，查看记审计</div>
               </div>
-              <Button icon={<RobotOutlined />} onClick={viewAI}>
+              <Button icon={<Glyph name="quan" />} onClick={viewAI}>
                 查看 AI 对话
               </Button>
             </div>

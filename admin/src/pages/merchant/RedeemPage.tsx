@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { IScannerControls } from '@zxing/browser';
 import dayjs from 'dayjs';
 import { Alert, Button, Collapse, Empty, Input, Space, Tag } from 'antd';
-import { CameraOutlined, CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled, ReloadOutlined, StopOutlined } from '@ant-design/icons';
 import { ApiError } from '../../api/client';
 import { isVoided, merchantApi, type RedeemBody, type Redemption } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
@@ -12,6 +11,7 @@ import { MOCK } from '../../config';
 import { PageHeader } from '../../components/ui';
 import { REDEEM_ERROR } from './labels';
 import { MerchantNav } from './nav';
+import { Glyph } from '../../components/Glyph';
 
 type Outcome = { ok: true; redemption: Redemption } | { ok: false; code: string; title: string; message: string; hint: string; status: number };
 
@@ -152,18 +152,18 @@ export default function RedeemPage() {
                   <div className="redeem-frame" aria-hidden />
                 ) : (
                   <div className="redeem-video-idle">
-                    <CameraOutlined style={{ fontSize: 36 }} />
+                    <Glyph name="camera" size={36} />
                     <div>扫顾客 App 里的券二维码</div>
                     <div className="muted" style={{ fontSize: 12 }}>二维码 60 秒刷新一次，截图无效</div>
                   </div>
                 )}
               </div>
               {scanning ? (
-                <Button block size="large" icon={<StopOutlined />} onClick={stopCamera}>
+                <Button block size="large" icon={<Glyph name="block" size={18} />} onClick={stopCamera}>
                   关闭相机
                 </Button>
               ) : (
-                <Button block size="large" type="primary" icon={<CameraOutlined />} loading={starting} onClick={startCamera}>
+                <Button block size="large" type="primary" icon={<Glyph name="camera" size={18} />} loading={starting} onClick={startCamera}>
                   扫码核销
                 </Button>
               )}
@@ -265,7 +265,7 @@ function ResultView({ outcome, onAgain, onScan }: { outcome: Outcome; onAgain: (
     const r = outcome.redemption;
     return (
       <div className="redeem-result ok" role="status">
-        <CheckCircleFilled className="redeem-icon" />
+        <Glyph name="checkCircleFilled" size={56} className="redeem-icon" />
         <div className="redeem-title">核销成功</div>
         <div className="redeem-perk">{r.coupon.perk.title}</div>
         <div className="redeem-meta">
@@ -276,10 +276,10 @@ function ResultView({ outcome, onAgain, onScan }: { outcome: Outcome; onAgain: (
         </div>
         {r.coupon.perk.description && <div className="muted" style={{ fontSize: 13 }}>{r.coupon.perk.description}</div>}
         <Space style={{ marginTop: 8 }} wrap>
-          <Button size="large" type="primary" icon={<CameraOutlined />} onClick={onScan}>
+          <Button size="large" type="primary" icon={<Glyph name="camera" size={18} />} onClick={onScan}>
             继续扫码
           </Button>
-          <Button size="large" icon={<ReloadOutlined />} onClick={onAgain}>
+          <Button size="large" icon={<Glyph name="refresh" size={18} />} onClick={onAgain}>
             手输下一张
           </Button>
         </Space>
@@ -289,15 +289,15 @@ function ResultView({ outcome, onAgain, onScan }: { outcome: Outcome; onAgain: (
   const warn = outcome.code === 'no_activity_today' || outcome.code === 'daily_cap_reached';
   return (
     <div className={`redeem-result ${warn ? 'warn' : 'err'}`} role="alert">
-      {warn ? <ExclamationCircleFilled className="redeem-icon" /> : <CloseCircleFilled className="redeem-icon" />}
+      {warn ? <Glyph name="alertFilled" size={56} className="redeem-icon" /> : <Glyph name="closeCircleFilled" size={56} className="redeem-icon" />}
       <div className="redeem-title">{outcome.title}</div>
       {outcome.message && !outcome.message.startsWith(outcome.title) && <div className="redeem-perk">{outcome.message}</div>}
       <div className="muted" style={{ fontSize: 13 }}>{outcome.hint}</div>
       <Space style={{ marginTop: 8 }} wrap>
-        <Button size="large" type="primary" icon={<CameraOutlined />} onClick={onScan}>
+        <Button size="large" type="primary" icon={<Glyph name="camera" size={18} />} onClick={onScan}>
           重新扫码
         </Button>
-        <Button size="large" icon={<ReloadOutlined />} onClick={onAgain}>
+        <Button size="large" icon={<Glyph name="refresh" size={18} />} onClick={onAgain}>
           手输券码
         </Button>
       </Space>

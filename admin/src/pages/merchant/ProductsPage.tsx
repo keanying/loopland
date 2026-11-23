@@ -7,7 +7,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { Alert, App, Button, Col, DatePicker, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Radio, Row, Segmented, Select, Space, Switch, Table, Tag, Tooltip } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { commerceApi, type Product, type ProductDetail, type ProductInput, type ProductStatus, type ProductType } from '../../api/commerce';
 import { useAuth } from '../../auth/AuthContext';
 import { ImageUpload } from '../../components/ImageUpload';
@@ -20,6 +19,7 @@ import { PriceText, ProductStatusTag } from './commerceShared';
 import { VENUE_SPORT, VENUE_SPORTS } from './labels';
 import { MerchantNav } from './nav';
 import { toFen, toYuan, urlParams, useMerchantOptions, useOwnVenues } from './util';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 const SUBMITTABLE: ProductStatus[] = ['draft', 'rejected', 'banned'];
@@ -115,11 +115,11 @@ export default function ProductsPage() {
     const busy = act.isPending && act.variables?.p.id === p.id;
     return (
       <Space size={6} onClick={(e) => e.stopPropagation()}>
-        <Button size={size} icon={<EditOutlined />} onClick={() => setEditing(p)}>
+        <Button size={size} icon={<Glyph name="pencil" size={size === 'small' ? 14 : 16} />} onClick={() => setEditing(p)}>
           编辑
         </Button>
         {SUBMITTABLE.includes(p.status) && (
-          <Button size={size} type="primary" icon={<SendOutlined />} loading={busy && act.variables?.op === 'submit'} onClick={() => act.mutate({ p, op: 'submit' })}>
+          <Button size={size} type="primary" icon={<Glyph name="send" size={size === 'small' ? 14 : 16} />} loading={busy && act.variables?.op === 'submit'} onClick={() => act.mutate({ p, op: 'submit' })}>
             提交审核
           </Button>
         )}
@@ -134,7 +134,7 @@ export default function ProductsPage() {
           </Button>
         )}
         <Tooltip title={p.sold_qty > 0 ? '卖出过的商品删除后归档' : '删除'}>
-          <Button size={size} danger icon={<DeleteOutlined />} aria-label="删除" onClick={() => confirmDelete(p)} />
+          <Button size={size} danger icon={<Glyph name="trash" size={size === 'small' ? 14 : 16} />} aria-label="删除" onClick={() => confirmDelete(p)} />
         </Tooltip>
       </Space>
     );
@@ -144,7 +144,7 @@ export default function ProductsPage() {
       <Button
         size={size}
         danger
-        icon={<StopOutlined />}
+        icon={<Glyph name="block" size={size === 'small' ? 14 : 16} />}
         onClick={(e) => {
           e.stopPropagation();
           setBanning(p);
@@ -171,7 +171,7 @@ export default function ProductsPage() {
           <Space wrap>
             <Input
               allowClear
-              prefix={<SearchOutlined />}
+              prefix={<Glyph name="search" />}
               placeholder="商品名称或 ID"
               style={{ width: 180 }}
               value={kw}
@@ -213,7 +213,7 @@ export default function ProductsPage() {
               options={[{ label: '全部', value: '' }, ...PRODUCT_STATUS_ORDER.map((s) => ({ label: PRODUCT_STATUS[s].text, value: s }))]}
             />
             {writable && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
+              <Button type="primary" icon={<Glyph name="plus" />} onClick={() => setEditing('new')}>
                 新建商品
               </Button>
             )}
@@ -610,7 +610,7 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
           {canSubmit && (
             <Button
               type="primary"
-              icon={<SendOutlined />}
+              icon={<Glyph name="send" />}
               loading={save.isPending && submitAfter}
               onClick={() => {
                 setSubmitAfter(true);

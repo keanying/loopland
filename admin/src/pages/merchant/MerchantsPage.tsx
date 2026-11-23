@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Radio, Row, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
-import { EditOutlined, EyeOutlined, LinkOutlined, PlusOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
 import { merchantApi, type Merchant, type MerchantDetail, type MerchantInput, type MerchantStaff, type MerchantStatus, type MerchantType } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import { ImageUpload } from '../../components/ImageUpload';
@@ -14,6 +13,7 @@ import { MerchantNav } from './nav';
 import { MerchantIcon, MerchantStatusTag } from './shared';
 import { urlParams } from './util';
 import { OpenAppsSection } from './openApps';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 
@@ -53,7 +53,7 @@ export default function MerchantsPage() {
           <Space wrap>
             <Input
               allowClear
-              prefix={<SearchOutlined />}
+              prefix={<Glyph name="search" />}
               placeholder="商户名称、联系人或 ID"
               style={{ width: 220 }}
               value={kw}
@@ -72,7 +72,7 @@ export default function MerchantsPage() {
               ]}
             />
             {can('merchant.write') && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
+              <Button type="primary" icon={<Glyph name="plus" />} onClick={() => setEditing('new')}>
                 新建商户
               </Button>
             )}
@@ -131,7 +131,7 @@ export default function MerchantsPage() {
                     查看
                   </Button>
                   {can('merchant.write') && (
-                    <Button size="small" icon={<EditOutlined />} onClick={() => setEditing(m)}>
+                    <Button size="small" icon={<Glyph name="pencil" size={14} />} onClick={() => setEditing(m)}>
                       编辑
                     </Button>
                   )}
@@ -216,7 +216,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
                 {step.label}
               </Button>
             )}
-            <Button icon={<EditOutlined />} onClick={() => onEdit(m)}>
+            <Button icon={<Glyph name="pencil" />} onClick={() => onEdit(m)}>
               编辑
             </Button>
           </Space>
@@ -252,7 +252,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
                 <span className="num">{revealed ?? m.contact_phone ?? '未登记'}</span>
                 {m.contact_phone && !revealed && can('merchant.reveal_phone') && (
                   <Tooltip title="查看完整号码会记入审计日志">
-                    <Button size="small" icon={<EyeOutlined />} loading={reveal.isPending} onClick={() => reveal.mutate(m.id)}>
+                    <Button size="small" icon={<Glyph name="eye" size={14} />} loading={reveal.isPending} onClick={() => reveal.mutate(m.id)}>
                       查看完整号码
                     </Button>
                   </Tooltip>
@@ -307,7 +307,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
             <div className="mer-h3-row">
               <h3 className="mer-h3">投放点 · {m.drops.length}</h3>
               <Link to={`/merchant/drops?merchant_id=${m.id}`}>
-                <LinkOutlined /> 去投放页新建 / 管理
+                <Glyph name="link" size="1em" /> 去投放页新建 / 管理
               </Link>
             </div>
             {m.drops.length === 0 ? (
@@ -337,7 +337,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
             <div className="mer-h3-row">
               <h3 className="mer-h3">员工账号 · {m.staff.length}</h3>
               {can('merchant.staff') ? (
-                <Button size="small" icon={<UserAddOutlined />} onClick={() => setStaffOpen(true)}>
+                <Button size="small" icon={<Glyph name="userPlus" size={14} />} onClick={() => setStaffOpen(true)}>
                   新建员工账号
                 </Button>
               ) : (

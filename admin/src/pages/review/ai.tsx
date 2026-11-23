@@ -1,9 +1,9 @@
 // AI verdict pieces for the 内容审核 queue (docs/api/v2-3-AI.md 「内容审核升级」).
 import { Tag, Tooltip } from 'antd';
-import { RobotOutlined } from '@ant-design/icons';
 import type { ReviewAI, ReviewTask } from '../../api/types';
 import { AI_LABEL, AI_SUGGESTION } from '../../utils/labels';
 import { RiskBadge } from './shared';
+import { Glyph } from '../../components/Glyph';
 
 export function SuggestionTag({ s }: { s: string }) {
   const x = AI_SUGGESTION[s] ?? { text: s, color: 'default' };
@@ -20,7 +20,7 @@ export function AIChip({ ai }: { ai: ReviewAI | null | undefined }) {
   const x = AI_SUGGESTION[ai.suggestion] ?? { text: ai.suggestion, color: 'default' };
   return (
     <Tooltip title={`${ai.model_name} 判定 · 置信度 ${Math.round(ai.confidence * 100)}%`}>
-      <Tag bordered={false} color={x.color} icon={<RobotOutlined />} style={{ marginInlineEnd: 0 }} className="num">
+      <Tag bordered={false} color={x.color} icon={<Glyph name="quan" size={12} />} style={{ marginInlineEnd: 0 }} className="num">
         AI {ai.risk_score} · {x.text.replace('建议', '')}
       </Tag>
     </Tooltip>
@@ -34,7 +34,7 @@ export function AIVerdict({ t }: { t: ReviewTask }) {
     return (
       <div className="panel ai-box" style={{ padding: 14, height: '100%' }}>
         <b>
-          <RobotOutlined /> AI 判定
+          <Glyph name="quan" size="1em" /> AI 判定
         </b>
         <div className="muted" style={{ fontSize: 13, padding: '6px 0' }}>
           {t.ai === undefined ? '服务端没有返回 AI 判定字段' : '没有 AI 判定：AI 审核未开启，或这次调用超时 / 失败，已先按规则分处理，后台会补打分'}
@@ -47,7 +47,7 @@ export function AIVerdict({ t }: { t: ReviewTask }) {
     <div className="panel ai-box" style={{ padding: 14, height: '100%' }} aria-label="AI 判定">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <b>
-          <RobotOutlined /> AI 判定
+          <Glyph name="quan" size="1em" /> AI 判定
         </b>
         <RiskBadge score={ai.risk_score} />
         <SuggestionTag s={ai.suggestion} />

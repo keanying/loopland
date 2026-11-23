@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Dropdown, Tag, Tooltip } from 'antd';
-import { ArrowDownOutlined, ArrowUpOutlined, ExclamationCircleOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_LABEL } from '../utils/labels';
 import { MOCK } from '../config';
 import { InboxBell } from './Inbox';
+import { Glyph } from './Glyph';
 
 export function MeChip() {
   const { admin, logout } = useAuth();
@@ -14,7 +14,7 @@ export function MeChip() {
   return (
     <Dropdown
       menu={{
-        items: [{ key: 'logout', icon: <LogoutOutlined />, label: '退出登录' }],
+        items: [{ key: 'logout', icon: <Glyph name="logout" size="1em" />, label: '退出登录' }],
         onClick: () => {
           logout();
           navigate('/login');
@@ -43,7 +43,7 @@ export function MeChip() {
 export function InfoTip({ children, label = '说明' }: { children: ReactNode; label?: string }) {
   return (
     <Tooltip title={children} placement="bottomLeft" styles={{ root: { maxWidth: 420 } }} trigger={['hover', 'click']}>
-      <ExclamationCircleOutlined className="info-tip" role="button" tabIndex={0} aria-label={label} />
+      <Glyph name="alert" size="1em" className="info-tip" role="button" tabIndex={0} aria-label={label} />
     </Tooltip>
   );
 }
@@ -79,7 +79,7 @@ export function Delta({ ratio, invert = false, suffix = '较上周同期' }: { r
   const good = invert ? !up : up;
   return (
     <span className={good ? 'delta-up' : 'delta-down'}>
-      {up ? <ArrowUpOutlined /> : <ArrowDownOutlined />} {up ? '+' : ''}
+      {up ? <Glyph name="arrowUp" size="1em" /> : <Glyph name="arrowDown" size="1em" />} {up ? '+' : ''}
       {(ratio * 100).toFixed(1)}% <span className="muted">{suffix}</span>
     </span>
   );

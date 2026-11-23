@@ -7,7 +7,8 @@ import { Button, Segmented, Space, Switch, Table, Tooltip } from 'antd';
 import { api, PAGE_SIZE } from '../api/admin';
 import type { AdminMessage, MessageCategory } from '../api/types';
 import { EmptyMessages } from '../components/Inbox';
-import { CategoryIcon, IconArrowRight, IconCheckAll } from '../components/icons';
+import { CategoryIcon } from '../components/icons';
+import { Glyph } from '../components/Glyph';
 import { PageHeader, Panel } from '../components/ui';
 import { MESSAGES_KEY, useMessageActions, useOpenMessage, useUnreadCount } from '../hooks/useMessages';
 import { ago, dt } from '../utils/format';
@@ -55,7 +56,7 @@ export default function MessagesPage() {
               只看未读
             </label>
             <Button
-              icon={<IconCheckAll size={16} />}
+              icon={<Glyph name="checkAll" size={16} />}
               disabled={!unreadHere}
               loading={readAll.isPending}
               onClick={() => readAll.mutate(category, { onSuccess: (r) => toastOk(r.updated ? `已将 ${r.updated} 条标为已读` : '没有未读消息') })}
@@ -142,7 +143,7 @@ export default function MessagesPage() {
                   )}
                   {m.link && (
                     <Tooltip title="打开">
-                      <Button size="small" type="text" aria-label="打开" icon={<IconArrowRight size={16} />} onClick={() => open(m)} />
+                      <Button size="small" type="text" aria-label="打开" icon={<Glyph name="arrowRight" size={16} />} onClick={() => open(m)} />
                     </Tooltip>
                   )}
                 </Space>

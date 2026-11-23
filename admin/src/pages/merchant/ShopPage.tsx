@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Col, ColorPicker, DatePicker, Form, Image, Input, InputNumber, Modal, Row, Segmented, Select, Space, Switch, Table, Tag, Tooltip } from 'antd';
-import { PlusOutlined, ThunderboltFilled } from '@ant-design/icons';
 import type { Color } from 'antd/es/color-picker';
 import type { Dayjs } from 'dayjs';
 import { perksApi, type ShopItem, type ShopItemInput, type ShopItemType } from '../../api/perks';
@@ -16,6 +15,7 @@ import { toastOk } from '../../utils/notify';
 import { MerchantNav } from './nav';
 import { SHOP_TYPE, SKIN_PATTERNS } from './perkLabels';
 import { SkinSwatch } from './perkShared';
+import { Glyph } from '../../components/Glyph';
 
 const TYPES = Object.keys(SHOP_TYPE) as ShopItemType[];
 const ENERGY_RULE = '能量只能通过运动获得，不能充值、不能转让；商城只能用能量兑换，没有任何付费入口。';
@@ -23,7 +23,7 @@ const ENERGY_RULE = '能量只能通过运动获得，不能充值、不能转�
 function Energy({ n }: { n: number }) {
   return (
     <span className="num" style={{ whiteSpace: 'nowrap' }}>
-      <ThunderboltFilled style={{ color: '#D99A0B' }} /> {num(n)}
+      <Glyph name="bolt" size="1em" style={{ color: '#D99A0B' }} /> {num(n)}
     </span>
   );
 }
@@ -65,7 +65,7 @@ export default function ShopPage() {
     <>
       <PageHeader title="商户与活动" sub="能量商城 · 用运动攒下的能量换领地皮肤、头像框、地图标记" extra={<MerchantNav />} />
       <div className="energy-note" role="note">
-        <ThunderboltFilled style={{ color: '#7A8F12', fontSize: 18 }} />
+        <Glyph name="bolt" size={18} style={{ color: '#7A8F12' }} />
         <span>
           <b>能量不能购买、不能转让。</b>
           {ENERGY_RULE}
@@ -88,7 +88,7 @@ export default function ShopPage() {
       <Panel
         title="商品"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} disabled={!writable} onClick={() => setEditing('new')}>
+          <Button type="primary" icon={<Glyph name="plus" />} disabled={!writable} onClick={() => setEditing('new')}>
             新建商品
           </Button>
         }
@@ -291,7 +291,7 @@ function ShopItemModal({ value, onClose }: { value: ShopItem | 'new' | null; onC
               </Col>
               <Col span={10}>
                 <Form.Item name="price_energy" label="价格（能量）" rules={[{ required: true, message: '请填写价格' }]}>
-                  <InputNumber className="num" min={1} max={100000} step={50} prefix={<ThunderboltFilled style={{ color: '#D99A0B' }} />} style={{ width: '100%' }} />
+                  <InputNumber className="num" min={1} max={100000} step={50} prefix={<Glyph name="bolt" size={14} style={{ color: '#D99A0B' }} />} style={{ width: '100%' }} />
                 </Form.Item>
               </Col>
             </Row>

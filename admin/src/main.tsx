@@ -7,6 +7,7 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { ApiError } from './api/client';
 import { AuthProvider } from './auth/AuthContext';
 import { theme } from './theme';
+import { ANTD_ICON_CONFIG, installAntdIconSkin } from './components/antdIcons';
 import { toastError } from './utils/notify';
 import App from './App';
 import './utils/format';
@@ -26,9 +27,11 @@ const queryClient = new QueryClient({
   },
 });
 
+installAntdIconSkin();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ConfigProvider locale={zhCN} theme={theme} button={{ autoInsertSpace: false }}>
+    <ConfigProvider locale={zhCN} theme={theme} button={{ autoInsertSpace: false }} {...ANTD_ICON_CONFIG}>
       <AntApp>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

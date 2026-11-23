@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Col, Drawer, Empty, Row, Segmented, Skeleton, Space, Table, Tag, Tooltip } from 'antd';
-import { EnvironmentOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { BossDetail, BossListItem, BossReward, BossStatus, RewardItem } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
@@ -14,6 +13,7 @@ import { dt, num } from '../../utils/format';
 import { BOSS_STATUS, DROP_KIND, SPORT_LABEL, UNIT_LABEL } from '../../utils/labels';
 import { toastOk } from '../../utils/notify';
 import { BRAND } from '../../theme';
+import { Glyph } from '../../components/Glyph';
 
 function rewardText(it: RewardItem | string): string {
   if (typeof it === 'string') return it;
@@ -84,7 +84,7 @@ export default function BossesTab() {
               ]}
             />
             <Link to="/territories">
-              <Button icon={<EnvironmentOutlined />}>去地图召唤</Button>
+              <Button icon={<Glyph name="pin" />}>去地图召唤</Button>
             </Link>
           </Space>
         }

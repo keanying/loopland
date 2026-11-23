@@ -2,17 +2,17 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Alert, Drawer, Empty, Image, Pagination, Skeleton, Tag } from 'antd';
-import { CompassOutlined, EnvironmentOutlined, RobotOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { AICard, AIMessage } from '../../api/types';
 import { dt, km } from '../../utils/format';
+import { Glyph } from '../../components/Glyph';
 
 function Card({ c }: { c: AICard }) {
   if (c.type === 'route' && 'route' in c) {
     const r = c.route as { title: string; subtitle?: string; distance_m?: number };
     return (
       <div className="chat-card">
-        <CompassOutlined /> <b>路线卡片 · {r.title}</b>
+        <Glyph name="route" size="1em" /> <b>路线卡片 · {r.title}</b>
         {r.distance_m ? <span className="muted"> · {km(r.distance_m)}</span> : null}
         {r.subtitle && <div className="muted">{r.subtitle}</div>}
       </div>
@@ -22,7 +22,7 @@ function Card({ c }: { c: AICard }) {
     const t = c.territory as { name: string; guard?: number };
     return (
       <div className="chat-card">
-        <EnvironmentOutlined /> <b>领地卡片 · {t.name}</b>
+        <Glyph name="pin" size="1em" /> <b>领地卡片 · {t.name}</b>
         {t.guard !== undefined && <span className="muted"> · 守卫值 {t.guard}</span>}
       </div>
     );
@@ -31,7 +31,7 @@ function Card({ c }: { c: AICard }) {
     const b = c.boss as { name: string; hp?: number; max_hp?: number };
     return (
       <div className="chat-card">
-        <ThunderboltOutlined /> <b>怪兽卡片 · {b.name}</b>
+        <Glyph name="monster" size="1em" /> <b>怪兽卡片 · {b.name}</b>
         {b.hp !== undefined && b.max_hp ? <span className="muted"> · 血量 {b.hp}/{b.max_hp}</span> : null}
       </div>
     );
@@ -44,7 +44,7 @@ function Bubble({ m }: { m: AIMessage }) {
     <div className={`chat-msg ${m.role}${m.deleted ? ' deleted' : ''}`}>
       {m.role === 'assistant' && (
         <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 2 }}>
-          <RobotOutlined /> 圈圈
+          <Glyph name="quan" size="1em" /> 圈圈
         </div>
       )}
       {m.content}

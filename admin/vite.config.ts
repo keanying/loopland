@@ -64,7 +64,7 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             react: ['react', 'react-dom', 'react-router-dom'],
-            antd: ['antd', '@ant-design/icons'],
+            antd: ['antd'],
             echarts: ['echarts', 'echarts-for-react'],
           },
         },

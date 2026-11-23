@@ -7,7 +7,6 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import { Alert, App, Badge, Button, Col, DatePicker, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Row, Segmented, Select, Space, Switch, Table, Tag, Tooltip } from 'antd';
-import { CheckOutlined, CloseOutlined, EditOutlined, PlusOutlined, RocketOutlined, StopOutlined } from '@ant-design/icons';
 import { commerceApi, type EntryStatus, type Promotion, type PromotionEntry, type PromotionInput, type PromotionStatus } from '../../api/commerce';
 import { SingleImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel } from '../../components/ui';
@@ -19,6 +18,7 @@ import { EntryStatusTag, PriceText, PromotionStatusTag } from './commerceShared'
 import { MerchantNav } from './nav';
 import { ProductThumb } from './ProductsPage';
 import { toFen, toYuan, urlParams } from './util';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 const LIVE: EntryStatus[] = ['active', 'pending_merchant', 'pending_platform'];
@@ -84,17 +84,17 @@ export default function PromotionsPage() {
   const stateButtons = (p: Promotion, size: 'small' | 'middle' = 'small') => (
     <Space size={6} onClick={(e) => e.stopPropagation()}>
       {!['ended', 'cancelled'].includes(p.status) && (
-        <Button size={size} icon={<EditOutlined />} onClick={() => setEditing(p)}>
+        <Button size={size} icon={<Glyph name="pencil" size={size === 'small' ? 14 : 16} />} onClick={() => setEditing(p)}>
           编辑
         </Button>
       )}
       {p.status === 'draft' && (
-        <Button size={size} type="primary" icon={<RocketOutlined />} onClick={() => confirmState(p, 'publish')}>
+        <Button size={size} type="primary" icon={<Glyph name="megaphone" size={size === 'small' ? 14 : 16} />} onClick={() => confirmState(p, 'publish')}>
           发布
         </Button>
       )}
       {['draft', 'scheduled', 'active'].includes(p.status) && (
-        <Button size={size} danger icon={<StopOutlined />} onClick={() => confirmState(p, 'cancel')}>
+        <Button size={size} danger icon={<Glyph name="block" size={size === 'small' ? 14 : 16} />} onClick={() => confirmState(p, 'cancel')}>
           取消
         </Button>
       )}
@@ -117,7 +117,7 @@ export default function PromotionsPage() {
               onChange={(v) => update({ status: String(v) || null, page: null })}
               options={[{ label: '全部', value: '' }, ...PROMOTION_STATUS_ORDER.map((s) => ({ label: PROMOTION_STATUS[s].text, value: s }))]}
             />
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
+            <Button type="primary" icon={<Glyph name="plus" />} onClick={() => setEditing('new')}>
               新建活动
             </Button>
           </Space>
@@ -284,7 +284,7 @@ function PromotionDrawer({ id, initialEntryStatus, onClose, extra }: { id: numbe
                   ]}
                 />
                 {editable && (
-                  <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setAdding(true)}>
+                  <Button type="primary" size="small" icon={<Glyph name="plus" size={14} />} onClick={() => setAdding(true)}>
                     添加商品
                   </Button>
                 )}
@@ -371,17 +371,17 @@ function PromotionDrawer({ id, initialEntryStatus, onClose, extra }: { id: numbe
                       <Space size={4}>
                         {e.status === 'pending_platform' && (
                           <>
-                            <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => setDialog({ kind: 'approve', e })}>
+                            <Button size="small" type="primary" icon={<Glyph name="check" size={14} />} onClick={() => setDialog({ kind: 'approve', e })}>
                               通过
                             </Button>
-                            <Button size="small" danger icon={<CloseOutlined />} onClick={() => setDialog({ kind: 'reject', e })}>
+                            <Button size="small" danger icon={<Glyph name="close" size={14} />} onClick={() => setDialog({ kind: 'reject', e })}>
                               驳回
                             </Button>
                           </>
                         )}
                         {(e.status === 'active' || e.status === 'pending_merchant') && (
                           <>
-                            <Button size="small" icon={<EditOutlined />} onClick={() => setDialog({ kind: 'edit', e })}>
+                            <Button size="small" icon={<Glyph name="pencil" size={14} />} onClick={() => setDialog({ kind: 'edit', e })}>
                               补贴 / 排序
                             </Button>
                             <Button size="small" danger onClick={() => setDialog({ kind: 'remove', e })}>

@@ -25,7 +25,6 @@ import {
   TimePicker,
   Tooltip,
 } from 'antd';
-import { AimOutlined, DownloadOutlined, EditOutlined, PlusOutlined, QrcodeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { merchantApi, type Venue, type VenueInput, type VenueSport } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import { SingleImageUpload } from '../../components/ImageUpload';
@@ -37,6 +36,7 @@ import { MerchantNav } from './nav';
 import { PointPicker } from './shared';
 import { discountText, urlParams, useMerchantOptions } from './util';
 import { downloadVenueQr, qrDataUrl } from './qr';
+import { Glyph } from '../../components/Glyph';
 
 const PAGE = 20;
 const DISTRICTS = ['浦东新区', '黄浦区', '徐汇区', '长宁区', '静安区', '普陀区', '虹口区', '杨浦区', '闵行区', '宝山区', '嘉定区', '金山区', '松江区', '青浦区', '奉贤区', '崇明区'];
@@ -75,7 +75,7 @@ export default function VenuesPage() {
           <Space wrap>
             <Input
               allowClear
-              prefix={<SearchOutlined />}
+              prefix={<Glyph name="search" />}
               placeholder="场馆名称、地址或城区"
               style={{ width: 210 }}
               value={kw}
@@ -105,7 +105,7 @@ export default function VenuesPage() {
               options={VENUE_SPORTS.map((s) => ({ value: s, label: VENUE_SPORT[s] }))}
             />
             {can('venue.write') && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
+              <Button type="primary" icon={<Glyph name="plus" />} onClick={() => setEditing('new')}>
                 新建场馆
               </Button>
             )}
@@ -182,11 +182,11 @@ export default function VenuesPage() {
               fixed: 'right',
               render: (_, v) => (
                 <Space onClick={(e) => e.stopPropagation()}>
-                  <Button size="small" icon={<QrcodeOutlined />} onClick={() => update({ id: v.id })}>
+                  <Button size="small" icon={<Glyph name="qr" size={14} />} onClick={() => update({ id: v.id })}>
                     二维码
                   </Button>
                   {can('venue.write') && (
-                    <Button size="small" icon={<EditOutlined />} onClick={() => setEditing(v)}>
+                    <Button size="small" icon={<Glyph name="pencil" size={14} />} onClick={() => setEditing(v)}>
                       编辑
                     </Button>
                   )}
@@ -215,7 +215,7 @@ function VenueDrawer({ venue, open, loading, onClose, onEdit }: { venue: Venue |
       extra={
         venue &&
         can('venue.write') && (
-          <Button icon={<EditOutlined />} onClick={() => onEdit(venue)}>
+          <Button icon={<Glyph name="pencil" />} onClick={() => onEdit(venue)}>
             编辑
           </Button>
         )
@@ -232,7 +232,7 @@ function VenueDrawer({ venue, open, loading, onClose, onEdit }: { venue: Venue |
             <Descriptions.Item label="地址" span="filled">
               {placeText(venue)}
               <div className="muted num" style={{ fontSize: 12 }}>
-                <AimOutlined /> {venue.center.lat.toFixed(6)}, {venue.center.lng.toFixed(6)} · 签到半径 {venue.checkin_radius_m} m
+                <Glyph name="locate" size="1em" /> {venue.center.lat.toFixed(6)}, {venue.center.lng.toFixed(6)} · 签到半径 {venue.checkin_radius_m} m
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="预订">{venue.bookable ? `${yuan(venue.price_amt)}/小时 · 每段 ${venue.slot_minutes ?? 60} 分钟 · ${venue.court_qty ?? '—'} 片场` : '不开放预订'}</Descriptions.Item>
@@ -293,7 +293,7 @@ function VenueQrCard({ venue }: { venue: Venue }) {
       <Space wrap style={{ justifyContent: 'center', width: '100%' }}>
         <Button
           type="primary"
-          icon={<DownloadOutlined />}
+          icon={<Glyph name="download" />}
           disabled={!text}
           loading={downloading}
           onClick={async () => {
@@ -312,7 +312,7 @@ function VenueQrCard({ venue }: { venue: Venue }) {
         {can('venue.write') && (
           <Button
             danger
-            icon={<ReloadOutlined />}
+            icon={<Glyph name="refresh" />}
             loading={rotate.isPending}
             onClick={() =>
               modal.confirm({
@@ -564,7 +564,7 @@ function VenueForm({ value, onClose }: { value: Venue | 'new' | null; onClose: (
           <Col xs={24} lg={11}>
             <b>位置与签到范围</b>
             <div className="muted" style={{ fontSize: 12, margin: '2px 0 8px' }}>
-              <AimOutlined /> 在地图上点击选点（参考周边领地），或直接填坐标（GCJ-02）
+              <Glyph name="locate" size="1em" /> 在地图上点击选点（参考周边领地），或直接填坐标（GCJ-02）
             </div>
             <Row gutter={8}>
               <Col span={12}>
