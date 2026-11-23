@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/billing"
 	"github.com/keanying/loopland/server/internal/gameplay"
 	"github.com/keanying/loopland/server/internal/moderation"
@@ -36,6 +37,8 @@ type Service struct {
 	Billing *billing.Service
 	Config  *gameplay.Store
 	Log     *slog.Logger
+	// Msg sends 管理端站内信 (review results, promotions, refunds).
+	Msg *adminmsg.Notifier
 }
 
 // Ref is {id, name}.
@@ -829,8 +832,33 @@ func (s *Service) Ban(ctx context.Context, tx pgx.Tx, id int64, reason string) e
 	}
 	_, err = tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET product_status='banned', review_note=$2, pending_content_json=NULL, is_content_approved=false,
 		update_time=now() WHERE id=$1`, id, reason)
-	return err
+	if err != nil {
+		return err
+	}
+	b, err := brief(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	s.Msg.ToMerchant(ctx, b.merchantID, adminmsg.Msg{Category: adminmsg.CatProduct, Level: adminmsg.Error,
+		Title: "商品「" + b.title + "」已被平台下架：" + reason, Body: "下架原因：" + reason + "。修改后可重新提交审核。",
+		Link: productLink(id), RefType: "product", RefID: id})
+	return nil
 }
+
+// productBrief names a product in messages.
+type productBrief struct {
+	title, merchantName string
+	merchantID          int64
+}
+
+func brief(ctx context.Context, q db.Querier, id int64) (productBrief, error) {
+	var b productBrief
+	err := q.QueryRow(ctx, `SELECT p.product_title, m.merchant_name, m.id FROM src.src_mer_loop_product p JOIN src.src_mer_loop_merchant m ON m.id=p.merchant_id
+		WHERE p.id=$1`, id).Scan(&b.title, &b.merchantName, &b.merchantID)
+	return b, err
+}
+
+func productLink(id int64) string { return fmt.Sprintf("/merchant/products?id=%d", id) }
 
 // ---------------------------------------------------------------- review
 
@@ -863,7 +891,33 @@ func (s *Service) review(ctx context.Context, tx pgx.Tx, id int64, c Content, pe
 			return err
 		}
 	}
-	return s.Mod.File(ctx, tx, moderation.Product, id, 0, c.text(), c.Images, sc, outcome)
+	if err := s.Mod.File(ctx, tx, moderation.Product, id, 0, c.text(), c.Images, sc, outcome); err != nil {
+		return err
+	}
+	if outcome == moderation.OutcomeReview {
+		return s.notifyReview(ctx, tx, id, c.Title, pending)
+	}
+	return nil
+}
+
+// notifyReview tells the platform (reviewers included) a product waits
+// in the review queue.
+func (s *Service) notifyReview(ctx context.Context, q db.Querier, id int64, title string, change bool) error {
+	b, err := brief(ctx, q, id)
+	if err != nil {
+		return err
+	}
+	if title == "" {
+		title = b.title
+	}
+	body := "新商品待审核，请在「审核」里处理。"
+	if change {
+		body = "在售商品修改了内容，待审核；审核前仍按原内容售卖。"
+	}
+	s.Msg.ToPlatform(ctx, adminmsg.Msg{Category: adminmsg.CatReview, Level: adminmsg.Info,
+		Title: "商户「" + b.merchantName + "」提交了商品「" + title + "」，待审核", Body: body,
+		Link: "/review?type=product", RefType: "product", RefID: id}, true)
+	return nil
 }
 
 // approve applies a passed review: pending changes replace the content; a
@@ -894,17 +948,50 @@ func (s *Service) approve(ctx context.Context, tx pgx.Tx, id int64) error {
 			review_note=CASE WHEN product_status='reviewing' THEN NULL ELSE review_note END, update_time=now() WHERE id=$1`, id); err != nil {
 		return err
 	}
+	if status == "reviewing" || pending != nil {
+		b, err := brief(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		m := adminmsg.Msg{Category: adminmsg.CatProduct, Level: adminmsg.Success, Title: "商品「" + b.title + "」审核通过，已上架",
+			Body: "用户现在可以在 App 里看到并购买。", Link: productLink(id), RefType: "product", RefID: id}
+		if status != "reviewing" {
+			m.Title, m.Body = "商品「"+b.title+"」的修改已生效", "新的标题、图片和说明已经在 App 里展示。"
+		}
+		s.Msg.ToMerchant(ctx, b.merchantID, m)
+	}
 	return s.emitReviewed(ctx, tx, id, "approved", "")
 }
 
 // reject applies a failed review: a product under review is rejected, a
 // pending change is discarded; review_note says why.
 func (s *Service) reject(ctx context.Context, tx pgx.Tx, id int64, reason string) error {
-	tag, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET
-			product_status=CASE WHEN product_status='reviewing' THEN 'rejected' ELSE product_status END,
-			pending_content_json=NULL, review_note=$2, update_time=now() WHERE id=$1`, id, reason)
-	if err != nil || tag.RowsAffected() == 0 {
+	var status string
+	var hadPending bool
+	err := tx.QueryRow(ctx, `SELECT product_status, pending_content_json IS NOT NULL FROM src.src_mer_loop_product WHERE id=$1 FOR UPDATE`, id).
+		Scan(&status, &hadPending)
+	if db.IsNoRows(err) {
+		return nil
+	}
+	if err != nil {
 		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET
+			product_status=CASE WHEN product_status='reviewing' THEN 'rejected' ELSE product_status END,
+			pending_content_json=NULL, review_note=$2, update_time=now() WHERE id=$1`, id, reason); err != nil {
+		return err
+	}
+	if status == "reviewing" || hadPending {
+		b, err := brief(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		m := adminmsg.Msg{Category: adminmsg.CatProduct, Level: adminmsg.Warning, Title: "商品「" + b.title + "」未通过审核：" + reason,
+			Body: "原因：" + reason + "。修改后可重新提交审核。", Link: productLink(id), RefType: "product", RefID: id}
+		if status != "reviewing" {
+			m.Title, m.Body = "商品「"+b.title+"」的修改未通过："+reason, "原因："+reason+"。商品仍按原内容在售，可修改后重新提交。"
+		}
+		s.Msg.ToMerchant(ctx, b.merchantID, m)
 	}
 	return s.emitReviewed(ctx, tx, id, "rejected", reason)
 }
@@ -932,8 +1019,11 @@ func (s *Service) Applier() moderation.Applier {
 			return s.reject(ctx, tx, id, reason)
 		},
 		Pend: func(ctx context.Context, tx pgx.Tx, id int64) error {
-			_, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET product_status='reviewing', update_time=now() WHERE id=$1 AND product_status='on_sale'`, id)
-			return err
+			tag, err := tx.Exec(ctx, `UPDATE src.src_mer_loop_product SET product_status='reviewing', update_time=now() WHERE id=$1 AND product_status='on_sale'`, id)
+			if err != nil || tag.RowsAffected() == 0 {
+				return err
+			}
+			return s.notifyReview(ctx, tx, id, "", false)
 		},
 	}
 }

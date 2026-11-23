@@ -36,12 +36,16 @@ func qInt(r *http.Request, k string) int64 {
 }
 
 func readBody(r *http.Request, limit int64) ([]byte, error) {
+	return readBodyOr(r, limit, httpx.BadRequest("invalid_body", "请求体太大"))
+}
+
+func readBodyOr(r *http.Request, limit int64, tooLarge error) ([]byte, error) {
 	b, err := io.ReadAll(io.LimitReader(r.Body, limit+1))
 	if err != nil {
 		return nil, err
 	}
 	if int64(len(b)) > limit {
-		return nil, httpx.BadRequest("invalid_body", "请求体太大")
+		return nil, tooLarge
 	}
 	return b, nil
 }
@@ -151,11 +155,17 @@ func ipAllowed(list []string, ip string) bool {
 // guard authenticates a signed call and checks the scope, then runs h.
 // Every call of a known app is logged (without the body).
 func (s *Service) guard(scope string, h httpx.HandlerFunc) http.Handler {
+	return s.guardBody(scope, maxBody, httpx.BadRequest("invalid_body", "请求体太大"), h)
+}
+
+// guardBody is guard with another body limit (uploads): the whole raw body
+// is read and signed, tooLarge is returned past limit.
+func (s *Service) guardBody(scope string, limit int64, tooLarge error, h httpx.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rec := &recorder{ResponseWriter: w}
 		var app *App
-		err := s.authenticate(rec, r, scope, &app, h)
+		err := s.authenticate(rec, r, scope, limit, tooLarge, &app, h)
 		if err != nil {
 			if he, ok := err.(*httpx.Error); ok && he.Status == http.StatusTooManyRequests {
 				rec.Header().Set("Retry-After", strconv.Itoa(60-int(s.now().Unix()%60)))
@@ -180,7 +190,7 @@ func (s *Service) guard(scope string, h httpx.HandlerFunc) http.Handler {
 	})
 }
 
-func (s *Service) authenticate(w *recorder, r *http.Request, scope string, out **App, h httpx.HandlerFunc) error {
+func (s *Service) authenticate(w *recorder, r *http.Request, scope string, limit int64, tooLarge error, out **App, h httpx.HandlerFunc) error {
 	ctx := r.Context()
 	appID, ts, nonce, sig := r.Header.Get("X-Loop-App-Id"), r.Header.Get("X-Loop-Timestamp"), r.Header.Get("X-Loop-Nonce"), r.Header.Get("X-Loop-Signature")
 	if appID == "" || ts == "" || nonce == "" || sig == "" {
@@ -204,7 +214,7 @@ func (s *Service) authenticate(w *recorder, r *http.Request, scope string, out *
 	if len(nonce) < 16 || len(nonce) > 64 {
 		return errInvalidSignature
 	}
-	body, err := readBody(r, maxBody)
+	body, err := readBodyOr(r, limit, tooLarge)
 	if err != nil {
 		return err
 	}

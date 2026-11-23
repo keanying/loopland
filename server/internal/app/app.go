@@ -20,6 +20,7 @@ import (
 
 	"github.com/keanying/loopland/server/internal/activity"
 	"github.com/keanying/loopland/server/internal/admin"
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/ai"
 	"github.com/keanying/loopland/server/internal/auth"
 	"github.com/keanying/loopland/server/internal/billing"
@@ -124,7 +125,9 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	terrSvc := &territory.Service{Pool: pool, Config: store}
 	hub := &realtime.Hub{Redis: rdb, Log: log, Auth: authSvc.Parse, AllowOrigin: originAllowed(cfg)}
 	// 本地生活 part B: drops, coupons, redemptions, brand campaigns, statements.
-	perksSvc := &perks.Service{Pool: pool, Log: log, QRKey: perks.DeriveKey(cfg.DataKey)}
+	// 管理端站内信 (第六批): written after the business transaction commits.
+	notifier := &adminmsg.Notifier{Pool: pool, Log: log}
+	perksSvc := &perks.Service{Pool: pool, Log: log, QRKey: perks.DeriveKey(cfg.DataKey), Msg: notifier}
 	playSvc := &play.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Log: log, Perks: perksSvc}
 	// 社区 part B: chat, meetups, rallies (settlement bonus), races.
 	commSvc := &community.Service{Pool: pool, Redis: rdb, Config: store, Hub: hub, Mod: mod, Log: log}
@@ -147,12 +150,16 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	commSvc.MeetupCancelled = venueSvc.CancelMeetupBookings
 	billSvc.Register(billing.BizRaceFee, commSvc.RaceFeeFulfiller())
 	// 第五批: merchant products and promotions; the open platform and webhooks.
-	productSvc := &product.Service{Pool: pool, Mod: mod, Billing: billSvc, Config: store, Log: log}
+	productSvc := &product.Service{Pool: pool, Mod: mod, Billing: billSvc, Config: store, Log: log, Msg: notifier}
 	mod.Register(moderation.Product, productSvc.Applier())
 	billSvc.Register(billing.BizProduct, productSvc.Fulfiller())
 	venueSvc.Products = productSvc
-	hooks := &webhook.Dispatcher{Pool: pool, Box: box, Log: log, AllowPrivate: cfg.Dev()}
-	openSvc := &openapi.Service{Pool: pool, Redis: rdb, Box: box, Webhooks: hooks, Products: productSvc, Perks: perksSvc, Venues: venueSvc, Dev: cfg.Dev()}
+	hooks := &webhook.Dispatcher{Pool: pool, Box: box, Log: log, AllowPrivate: cfg.Dev(), Msg: notifier}
+	// Uploads: app (/v1/media), back office (/admin/v1/media), open platform (/open/v1/media).
+	mediaH := &media.Handler{Pool: pool, Remote: func() media.Store { return reg.Current().Media }, Dev: cfg.Dev(),
+		Local: media.Local{Dir: cfg.MediaDir, BaseURL: cfg.PublicBaseURL}}
+	openSvc := &openapi.Service{Pool: pool, Redis: rdb, Box: box, Webhooks: hooks, Products: productSvc, Perks: perksSvc, Venues: venueSvc, Dev: cfg.Dev(),
+		Media: mediaH, Msg: notifier}
 	userH := &user.Handler{Pool: pool, Config: store, Box: box, Realname: opt.Realname, Mod: mod}
 
 	mux := http.NewServeMux()
@@ -200,8 +207,9 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 	(&community.AdminHandler{Svc: commSvc, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin, admin.RoleOps))
 	(&providers.AdminHandler{Reg: reg, Audit: admin.Audit}).Routes(mux, adminAPI.Guard(admin.RoleAdmin))
 	// 社区 part A: uploads, profiles, posts, comments, reports, replays, review queue.
-	(&media.Handler{Pool: pool, Remote: func() media.Store { return reg.Current().Media }, Dev: cfg.Dev(),
-		Local: media.Local{Dir: cfg.MediaDir, BaseURL: cfg.PublicBaseURL}}).Routes(mux, authed)
+	mediaH.Routes(mux, authed)
+	mediaH.AdminRoutes(mux, adminAPI.Guard())
+	(&adminmsg.Handler{Notifier: notifier}).Routes(mux, adminAPI.Guard())
 	socSvc := &social.Service{Pool: pool, Redis: rdb, Config: store, Mod: mod, ShareBase: cfg.PublicBaseURL}
 	(&social.Handler{Svc: socSvc}).Routes(mux, authed)
 	(&social.AdminHandler{Svc: socSvc, Audit: admin.Audit, RemoveMessage: commSvc.RemoveMessage}).Routes(mux,
@@ -229,8 +237,8 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 
 	return &App{
 		Handler: withMiddleware(cors(mux, cfg), log),
-		Jobs: &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: mergeJobs(playSvc.Jobs(), commSvc.Jobs(), aiSvc.Jobs(), perksSvc.Jobs(),
-			venueSvc.Jobs(), productSvc.Jobs(), hooks.Jobs())},
+		Jobs: &jobs.Runner{Pool: pool, Billing: billSvc, Config: store, Log: log, Extra: adminmsg.WrapJobs(mergeJobs(playSvc.Jobs(), commSvc.Jobs(),
+			aiSvc.Jobs(), perksSvc.Jobs(), venueSvc.Jobs(), productSvc.Jobs(), hooks.Jobs(), notifier.Jobs()))},
 		Hub:    hub,
 		Play:   playSvc,
 		Config: store, Pool: pool, Redis: rdb,
@@ -362,7 +370,11 @@ func withMiddleware(next http.Handler, log *slog.Logger) http.Handler {
 			}
 		}()
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		next.ServeHTTP(sw, r)
+		// 管理端站内信 queued by the request are written once it succeeded
+		// (its transactions committed), dropped when it failed.
+		ctx := adminmsg.WithOutbox(r.Context())
+		next.ServeHTTP(sw, r.WithContext(ctx))
+		adminmsg.Settle(ctx, sw.status < http.StatusBadRequest)
 	})
 }
 

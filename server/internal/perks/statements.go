@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/keanying/loopland/server/internal/adminmsg"
 	"github.com/keanying/loopland/server/internal/platform/clock"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
@@ -178,6 +179,7 @@ func (s *Service) Generate(ctx context.Context, start time.Time, failIfExists bo
 		return nil, httpx.BadRequest("invalid_period", "这一周还没结束")
 	}
 	var ids []int64
+	var created []Statement
 	err := pgx.BeginFunc(ctx, s.Pool, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_fin_loop_statement WHERE period_start_date=$1)`, start).Scan(&exists); err != nil {
@@ -227,10 +229,34 @@ func (s *Service) Generate(ctx context.Context, start time.Time, failIfExists bo
 				return err
 			}
 			ids = append(ids, id)
+			created = append(created, x)
 		}
 		return nil
 	})
-	return ids, err
+	if err != nil {
+		return nil, err
+	}
+	for _, x := range created {
+		s.Msg.ToMerchant(ctx, x.merchantID, adminmsg.Msg{Category: adminmsg.CatSettlement, Level: adminmsg.Info,
+			Title: weekTitle(start) + "已生成，待平台确认", Body: statementBody(x), Link: statementLink(x.ID), RefType: "statement", RefID: x.ID})
+	}
+	return ids, nil
+}
+
+func weekTitle(start time.Time) string {
+	_, w := start.ISOWeek()
+	return fmt.Sprintf("第 %d 周结算单", w)
+}
+
+func statementLink(id int64) string { return fmt.Sprintf("/merchant/settlement?id=%d", id) }
+
+// statementBody is the period and the net amount (net_amt > 0: the merchant pays).
+func statementBody(x Statement) string {
+	net := "商户应付平台 " + adminmsg.Yuan(x.NetAmt)
+	if x.NetAmt <= 0 {
+		net = "平台应付商户 " + adminmsg.Yuan(-x.NetAmt)
+	}
+	return fmt.Sprintf("%s 至 %s（%s），%s。", x.PeriodStart, x.PeriodEnd, x.StatementNo, net)
 }
 
 // fill writes a new statement's lines and totals. Redemptions are lines
@@ -347,7 +373,24 @@ func (s *Service) StatementAction(ctx context.Context, tx pgx.Tx, id, adminID in
 	default:
 		return httpx.Conflict("invalid_status", "确认后才能标记已付款")
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	x, err := s.LoadStatement(ctx, tx, nil, id, false)
+	if err != nil {
+		return err
+	}
+	start, _ := time.ParseInLocation(time.DateOnly, x.PeriodStart, clock.Shanghai)
+	m := adminmsg.Msg{Category: adminmsg.CatSettlement, Level: adminmsg.Success, Title: weekTitle(start) + "已确认", Body: statementBody(x),
+		Link: statementLink(id), RefType: "statement", RefID: id}
+	if action == "paid" {
+		m.Title = weekTitle(start) + "平台已付款 " + adminmsg.Yuan(max(-x.NetAmt, 0))
+		if x.NetAmt > 0 {
+			m.Title = weekTitle(start) + "已结清 " + adminmsg.Yuan(x.NetAmt)
+		}
+	}
+	s.Msg.ToMerchant(ctx, x.merchantID, m)
+	return nil
 }
 
 // OverviewDay is one bar of the settlement chart.

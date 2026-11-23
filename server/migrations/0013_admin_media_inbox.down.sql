@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS src.src_msg_loop_admin_message;
+DELETE FROM src.src_cnt_loop_media WHERE user_id IS NULL;
+DROP INDEX IF EXISTS src.media_admin_day;
+DROP INDEX IF EXISTS src.media_open_app_day;
+ALTER TABLE src.src_cnt_loop_media DROP CONSTRAINT IF EXISTS media_uploader_check;
+ALTER TABLE src.src_cnt_loop_media DROP CONSTRAINT IF EXISTS src_cnt_loop_media_purpose_type_check;
+ALTER TABLE src.src_cnt_loop_media ADD CONSTRAINT src_cnt_loop_media_purpose_type_check CHECK (purpose_type IN ('post', 'avatar', 'crew_avatar', 'chat'));
+ALTER TABLE src.src_cnt_loop_media DROP COLUMN IF EXISTS admin_id;
+ALTER TABLE src.src_cnt_loop_media DROP COLUMN IF EXISTS merchant_id;
+ALTER TABLE src.src_cnt_loop_media DROP COLUMN IF EXISTS open_app_id;
+ALTER TABLE src.src_cnt_loop_media ALTER COLUMN user_id SET NOT NULL;
+COMMENT ON TABLE src.src_cnt_loop_media IS '用户上传的图片：动态、头像、跑团头像、聊天图片';
+COMMENT ON COLUMN src.src_cnt_loop_media.user_id IS '上传者（用户ID）';
+COMMENT ON COLUMN src.src_cnt_loop_media.purpose_type IS '用途：post-动态图片 avatar-用户头像 crew_avatar-跑团头像 chat-聊天图片';
+COMMENT ON COLUMN src.src_cnt_loop_media.object_key IS '存储里的对象路径，如 post/2026/11/21/<随机>.jpg';

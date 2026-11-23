@@ -12,6 +12,11 @@ import (
 // entry at the product price and one invitation the merchant accepts, and
 // a user buys a product through the mock channel. No open platform app is
 // created (secrets are only shown when a merchant creates one).
+//
+// These flows also fill the back-office inbox (第六批 站内信): gym-staff gets
+// the review results, the direct entry and the invitation; looproot (and
+// any ops account) gets the pass's application and the product waiting for
+// manual review.
 func seedProducts(users []*client, ad *client) {
 	staff := &client{}
 	var login struct {
@@ -55,6 +60,9 @@ func seedProducts(users []*client, ad *client) {
 	pass := create(map[string]any{"type": "pass", "title": "匹克球 10 次卡", "subtitle": "每次 1 小时", "description": "有效期内任意时段可用",
 		"images": images, "sports": []string{"pickleball"}, "price_amt": 45000, "original_amt": 60000, "use_qty": 10,
 		"valid_until": time.Now().AddDate(0, 6, 0).Format("2006-01-02"), "refundable": true, "rules": "每次核销用掉 1 次，剩余次数在卡券包查看"})
+	// A phone number in the description sends this one to manual review.
+	create(map[string]any{"type": "package", "title": "周末亲子羽毛球团课", "subtitle": "4–10 岁，含教练和球拍", "description": "每周六 10:00 开课，报名咨询 13812345678",
+		"images": images, "sports": []string{"badminton"}, "price_amt": 12800, "valid_days": 60, "venue_ids": venueIDs, "rules": "到店出示券码，店员扫码核销"})
 	if pkg.ID == 0 {
 		return
 	}
