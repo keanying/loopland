@@ -23,6 +23,7 @@ import type {
 } from '../api/merchant';
 import * as db from './data';
 import { dropsOfMerchant } from './perks';
+import { notifyMerchant, yuanText, type MessageDraft } from './messages';
 
 type Ctx = { m: RegExpMatchArray; q: URLSearchParams; body: Record<string, unknown>; adminId: number; role: AdminRole };
 type Handler = (ctx: Ctx) => unknown;
@@ -959,6 +960,7 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       s.status = 'confirmed';
       s.confirmed_by = adminId;
       s.confirmed_at = new Date().toISOString();
+      notifyMerchant(s.merchant_id, statementMessage(s));
       const out = statementOut(s);
       log(adminId, 'statement.confirm', `statement:${s.id}`, { statement_no: out.statement_no, net_amt: out.net_amt });
       return out;
@@ -970,6 +972,7 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       if (s.status !== 'confirmed') fail(409, 'invalid_status', '结算单确认后才能标记已付款');
       s.status = 'paid';
       s.paid_at = new Date().toISOString();
+      notifyMerchant(s.merchant_id, statementMessage(s));
       const out = statementOut(s);
       log(adminId, 'statement.paid', `statement:${s.id}`, { statement_no: out.statement_no, net_amt: out.net_amt });
       return out;
@@ -983,9 +986,31 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       if (from + 7 * DAY > NOW) fail(400, 'invalid_period', '这一周还没结束，不能生成结算单');
       if (statements.some((s) => s.period_start === from)) fail(409, 'conflict', '这一周的结算单已经生成过了');
       const ids = billableMerchants(from);
-      for (const mid of ids) statements.push({ id: ++statementSeq, merchant_id: mid, period_start: from, status: 'draft', confirmed_by: null, confirmed_at: null, paid_at: null });
+      for (const mid of ids) {
+        const s: StatementRow = { id: ++statementSeq, merchant_id: mid, period_start: from, status: 'draft', confirmed_by: null, confirmed_at: null, paid_at: null };
+        statements.push(s);
+        notifyMerchant(mid, statementMessage(s));
+      }
       log(adminId, 'statement.generate', `period:${raw}`, { merchants: ids.length });
       return { generated: ids.length };
     }],
   ];
+}
+
+/** 站内信 for a statement in its current status (docs/api/v2-6 「谁收到什么」). */
+function statementMessage(s: StatementRow): MessageDraft {
+  const out = statementOut(s);
+  const week = `第 ${isoWeek(s.period_start).week} 周结算单`;
+  const link = `/merchant/settlement?id=${s.id}`;
+  if (s.status === 'draft') return { category: 'settlement', level: 'info', title: `${week}已生成，待平台确认`, body: `${out.period_start} 至 ${out.period_end}，核销 ${out.redemption_qty} 张、订场 ${out.booking_qty} 单。`, link };
+  if (s.status === 'confirmed') return { category: 'settlement', level: 'success', title: `${week}已确认`, body: '平台已确认金额，线下打款后会再通知你。', link };
+  return { category: 'settlement', level: 'success', title: `${week}平台已付款 ${yuanText(Math.abs(out.net_amt))}`, body: '请留意对公账户到账情况。', link };
+}
+
+/** A merchant's statements (newest first) as 站内信, for the seeds in mocks/messages.ts. */
+export function statementMessagesOf(merchantId: number): { draft: MessageDraft; at: string }[] {
+  return statements
+    .filter((s) => s.merchant_id === merchantId)
+    .sort((a, b) => b.period_start - a.period_start)
+    .map((s) => ({ draft: statementMessage(s), at: s.paid_at ?? s.confirmed_at ?? iso(s.period_start + 7 * DAY + 3 * HOUR) }));
 }

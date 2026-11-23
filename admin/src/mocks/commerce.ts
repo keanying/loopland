@@ -25,6 +25,7 @@ import * as db from './data';
 import { merchantOf, merchants, venues } from './merchant';
 import { onReviewDecided, tasks as reviewTasks } from './community';
 import { photo } from './images';
+import { notifyMerchant, notifyPlatform } from './messages';
 
 type Ctx = { m: RegExpMatchArray; q: URLSearchParams; body: Record<string, unknown>; adminId: number; role: AdminRole };
 type Handler = (ctx: Ctx) => unknown;
@@ -308,13 +309,16 @@ onReviewDecided((t: ReviewTask, approve: boolean, reason: string) => {
   if (t.target_type !== 'product') return;
   const p = products.find((x) => x.id === t.target_id);
   if (!p) return;
+  const link = `/merchant/products?id=${p.id}`;
   if (t.product?.is_change) {
     if (approve && p.pending) Object.assign(p, p.pending);
     p.pending = null;
     p.review_note = approve ? null : `修改未通过：${reason}`;
+    notifyMerchant(p.merchant_id, approve ? { category: 'product', level: 'success', title: `商品「${p.title}」的修改已生效`, link } : { category: 'product', level: 'warning', title: `商品「${p.title}」的修改未通过：${reason}`, body: '旧内容继续在售。', link });
   } else if (p.status === 'reviewing') {
     p.status = approve ? 'on_sale' : 'rejected';
     p.review_note = approve ? null : reason;
+    notifyMerchant(p.merchant_id, approve ? { category: 'product', level: 'success', title: `商品「${p.title}」审核通过，已上架`, body: '可在「商品」里查看。', link } : { category: 'product', level: 'warning', title: `商品「${p.title}」未通过审核：${reason}`, body: '修改后可以重新提交。', link });
   }
   p.updated_at = new Date().toISOString();
 });
@@ -322,6 +326,8 @@ onReviewDecided((t: ReviewTask, approve: boolean, reason: string) => {
 /** Moderation on submit / content change: block → rejected, review → manual queue, else auto-approved. */
 function moderate(p: ProductRow, content: Partial<ProductContent>, isChange: boolean): 'approved' | 'rejected' | 'reviewing' {
   const r = score(contentText(content), p);
+  const link = `/merchant/products?id=${p.id}`;
+  const name = String(content.title ?? p.title);
   if (r.score >= 70) {
     if (isChange) {
       p.pending = null;
@@ -330,12 +336,14 @@ function moderate(p: ProductRow, content: Partial<ProductContent>, isChange: boo
       p.status = 'rejected';
       p.review_note = r.reasons.join('；');
     }
+    notifyMerchant(p.merchant_id, { category: 'product', level: 'warning', title: isChange ? `商品「${p.title}」的修改未通过：${r.reasons[0]}` : `商品「${name}」未通过审核：${r.reasons[0]}`, body: '修改后可以重新提交。', link });
     return 'rejected';
   }
   if (r.score >= 40) {
     if (!isChange) p.status = 'reviewing';
     p.review_note = null;
     pushTask(p, content, r, isChange);
+    notifyPlatform({ category: 'review', level: 'info', title: `商户「${mref(p.merchant_id).name}」提交了商品「${name}」，待审核`, link: '/review?type=product' });
     return 'reviewing';
   }
   if (isChange) {
@@ -343,6 +351,7 @@ function moderate(p: ProductRow, content: Partial<ProductContent>, isChange: boo
     p.pending = null;
   } else p.status = 'on_sale';
   p.review_note = null;
+  notifyMerchant(p.merchant_id, { category: 'product', level: 'success', title: isChange ? `商品「${p.title}」的修改已生效` : `商品「${p.title}」审核通过，已上架`, body: '可在「商品」里查看。', link });
   return 'approved';
 }
 
@@ -759,6 +768,7 @@ export function commerceRoutes(log: Log): [string, RegExp, Handler][] {
         t.reviewed_at = new Date().toISOString();
       }
       touch(p);
+      notifyMerchant(p.merchant_id, { category: 'product', level: 'error', title: `商品「${p.title}」已被平台下架：${reason}`, body: '修改后可以重新提交审核。', link: `/merchant/products?id=${p.id}` });
       log(ctx.adminId, 'product.ban', `product:${p.id}`, { reason });
       return productOut(p);
     }],
@@ -1116,3 +1126,11 @@ function promotionInput(b: Record<string, unknown>, base?: PromotionRow): Omit<P
   };
   return { title, subtitle: str('subtitle'), banner_url: banner ? String(banner) : null, description: str('description'), starts_at: new Date(starts).toISOString(), ends_at: new Date(ends).toISOString(), apply_open: applyOpen, apply_deadline: deadline ? new Date(deadline).toISOString() : null };
 }
+
+/** Read-only views for the 站内信 seeds (mocks/messages.ts); read lazily, never at import time. */
+export const commerceRows = {
+  products: () => products,
+  orders: () => orders,
+  promotions: () => promotions,
+  entries: () => entries,
+};

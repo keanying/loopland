@@ -10,6 +10,7 @@ import { Alert, App, Button, Col, DatePicker, Descriptions, Drawer, Empty, Form,
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined, SendOutlined, StopOutlined } from '@ant-design/icons';
 import { commerceApi, type Product, type ProductDetail, type ProductInput, type ProductStatus, type ProductType } from '../../api/commerce';
 import { useAuth } from '../../auth/AuthContext';
+import { ImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel } from '../../components/ui';
 import { dt, num, yuan } from '../../utils/format';
 import { toastOk } from '../../utils/notify';
@@ -18,7 +19,7 @@ import { PRODUCT_STATUS, PRODUCT_STATUS_ORDER, PRODUCT_TYPE, PRODUCT_TYPES, stoc
 import { PriceText, ProductStatusTag } from './commerceShared';
 import { VENUE_SPORT, VENUE_SPORTS } from './labels';
 import { MerchantNav } from './nav';
-import { IMAGE_URL, toFen, toYuan, urlParams, useMerchantOptions, useOwnVenues } from './util';
+import { toFen, toYuan, urlParams, useMerchantOptions, useOwnVenues } from './util';
 
 const PAGE = 20;
 const SUBMITTABLE: ProductStatus[] = ['draft', 'rejected', 'banned'];
@@ -479,7 +480,7 @@ interface FormValues {
   title: string;
   subtitle?: string;
   description?: string;
-  images: { url: string }[];
+  images: string[];
   sports: string[];
   price_yuan: number;
   original_yuan?: number | null;
@@ -507,7 +508,6 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
   const type = Form.useWatch('type', form);
   const validity = Form.useWatch('validity', form);
   const unlimited = Form.useWatch('stock_unlimited', form);
-  const images = Form.useWatch('images', form) ?? [];
   const price = Form.useWatch('price_yuan', form);
   const original = Form.useWatch('original_yuan', form);
   const allow = Form.useWatch('allow_promotion', form);
@@ -518,7 +518,7 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
     if (!value) return;
     form.resetFields();
     if (value === 'new') {
-      form.setFieldsValue({ type: 'package', images: [{ url: '' }], sports: [], validity: 'days', valid_days: 30, stock_unlimited: false, stock_qty: 100, per_user_limit_qty: 0, refundable: true, allow_promotion: false, venue_ids: [], use_qty: 10 });
+      form.setFieldsValue({ type: 'package', images: [], sports: [], validity: 'days', valid_days: 30, stock_unlimited: false, stock_qty: 100, per_user_limit_qty: 0, refundable: true, allow_promotion: false, venue_ids: [], use_qty: 10 });
       return;
     }
     if (!d) return;
@@ -528,7 +528,7 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
       title: c.title,
       subtitle: c.subtitle ?? '',
       description: c.description ?? '',
-      images: (c.images ?? []).map((url) => ({ url })),
+      images: c.images ?? [],
       sports: d.sports,
       price_yuan: toYuan(d.price_amt) ?? 0,
       original_yuan: toYuan(d.original_amt),
@@ -569,7 +569,7 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
       title: v.title.trim(),
       subtitle: v.subtitle?.trim() || null,
       description: v.description?.trim() || null,
-      images: (v.images ?? []).map((x) => x.url?.trim()).filter(Boolean),
+      images: (v.images ?? []).map((u) => u.trim()).filter(Boolean),
       sports: v.sports ?? [],
       price_amt: toFen(v.price_yuan) ?? 0,
       original_amt: toFen(v.original_yuan ?? null),
@@ -645,34 +645,13 @@ function ProductForm({ value, onClose, onSaved }: { value: Product | 'new' | nul
             <Form.Item name="subtitle" label="副标题" rules={[{ max: 40, message: '最多 40 字' }]}>
               <Input placeholder="含球拍租借" showCount maxLength={40} />
             </Form.Item>
-            <div className="ant-form-item-label" style={{ paddingBottom: 8 }}>
-              <label>图片（1–9 张，第一张为封面）</label>
-            </div>
-            <Form.List
+            <Form.Item
               name="images"
-              rules={[{ validator: async (_, v?: { url: string }[]) => ((v ?? []).some((x) => x?.url?.trim()) ? undefined : Promise.reject(new Error('至少 1 张图片'))) }]}
+              label="图片（1–9 张，第一张为封面）"
+              rules={[{ required: true, type: 'array', min: 1, message: '至少 1 张图片' }]}
             >
-              {(fields, { add, remove }, { errors }) => (
-                <Space direction="vertical" style={{ width: '100%', marginBottom: 18 }}>
-                  {fields.map((f, i) => {
-                    const url = images[i]?.url?.trim();
-                    return (
-                      <div key={f.key} className="mer-img-row">
-                        <div className="mer-img-thumb">{url && IMAGE_URL.test(url) ? <Image src={url} width={64} height={46} alt="" /> : <span className="muted">预览</span>}</div>
-                        <Form.Item name={[f.name, 'url']} style={{ flex: 1, marginBottom: 0 }} rules={[{ pattern: IMAGE_URL, message: '需要是 http(s) 图片地址' }]}>
-                          <Input placeholder="https://… 图片地址（媒体上传后得到）" allowClear />
-                        </Form.Item>
-                        <Button aria-label="删除这张" icon={<DeleteOutlined />} disabled={fields.length <= 1} onClick={() => remove(f.name)} />
-                      </div>
-                    );
-                  })}
-                  <Button icon={<PlusOutlined />} disabled={fields.length >= 9} onClick={() => add({ url: '' })}>
-                    添加一张
-                  </Button>
-                  <Form.ErrorList errors={errors} />
-                </Space>
-              )}
-            </Form.List>
+              <ImageUpload purpose="product" max={9} coverFirst label="商品图片" hint="建议 4:3 或 1:1" />
+            </Form.Item>
             <Form.Item name="description" label="描述" rules={[{ max: 1000, message: '最多 1000 字' }]}>
               <Input.TextArea rows={4} showCount maxLength={1000} placeholder="包含什么、什么时间可用、注意事项" />
             </Form.Item>

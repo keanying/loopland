@@ -1,6 +1,6 @@
 // V2 第五批 · 商品订单 (docs/api/v2-5「商户商品」· 商品订单). Merchant accounts see their own orders; admin / ops see
 // every merchant's; admin can refund the unused coupons of an order (two-step confirm, audited).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -37,7 +37,7 @@ function CouponTag({ status }: { status: CouponStatus }) {
 
 export default function ProductOrdersPage() {
   const { can, admin } = useAuth();
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const qc = useQueryClient();
   const staff = admin?.role === 'merchant';
   const [params, setParams] = useSearchParams();
@@ -63,6 +63,36 @@ export default function ProductOrdersPage() {
     queryFn: () => commerceApi.productOrders({ merchant_id: merchantId, product_id: productId, status, from, to, page }),
     placeholderData: (p) => p,
   });
+
+  // `?id=` (站内信「订单 PO… 已由平台退款」) opens that order. The admin API has no by-id lookup: look in the
+  // current page first, then in the latest 100 orders.
+  const openId = Number(params.get('id') ?? 0) || null;
+  const handled = useRef<number | null>(null);
+  const onPage = !!openId && !!list.data?.items.some((o) => o.id === openId);
+  const lookup = useQuery({
+    queryKey: ['product-orders', 'lookup', openId],
+    queryFn: () => commerceApi.productOrders({ page: 1, page_size: 100 }),
+    enabled: !!openId && !!list.data && !onPage,
+  });
+  useEffect(() => {
+    if (!openId) {
+      handled.current = null;
+      return;
+    }
+    if (handled.current === openId) return;
+    const hit = list.data?.items.find((o) => o.id === openId) ?? lookup.data?.items.find((o) => o.id === openId);
+    if (hit) {
+      handled.current = openId;
+      setDetail(hit);
+    } else if (lookup.data) {
+      handled.current = openId;
+      message.warning('没有在最近 100 笔订单里找到这笔订单，请按商品或日期筛选查找');
+    }
+  }, [openId, list.data, lookup.data, message]);
+  const closeDetail = () => {
+    setDetail(null);
+    if (openId) update({ id: null });
+  };
 
   const doRefund = useMutation({
     mutationFn: ({ o, r }: { o: ProductOrder; r: string }) => commerceApi.refundProductOrder(o.id, r),
@@ -248,7 +278,7 @@ export default function ProductOrdersPage() {
         />
       </Panel>
 
-      <Drawer open={detail !== null} onClose={() => setDetail(null)} width={720} title={detail ? `商品订单 ${detail.order_no}` : ''} extra={detail && refundButton(detail, 'middle')}>
+      <Drawer open={detail !== null} onClose={closeDetail} width={720} title={detail ? `商品订单 ${detail.order_no}` : ''} extra={detail && refundButton(detail, 'middle')}>
         {detail && <OrderDetail o={detail} staff={staff} />}
       </Drawer>
 

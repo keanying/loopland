@@ -29,6 +29,9 @@ import { aiRoutes } from './ai';
 import { mapSupplies, perkRoutes } from './perks';
 import { merchantOf, merchantRoutes, merchantTodos } from './merchant';
 import { commerceRoutes, commerceTodos } from './commerce';
+import { mediaRoutes } from './media';
+import { messageRoutes } from './messages';
+import './messageSeeds';
 
 const DAY = 86_400_000;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -831,6 +834,10 @@ const routes: [string, RegExp, Handler][] = [
 
   // V2 第三批「AI」(docs/api/v2-3-AI.md 「管理端 · AI 用量」)
   ...aiRoutes(log),
+
+  // V2 第六批「管理端图片上传与站内信」
+  ...mediaRoutes(),
+  ...messageRoutes(),
 
   // V2 第五批「商户商品与开放平台」· 商品 / 商品订单 / 官方活动 / 开放平台
   ...commerceRoutes(log),

@@ -109,6 +109,67 @@ export async function request<T>(method: string, path: string, opts: { query?: Q
   }
 }
 
+/** Status + body text → data, or an ApiError (shared by upload()). */
+function parseResponse(status: number, text: string): unknown {
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+  if (status < 200 || status >= 300) {
+    if (isErrorBody(data)) throw new ApiError(status, data.error.code, data.error.message);
+    if (status === 413) throw new ApiError(status, 'file_too_large', '文件太大');
+    throw new ApiError(status, status === 401 ? 'unauthorized' : 'http_error', `请求失败（HTTP ${status}）`);
+  }
+  return data;
+}
+
+/**
+ * multipart/form-data POST (image upload). Same auth, mock routing and 401 handling as request(); the
+ * browser sets the multipart boundary itself, so no Content-Type header here. Uses XHR for upload progress.
+ */
+export async function upload<T>(path: string, form: FormData, opts: { onProgress?: (percent: number) => void; signal?: AbortSignal } = {}): Promise<T> {
+  const token = getToken();
+  try {
+    if (MOCK) {
+      const { mockFetch } = await import('../mocks');
+      opts.onProgress?.(40);
+      const r = (await mockFetch('POST', path, form, token)) as T;
+      opts.onProgress?.(100);
+      return r;
+    }
+    return await new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', API_BASE + path);
+      xhr.setRequestHeader('Accept', 'application/json');
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) opts.onProgress?.(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        try {
+          resolve(parseResponse(xhr.status, xhr.responseText) as T);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      xhr.onerror = () => reject(new ApiError(0, 'network', '无法连接服务器，请检查网络或后端是否已启动'));
+      xhr.onabort = () => reject(new ApiError(0, 'aborted', '已取消上传'));
+      opts.signal?.addEventListener('abort', () => xhr.abort());
+      xhr.send(form);
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      setToken(null);
+      unauthorizedHandler?.();
+    }
+    throw err;
+  }
+}
+
 export const http = {
   get: <T>(path: string, query?: Query) => request<T>('GET', path, { query }),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body: body ?? {} }),

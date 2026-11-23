@@ -1,6 +1,6 @@
 // One function per endpoint in docs/api/v1.md 「管理端」 (and docs/api/系统配置.md, v2-1-玩法.md, v2-2-社区.md, v2-3-AI.md).
 import { ADMIN_PREFIX } from '../config';
-import { http } from './client';
+import { http, upload } from './client';
 import type {
   AdminPost,
   AdminReport,
@@ -28,6 +28,12 @@ import type {
   AdminAccount,
   AdminCreate,
   AdminMe,
+  AdminMessage,
+  MediaPurpose,
+  MessageCategory,
+  MessageList,
+  UnreadCount,
+  UploadedMedia,
   AdminOrder,
   AdminPatch,
   AuditItem,
@@ -215,4 +221,19 @@ export const api = {
   saveProvider: (code: string, body: ProviderSave) => http.put<Provider>(`${A}/providers/${encodeURIComponent(code)}`, body),
   testProvider: (code: string, input?: string) =>
     http.post<ProviderCheck>(`${A}/providers/${encodeURIComponent(code)}/test`, input ? { input } : {}),
+
+  // V2 第六批 (docs/api/v2-6-管理端图片上传与站内信.md): 图片上传
+  uploadMedia: (file: File | Blob, purpose: MediaPurpose, opts?: { onProgress?: (percent: number) => void; signal?: AbortSignal }) => {
+    const form = new FormData();
+    form.append('purpose', purpose);
+    form.append('file', file, file instanceof File ? file.name : 'image');
+    return upload<UploadedMedia>(`${A}/media`, form, opts);
+  },
+
+  // 站内信 (every admin account; only its own messages, newest first)
+  messages: (p: { category?: MessageCategory | ''; unread?: boolean; page?: number; page_size?: number }) =>
+    http.get<MessageList>(`${A}/messages`, { page_size: PAGE_SIZE, ...p, unread: p.unread ? true : undefined }),
+  unreadCount: () => http.get<UnreadCount>(`${A}/messages/unread-count`),
+  readMessage: (id: number) => http.post<AdminMessage>(`${A}/messages/${id}/read`),
+  readAllMessages: (category?: MessageCategory | '') => http.post<{ updated: number }>(`${A}/messages/read-all`, category ? { category } : {}),
 };

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_LABEL } from '../utils/labels';
 import { MOCK } from '../config';
+import { InboxBell } from './Inbox';
 
 export function MeChip() {
   const { admin, logout } = useAuth();
@@ -63,7 +64,10 @@ export function PageHeader({ title, sub, subline, extra }: { title: string; sub?
       </div>
       <div className="page-extra">
         {extra}
-        <MeChip />
+        <div className="page-me">
+          <InboxBell />
+          <MeChip />
+        </div>
       </div>
     </header>
   );
