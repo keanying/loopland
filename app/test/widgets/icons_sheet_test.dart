@@ -9,6 +9,8 @@ import 'test_helpers.dart';
 /// 图标总览：全部 [LIcons] 在深色和浅色底上各一份，外加「圈圈」标志的各个尺寸。
 /// `LOOPLAND_SCREENSHOTS=1 flutter test` 时写到 screenshots/icons_sheet.png。
 void main() {
+  setUpAll(loadFonts);
+
   testWidgets('LIcon takes size and color from IconTheme like Icon', (t) async {
     await t.pumpWidget(const Directionality(
       textDirection: TextDirection.ltr,
@@ -37,7 +39,6 @@ void main() {
   });
 
   testWidgets('icon contact sheet', (t) async {
-    await loadFonts();
     await phone(t, size: const Size(1280, 2400));
     await t.pumpWidget(wrap(const Align(alignment: Alignment.topCenter, child: RepaintBoundary(key: ValueKey('sheet'), child: _Sheet()))));
     await t.pump();
