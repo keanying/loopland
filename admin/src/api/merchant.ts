@@ -37,6 +37,9 @@ export interface MerchantStaff {
   id: number;
   username: string;
   is_disabled: boolean;
+  /** 绑定的门店；空 = 不限门店（可核销本商户所有门店的券）。 */
+  venue_ids: number[];
+  venues: { id: number; name: string }[];
 }
 
 export interface MerchantDetail extends Merchant {
@@ -291,7 +294,9 @@ export const merchantApi = {
   updateMerchant: (id: number, body: Partial<MerchantInput>) => http.patch<Merchant>(`${A}/merchants/${id}`, body),
   /** Not spelled out in the contract (「管理员查看完整号码记审计」); mirrors POST /users/{id}/reveal-phone. */
   revealMerchantPhone: (id: number) => http.post<{ phone: string }>(`${A}/merchants/${id}/reveal-phone`),
-  createStaff: (id: number, body: { username: string; password: string }) => http.post<Record<string, never>>(`${A}/merchants/${id}/staff`, body),
+  createStaff: (id: number, body: { username: string; password: string; venue_ids?: number[] }) => http.post<Record<string, never>>(`${A}/merchants/${id}/staff`, body),
+  setStaffVenues: (merchantId: number, staffId: number, venue_ids: number[]) =>
+    http.put<MerchantStaff>(`${A}/merchants/${merchantId}/staff/${staffId}/venues`, { venue_ids }),
 
   venues: (p: VenueFilter) => http.get<Paged<Venue>>(`${A}/venues`, { page_size: PAGE, ...p }),
   createVenue: (body: VenueInput) => http.post<Venue>(`${A}/venues`, body),

@@ -33,11 +33,20 @@ type Merchant struct {
 	CreatedAt             time.Time `json:"created_at"`
 }
 
-// Staff is a merchant staff account.
+// Staff is a merchant staff account. Venues: the stores it is bound to
+// (empty = not bound, may redeem for every store of the merchant).
 type Staff struct {
-	ID         int64  `json:"id"`
-	Username   string `json:"username"`
-	IsDisabled bool   `json:"is_disabled"`
+	ID         int64      `json:"id"`
+	Username   string     `json:"username"`
+	IsDisabled bool       `json:"is_disabled"`
+	VenueIDs   []int64    `json:"venue_ids"`
+	Venues     []VenueRef `json:"venues"`
+}
+
+// VenueRef is {id, name}.
+type VenueRef struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // MerchantDetail is GET /admin/v1/merchants/{id}.
@@ -147,11 +156,26 @@ func (s *Service) MerchantDetail(ctx context.Context, id int64) (MerchantDetail,
 			d.Drops = drops
 		}
 	}
-	rows, err := s.Pool.Query(ctx, `SELECT id, username, is_disabled FROM src.src_sys_loop_admin WHERE merchant_id=$1 ORDER BY id`, id)
+	rows, err := s.Pool.Query(ctx, `SELECT a.id, a.username, a.is_disabled,
+			COALESCE(array_agg(v.id ORDER BY v.id) FILTER (WHERE v.id IS NOT NULL), '{}'),
+			COALESCE(array_agg(v.venue_name ORDER BY v.id) FILTER (WHERE v.id IS NOT NULL), '{}')
+		FROM src.src_sys_loop_admin a
+		LEFT JOIN src.src_mer_loop_staff_venue sv ON sv.admin_id=a.id
+		LEFT JOIN src.src_mer_loop_venue v ON v.id=sv.venue_id
+		WHERE a.merchant_id=$1 GROUP BY a.id ORDER BY a.id`, id)
 	if err != nil {
 		return d, err
 	}
-	d.Staff, err = pgx.CollectRows(rows, pgx.RowToStructByPos[Staff])
+	d.Staff, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) (Staff, error) {
+		var st Staff
+		var names []string
+		err := r.Scan(&st.ID, &st.Username, &st.IsDisabled, &st.VenueIDs, &names)
+		st.Venues = make([]VenueRef, len(st.VenueIDs))
+		for i := range st.VenueIDs {
+			st.Venues[i] = VenueRef{ID: st.VenueIDs[i], Name: names[i]}
+		}
+		return st, err
+	})
 	if d.Staff == nil {
 		d.Staff = []Staff{}
 	}
@@ -312,6 +336,44 @@ func (s *Service) RevealPhone(ctx context.Context, id int64) (string, error) {
 		return "", httpx.NotFound("联系人手机号")
 	}
 	return s.Box.Open(enc)
+}
+
+// SetStaffVenues binds a staff account to stores of its merchant (replaces
+// the list; empty = not bound). Venues of other merchants are 400.
+func (s *Service) SetStaffVenues(ctx context.Context, tx pgx.Tx, merchant, staff int64, venueIDs []int64) error {
+	var ok bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM src.src_sys_loop_admin WHERE id=$1 AND role='merchant' AND merchant_id=$2)`, staff, merchant).Scan(&ok); err != nil {
+		return err
+	}
+	if !ok {
+		return httpx.NotFound("员工账号")
+	}
+	if len(venueIDs) > 0 {
+		var n int
+		if err := tx.QueryRow(ctx, `SELECT count(DISTINCT id) FROM src.src_mer_loop_venue WHERE id = ANY($1) AND merchant_id=$2`, venueIDs, merchant).Scan(&n); err != nil {
+			return err
+		}
+		if n != len(uniq(venueIDs)) {
+			return httpx.BadRequest("invalid_body", "只能绑定本商户的场馆")
+		}
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM src.src_mer_loop_staff_venue WHERE admin_id=$1`, staff); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO src.src_mer_loop_staff_venue (admin_id, venue_id) SELECT $1, x FROM unnest($2::bigint[]) x ON CONFLICT DO NOTHING`, staff, uniq(venueIDs))
+	return err
+}
+
+func uniq(ids []int64) []int64 {
+	seen := map[int64]bool{}
+	out := []int64{}
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 // CreateStaff creates a merchant-role admin account bound to the merchant.

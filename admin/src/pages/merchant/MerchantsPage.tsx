@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Col, Descriptions, Drawer, Empty, Form, Image, Input, InputNumber, Modal, Radio, Row, Segmented, Select, Space, Table, Tag, Tooltip } from 'antd';
 import { EditOutlined, EyeOutlined, LinkOutlined, PlusOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
-import { merchantApi, type Merchant, type MerchantDetail, type MerchantInput, type MerchantStatus, type MerchantType } from '../../api/merchant';
+import { merchantApi, type Merchant, type MerchantDetail, type MerchantInput, type MerchantStaff, type MerchantStatus, type MerchantType } from '../../api/merchant';
 import { useAuth } from '../../auth/AuthContext';
 import { ImageUpload } from '../../components/ImageUpload';
 import { PageHeader, Panel, Tile } from '../../components/ui';
@@ -155,6 +155,7 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
   const detail = useQuery({ queryKey: ['merchants', 'detail', id], queryFn: () => merchantApi.merchant(id!), enabled: id !== null });
   const [phone, setPhone] = useState<{ id: number; phone: string } | null>(null);
   const [staffOpen, setStaffOpen] = useState(false);
+  const [binding, setBinding] = useState<MerchantStaff | null>(null);
   const reveal = useMutation({ mutationFn: (mid: number) => merchantApi.revealMerchantPhone(mid), onSuccess: (r, mid) => setPhone({ id: mid, phone: r.phone }) });
   const m = detail.data;
   const revealed = m && phone?.id === m.id ? phone.phone : null;
@@ -346,17 +347,26 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
             {m.staff.length === 0 ? (
               <span className="muted">还没有员工账号。员工用「商户对接」角色登录，只能管本商户的核销、商品、官方活动、场馆资料、订场、结算单和开放平台</span>
             ) : (
-              <Space wrap>
+              <div className="staff-list">
                 {m.staff.map((s) => (
-                  <Tag key={s.id} bordered={false} color={s.is_disabled ? 'default' : 'blue'} style={{ padding: '4px 10px' }}>
-                    {s.username}
-                    {s.is_disabled && ' · 已停用'}
-                  </Tag>
+                  <div key={s.id} className="staff-row">
+                    <b>{s.username}</b>
+                    {s.is_disabled && <Tag bordered={false}>已停用</Tag>}
+                    <span className="staff-stores">
+                      {s.venues.length === 0 ? <span className="muted">不限门店</span> : s.venues.map((v) => <Tag key={v.id} bordered={false} color="blue">{v.name}</Tag>)}
+                    </span>
+                    {can('merchant.staff') && (
+                      <Button size="small" type="text" onClick={() => setBinding(s)}>
+                        绑定门店
+                      </Button>
+                    )}
+                  </div>
                 ))}
-              </Space>
+              </div>
             )}
           </section>
           {can('openapi.manage') && <OpenAppsSection merchantId={m.id} />}
+          <StaffVenuesModal merchant={m} staff={binding} onClose={() => setBinding(null)} />
           <StaffModal
             merchant={staffOpen ? m : null}
             onClose={() => setStaffOpen(false)}
@@ -371,11 +381,43 @@ function MerchantDetailDrawer({ id, onClose, onEdit }: { id: number | null; onCl
   );
 }
 
+const STORE_HELP = '绑定后，这个员工只能核销适用于这些门店的商品券，核销门店自动记为他的门店；不选 = 不限门店。';
+
+/** 员工绑定门店（核销时校验门店，docs/api/v2-5「商户商品 · 券」）。 */
+function StaffVenuesModal({ merchant, staff, onClose }: { merchant: MerchantDetail; staff: MerchantStaff | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [ids, setIds] = useState<number[]>([]);
+  useEffect(() => setIds(staff?.venue_ids ?? []), [staff]);
+  const save = useMutation({
+    mutationFn: () => merchantApi.setStaffVenues(merchant.id, staff!.id, ids),
+    onSuccess: (s) => {
+      qc.invalidateQueries({ queryKey: ['merchants', 'detail', merchant.id] });
+      toastOk(s.venues.length ? `「${s.username}」已绑定 ${s.venues.map((v) => v.name).join('、')}` : `「${s.username}」已改为不限门店`);
+      onClose();
+    },
+  });
+  return (
+    <Modal open={staff !== null} title={`绑定门店 · ${staff?.username ?? ''}`} okText="保存" cancelText="取消" confirmLoading={save.isPending} onCancel={onClose} onOk={() => save.mutate()} destroyOnHidden>
+      <p className="muted" style={{ marginTop: 0 }}>{STORE_HELP}</p>
+      <Select
+        mode="multiple"
+        allowClear
+        style={{ width: '100%' }}
+        placeholder="不限门店"
+        value={ids}
+        onChange={setIds}
+        options={merchant.venues.map((v) => ({ value: v.id, label: v.name }))}
+        notFoundContent="这个商户还没有场馆"
+      />
+    </Modal>
+  );
+}
+
 function StaffModal({ merchant, onClose, onDone }: { merchant: MerchantDetail | null; onClose: () => void; onDone: (username: string) => void }) {
   const qc = useQueryClient();
-  const [form] = Form.useForm<{ username: string; password: string }>();
+  const [form] = Form.useForm<{ username: string; password: string; venue_ids?: number[] }>();
   const create = useMutation({
-    mutationFn: (v: { username: string; password: string }) => merchantApi.createStaff(merchant!.id, v),
+    mutationFn: (v: { username: string; password: string; venue_ids?: number[] }) => merchantApi.createStaff(merchant!.id, v),
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ['merchants', 'detail', merchant?.id] });
       qc.invalidateQueries({ queryKey: ['admins'] });
@@ -386,12 +428,15 @@ function StaffModal({ merchant, onClose, onDone }: { merchant: MerchantDetail | 
   return (
     <Modal open={merchant !== null} title={`新建员工账号 · ${merchant?.name ?? ''}`} okText="创建" cancelText="取消" confirmLoading={create.isPending} onCancel={onClose} onOk={() => form.submit()} destroyOnHidden>
       <Alert type="info" showIcon style={{ marginBottom: 14 }} message="角色为「商户对接」，绑定这个商户" description="只能看到本商户的核销台、商品与订单、官方活动、场馆预订、场馆资料（部分字段）、结算单和开放平台。" />
-      <Form form={form} layout="vertical" onFinish={(v) => create.mutate({ username: v.username.trim(), password: v.password })}>
+      <Form form={form} layout="vertical" onFinish={(v) => create.mutate({ username: v.username.trim(), password: v.password, venue_ids: v.venue_ids ?? [] })}>
         <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请填写用户名' }, { pattern: /^[a-zA-Z0-9_.-]{3,32}$/, message: '3–32 位字母、数字、下划线' }]}>
           <Input placeholder="如 paoye_front" autoComplete="off" />
         </Form.Item>
         <Form.Item name="password" label="初始密码" rules={[{ required: true, message: '请设置密码' }, { min: 10, message: '后台账号密码至少 10 位' }]}>
           <Input.Password autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item name="venue_ids" label="门店（可选）" extra={STORE_HELP}>
+          <Select mode="multiple" allowClear placeholder="不限门店" options={(merchant?.venues ?? []).map((v) => ({ value: v.id, label: v.name }))} />
         </Form.Item>
       </Form>
     </Modal>

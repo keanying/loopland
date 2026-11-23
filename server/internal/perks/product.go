@@ -101,37 +101,77 @@ type productCoupon struct {
 	merchantName, perkName string
 }
 
-// storeFor picks and checks the store of a product redemption: a given
-// store must be one of the coupon's venues (by name or id) when the coupon
-// is limited to venues (403 wrong_store); without one it defaults to the
-// only venue, or the merchant name.
-func storeFor(ctx context.Context, q db.Querier, pc productCoupon, store string) (string, error) {
+// storeFor picks and checks the store of a product redemption.
+//   - The coupon's stores: its venue_ids (empty = every store of the merchant).
+//   - A staff account bound to stores (src_mer_loop_staff_venue) may only
+//     redeem for its own stores: no overlap with the coupon's stores → 403
+//     wrong_store; a given store must be one of them.
+//   - A given store must be one of the allowed stores (by name or id) when
+//     there is a store limit; without one it defaults to the only allowed
+//     store, else the merchant name.
+func storeFor(ctx context.Context, q db.Querier, pc productCoupon, store string, adminID int64) (string, error) {
 	store = strings.TrimSpace(store)
-	if len(pc.venueIDs) == 0 {
+	type vn struct{ id, name string }
+	load := func(sql string, arg any) ([]vn, error) {
+		rows, err := q.Query(ctx, sql, arg)
+		if err != nil {
+			return nil, err
+		}
+		return pgx.CollectRows(rows, func(r pgx.CollectableRow) (vn, error) {
+			var v vn
+			return v, r.Scan(&v.id, &v.name)
+		})
+	}
+	var staff []vn
+	if adminID != 0 {
+		var err error
+		staff, err = load(`SELECT v.id::text, v.venue_name FROM src.src_mer_loop_staff_venue sv
+			JOIN src.src_mer_loop_venue v ON v.id=sv.venue_id WHERE sv.admin_id=$1 ORDER BY v.id`, adminID)
+		if err != nil {
+			return "", err
+		}
+	}
+	var allowed []vn // nil = no store limit
+	if len(pc.venueIDs) > 0 {
+		vs, err := load(`SELECT id::text, venue_name FROM src.src_mer_loop_venue WHERE id = ANY($1) ORDER BY id`, pc.venueIDs)
+		if err != nil {
+			return "", err
+		}
+		allowed = vs
+	}
+	if len(staff) > 0 {
+		if allowed == nil {
+			allowed = staff
+		} else {
+			in := map[string]bool{}
+			for _, v := range staff {
+				in[v.id] = true
+			}
+			var both []vn
+			for _, v := range allowed {
+				if in[v.id] {
+					both = append(both, v)
+				}
+			}
+			if len(both) == 0 {
+				return "", errWrongStore
+			}
+			allowed = both
+		}
+	}
+	if allowed == nil {
 		if store == "" {
 			return pc.merchantName, nil
 		}
 		return store, nil
 	}
-	rows, err := q.Query(ctx, `SELECT id::text, venue_name FROM src.src_mer_loop_venue WHERE id = ANY($1) ORDER BY id`, pc.venueIDs)
-	if err != nil {
-		return "", err
-	}
-	type vn struct{ id, name string }
-	vs, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (vn, error) {
-		var v vn
-		return v, r.Scan(&v.id, &v.name)
-	})
-	if err != nil {
-		return "", err
-	}
 	if store == "" {
-		if len(vs) == 1 {
-			return vs[0].name, nil
+		if len(allowed) == 1 {
+			return allowed[0].name, nil
 		}
 		return pc.merchantName, nil
 	}
-	for _, v := range vs {
+	for _, v := range allowed {
 		if v.name == store || v.id == store {
 			return v.name, nil
 		}

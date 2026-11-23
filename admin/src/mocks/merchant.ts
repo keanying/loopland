@@ -149,6 +149,16 @@ export const merchants: MerchantRow[] = (
 
 /** Admin accounts bound to a merchant (role merchant). */
 const staffMerchant = new Map<number, number>([[4, 2]]); // shop → 跑野运动馆
+const staffVenues = new Map<number, number[]>(); // 员工绑定的门店（空 = 不限）
+function staffOut(a: { id: number; username: string; disabled: boolean }) {
+  const ids = staffVenues.get(a.id) ?? [];
+  return { id: a.id, username: a.username, is_disabled: a.disabled, venue_ids: ids, venues: ids.map((id) => ({ id, name: venues.find((v) => v.id === id)?.name ?? `场馆 #${id}` })) };
+}
+function setStaffVenuesOf(staffId: number, merchantId: number, ids: unknown) {
+  const list = Array.isArray(ids) ? [...new Set(ids.map(Number))] : [];
+  if (list.some((id) => venues.find((v) => v.id === id)?.merchant_id !== merchantId)) fail(400, 'invalid_body', '只能绑定本商户的场馆');
+  staffVenues.set(staffId, list);
+}
 export function merchantOf(adminId: number): number | null {
   return staffMerchant.get(adminId) ?? null;
 }
@@ -728,7 +738,7 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
         ...merchantOut(m),
         venues: venues.filter((v) => v.merchant_id === m.id).map(venueOut),
         drops: dropsOfMerchant(m.id),
-        staff: db.admins.filter((a) => a.role === 'merchant' && staffMerchant.get(a.id) === m.id).map((a) => ({ id: a.id, username: a.username, is_disabled: a.disabled })),
+        staff: db.admins.filter((a) => a.role === 'merchant' && staffMerchant.get(a.id) === m.id).map(staffOut),
       };
     }],
     ['POST', /^\/merchants$/, ({ body, role, adminId }) => {
@@ -769,8 +779,18 @@ export function merchantRoutes(log: Log): [string, RegExp, Handler][] {
       const a = { id: Math.max(...db.admins.map((x) => x.id)) + 1, username, role: 'merchant' as AdminRole, disabled: false, created_at: new Date().toISOString() };
       db.admins.push(a);
       staffMerchant.set(a.id, m.id);
-      log(adminId, 'merchant.staff.create', `admin:${a.id}`, { merchant_id: m.id });
+      setStaffVenuesOf(a.id, m.id, body.venue_ids);
+      log(adminId, 'merchant.staff.create', `admin:${a.id}`, { merchant_id: m.id, venue_ids: staffVenues.get(a.id) });
       return {};
+    }],
+    ['PUT', /^\/merchants\/(\d+)\/staff\/(\d+)\/venues$/, ({ m: mm, body, role, adminId }) => {
+      requireRole(role, ['admin']);
+      const mid = Number(mm[1]);
+      const a = db.admins.find((x) => x.id === Number(mm[2]) && x.role === 'merchant' && staffMerchant.get(x.id) === mid);
+      if (!a) fail(404, 'not_found', '员工账号不存在');
+      setStaffVenuesOf(a.id, mid, body.venue_ids);
+      log(adminId, 'merchant.staff_venues', `admin:${a.id}`, { merchant_id: mid, venue_ids: staffVenues.get(a.id) });
+      return staffOut(a);
     }],
 
     // ---- 场馆

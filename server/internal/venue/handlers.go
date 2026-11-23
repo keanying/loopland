@@ -189,6 +189,7 @@ func (h *AdminHandler) Routes(mux *http.ServeMux, ops, scoped, adminOnly func(ht
 	mux.Handle("PATCH /admin/v1/merchants/{id}", ops(h.patchMerchant))
 	mux.Handle("POST /admin/v1/merchants/{id}/reveal-phone", adminOnly(h.revealPhone))
 	mux.Handle("POST /admin/v1/merchants/{id}/staff", adminOnly(h.createStaff))
+	mux.Handle("PUT /admin/v1/merchants/{id}/staff/{staff}/venues", adminOnly(h.setStaffVenues))
 
 	// Merchant staff see and partly edit their own venues (商户自助改场馆, venue.self).
 	mux.Handle("GET /admin/v1/venues", scoped(h.venues))
@@ -324,8 +325,9 @@ func (h *AdminHandler) createStaff(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	var req struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
+		Username string  `json:"username"`
+		Password string  `json:"password"`
+		VenueIDs []int64 `json:"venue_ids"`
 	}
 	if err := httpx.Decode(r, &req); err != nil {
 		return err
@@ -335,12 +337,55 @@ func (h *AdminHandler) createStaff(w http.ResponseWriter, r *http.Request) error
 		if err != nil {
 			return err
 		}
-		return h.audit(r.Context(), tx, "merchant.staff_create", "admin:"+itoa(staff), map[string]any{"merchant_id": id, "username": req.Username})
+		if len(req.VenueIDs) > 0 {
+			if err := h.Svc.SetStaffVenues(r.Context(), tx, id, staff, req.VenueIDs); err != nil {
+				return err
+			}
+		}
+		return h.audit(r.Context(), tx, "merchant.staff_create", "admin:"+itoa(staff), map[string]any{"merchant_id": id, "username": req.Username, "venue_ids": req.VenueIDs})
 	})
 	if err != nil {
 		return err
 	}
 	return httpx.OK(w, map[string]any{})
+}
+
+// setStaffVenues is PUT /admin/v1/merchants/{id}/staff/{staff}/venues
+// {"venue_ids":[...]} (admin; empty list = not bound).
+func (h *AdminHandler) setStaffVenues(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathID(r, "id")
+	if err != nil {
+		return err
+	}
+	staff, err := httpx.PathID(r, "staff")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		VenueIDs []int64 `json:"venue_ids"`
+	}
+	if err := httpx.Decode(r, &req); err != nil {
+		return err
+	}
+	err = pgx.BeginFunc(r.Context(), h.Svc.Pool, func(tx pgx.Tx) error {
+		if err := h.Svc.SetStaffVenues(r.Context(), tx, id, staff, req.VenueIDs); err != nil {
+			return err
+		}
+		return h.audit(r.Context(), tx, "merchant.staff_venues", "admin:"+itoa(staff), map[string]any{"merchant_id": id, "venue_ids": req.VenueIDs})
+	})
+	if err != nil {
+		return err
+	}
+	d, err := h.Svc.MerchantDetail(r.Context(), id)
+	if err != nil {
+		return err
+	}
+	for _, st := range d.Staff {
+		if st.ID == staff {
+			return httpx.OK(w, st)
+		}
+	}
+	return httpx.NotFound("员工账号")
 }
 
 func (h *AdminHandler) venues(w http.ResponseWriter, r *http.Request) error {

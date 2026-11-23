@@ -144,7 +144,7 @@ func (s *Service) RedeemAs(ctx context.Context, op Operator, in RedeemInput) (Re
 		var body string
 		if source == "product" {
 			pc.productID, pc.orderID = *productID, *orderID
-			storeName, err := storeFor(ctx, tx, pc, in.Store)
+			storeName, err := storeFor(ctx, tx, pc, in.Store, op.AdminID)
 			if err != nil {
 				return err
 			}
