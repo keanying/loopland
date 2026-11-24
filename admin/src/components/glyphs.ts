@@ -151,5 +151,5 @@ export const APP_GLYPHS = {
   wallet: { parts: [{ d: 'M3.5 7.5h17v12h-17zM3.5 7.5 15 4v3.5M15 11.5h5.5v4H15z' }] },
   doc: { parts: [{ d: 'M6 3h9l4 4v14H6zM9 12h7M9 16h5' }], proto: true },
   apple: { parts: [{ d: 'M16.4 12.7c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.7-.4 6.7 1.1 8.9.8 1.1 1.6 2.3 2.8 2.2 1.1 0 1.5-.7 2.9-.7 1.3 0 1.7.7 2.9.7 1.2 0 2-1.1 2.7-2.2.9-1.2 1.2-2.4 1.2-2.5 0 0-2.3-.9-2.3-3.6zM14.2 6.1c.6-.8 1-1.8.9-2.8-.9 0-2 .6-2.6 1.3-.6.6-1.1 1.7-.9 2.7 1 .1 2-.5 2.6-1.2z', fill: true }] },
-  quan: { parts: [{ d: 'O15.6 12 7.4', fill: true }, { d: 'O6.6 12 5.2', cut: true, extra: 2.4 }, { d: 'O16.4 10.6 1.2O19.8 10.6 1.2', fill: true, cut: true }, { d: 'M15.9 14q2.2 2 4.4 0', cut: true, extra: -0.3 }, { d: 'O6.6 12 5.2' }], proto: true },
+  quan: { parts: [{ d: 'O16.2 12 6.8', fill: true }, { d: 'O8.4 12 6.2', cut: true, extra: 3 }, { d: 'O8.4 12 6.2', extra: 0.8 }, { d: 'O8.4 5.8 2.4', fill: true, cut: true }, { d: 'O8.4 5.8 1.6', fill: true }], proto: true },
 } satisfies Record<string, GlyphDef>;

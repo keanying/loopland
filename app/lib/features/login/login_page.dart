@@ -182,7 +182,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     style: TextStyle(fontSize: 40, fontWeight: FontWeight.w900, height: 1.2, letterSpacing: 1)),
               ),
               const SizedBox(height: 12),
-              const Text('每一次跑步都在地图上圈下领地，和跑团一起建城、打怪兽。',
+              const Text('每一次运动都在地图上圈一圈，和你的伙伴一起游戏，一起跑。',
                   style: TextStyle(color: LL.text2, fontSize: 15, height: 1.6)),
               const SizedBox(height: 28),
               if (opts.oneClick) ...[

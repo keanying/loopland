@@ -107,9 +107,12 @@ void main() {
     }
     now = now.add(const Duration(minutes: 5));
     ctrl.pause(); // forces a snapshot
-    // The snapshot is written asynchronously (temp file + rename).
+    // The snapshot is written asynchronously (temp file + rename). Starting
+    // already wrote an empty one, so wait for the one taken on pause (all 5
+    // points), not just any snapshot — under load the older write can be
+    // read first.
     RunSnapshot? snap;
-    for (var i = 0; i < 250 && snap == null; i++) {
+    for (var i = 0; i < 250 && (snap == null || snap.points.length < 5); i++) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       snap = await store.loadInProgress();
     }

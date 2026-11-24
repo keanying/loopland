@@ -53,9 +53,9 @@ class LPart {
   final double extra;
 }
 
-/// 描边。
+/// 描边（线宽 = 正常线宽 + [extra]）。
 class _S extends LPart {
-  const _S(super.d) : super._();
+  const _S(super.d, [double extra = 0]) : super._(extra: extra);
 }
 
 /// 填充（边缘再描一圈细线，让尖角变圆润）。
@@ -320,12 +320,13 @@ abstract final class LIcons {
   // ── 圈圈 ──────────────────────────────────────────────────
   /// 「圈圈」助手的单色标志：品牌双环 oo，右边的实心圈长出一张小脸。
   /// 彩色版见 [QuanMark]。
+  /// 品牌标志 oo 的单色版（品牌 SVG 按比例缩到 24 网格：空心圈、实心圈、缝、紫点位置）。
   static const quan = LGlyph('quan', [
-    _F('O15.6 12 7.4'),
-    _X('O6.6 12 5.2', 2.4),
-    _XF('O16.4 10.6 1.2O19.8 10.6 1.2'),
-    _X('M15.9 14q2.2 2 4.4 0', -0.3),
-    _S('O6.6 12 5.2'),
+    _F('O16.2 12 6.8'),
+    _X('O8.4 12 6.2', 3.0),
+    _S('O8.4 12 6.2', 0.8),
+    _XF('O8.4 5.8 2.4'),
+    _F('O8.4 5.8 1.6'),
   ], proto: true);
 
   /// 全部图标（图标总览用），按上面的顺序。
@@ -469,8 +470,9 @@ class _GlyphPainter extends CustomPainter {
   bool shouldRepaint(_GlyphPainter old) => old.glyph != glyph || old.color != color || old.shadows != shadows || old.iconSize != iconSize;
 }
 
-/// 「圈圈」AI 助手的形象：品牌双环 oo（左边空心圈是路线，右边荧光绿实心圈是圈下的地），
-/// 实心圈上一双豆豆眼和一个笑。尺寸不小于 28 时，空心圈顶上带品牌的紫色小圆点（跑者）。
+/// 「圈圈」AI 助手的形象 = 品牌标志 oo（docs/资料包/04_Logo与图标）：左边空心白圈是跑步路线，
+/// 右边荧光绿实心圈是圈下的地，两圈之间留一道缝，空心圈顶上的紫点是正在跑的人。
+/// 几何按 `assets/brand/mark_for_dark_bg.svg` 等比缩放，不加任何表情。
 ///
 /// 深色底用默认配色；放在浅色或彩色底上时把 [ringColor] 设成墨黑。
 /// 要整枚单色（比如放在荧光绿底上），用 `LIcon(LIcons.quan)`。
@@ -480,15 +482,14 @@ class QuanMark extends StatelessWidget {
     this.size = 24,
     this.ringColor = LL.text,
     this.discColor = LL.lime,
-    this.faceColor = LL.ink,
     this.runner,
     this.semanticLabel,
   });
 
   final double size;
-  final Color ringColor, discColor, faceColor;
+  final Color ringColor, discColor;
 
-  /// 空心圈顶上的紫点；不给时尺寸 ≥ 28 才画（品牌规范：小于 24 px 去掉紫点）。
+  /// 空心圈顶上的紫点；不给时尺寸 ≥ 24 才画（品牌规范：小于 24 px 去掉紫点）。
   final bool? runner;
   final String? semanticLabel;
 
@@ -499,15 +500,15 @@ class QuanMark extends StatelessWidget {
           child: SizedBox(
             width: size,
             height: size,
-            child: CustomPaint(painter: _QuanPainter(ringColor, discColor, faceColor, runner ?? size >= 28, size)),
+            child: CustomPaint(painter: _QuanPainter(ringColor, discColor, runner ?? size >= 24, size)),
           ),
         ),
       );
 }
 
 class _QuanPainter extends CustomPainter {
-  _QuanPainter(this.ring, this.disc, this.face, this.runner, this.markSize);
-  final Color ring, disc, face;
+  _QuanPainter(this.ring, this.disc, this.runner, this.markSize);
+  final Color ring, disc;
   final bool runner;
   final double markSize;
 
@@ -515,45 +516,32 @@ class _QuanPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final side = math.min(markSize, size.shortestSide);
     if (side <= 0) return;
-    final k = side / 24;
+    // 品牌 SVG 的 viewBox 是 12 22 74 52：按宽度缩到 side，垂直居中
+    final k = side / 74;
     canvas.save();
-    canvas.translate((size.width - side) / 2, (size.height - side) / 2);
+    canvas.translate((size.width - side) / 2, (size.height - 52 * k) / 2);
     canvas.scale(k);
-    final sw = LGlyph.strokeUnits(side) + 0.4; // 品牌标志的圈比普通线条粗
-    const ringC = Offset(6.6, 12), ringR = 5.2;
-    canvas.saveLayer(const Rect.fromLTWH(-4, -4, 32, 32), Paint());
-    // 实心圈
-    canvas.drawCircle(const Offset(15.6, 12), 7.4, Paint()..color = disc);
-    // 空心圈压在实心圈上，中间留一道缝
-    canvas.drawCircle(ringC, ringR, Paint()
+    canvas.translate(-12, -22);
+    canvas.saveLayer(const Rect.fromLTWH(0, 0, 100, 100), Paint());
+    // 实心圈（被空心圈切出一道缝）
+    canvas.drawCircle(const Offset(62, 50), 21, Paint()..color = disc);
+    canvas.drawCircle(const Offset(38, 50), 19, Paint()
       ..blendMode = BlendMode.dstOut
       ..style = PaintingStyle.stroke
-      ..strokeWidth = sw + 2.4);
-    final ringPaint = Paint()
+      ..strokeWidth = 15);
+    // 空心圈
+    canvas.drawCircle(const Offset(38, 50), 19, Paint()
       ..color = ring
       ..style = PaintingStyle.stroke
-      ..strokeWidth = sw;
-    canvas.drawCircle(ringC, ringR, ringPaint);
+      ..strokeWidth = 8);
     if (runner) {
-      // 紫点所在处把圈断开
-      canvas.drawCircle(Offset(ringC.dx, ringC.dy - ringR), 2.3, Paint()..blendMode = BlendMode.dstOut);
-      canvas.drawCircle(Offset(ringC.dx, ringC.dy - ringR), 1.5, Paint()..color = LL.lavender);
+      canvas.drawCircle(const Offset(38, 31), 7.5, Paint()..blendMode = BlendMode.dstOut);
+      canvas.drawCircle(const Offset(38, 31), 5, Paint()..color = LL.lavender);
     }
-    // 脸
-    final facePaint = Paint()..color = face;
-    canvas.drawCircle(const Offset(16.4, 10.6), 1.2, facePaint);
-    canvas.drawCircle(const Offset(19.8, 10.6), 1.2, facePaint);
-    canvas.drawPath(
-        _path('M15.9 14q2.2 2 4.4 0'),
-        Paint()
-          ..color = face
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = sw - 0.4);
     canvas.restore();
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_QuanPainter old) => old.ring != ring || old.disc != disc || old.face != face || old.runner != runner || old.markSize != markSize;
+  bool shouldRepaint(_QuanPainter old) => old.ring != ring || old.disc != disc || old.runner != runner || old.markSize != markSize;
 }

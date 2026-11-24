@@ -62,9 +62,9 @@ class NavShell extends ConsumerWidget {
   }
 }
 
-/// 底栏。选中的普通标签（领地 / 图鉴 / 社区 / 我的）是一个浮在上沿的荧光绿圆球，
-/// 底栏在它下面凹进去；切换时圆球从凹口弹起、沿弧线飞到新位置落下，
-/// 旧凹口合上、新凹口带回弹地张开（液态气泡效果）。切到中间「开始」时圆球缩进按钮里。
+/// 底栏。选中的普通标签（领地 / 图鉴 / 社区 / 我的）在栏内有一块荧光绿圆角高亮，
+/// 图标变成深色；切换时高亮在栏内滑到新位置（滑动途中略微拉长），不跳出底栏。
+/// 选中中间「开始」时高亮收起，由「开始」按钮自己表示选中。点按时那一格有一下变色反馈。
 class _Bar extends StatefulWidget {
   const _Bar({required this.index, required this.onTap, required this.centerArt});
   final int index;
@@ -79,11 +79,10 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
   static const _icons = [LIcons.map, LIcons.codex, LIcons.play, LIcons.users, LIcons.user];
   static const _labels = ['领地', '图鉴', '开始', '社区', '我的'];
   static const button = 84.0; // 中间「开始」按钮直径（含外圈）
-  static const ball = 44.0; // 选中圆球直径
-  static const notchDepth = 38.0; // 凹口深度（圆球一半落在凹口里，四周留一圈缝）
-  static const pad = 22.0; // 两端图标离底栏边缘的距离（给圆角让出位置）
+  static const pad = 10.0; // 两端标签离底栏边缘的距离
+  static const pillH = 52.0; // 高亮块高度
 
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 700), value: 1);
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 380), value: 1);
   late int _from = widget.index, _to = widget.index;
 
   @override
@@ -105,8 +104,6 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  static double _seg(double t, double a, double b) => ((t - a) / (b - a)).clamp(0.0, 1.0);
-
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -121,62 +118,95 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
               3 => w / 2 + (button + 12) / 2 + itemW / 2,
               _ => w - pad - itemW / 2,
             };
+        final pillW = itemW - 6;
         return AnimatedBuilder(
           animation: _c,
           builder: (context, _) {
-            final t = _c.value;
-            final moving = _from != _to && t < 1;
-            // 凹口：旧的在前 30% 合上，新的在后 40% 带回弹张开
-            final notches = <(double, double)>[
-              if (moving && _from != 2) (x(_from), notchDepth * (1 - Curves.easeIn.transform(_seg(t, 0, 0.3)))),
-              if (_to != 2) (x(_to), notchDepth * (moving ? const ElasticOutCurve(0.45).transform(_seg(t, 0.6, 1)) : 1).clamp(0.0, 2.0)),
-            ];
-            // 圆球：水平按缓动移动，竖直走一条抛物线（经过中间按钮时抛得更高）
-            final move = Curves.easeInOutCubic.transform(_seg(t, 0.05, 0.85));
-            final crossesCenter = (_from - 2) * (_to - 2) < 0;
-            final lift = moving ? (crossesCenter ? 70.0 : 44.0) * math.sin(math.pi * _seg(t, 0, 0.9)) : 0.0;
-            final ballX = moving ? x(_from) + (x(_to) - x(_from)) * move : x(_to);
+            final t = Curves.easeOutCubic.transform(_c.value);
+            final moving = _from != _to && _c.value < 1;
+            // 高亮位置与宽度：滑动途中拉长一点（像被拖过去），到位后回到原宽
+            final cx = moving ? x(_from) + (x(_to) - x(_from)) * t : x(_to);
+            final stretch = moving && _from != 2 && _to != 2 && (_from - 2) * (_to - 2) > 0 ? math.sin(math.pi * _c.value) * math.min(28.0, (x(_to) - x(_from)).abs() * 0.18) : 0.0;
+            // 切到 / 离开中间「开始」：高亮在原位收起 / 在新位置展开；
+            // 跨过中间按钮的切换（左右两侧之间）：前半段在原位收起、后半段在新位置展开，不从按钮底下滑过
             var scale = 1.0;
-            if (moving && _from == 2) scale = Curves.easeOutBack.transform(_seg(t, 0, 0.3));
-            if (_to == 2) scale = moving ? 1 - Curves.easeIn.transform(_seg(t, 0.6, 0.9)) : 0;
-            // 球里的图标：先淡出旧的，落下前淡入新的
-            final showTo = !moving || t > 0.7;
-            final iconOpacity = !moving ? 1.0 : (t < 0.2 ? 1 - _seg(t, 0, 0.2) : _seg(t, 0.7, 0.9));
-            double itemOpacity(int i) {
-              if (i == _to) return moving ? 1 - _seg(t, 0.55, 0.7) : 0;
-              if (i == _from && moving) return _seg(t, 0.05, 0.3);
-              return 1;
+            var pillX = cx;
+            final crosses = (_from - 2) * (_to - 2) < 0;
+            if (_to == 2) {
+              scale = moving ? 1 - t : 0;
+              pillX = moving ? x(_from) : x(_to);
+            } else if (moving && _from == 2) {
+              scale = t;
+              pillX = x(_to);
+            } else if (moving && crosses) {
+              final v = _c.value;
+              scale = v < 0.5 ? 1 - Curves.easeIn.transform(v * 2) : Curves.easeOutBack.transform((v - 0.5) * 2);
+              pillX = v < 0.5 ? x(_from) : x(_to);
             }
 
-            Widget item(int i) => Expanded(
-                  child: Semantics(
-                    button: true,
-                    selected: widget.index == i,
-                    label: _labels[i],
-                    child: InkResponse(
-                      onTap: () => widget.onTap(i),
-                      child: Center(
-                        child: Opacity(
-                          opacity: itemOpacity(i),
-                          child: LIcon(_icons[i], color: LL.text3, size: 28),
+            Widget item(int i) {
+              final sel = widget.index == i;
+              return Expanded(
+                child: Semantics(
+                  button: true,
+                  selected: sel,
+                  label: _labels[i],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3, vertical: (NavShell.barHeight - pillH) / 2),
+                    child: Material(
+                      type: MaterialType.transparency,
+                      child: InkWell(
+                        onTap: () => widget.onTap(i),
+                        borderRadius: BorderRadius.circular(18),
+                        splashColor: LL.lime.withValues(alpha: 0.28),
+                        highlightColor: LL.lime.withValues(alpha: 0.16),
+                        child: Center(
+                          child: TweenAnimationBuilder<Color?>(
+                            tween: ColorTween(end: sel ? LL.ink : LL.text3),
+                            duration: const Duration(milliseconds: 220),
+                            builder: (_, c, _) => LIcon(_icons[i], color: c, size: 26),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                );
+                ),
+              );
+            }
 
-            const barTop = 22.0;
             return Stack(clipBehavior: Clip.none, alignment: Alignment.bottomCenter, children: [
-              // 底栏：中间向上鼓起托住「开始」按钮，选中项位置凹进去
+              // 底栏：中间向上鼓起托住「开始」按钮
               SizedBox(
                 height: NavShell.barHeight,
                 width: double.infinity,
                 child: CustomPaint(
-                  painter: _BarPainter(hump: button / 2 + 10, notches: notches),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: pad),
-                    child: Row(children: [item(0), item(1), const SizedBox(width: button + 12), item(3), item(4)]),
-                  ),
+                  painter: _BarPainter(hump: button / 2 + 10),
+                  child: Stack(children: [
+                    // 选中高亮（在栏内，不越出底栏）
+                    if (scale > 0.01)
+                      Positioned(
+                        left: pillX - (pillW + stretch) / 2,
+                        top: (NavShell.barHeight - pillH) / 2,
+                        width: pillW + stretch,
+                        height: pillH,
+                        child: IgnorePointer(
+                          child: Transform.scale(
+                            scale: scale,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: LL.lime,
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [BoxShadow(color: LL.lime.withValues(alpha: 0.22), blurRadius: 10)],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: pad),
+                      child: Row(children: [item(0), item(1), const SizedBox(width: button + 12), item(3), item(4)]),
+                    ),
+                  ]),
                 ),
               ),
               Positioned(
@@ -191,37 +221,6 @@ class _BarState extends State<_Bar> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
-              // 选中圆球（只是视觉，点击落到下面的标签上）
-              if (scale > 0.01)
-                Positioned(
-                  left: ballX - ball / 2,
-                  top: barTop + 8 - ball / 2 - lift,
-                  child: IgnorePointer(
-                    child: ExcludeSemantics(
-                      child: Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width: ball,
-                          height: ball,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFFEAFA94), LL.lime],
-                            ),
-                            boxShadow: [BoxShadow(color: LL.lime.withValues(alpha: 0.3), blurRadius: 12)],
-                          ),
-                          child: Opacity(
-                            opacity: iconOpacity,
-                            child: LIcon(_icons[showTo ? _to : _from], color: LL.ink, size: 24),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ]);
           },
         );
@@ -322,73 +321,35 @@ class _StartButtonState extends State<_StartButton> with TickerProviderStateMixi
   }
 }
 
-/// 底栏背景：圆角矩形，中间顶部向上鼓起一个平滑的弧，选中项位置向下凹一个碗形缺口。
-/// 上沿按从左到右依次画出凹口和鼓包（不用路径布尔运算，避免边缘重合时算错）。
+/// 底栏背景：圆角胶囊，中间顶部向上鼓起一个平滑的弧，托住「开始」按钮。
 class _BarPainter extends CustomPainter {
-  _BarPainter({required this.hump, this.notches = const []});
+  _BarPainter({required this.hump});
   final double hump; // 鼓起部分的半宽
-  final List<(double, double)> notches; // 凹口：(中心 x, 深度)
-
-  static const radius = 28.0; // 底栏圆角
-  static const shoulder = 36.0; // 凹口单侧宽度（靠近圆角、鼓包或另一个凹口时自动收窄）
-  static const rise = 14.0; // 鼓起高度
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height, r = radius, cx = w / 2;
-    final humpL = cx - hump - 4, humpR = cx + hump + 4; // 鼓包两端
-    // 每个凹口两侧的宽度：不进圆角、不进鼓包、和相邻凹口在中点分开
-    final list = [for (final n in notches) if (n.$2 >= 0.5) n]..sort((a, b) => a.$1.compareTo(b.$1));
-    final sides = <(double, double)>[];
-    for (var i = 0; i < list.length; i++) {
-      final x = list[i].$1;
-      var l = math.min(shoulder, x < cx ? x - r - 2 : x - humpR);
-      var rr = math.min(shoulder, x < cx ? humpL - x : w - r - 2 - x);
-      if (i > 0) l = math.min(l, (x - list[i - 1].$1) / 2);
-      if (i < list.length - 1) rr = math.min(rr, (list[i + 1].$1 - x) / 2);
-      sides.add((l, rr));
-    }
-    final path = Path()..moveTo(r, 0);
-    void notch(int i) {
-      final (x, d) = list[i];
-      final (l, rr) = sides[i];
-      if (l < 4 || rr < 4) return;
-      path
-        ..lineTo(x - l, 0)
-        ..cubicTo(x - l * 0.45, 0, x - l * 0.6, d, x, d)
-        ..cubicTo(x + rr * 0.6, d, x + rr * 0.45, 0, x + rr, 0);
-    }
-
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].$1 < cx) notch(i);
-    }
-    path
-      ..lineTo(humpL, 0)
-      ..cubicTo(cx - hump + 12, 0, cx - hump + 8, -rise, cx, -rise)
-      ..cubicTo(cx + hump - 8, -rise, cx + hump - 12, 0, humpR, 0);
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].$1 > cx) notch(i);
-    }
-    path
+    final w = size.width, h = size.height, r = h / 2, cx = w / 2;
+    const rise = 14.0; // 鼓起高度
+    final path = Path()
+      ..moveTo(r, 0)
+      ..lineTo(cx - hump - 22, 0)
+      ..cubicTo(cx - hump + 4, 0, cx - hump + 6, -rise, cx, -rise)
+      ..cubicTo(cx + hump - 6, -rise, cx + hump - 4, 0, cx + hump + 22, 0)
       ..lineTo(w - r, 0)
-      ..arcToPoint(Offset(w, r), radius: const Radius.circular(radius))
-      ..lineTo(w, h - r)
-      ..arcToPoint(Offset(w - r, h), radius: const Radius.circular(radius))
+      ..arcToPoint(Offset(w - r, h), radius: Radius.circular(r))
       ..lineTo(r, h)
-      ..arcToPoint(Offset(0, h - r), radius: const Radius.circular(radius))
-      ..lineTo(0, r)
-      ..arcToPoint(Offset(r, 0), radius: const Radius.circular(radius))
+      ..arcToPoint(Offset(r, 0), radius: Radius.circular(r))
       ..close();
     canvas.drawShadow(path, const Color(0xFF000000), 12, false);
     canvas.drawPath(path, Paint()..color = const Color(0xF21B1B20));
     canvas.drawPath(path, Paint()
-      ..color = const Color(0xFF3A3A42) // 描边略亮一点，凹口轮廓在深色背景上也看得出
+      ..color = LL.border
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2);
+      ..strokeWidth = 1);
   }
 
   @override
-  bool shouldRepaint(_BarPainter old) => true;
+  bool shouldRepaint(_BarPainter old) => old.hump != hump;
 }
 
 /// 「开始」按钮外圈的虚线圆。
