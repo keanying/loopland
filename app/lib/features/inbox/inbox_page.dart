@@ -15,6 +15,7 @@ import '../../widgets/l_icons.dart';
 import '../chat/conversations_page.dart';
 import '../community/gathering_providers.dart';
 import '../community/gathering_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// Inbox categories (`GET /v1/inbox?category=`), in display order.
 const inboxCategories = [
@@ -182,7 +183,7 @@ class _InboxPageState extends ConsumerState<InboxPage> {
                 onPressed: (summary?.notifications ?? 1) == 0 ? null : _readAll, child: const Text('全部已读')),
           ),
           Expanded(
-            child: RefreshIndicator(
+            child: SoundRefresh(
           onRefresh: _refresh,
           child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
             Row(children: [

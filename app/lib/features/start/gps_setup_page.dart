@@ -17,6 +17,7 @@ import '../../widgets/l_icons.dart';
 import '../ai/ai_providers.dart';
 import '../ai/ai_widgets.dart';
 import '../login/consent_page.dart';
+import '../../audio/audio.dart';
 
 /// 开跑前：选运动、选目标（自由圈地 / AI 推荐路线 / 定距离 / 定时间 / 抢指定领地）。
 class GpsSetupPage extends ConsumerStatefulWidget {
@@ -96,6 +97,9 @@ class _GpsSetupPageState extends ConsumerState<GpsSetupPage> {
       }
       final cfg = ref.read(configProvider).value;
       final ai = _goal == 'ai' ? _aiRoute : null;
+      ref.read(audioProvider)
+        ..play(Sounds.startPress)
+        ..haptic(HapticKind.medium);
       ref.read(runControllerProvider.notifier).start(
             RunConfig(sport: _sport, goal: _goalValue, guide: ai == null ? null : guideOf(ai)),
             minClaimAreaM2: cfg?.minClaimAreaM2 ?? 500,

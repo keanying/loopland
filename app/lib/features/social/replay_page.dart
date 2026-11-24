@@ -11,6 +11,8 @@ import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
+import '../../widgets/sound_refresh.dart';
+import '../../audio/audio.dart';
 
 /// D-06 轨迹回放: vertical pages from `/v1/replays` (`/replays`), or one run
 /// (`/replays/activity/:id`, `GET /v1/activities/{id}/replay`). Each track is
@@ -57,6 +59,11 @@ class _ReplayPageState extends ConsumerState<ReplayPage> {
 
   Future<void> _like(Replay r) async {
     final on = !r.liked;
+    if (on) {
+      ref.read(audioProvider)
+        ..play(Sounds.like)
+        ..haptic(HapticKind.light);
+    }
     _pager.replaceWhere(
       (e) => e.postId == r.postId,
       (e) => e.copyWith(liked: on, likeCount: (e.likeCount + (on ? 1 : -1)).clamp(0, 1 << 31)),
@@ -88,7 +95,7 @@ class _ReplayPageState extends ConsumerState<ReplayPage> {
               child: Text('还没有可回放的轨迹', style: TextStyle(color: LL.text2)),
             );
     } else {
-      body = RefreshIndicator(
+      body = SoundRefresh(
         onRefresh: _pager.refresh,
         child: PageView.builder(
           controller: _page,

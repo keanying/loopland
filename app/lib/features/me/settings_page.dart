@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../api/models.dart';
+import '../../audio/audio.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/env.dart';
 import '../../core/format.dart';
@@ -17,6 +18,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../login/consent_page.dart';
+import 'sound_settings.dart';
 
 const visibilityNames = {'public': '公开', 'followers': '仅粉丝', 'crew': '仅跑团', 'private': '仅自己'};
 
@@ -29,6 +31,13 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _busy = false;
+
+  /// 开关的「嘀 / 嘟」.
+  void _toggled(bool on) {
+    final a = ref.read(audioProvider);
+    a.play(on ? Sounds.uiToggleOn : Sounds.uiToggleOff);
+    a.haptic(HapticKind.selection);
+  }
 
   Future<void> _patch(Map<String, dynamic> settings) async {
     final u = await runGuarded(context, () => ref.read(apiProvider).updateMe(settings: settings));
@@ -121,18 +130,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               title: const Text('隐藏轨迹起终点'),
               subtitle: const Text('隐藏起点和终点附近 200 m，保护住址', style: TextStyle(color: LL.text3, fontSize: 12)),
               value: s.hideEndpoints,
-              onChanged: (v) => _patch({'hide_endpoints': v}),
+              onChanged: (v) {
+                _toggled(v);
+                _patch({'hide_endpoints': v});
+              },
             ),
             SwitchListTile(
               title: const Text('在地图上显示我的头像'),
               value: s.showAvatarOnMap,
-              onChanged: (v) => _patch({'show_avatar_on_map': v}),
+              onChanged: (v) {
+                _toggled(v);
+                _patch({'show_avatar_on_map': v});
+              },
             ),
             SwitchListTile(
               title: const Text('个性化推荐'),
               subtitle: const Text('关闭后不再根据你的数据推荐内容', style: TextStyle(color: LL.text3, fontSize: 12)),
               value: s.personalized,
-              onChanged: (v) => _patch({'personalized': v}),
+              onChanged: (v) {
+                _toggled(v);
+                _patch({'personalized': v});
+              },
             ),
           ]),
           _group('授权', [
@@ -141,11 +159,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: ConsentSwitches(
                 location: u.consents.location,
                 health: u.consents.health,
-                onLocation: (v) => _consent(location: v),
-                onHealth: (v) => _consent(health: v),
+                onLocation: (v) {
+                  _toggled(v);
+                  _consent(location: v);
+                },
+                onHealth: (v) {
+                  _toggled(v);
+                  _consent(health: v);
+                },
               ),
             ),
           ]),
+          _group('声音', const [SoundSettings()]),
           _group('账号', [
             ListTile(
               title: const Text('手机号'),

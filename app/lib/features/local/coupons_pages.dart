@@ -16,6 +16,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import 'perks_providers.dart';
+import '../../widgets/sound_refresh.dart';
 
 String _md(DateTime? t) => t == null ? '-' : DateFormat('MM.dd').format(t.toLocal());
 String _mdhm(DateTime? t) => t == null ? '-' : DateFormat('MM.dd HH:mm').format(t.toLocal());
@@ -69,7 +70,7 @@ class _CouponsPageState extends ConsumerState<CouponsPage> {
             child: PillTabs(labels: couponStatusNames, index: _tab, onChanged: (i) => setState(() => _tab = i)),
           ),
           Expanded(
-            child: RefreshIndicator(
+            child: SoundRefresh(
               onRefresh: () => ref.refresh(myCouponsProvider(status).future),
               child: AsyncBody<List<Coupon>>(
                 value: v,

@@ -18,6 +18,7 @@ import '../social/social_widgets.dart' show mediaUrl;
 import 'product_pay.dart';
 import 'product_providers.dart';
 import 'product_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// Asia/Shanghai wall clock, like the venue / slot times.
 String _mdhm(DateTime? t) => t == null ? '-' : DateFormat('M月d日 HH:mm').format(shanghaiClock(t));
@@ -63,7 +64,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             if (_qty > max && max > 0) _qty = max;
             return Column(children: [
               Expanded(
-                child: RefreshIndicator(
+                child: SoundRefresh(
                   onRefresh: () => ref.refresh(productProvider(widget.productId).future),
                   child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
                     _Gallery(product: p),
@@ -535,7 +536,7 @@ class PromotionsPage extends ConsumerWidget {
         child: Column(children: [
           const BackHeader(title: '官方活动', subtitle: '限时活动价 · 合作商户让利'),
           Expanded(
-            child: RefreshIndicator(
+            child: SoundRefresh(
               onRefresh: () => ref.refresh(promotionsProvider.future),
               child: AsyncBody<List<Promotion>>(
                 value: async,
@@ -603,7 +604,7 @@ class PromotionDetailPage extends ConsumerWidget {
         child: AsyncBody<Promotion>(
           value: async,
           onRetry: () => ref.invalidate(promotionProvider(promotionId)),
-          data: (p) => RefreshIndicator(
+          data: (p) => SoundRefresh(
             onRefresh: () => ref.refresh(promotionProvider(promotionId).future),
             child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
               const BackHeader(title: '官方活动'),

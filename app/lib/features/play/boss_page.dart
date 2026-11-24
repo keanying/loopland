@@ -20,6 +20,8 @@ import '../ai/ai_widgets.dart';
 import 'locate.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
+import '../../widgets/sound_refresh.dart';
+import '../../audio/audio.dart';
 
 /// Damage rules grouped for the 2-column grid: "跑步 / 骑行" · "每 1 km = 100 伤害".
 List<(String, String)> damageTiles(List<DamageRule> rules, BossStrikeInfo strike) {
@@ -117,7 +119,21 @@ class _BossPageState extends ConsumerState<BossPage> {
         _cooldownUntil = DateTime.now().add(Duration(seconds: b.strike.cooldownS));
       });
       ref.read(authProvider.notifier).refreshUser().ignore();
-      if (r.status != 'active') _reload();
+      final audio = ref.read(audioProvider);
+      if (r.status != 'active') {
+        // 最后一击：泄气 + 胜利小号角
+        audio
+          ..play(Sounds.bossDown)
+          ..play(Sounds.bossDownChar(b.kind))
+          ..haptic(HapticKind.heavy)
+          ..say(Sounds.runBossDown, priority: VoicePriority.boss);
+        _reload();
+      } else {
+        audio
+          ..play(Sounds.bossHit)
+          ..play(Sounds.bossHitChar(b.kind))
+          ..haptic(HapticKind.light);
+      }
     } on ApiException catch (e) {
       if (!mounted) return;
       if (e.code == 'cooldown') {
@@ -148,7 +164,7 @@ class _BossPageState extends ConsumerState<BossPage> {
             _cooldownUntil ??= fetched.strike.availableInS > 0
                 ? DateTime.now().add(Duration(seconds: fetched.strike.availableInS))
                 : null;
-            return RefreshIndicator(onRefresh: () async => _reload(), child: _body(b));
+            return SoundRefresh(onRefresh: () async => _reload(), child: _body(b));
           },
         ),
       ),
@@ -277,9 +293,13 @@ class _MonsterCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFF2A2A31), width: 1.5),
       ),
       child: Column(children: [
-        Opacity(
-          opacity: b.isActive ? 1 : 0.55,
-          child: hasArt(b.kind) ? CardArt(artKey: b.kind, width: 170) : MonsterArt(kind: b.kind, size: 170, badge: true),
+        // 点怪兽：它会嘟囔一声
+        GestureDetector(
+          onTap: () => playSound(context, Sounds.bossTap(b.kind)),
+          child: Opacity(
+            opacity: b.isActive ? 1 : 0.55,
+            child: hasArt(b.kind) ? CardArt(artKey: b.kind, width: 170) : MonsterArt(kind: b.kind, size: 170, badge: true),
+          ),
         ),
         const SizedBox(height: 14),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [

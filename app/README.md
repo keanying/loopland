@@ -187,7 +187,7 @@ screenshots/  组件测试生成的界面截图
   - 跟练页（`/coach/:key`，设计稿 11_AI_跟练）：前置摄像头预览 + 骨架叠加（CustomPainter）、「AI 自动计数」大数字、组数条、提示气泡、底部面板（已用时 / 倒计时或 次数/目标 / 组数 / 开始·暂停·继续 / 预计能量）；5 秒准备倒计时，按动作 `count`（到目标次数自动完成本组）或 `time` 计时，组间 / 动作间休息（显示「下一个」，可跳过），暂停 / 继续、完成本组、跳过动作、结束训练，结束后显示小结再「领取能量」。
   - 计次（`lib/coach/rep_counter.dart`，纯 Dart，`test/coach/` 用合成关键点序列测试，含抖动 / 丢帧 / 离群点 / 低帧率）：`jump` 用鼻、肩、髋、膝、踝相对各自偏移的截尾均值得到身体高度（按躯干长度归一化），对「峰值相对前一个谷底的升幅」做迟滞（≥ max(0.055 躯干长, 35% 近期幅度)，升幅须在 0.6 s 内完成，过滤慢晃和漂移）；`squat` 膝角（≥155° 站直 / ≤115° 蹲下）、`pushup` 肘角（≥150° / ≤100°）、`crunch` 躯干与地面夹角（≤15° / ≥28°），角度取 0.3 s 中位数，回到起始姿势才计 1 次；`none` 只计时。
   - 画面只在手机本地交给 ML Kit 识别，不上传、不保存（页面和课程列表都有说明，训练结束立即关闭摄像头，切到后台释放摄像头并暂停）。「全身入镜」提示；4 秒窗口内光线太暗 / 可用帧不足 40% / 2.5 秒没有画面时自动改为手动计数（+1 / +10 / −1），点状态条可恢复自动；没有摄像头权限、没有摄像头、Web / 桌面：计时 + 手动计数。
-  - 语音（`flutter_tts`，zh-CN）：准备、每组开始、过半、最后 3 个、最后 3 秒倒数、休息与下一个动作、完成；右上角静音开关（记在本机；跑步页目前没有语音设置）。
+  - 语音（`lib/audio/`，见下面「声音」）：准备、下一个动作、过半、最后十秒、3-2-1 用圈圈录好的台词（`assets/audio/voice/coach/`），动作名、组数、最后 3 个用系统语音（`flutter_tts`，zh-CN）；右上角静音开关（记在本机），也受 设置 → 声音 →「语音播报」控制。
   - 上传沿用 `POST /v1/activities`（跳绳 `amount` = 总次数，其余为分钟数）+ `coach`（`workout_key`、`camera`、`reps_detected`、`reps_manual`、`sets_done`），结果走原来的结算页（能量、复核）。手动补记比识别多 20% 以上时小结页提示可能进入人工复核（服务端规则 `coach_mismatch`）。
 - **本地生活 · 订场 / 场馆签到 / 馆主 / 约球订场 / 赛事报名费（V2 第四批 C-07、C-08、E-03、D-11、D-12，接口 `docs/api/v2-4-本地生活与商户.md`）**：代码在 `lib/api/local_api.dart`、`local_models.dart`、`lib/features/local/`（`local_page.dart` 页面壳、`booking_tab.dart`、`booking_flow.dart`、`venue_widgets.dart`、`venue_pages.dart`、`venue_checkin.dart`、`venue_section.dart`、`qr_scan_page.dart`、`my_bookings_page.dart`、`meetup_booking.dart`、`local_routes.dart`）、`lib/map/venue_marker.dart`。
   - 本地生活 `/local?tab=booking|campaigns|shop`（设计稿 08；入口：我的、赛季页、开始页「场馆球类」）：订场 / 联名活动 / 能量商城三个标签（后两个首次切换时才加载）。「订场」：运动分类（全部 + 8 种）、按当前定位由近到远的合作场馆（`bookable=true`），卡片显示首字色块、名称、「距你 0.8 km · 室内 · 可租拍」、馆主行（「馆主 · 夜跑兔（你的跑团）」/ 馆主是自己时显示订场折扣 / 「暂无馆主 · 先签到先得」）、价格；展开的场馆有日期条（今天起 7 天，按北京时间）、时段格（已满划线不可点，馆主价小字）、连续多选（1–4 个，`booking.max_slots`，点两端缩短、点中间或不相邻重新开始）、「先选一个时段 / 确认预订 21:00–23:00 · ¥120」。顶部「推荐」条：附近（5 km 内）还有空位、未开始的约球组局（`GET /v1/meetups?type=ball`，按规则选，不调 AI，所以标「推荐」不标 AI），点进组局详情。
@@ -287,6 +287,13 @@ keytool -list -v -keystore android/app/loopland-release.jks -alias loopland
 
 - Android CameraX + ML Kit 条码（模型随包），iOS 用 Apple Vision，只识别 QR；相机权限由插件在打开扫一扫时申请（Android `CAMERA` 已声明，iOS `NSCameraUsageDescription` 已加上「扫场馆二维码签到」）。拒绝权限 / 不支持时扫码页提示改用定位签到。画面只在本机识别。
 
+### 8c. 声音 — `audioplayers 6.8.1`（+ `flutter_tts`）
+
+- 素材 `assets/audio/`（清单和接入说明见 `docs/音频素材清单.md`），代码 `lib/audio/`：语音播报 / 音效 / 角色声音三个通道（设置 →「声音」：开关、音量、试听，存在本机），语音排队（优先级、同类 20 秒、缺素材读台词），跑步、跟练、结算、底栏、提示、点赞、签到、支付、宝箱、建城、怪兽、伙伴等时机，配合震动。
+- 语音播报时压低用户的音乐（Android `AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK`，iOS `playback + duckOthers`，播完回到 `ambient`）；音效不抢焦点，iOS 静音键打开时不出声。iOS `UIBackgroundModes` 加了 `audio`（锁屏跑步时播报）。
+- 测试里不出声：`flutter test` 默认静音后端，需要断言时用 `RecordingAudioBackend` 覆盖 `audioProvider`。
+- 混音 / 压低音乐、静音键、锁屏播报、首播延迟需要真机验证。
+
 ### 8. AI 跟练 — `camera 0.12.2`、`google_mlkit_pose_detection 0.16.1`、`flutter_tts 4.2.5`
 
 - ML Kit 姿态识别模型随包内置（不依赖 Google Play 服务、不联网下载），stream 模式、base 模型；处理不过来的帧直接丢弃。Android 用 NV21（个别机型给 3 平面 YUV 时在 Dart 里转），iOS 用 BGRA。
@@ -337,5 +344,5 @@ flutter build ipa --release --dart-define-from-file=config/prod.json
 - 订场 / 报名费的微信、支付宝支付和场馆扫码（相机权限、mobile_scanner 与 ML Kit 姿态识别同包、App Link 验证）只在本环境用假实现测试，需要真机验证。
 - 伙伴经验：`exp` 按服务端实现理解为累计经验，`exp_to_next` 为距下一级还差多少，本级进度 = `exp_per_level − exp_to_next`。
 - WebSocket 只解析 `boss` / `territory_attacked` / `rally` / `ping`；客户端不回 pong（约定未要求）。实时横幅只在 App 前台时出现，系统推送未接。
-- 跑步中的语音播报、手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）；AI 跟练有语音。
+- 手表心率 / 步频未接（上传字段已支持 `hr` / `cad` / `wearable`）。跑步中、AI 跟练、结算都有语音播报（`lib/audio/`）；「只在戴耳机时播报」未做（需要原生代码判断耳机）。
 - AI 跟练的计次阈值只用合成数据调过（`test/coach/`），需要真机实测：不同光线 / 距离 / 机位下的跳绳、开合跳、深蹲、俯卧撑、卷腹计数准确率，前置摄像头骨架叠加的镜像与对齐，低端机帧率，后台切换释放摄像头，TTS 中文语音（部分 Android 机没装中文 TTS 引擎时只显示文字）。

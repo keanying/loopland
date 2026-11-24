@@ -207,7 +207,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
   void _onCue(CoachCue c) {
     if (c.kind != CueKind.countdown) _cueText = c.text;
     if (!mounted || ref.read(voiceMutedProvider)) return;
-    _voice.speak(c.text).ignore();
+    _voice.cue(c).ignore();
   }
 
   void _tick() {

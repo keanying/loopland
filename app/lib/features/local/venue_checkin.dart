@@ -6,6 +6,7 @@ import '../../api/errors.dart';
 import '../../api/local_api.dart';
 import '../../api/local_models.dart';
 import '../../api/perks_models.dart' show Coupon;
+import '../../audio/audio.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
@@ -62,6 +63,9 @@ class VenueCheckin {
       {Venue? venue}) async {
     try {
       final r = await f();
+      ref.read(audioProvider)
+        ..play(Sounds.scanOk)
+        ..haptic(HapticKind.medium);
       ref.invalidate(venueProvider(venueId));
       ref.read(authProvider.notifier).refreshUser().ignore();
       if (context.mounted) await showCheckinResult(context, r, venue: venue);

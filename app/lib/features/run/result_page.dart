@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../api/models.dart';
+import '../../audio/settlement_sounds.dart';
 import '../../claim/geo.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
@@ -40,7 +41,10 @@ class ResultPage extends ConsumerWidget {
     final isGps = gpsSports.contains(a.sport);
     final ctrl = TerritoryMapController();
     final ai = s.status == 'settled' && a.id > 0 && ref.watch(aiEnabledProvider);
-    return Scaffold(
+    // 结算音效 + 语音（圈地、怪兽、宝箱、升级…），打开时播一次
+    return SettlementSounds(
+      result: args.result,
+      child: Scaffold(
       body: SafeArea(
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
           Row(children: [
@@ -201,7 +205,7 @@ class ResultPage extends ConsumerWidget {
           OutlinedButton(onPressed: () => context.go('/me'), child: const Text('完成')),
         ]),
       ),
-    );
+    ));
   }
 
   /// V2 settlement blocks: boss damage, chests, defended territories, routes,

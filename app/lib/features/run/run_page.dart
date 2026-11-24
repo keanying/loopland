@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../api/errors.dart';
+import '../../audio/audio.dart';
+import '../../audio/run_sounds.dart';
 import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/claim.dart';
@@ -41,12 +43,24 @@ class _RunPageState extends ConsumerState<RunPage> {
   DateTime? _nearbyTime;
   bool _nearbyLoading = false;
 
+  /// Voice lines, sound effects and haptics of the run.
+  late final RunSounds _sounds;
+
   @override
   void initState() {
     super.initState();
+    final s = ref.read(runControllerProvider);
+    final now = ref.read(clockProvider)();
+    _sounds = RunSounds(ref.read(audioProvider), s, now)..onState(null, s, now);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _maybeLoadNearby(ref.read(runControllerProvider).position);
     });
+  }
+
+  @override
+  void dispose() {
+    _sounds.holdCancel();
+    super.dispose();
   }
 
   /// Reloads objects within ~1.5 km when the runner moved 400 m or every 2 min.
@@ -131,6 +145,7 @@ class _RunPageState extends ConsumerState<RunPage> {
       final pos = next.position;
       if (_follow && pos != null && pos != prev?.position) _map.moveTo(pos);
       if (pos != prev?.position) _maybeLoadNearby(pos);
+      _sounds.onState(prev, next, ref.read(clockProvider)(), nearby: _nearby);
       if (next.loops.length > _lastLoopCount) {
         final added = next.loops.length - _lastLoopCount;
         _lastLoopCount = next.loops.length;
@@ -317,7 +332,14 @@ class _RunPageState extends ConsumerState<RunPage> {
             ),
           LongPressButton(
             label: '长按结束',
-            onComplete: s.phase == RunPhase.countdown ? null : _finish,
+            onHoldStart: _sounds.holdStart,
+            onHoldCancel: _sounds.holdCancel,
+            onComplete: s.phase == RunPhase.countdown
+                ? null
+                : () {
+                    _sounds.holdDone(settling: ref.read(runControllerProvider).points.length >= 2);
+                    _finish();
+                  },
           ),
         ]),
       ]),
@@ -417,9 +439,19 @@ class _BigButton extends StatelessWidget {
 
 /// Finish button that must be held (防误触).
 class LongPressButton extends StatefulWidget {
-  const LongPressButton({super.key, required this.label, this.onComplete, this.duration = const Duration(milliseconds: 1200)});
+  const LongPressButton({
+    super.key,
+    required this.label,
+    this.onComplete,
+    this.onHoldStart,
+    this.onHoldCancel,
+    this.duration = const Duration(milliseconds: 1200),
+  });
   final String label;
   final VoidCallback? onComplete;
+
+  /// The press started / was let go before completing (蓄力音).
+  final VoidCallback? onHoldStart, onHoldCancel;
   final Duration duration;
   @override
   State<LongPressButton> createState() => _LongPressButtonState();
@@ -429,8 +461,18 @@ class _LongPressButtonState extends State<LongPressButton> with SingleTickerProv
   late final AnimationController _c = AnimationController(vsync: this, duration: widget.duration)
     ..addStatusListener(_onStatus);
 
+  bool _holding = false;
+
+  void _release() {
+    _c.reverse();
+    if (!_holding) return;
+    _holding = false;
+    widget.onHoldCancel?.call();
+  }
+
   void _onStatus(AnimationStatus s) {
     if (s == AnimationStatus.completed) {
+      _holding = false;
       _c.reset();
       widget.onComplete?.call();
     }
@@ -451,9 +493,15 @@ class _LongPressButtonState extends State<LongPressButton> with SingleTickerProv
         label: widget.label,
         onLongPress: widget.onComplete,
         child: GestureDetector(
-          onTapDown: enabled ? (_) => _c.forward() : null,
-          onTapUp: (_) => _c.reverse(),
-          onTapCancel: () => _c.reverse(),
+          onTapDown: enabled
+              ? (_) {
+                  _c.forward();
+                  _holding = true;
+                  widget.onHoldStart?.call();
+                }
+              : null,
+          onTapUp: (_) => _release(),
+          onTapCancel: _release,
           child: AnimatedBuilder(
             animation: _c,
             builder: (context, _) => SizedBox(

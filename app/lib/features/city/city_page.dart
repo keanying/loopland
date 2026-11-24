@@ -12,6 +12,8 @@ import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../play/defense_banner.dart';
+import '../../widgets/sound_refresh.dart';
+import '../../audio/audio.dart';
 
 /// 建城：6 个建造位、建筑选择、角色驻扎，实时显示守卫值和每日能量。
 class CityPage extends ConsumerStatefulWidget {
@@ -38,6 +40,9 @@ class _CityPageState extends ConsumerState<CityPage> {
     final r = await runGuarded(context, () => ref.read(apiProvider).build(t.id, slot, key));
     if (r == null || !mounted) return;
     _apply(r.territory);
+    ref.read(audioProvider)
+      ..play(Sounds.buildingDone)
+      ..haptic(HapticKind.medium);
     toast(context, '建造完成，剩余能量 ${r.energy}');
     ref.read(authProvider.notifier).refreshUser().ignore();
   }
@@ -100,7 +105,7 @@ class _CityPageState extends ConsumerState<CityPage> {
     final slots = [
       for (var i = 0; i < slotCount; i++) t.slots.firstWhere((s) => s.slot == i, orElse: () => Slot(slot: i)),
     ];
-    return RefreshIndicator(
+    return SoundRefresh(
       onRefresh: () async {
         _local = null;
         ref.invalidate(territoryProvider(widget.territoryId));

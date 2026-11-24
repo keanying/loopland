@@ -11,6 +11,7 @@ import '../../core/providers.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
+import '../../widgets/sound_refresh.dart';
 
 final plansProvider = FutureProvider.autoDispose<PlansResponse>((ref) => ref.watch(apiProvider).plans());
 final membershipProvider = FutureProvider.autoDispose<Membership>((ref) => ref.watch(apiProvider).membership());
@@ -139,7 +140,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     final mem = ref.watch(membershipProvider).value ?? user?.membership;
     return Scaffold(
       body: SafeArea(
-        child: RefreshIndicator(
+        child: SoundRefresh(
           onRefresh: () async {
             ref.invalidate(plansProvider);
             ref.invalidate(membershipProvider);

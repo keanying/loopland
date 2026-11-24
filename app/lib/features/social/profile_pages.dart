@@ -16,6 +16,7 @@ import 'post_card.dart';
 import 'report_sheet.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// Route of the direct chat (built by the messaging side).
 String directChatPath(int userId) => '/chat/direct/$userId';
@@ -416,7 +417,7 @@ class BlocksPage extends ConsumerWidget {
               onRetry: () => ref.invalidate(blocksProvider),
               data: (list) => list.isEmpty
                   ? const Center(child: Text('黑名单是空的', style: TextStyle(color: LL.text2)))
-                  : RefreshIndicator(
+                  : SoundRefresh(
                       onRefresh: () => ref.refresh(blocksProvider.future),
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),

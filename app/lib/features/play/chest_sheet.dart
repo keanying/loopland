@@ -12,6 +12,7 @@ import '../../widgets/monster_art.dart';
 import '../local/coupons_pages.dart';
 import 'locate.dart';
 import 'play_widgets.dart';
+import '../../audio/audio.dart';
 
 /// Bottom sheet for a tapped energy chest. Pops with `true` when the chest
 /// is gone for this user (opened / already opened / expired) so the map can
@@ -40,6 +41,9 @@ class _ChestSheetState extends ConsumerState<ChestSheet> {
       if (at == null || !mounted) return;
       final r = await ref.read(apiProvider).openChest(widget.chest.id, at);
       if (!mounted) return;
+      ref.read(audioProvider)
+        ..play(Sounds.chestOpen)
+        ..haptic(HapticKind.medium);
       setState(() {
         _opened = r;
         _gone = true;

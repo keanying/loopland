@@ -15,6 +15,7 @@ import 'coupons_pages.dart' show CouponCard, openCoupon;
 import 'product_pay.dart';
 import 'product_providers.dart';
 import 'product_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 const productOrderFilters = ['', 'pending', 'paid', 'completed', 'refunded', 'cancelled'];
 const productOrderFilterLabels = ['全部', '待支付', '待使用', '已完成', '已退款', '已取消'];
@@ -40,7 +41,7 @@ class _ProductOrdersListState extends ConsumerState<ProductOrdersList> {
       ),
       const SizedBox(height: 8),
       Expanded(
-        child: RefreshIndicator(
+        child: SoundRefresh(
           onRefresh: () => ref.refresh(myProductOrdersProvider(status).future),
           child: AsyncBody<List<ProductOrder>>(
             value: async,
@@ -197,7 +198,7 @@ class _ProductOrderDetailPageState extends ConsumerState<ProductOrderDetailPage>
             final expired = o.isPending && o.payExpiresAt != null && now.isAfter(o.payExpiresAt!);
             return Column(children: [
               Expanded(
-                child: RefreshIndicator(
+                child: SoundRefresh(
                   onRefresh: () => ref.refresh(productOrderProvider(widget.orderId).future),
                   child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
                     BackHeader(title: '订单详情', subtitle: o.orderNo.isEmpty ? null : o.orderNo),

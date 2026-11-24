@@ -4,14 +4,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/models.dart';
+import '../audio/audio.dart';
 import '../core/theme.dart';
 import '../widgets/l_icons.dart';
 import 'realtime_providers.dart';
 
 /// What a banner shows and where tapping it goes.
 class BannerData {
-  const BannerData({required this.icon, required this.color, required this.title, required this.body, required this.path});
+  const BannerData({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+    required this.path,
+    this.sound = Sounds.message,
+  });
   final LGlyph icon;
+
+  /// Played when the banner shows (`territory_lost` for a lost territory).
+  final Sound sound;
   final Color color;
   final String title, body;
   final String path;
@@ -25,6 +36,7 @@ class BannerData {
                 title: '领地 #$territoryId 被抢走了',
                 body: '去看看，跑一圈把它夺回来',
                 path: '/city/$territoryId',
+                sound: Sounds.territoryLost,
               )
             : BannerData(
                 icon: LIcons.shield,
@@ -62,6 +74,7 @@ class _RealtimeBannerHostState extends ConsumerState<RealtimeBannerHost> {
   void _show(BannerData b) {
     _hide?.cancel();
     setState(() => _shown = b);
+    ref.read(audioProvider).play(b.sound);
     _hide = Timer(const Duration(seconds: 6), _dismiss);
   }
 

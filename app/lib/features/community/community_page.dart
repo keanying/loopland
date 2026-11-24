@@ -13,6 +13,7 @@ import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import 'gathering_providers.dart';
 import 'gathering_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 final crewProvider = FutureProvider.autoDispose.family<Crew, int>((ref, id) => ref.watch(apiProvider).crew(id));
 final crewMembersProvider =
@@ -35,7 +36,7 @@ class CommunityPage extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
+        child: SoundRefresh(
           onRefresh: () async {
             ref.invalidate(communityHomeProvider);
             await ref.read(authProvider.notifier).refreshUser().catchError((_) {});

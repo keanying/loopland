@@ -14,6 +14,7 @@ import '../community/gathering_widgets.dart' show Tag;
 import 'local_providers.dart';
 import 'product_orders_pages.dart' show ProductOrdersList;
 import 'venue_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 const _filters = ['', 'pending_pay', 'paid', 'completed', 'refunded', 'cancelled'];
 const _filterLabels = ['全部', '待支付', '待使用', '已完成', '已退款', '已取消'];
@@ -64,7 +65,7 @@ class _MyBookingsPageState extends ConsumerState<MyBookingsPage> {
       ),
       const SizedBox(height: 8),
       Expanded(
-        child: RefreshIndicator(
+        child: SoundRefresh(
           onRefresh: () async => ref.invalidate(myBookingsProvider(status)),
           child: AsyncBody<List<Booking>>(
             value: async,

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../audio/audio.dart';
 import '../core/theme.dart';
 import 'l_icons.dart';
 
@@ -12,8 +13,11 @@ enum ToastKind { info, success, warning, error }
 /// 显示一条轻提示（替代底部 SnackBar）：从屏幕顶部滑下的深色圆角卡片，
 /// 在所有页面、底部面板和弹窗之上；不拦截点击（下面的按钮照常能点），
 /// 按字数停留 2–5 秒后自动收起。同一时间只显示一条，新的替换旧的。
-void toast(BuildContext context, String message, {ToastKind kind = ToastKind.info}) =>
-    toaster(context)(message, kind: kind);
+///
+/// 成功提示播 `ui_success`、错误提示播 `ui_error`（[silent] 时不出声，比如
+/// 同时已经有别的声音）。
+void toast(BuildContext context, String message, {ToastKind kind = ToastKind.info, bool silent = false}) =>
+    toaster(context)(message, kind: kind, silent: silent);
 
 /// 先拿到「显示提示」的函数，再关页面 / 弹窗后调用（关掉之后 context 已经失效）：
 /// ```dart
@@ -21,11 +25,23 @@ void toast(BuildContext context, String message, {ToastKind kind = ToastKind.inf
 /// Navigator.pop(context);
 /// show('发布成功', kind: ToastKind.success);
 /// ```
-void Function(String message, {ToastKind kind}) toaster(BuildContext context) {
+void Function(String message, {ToastKind kind, bool silent}) toaster(BuildContext context) {
   final overlay = Overlay.maybeOf(context, rootOverlay: true);
-  return (message, {kind = ToastKind.info}) {
+  final audio = audioOf(context);
+  return (message, {kind = ToastKind.info, silent = false}) {
     if (overlay == null || !overlay.mounted) return;
     _Toasts.show(overlay, message, kind);
+    if (silent) return;
+    // 成功「叮咚」、错误「嘟」；普通提示和警告不出声
+    switch (kind) {
+      case ToastKind.success:
+        audio?.play(Sounds.uiSuccess);
+      case ToastKind.error:
+        audio?.play(Sounds.uiError);
+      case ToastKind.info:
+      case ToastKind.warning:
+        break;
+    }
   };
 }
 
