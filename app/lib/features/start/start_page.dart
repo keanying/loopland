@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../local/venue_section.dart';
+import '../../audio/audio.dart';
 
 class SportInfo {
   const SportInfo(this.key, this.icon, this.desc, {this.tag});
@@ -161,7 +162,10 @@ class _SportTile extends StatelessWidget {
       button: true,
       selected: selected,
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          playSound(context, Sounds.uiTap);
+          onTap();
+        },
         borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(

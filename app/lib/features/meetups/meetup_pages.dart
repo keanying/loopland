@@ -22,6 +22,7 @@ import '../local/booking_flow.dart' show bookVenue;
 import '../local/meetup_booking.dart';
 import '../local/venue_widgets.dart' show slotRangeText;
 import '../social/social_widgets.dart' show UserAvatar, openProfile;
+import '../../widgets/sound_refresh.dart';
 
 const _types = ['', 'run', 'ball', 'ride'];
 const _typeLabels = ['全部', '约跑', '约球', '约骑'];
@@ -144,7 +145,7 @@ class _MeetupsPageState extends ConsumerState<MeetupsPage> {
 
   Widget _mine() {
     final async = ref.watch(myMeetupsProvider);
-    return RefreshIndicator(
+    return SoundRefresh(
       onRefresh: () async => ref.invalidate(myMeetupsProvider),
       child: AsyncBody<List<Meetup>>(
         value: async,

@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../audio/audio.dart';
 import '../core/providers.dart';
 import '../core/theme.dart';
 import 'card_art.dart' show hasArt;
@@ -52,7 +53,17 @@ class NavShell extends ConsumerWidget {
             ),
             child: _Bar(
               index: shell.currentIndex,
-              onTap: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+              onTap: (i) {
+                final audio = ref.read(audioProvider);
+                if (i == 2) {
+                  // 「开始」：起跑的「咚」；已经在开始页时，按钮里的伙伴叫一声
+                  audio.play(shell.currentIndex == 2 ? Sounds.petTap(escort?.key ?? 'gecko') : Sounds.startPress);
+                  audio.haptic(HapticKind.light);
+                } else if (i != shell.currentIndex) {
+                  audio.play(Sounds.uiTab);
+                }
+                shell.goBranch(i, initialLocation: i == shell.currentIndex);
+              },
               centerArt: escort?.key ?? 'gecko',
             ),
           ),

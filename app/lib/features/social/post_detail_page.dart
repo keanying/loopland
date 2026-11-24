@@ -18,6 +18,7 @@ import 'report_sheet.dart';
 import 'share_sheet.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
+import '../../audio/audio.dart';
 
 final postDetailProvider = FutureProvider.autoDispose.family<Post, int>((ref, id) async {
   final p = await ref.watch(communityApiProvider).post(id);
@@ -129,6 +130,11 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
 
   Future<void> _likeComment(Comment c) async {
     final on = !c.liked;
+    if (on) {
+      ref.read(audioProvider)
+        ..play(Sounds.like)
+        ..haptic(HapticKind.light);
+    }
     _update(c.id, (e) => e.copyWith(liked: on, likeCount: (e.likeCount + (on ? 1 : -1)).clamp(0, 1 << 31)));
     try {
       final r = await ref.read(communityApiProvider).likeComment(c.id, on);

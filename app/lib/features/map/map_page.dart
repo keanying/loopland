@@ -29,6 +29,7 @@ import '../local/supply_sheet.dart';
 import '../play/chest_sheet.dart';
 import '../play/defense_banner.dart';
 import '../play/play_providers.dart';
+import '../../audio/audio.dart';
 
 /// 领地地图（App 首页）。
 class MapPage extends ConsumerStatefulWidget {
@@ -117,6 +118,7 @@ class _MapPageState extends ConsumerState<MapPage> {
   Future<void> _openObject(MapObjectHit hit) async {
     switch (hit) {
       case BossHit(:final boss):
+        ref.read(audioProvider).play(Sounds.bossTap(boss.kind));
         context.push('/bosses/${boss.id}');
       case CheckpointHit(:final checkpoint):
         context.push('/routes/${checkpoint.routeId}');
@@ -194,6 +196,11 @@ class _MapPageState extends ConsumerState<MapPage> {
   Widget build(BuildContext context) {
     final user = ref.watch(userProvider);
     final unread = ref.watch(inboxUnreadProvider).value ?? 0;
+    // 新站内信：柔和的两音提示
+    ref.listen<AsyncValue<int>>(inboxUnreadProvider, (prev, next) {
+      final a = prev?.value, b = next.value;
+      if (a != null && b != null && b > a) ref.read(audioProvider).play(Sounds.message);
+    });
     final season = ref.watch(seasonProvider).value?.season;
     final top = MediaQuery.paddingOf(context).top;
     final bottom = NavShell.bottomInset(context);

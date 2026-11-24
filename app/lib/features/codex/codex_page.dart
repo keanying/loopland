@@ -10,6 +10,8 @@ import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../../widgets/nav_shell.dart';
 import '../play/companion_card.dart';
+import '../../widgets/sound_refresh.dart';
+import '../../audio/audio.dart';
 
 /// One card in the codex grid, normalised across categories.
 class CodexCardData {
@@ -166,7 +168,7 @@ class _CodexPageState extends ConsumerState<CodexPage> {
     };
     final total = c.totalCount;
     final egg = c.companions.where((p) => p.isEgg).firstOrNull;
-    return RefreshIndicator(
+    return SoundRefresh(
       onRefresh: () => ref.refresh(codexProvider.future),
       child: ListView(padding: EdgeInsets.fromLTRB(16, 12, 16, NavShell.bottomInset(context)), children: [
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -205,6 +207,17 @@ class _CodexPageState extends ConsumerState<CodexPage> {
   }
 
   Future<void> _detail(CodexCardData d) async {
+    // 点伙伴 / 怪兽 / 角色卡：它们叫一声（没解锁的不出声）
+    if (d.obtained) {
+      final c = d.companion, m = d.monster;
+      ref.read(audioProvider).play(c != null
+          ? Sounds.petTap(c.key)
+          : m != null
+              ? Sounds.bossTap(m.key)
+              : d.medal
+                  ? null
+                  : Sounds.role(d.art));
+    }
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -319,8 +332,11 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
     setState(() => _busy = false);
     if (c != null) {
       ref.invalidate(codexProvider);
+      ref.read(audioProvider)
+        ..play(Sounds.petHappy(key))
+        ..haptic(HapticKind.light);
       Navigator.pop(context);
-      toast(context, '已设为陪跑', kind: ToastKind.success);
+      toast(context, '已设为陪跑', kind: ToastKind.success, silent: true);
     }
   }
 

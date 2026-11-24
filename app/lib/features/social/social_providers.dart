@@ -8,6 +8,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../widgets/common.dart';
+import '../../audio/audio.dart';
 
 /// Latest known version of every post the user touched (like / collect /
 /// comment counts), so the feed, the detail page and profiles stay in sync
@@ -36,6 +37,11 @@ class PostActions {
   static Future<void> toggleLike(BuildContext context, WidgetRef ref, Post p) async {
     final cache = ref.read(postCacheProvider.notifier);
     final on = !p.liked;
+    if (on) {
+      ref.read(audioProvider)
+        ..play(Sounds.like)
+        ..haptic(HapticKind.light);
+    }
     cache.put(p.copyWith(liked: on, likeCount: (p.likeCount + (on ? 1 : -1)).clamp(0, 1 << 31)));
     try {
       final r = await ref.read(communityApiProvider).likePost(p.id, on);

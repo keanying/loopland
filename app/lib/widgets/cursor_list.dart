@@ -4,6 +4,7 @@ import '../api/community_common.dart';
 import '../api/errors.dart';
 import '../core/theme.dart';
 import 'common.dart';
+import 'sound_refresh.dart';
 
 /// Infinite list over a [CursorPager]: pull to refresh, loads the next page
 /// near the bottom, spinner / error-with-retry / empty states.
@@ -133,7 +134,7 @@ class _CursorListViewState<T> extends State<CursorListView<T>> {
     );
     return NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
-      child: widget.reverse ? list : RefreshIndicator(onRefresh: p.refresh, child: list),
+      child: widget.reverse ? list : SoundRefresh(onRefresh: p.refresh, child: list),
     );
   }
 }

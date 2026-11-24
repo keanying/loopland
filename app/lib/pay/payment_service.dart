@@ -12,9 +12,14 @@ import '../auth/social_login.dart';
 import '../core/features.dart';
 import '../core/providers.dart';
 import '../core/sdk_config.dart';
+import '../audio/audio.dart';
 
 final paymentServiceProvider = Provider<PaymentService>((ref) {
-  final s = PaymentService(ref.watch(apiProvider));
+  final s = PaymentService(ref.watch(apiProvider), onPaid: () {
+    ref.read(audioProvider)
+      ..play(Sounds.payOk)
+      ..haptic(HapticKind.medium);
+  });
   ref.onDispose(s.dispose);
   return s;
 });
@@ -102,6 +107,7 @@ class PaymentService {
     this.pollInterval = const Duration(seconds: 2),
     this.pollTimeout = const Duration(seconds: 90),
     this.unpaidCheckTimeout = const Duration(seconds: 6),
+    this.onPaid,
   })  : gateways = gateways ?? SdkPayGateways(),
         iap = iap ?? StoreKitIapGateway();
 
@@ -114,6 +120,9 @@ class PaymentService {
   /// How long to keep checking when the SDK reported cancel/failure (the
   /// callback may still arrive, e.g. the user paid and then backed out).
   final Duration unpaidCheckTimeout;
+
+  /// An order of [payOrder] came back paid (支付成功的「叮」).
+  final void Function()? onPaid;
 
   StreamSubscription<List<PurchaseDetails>>? _iapSub;
   Completer<void>? _applePending;
@@ -201,6 +210,12 @@ class PaymentService {
   /// Call [ensureChannelReady] before creating the order. Throws `cancelled`
   /// when the user backed out and the server also says unpaid.
   Future<Order> payOrder(String orderNo, String channel, Map<String, dynamic> payParams) async {
+    final o = await _payOrder(orderNo, channel, payParams);
+    if (o.isPaid) onPaid?.call();
+    return o;
+  }
+
+  Future<Order> _payOrder(String orderNo, String channel, Map<String, dynamic> payParams) async {
     final no = orderNo;
     final p = payParams;
     switch (channel) {

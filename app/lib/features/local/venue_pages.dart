@@ -17,6 +17,7 @@ import 'local_providers.dart';
 import 'product_widgets.dart' show ProductSection;
 import 'venue_checkin.dart';
 import 'venue_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// 场馆详情（C-07 / C-08 / E-03）：团购 / 套餐、馆主、本周积分榜、签到（定位 / 扫码）、订场。
 class VenueDetailPage extends ConsumerStatefulWidget {
@@ -79,7 +80,7 @@ class _VenueDetailPageState extends ConsumerState<VenueDetailPage> {
           onRetry: () => ref.invalidate(venueProvider(widget.venueId)),
           data: (v) => Column(children: [
             Expanded(
-              child: RefreshIndicator(
+              child: SoundRefresh(
                 onRefresh: () async => ref.invalidate(venueProvider(widget.venueId)),
                 child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
                   BackHeader(title: '场馆', subtitle: v.district.isEmpty ? null : v.district),

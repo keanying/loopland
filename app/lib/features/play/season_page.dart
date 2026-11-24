@@ -12,6 +12,7 @@ import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 String km2(double m2) => (m2 / 1e6).toStringAsFixed(2);
 
@@ -45,7 +46,7 @@ class _SeasonPageState extends ConsumerState<SeasonPage> {
         child: AsyncBody<SeasonOverview>(
           value: async,
           onRetry: () => ref.invalidate(seasonProvider),
-          data: (s) => RefreshIndicator(
+          data: (s) => SoundRefresh(
             onRefresh: () => ref.refresh(seasonProvider.future),
             child: _body(s),
           ),

@@ -11,6 +11,7 @@ import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import 'play_providers.dart';
 import 'play_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 String _cpState(RouteCheckpoint c) => c.isDone ? '已打卡' : (c.isNext ? '下一站' : '待打卡');
 
@@ -28,7 +29,7 @@ class RoutesPage extends ConsumerWidget {
             child: AsyncBody<List<CityRoute>>(
               value: async,
               onRetry: () => ref.invalidate(routesProvider),
-              data: (list) => RefreshIndicator(
+              data: (list) => SoundRefresh(
                 onRefresh: () => ref.refresh(routesProvider.future),
                 child: list.isEmpty
                     ? ListView(children: const [
@@ -249,7 +250,7 @@ class CampaignsPage extends ConsumerWidget {
             child: AsyncBody<List<Campaign>>(
               value: async,
               onRetry: () => ref.invalidate(campaignsProvider),
-              data: (list) => RefreshIndicator(
+              data: (list) => SoundRefresh(
                 onRefresh: () => ref.refresh(campaignsProvider.future),
                 child: list.isEmpty
                     ? ListView(children: const [

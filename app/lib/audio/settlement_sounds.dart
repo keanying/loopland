@@ -24,7 +24,7 @@ class SettlementPlan {
     if (s.status == 'voided') return [(Sounds.uiError, null)];
     if (s.status != 'settled') return const [];
     final down = s.bossDamage.where((b) => b.defeated).firstOrNull;
-    return [
+    return <(Sound, HapticKind?)>[
       if (s.claims.isNotEmpty) (Sounds.claim, HapticKind.medium),
       if (down != null) ...[
         (Sounds.bossDown, HapticKind.heavy),
@@ -37,8 +37,13 @@ class SettlementPlan {
       if (s.energyGranted > 0) (Sounds.energyGain, null),
       if (s.levelUp != null) (Sounds.levelUp, HapticKind.medium),
       if (_codex) (Sounds.codexUnlock, null),
-    ];
+      // 孵化出的伙伴开心地叫一声，招募到的角色打个招呼
+      for (final e in s.eggs.where((e) => e.hatched)) ?_char(Sounds.petHappy(e.key)),
+      for (final r in s.recruits.where((r) => r.recruited)) ?_char(Sounds.role(r.role)),
+    ].take(8).toList();
   }
+
+  static (Sound, HapticKind?)? _char(Sound? s) => s == null ? null : (s, null);
 
   bool get _codex => result.settlement.eggs.any((e) => e.hatched) || result.settlement.recruits.any((r) => r.recruited);
 

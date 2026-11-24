@@ -20,6 +20,7 @@ import '../social/image_viewer.dart';
 import '../social/social_widgets.dart';
 import 'conversations_page.dart';
 import 'pick_image.dart';
+import '../../audio/audio.dart';
 
 /// `/chat/direct/:userId`: opens (or creates) the direct conversation via
 /// `POST /v1/conversations/direct`, then shows it.
@@ -137,7 +138,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     switch (e) {
       case ChatMessageEvent(:final message) when message.conversationId == _id:
         _add(message);
-        if (message.sender?.id != _me) _markRead();
+        if (message.sender?.id != _me) {
+          _markRead();
+          ref.read(audioProvider).play(Sounds.message);
+        }
       case ConversationReadEvent(:final conversationId, :final userId, :final messageId)
           when conversationId == _id && userId != _me:
         if (messageId > _peerRead) setState(() => _peerRead = messageId);

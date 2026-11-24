@@ -20,6 +20,7 @@ import '../run/result_page.dart';
 import '../social/my_social_card.dart';
 import '../social/social_providers.dart';
 import '../social/social_widgets.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// 我的。
 class MePage extends ConsumerWidget {
@@ -35,7 +36,7 @@ class MePage extends ConsumerWidget {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
+        child: SoundRefresh(
           onRefresh: () async {
             await ref.read(authProvider.notifier).refreshUser();
             ref.invalidate(pendingUploadsProvider);

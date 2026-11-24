@@ -116,6 +116,7 @@ class AudioplayersBackend implements AudioBackend {
     final done = Completer<void>();
     _voiceDone = done;
     StreamSubscription<void>? sub;
+    var started = false;
     await _guard('voice $asset', () async {
       await _init();
       final p = _voice ??= await _newPlayer(_voiceContext);
@@ -123,9 +124,10 @@ class AudioplayersBackend implements AudioBackend {
         if (!done.isCompleted) done.complete();
       });
       await p.play(AssetSource(asset), volume: volume);
+      started = true;
     });
     // Lines are ≤ 4 s; never let a lost completion event block the queue.
-    await done.future.timeout(const Duration(seconds: 6), onTimeout: () {});
+    if (started) await done.future.timeout(const Duration(seconds: 6), onTimeout: () {});
     await sub?.cancel();
     if (!done.isCompleted) done.complete();
   }

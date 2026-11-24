@@ -49,6 +49,12 @@ class ProductPay {
   /// out (and the server also says unpaid). Returns the order as the server
   /// sees it afterwards (paid, or still pending if the callback is late).
   Future<ProductOrder> pay(ProductOrderCreated created, String channel) async {
+    final o = await _payOnce(created, channel);
+    if (o.isPaid) _pay.onPaid?.call();
+    return o;
+  }
+
+  Future<ProductOrder> _payOnce(ProductOrderCreated created, String channel) async {
     final o = created.order;
     switch (channel) {
       case 'mock':

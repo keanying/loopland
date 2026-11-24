@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart' show ModalBottomSheetRoute;
+
+import '../audio/audio.dart';
 
 /// Pop-ups (bottom sheets, menus…) open inside the five tab pages. While any
 /// is open the floating bottom bar slides away, so it never covers a sheet
@@ -11,11 +14,16 @@ class NavBarCover extends ChangeNotifier {
 
   bool get covered => _open.isNotEmpty;
 
+  /// A bottom sheet opened in a tab (plays `ui_sheet_open`).
+  VoidCallback? onSheetOpen;
+
   // Navigator callbacks can run in the middle of a build: notify after it.
   void _changed() => scheduleMicrotask(notifyListeners);
 
   void add(Route<dynamic> r) {
-    if (_open.add(r)) _changed();
+    if (!_open.add(r)) return;
+    if (r is ModalBottomSheetRoute) onSheetOpen?.call();
+    _changed();
   }
 
   void remove(Route<dynamic> r) {
@@ -24,7 +32,7 @@ class NavBarCover extends ChangeNotifier {
 }
 
 final navBarCoverProvider = Provider<NavBarCover>((ref) {
-  final c = NavBarCover();
+  final c = NavBarCover()..onSheetOpen = () => ref.read(audioProvider).play(Sounds.uiSheetOpen);
   ref.onDispose(c.dispose);
   return c;
 });

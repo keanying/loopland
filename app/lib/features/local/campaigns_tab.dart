@@ -14,6 +14,7 @@ import '../../widgets/l_icons.dart';
 import '../ai/ai_providers.dart';
 import '../social/social_widgets.dart' show mediaUrl;
 import 'perks_providers.dart';
+import '../../widgets/sound_refresh.dart';
 
 const _cardColors = [LL.lime, LL.pink, LL.sky, LL.lavender, LL.yellow];
 
@@ -48,7 +49,7 @@ class CampaignsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final v = ref.watch(brandCampaignsProvider);
     final unused = ref.watch(myCouponsProvider('unused')).value;
-    return RefreshIndicator(
+    return SoundRefresh(
       onRefresh: () {
         ref.invalidate(myCouponsProvider('unused'));
         return ref.refresh(brandCampaignsProvider.future);

@@ -14,6 +14,7 @@ import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cosmetics.dart';
 import '../../widgets/l_icons.dart';
+import '../../widgets/sound_refresh.dart';
 
 /// 能量商城 tab body (scrolls by itself).
 class ShopTab extends ConsumerStatefulWidget {
@@ -145,7 +146,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
       '',
       for (final t in shopTypes) c == null ? '' : '${c.items.where((e) => e.type == t).length}',
     ];
-    return RefreshIndicator(
+    return SoundRefresh(
       onRefresh: _load,
       child: CustomScrollView(slivers: [
         SliverPadding(
