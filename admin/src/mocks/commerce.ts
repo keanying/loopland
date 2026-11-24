@@ -271,7 +271,7 @@ function pushTask(p: ProductRow, content: Partial<ProductContent>, risk: { score
     id: ++reviewSeq,
     target_type: 'product',
     target_id: p.id,
-    user: { id: m.id, nickname: m.name },
+    user: null, // 和后端一致：商品任务没有用户，提交者看 merchant
     text: contentText(content),
     images: content.images ?? p.images,
     risk_score: risk.score,

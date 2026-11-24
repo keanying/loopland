@@ -39,6 +39,12 @@ const IMAGE_ONLY = new Set(['avatar', 'crew_avatar']);
 const PROFILE = ['nickname', 'avatar', 'crew_name', 'crew_avatar', 'bio'];
 
 /** What 「打码后通过」 does to each kind of object. */
+/** 提交者：商品审核任务是商户（没有用户），其他是发布内容的用户。 */
+function who(t: ReviewTask): { name: string; id: number; label: string } {
+  if (t.user) return { name: t.user.nickname, id: t.user.id, label: '用户' };
+  return { name: t.merchant?.name ?? '商户', id: t.merchant?.id ?? 0, label: '商户' };
+}
+
 function maskEffect(type: string): string {
   if (IMAGE_ONLY.has(type)) return type === 'avatar' ? '恢复默认头像后通过' : '跑团头像恢复默认后通过';
   if (type === 'post') return '正文里命中的敏感词和联系方式替换为 *，AI 标记的违规图片从动态里移除，然后通过';
@@ -150,7 +156,7 @@ export default function QueueTab() {
       setRejecting(null);
       refresh();
       const label = REVIEW_DECISION[v.action] ?? v.action;
-      toastOk(`已${label}${v.action === 'reject_mute' ? ` ${v.mute_days} 天` : ''}：${REVIEW_TARGET[v.task.target_type]?.text ?? ''} · ${v.task.user.nickname}${next ? '' : ' · 队列已清空'}`);
+      toastOk(`已${label}${v.action === 'reject_mute' ? ` ${v.mute_days} 天` : ''}：${REVIEW_TARGET[v.task.target_type]?.text ?? ''} · ${who(v.task).name}${next ? '' : ' · 队列已清空'}`);
     },
     onError: () => refresh(),
   });
@@ -387,7 +393,7 @@ export default function QueueTab() {
         title={
           rejecting === 'batch'
             ? `驳回选中的 ${checked.size} 条内容`
-            : `${rejecting === 'mute' ? '驳回并禁言' : '驳回'}${active ? `「${REVIEW_TARGET[active.target_type]?.text ?? ''}」· ${active.user.nickname}` : ''}`
+            : `${rejecting === 'mute' ? '驳回并禁言' : '驳回'}${active ? `「${REVIEW_TARGET[active.target_type]?.text ?? ''}」· ${who(active).name}` : ''}`
         }
         presets={rejecting !== 'batch' && active?.target_type === 'product' ? PRODUCT_REJECT_REASONS : REJECT_REASONS}
         okText={rejecting === 'mute' ? `驳回并禁言 ${muteDays} 天` : '驳回'}
@@ -396,7 +402,7 @@ export default function QueueTab() {
           rejecting === 'batch'
             ? '驳回后作者会收到站内信；昵称、头像、跑团名称和头像会恢复默认值。'
             : active
-              ? `${REJECT_EFFECT[active.target_type] ?? ''}，${active.target_type === 'product' ? '商户' : '作者'}会收到站内信${rejecting === 'mute' ? `；${active.user.nickname} ${muteDays} 天内不能发言、改昵称和头像` : ''}。`
+              ? `${REJECT_EFFECT[active.target_type] ?? ''}，${active.target_type === 'product' ? '商户' : '作者'}会收到站内信${rejecting === 'mute' ? `；${who(active).name} ${muteDays} 天内不能发言、改昵称和头像` : ''}。`
               : undefined
         }
         extra={
@@ -434,7 +440,7 @@ function QueueItem({ t, active, checked, selectable, onClick, onCheck }: { t: Re
       data-id={t.id}
       role="button"
       tabIndex={0}
-      aria-label={`${REVIEW_TARGET[t.target_type]?.text ?? t.target_type} ${t.user.nickname} 风险 ${t.risk_score}`}
+      aria-label={`${REVIEW_TARGET[t.target_type]?.text ?? t.target_type} ${who(t).name} 风险 ${t.risk_score}`}
       onClick={onClick}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
     >
@@ -459,7 +465,7 @@ function QueueItem({ t, active, checked, selectable, onClick, onCheck }: { t: Re
         </div>
         <div style={{ fontSize: 12 }}>
           {t.target_type === 'product' && <span className="muted">商户 </span>}
-          <b>{t.merchant?.name ?? t.user.nickname}</b> <span className="muted num">#{t.merchant?.id ?? t.user.id}</span>
+          <b>{who(t).name}</b> <span className="muted num">#{who(t).id}</span>
           {t.product && (
             <span className="muted num" style={{ marginLeft: 6 }}>
               · {PRODUCT_TYPE_TEXT[t.product.type] ?? t.product.type} {yuan(t.product.price_amt)}
@@ -552,18 +558,18 @@ function TaskDetail({ t, writable, busy, pendingAction, onAction }: { t: ReviewT
   return (
     <Panel grey style={{ height: 'auto', position: 'sticky', top: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <Avatar name={t.user.nickname} size="lg" />
+        <Avatar name={who(t).name} size="lg" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 18, fontWeight: 800 }}>
             {REVIEW_TARGET[t.target_type]?.text ?? t.target_type} ·{' '}
-            {isProduct ? <Link to={`/merchant/products?id=${t.target_id}`}>{t.merchant?.name ?? t.user.nickname}</Link> : <Link to={`/users?id=${t.user.id}`}>{t.user.nickname}</Link>}
+            {isProduct || !t.user ? <Link to={`/merchant/products?id=${t.target_id}`}>{who(t).name}</Link> : <Link to={`/users?id=${t.user.id}`}>{t.user.nickname}</Link>}
           </div>
           <div className="muted" style={{ fontSize: 12 }}>
-            {isProduct ? `商户 #${t.merchant?.id ?? t.user.id} · 商品` : `用户 #${t.user.id} · 对象`} #{t.target_id} · 任务 #{t.id} · {dt(t.created_at)} 提交
+            {isProduct ? `商户 #${who(t).id} · 商品` : `${who(t).label} #${who(t).id} · 对象`} #{t.target_id} · 任务 #{t.id} · {dt(t.created_at)} 提交
             {t.target_type === 'post' && (
               <>
                 {' · '}
-                <Link to={`/review?tab=posts&user_id=${t.user.id}&post=${t.target_id}`}>在动态管理中查看</Link>
+                <Link to={`/review?tab=posts&user_id=${who(t).id}&post=${t.target_id}`}>在动态管理中查看</Link>
               </>
             )}
           </div>
@@ -654,7 +660,7 @@ function TaskDetail({ t, writable, busy, pendingAction, onAction }: { t: ReviewT
           <div className={`tile${(violations ?? 0) >= 3 ? ' warn' : ''}`} style={{ height: '100%' }} aria-label="作者历史违规">
             <div className="tile-v num">{violations ?? '—'}</div>
             <div className="tile-l">作者历史违规（被拒绝 / 下架）{(violations ?? 0) >= 3 ? '，可考虑驳回并禁言' : ''}</div>
-            <Link to={`/users?id=${t.user.id}`} style={{ fontSize: 12 }}>
+            <Link to={`/users?id=${who(t).id}`} style={{ fontSize: 12 }}>
               查看用户
             </Link>
           </div>

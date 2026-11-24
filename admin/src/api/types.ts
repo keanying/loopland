@@ -1019,7 +1019,8 @@ export interface ReviewTask {
   id: number;
   target_type: ReviewTargetType;
   target_id: number;
-  user: UserBrief;
+  /** 发布者；商品审核任务（target_type=product）没有用户，是 null，看 `merchant`。 */
+  user: UserBrief | null;
   text: string | null;
   images: string[] | null;
   risk_score: number;

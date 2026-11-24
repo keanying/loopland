@@ -338,7 +338,7 @@ PRIVACY_SEEDS.forEach((x, j) => {
 /** Past rejections / take-downs per author (seeded base + the history in this mock). */
 const violationBase = new Map<number, number>();
 function violations(userId: number): number {
-  const rejected = tasks.filter((t) => t.user.id === userId && t.status === 'rejected').length;
+  const rejected = tasks.filter((t) => t.user?.id === userId && t.status === 'rejected').length;
   const removed = posts.filter((p) => p.author.id === userId && p.deleted).length;
   return (violationBase.get(userId) ?? 0) + rejected + removed;
 }
@@ -349,13 +349,13 @@ function enrich(t: ReviewTask) {
   // 最终风险分 = max(规则分, AI 分)
   if (t.ai) t.risk_score = Math.max(t.risk_score, t.ai.risk_score);
   t.has_activity = t.target_type === 'post' && !!posts.find((p) => p.id === t.target_id)?.activity;
-  if (t.ai?.suggestion === 'reject' && !violationBase.has(t.user.id)) violationBase.set(t.user.id, 1 + (t.user.id % 3));
+  if (t.user && t.ai?.suggestion === 'reject' && !violationBase.has(t.user.id)) violationBase.set(t.user.id, 1 + (t.user.id % 3));
 }
 tasks.forEach(enrich);
 
 /** Task as the API returns it (violation count is live). */
 function view(t: ReviewTask): ReviewTask {
-  return { ...clone(t), user_violation_count: violations(t.user.id) };
+  return t.user ? { ...clone(t), user_violation_count: violations(t.user.id) } : clone(t);
 }
 
 function nextPending(after: ReviewTask, type: string): ReviewTask | null {
@@ -723,7 +723,7 @@ export function communityRoutes(log: Log): [string, RegExp, Handler][] {
       if (action === 'approve_hide_endpoints' && post?.activity) post.activity.track = post.activity.track.slice(4, -4); // 起终点隐藏 500 m
       decide(t, approve, reason, adminId);
       if (action === 'reject_mute') {
-        const u = db.users.find((x) => x.id === t.user.id);
+        const u = t.user ? db.users.find((x) => x.id === t.user!.id) : undefined;
         if (u && u.status !== 'banned') {
           u.status = 'muted';
           u.muted_until = new Date(Date.now() + mute * DAY).toISOString();
