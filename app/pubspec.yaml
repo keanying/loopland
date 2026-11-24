@@ -52,6 +52,8 @@ dependencies:
   camera: 0.12.2
   google_mlkit_pose_detection: 0.16.1
   flutter_tts: 4.2.5
+  # 语音播报 / 音效 / 角色声音（lib/audio/，素材见 docs/音频素材清单.md）
+  audioplayers: 6.8.1
   # 场馆签到（C-07）：App 内扫场馆二维码（Android CameraX + ML Kit 条码，iOS Apple Vision）
   mobile_scanner: 7.5.0
   # 卡券包（E-04）：到店出示的券码二维码（纯 Dart 绘制，无原生代码）
@@ -73,3 +75,9 @@ flutter:
     - assets/media/
     # 高德控制台导出的暗色自定义样式（style.data / style_extra.data），见 README
     - assets/map/
+    # 声音（lib/audio/sound_catalog.dart）
+    - assets/audio/voice/run/
+    - assets/audio/voice/coach/
+    - assets/audio/voice/result/
+    - assets/audio/sfx/
+    - assets/audio/char/

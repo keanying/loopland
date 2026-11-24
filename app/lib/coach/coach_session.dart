@@ -15,13 +15,18 @@ enum CoachPhase {
   done,
 }
 
-enum CueKind { prepare, start, half, almost, countdown, rest, done }
+enum CueKind { prepare, start, half, almost, last10, countdown, rest, done }
 
 /// A voice prompt (the UI also shows the latest one in the hint bubble).
 class CoachCue {
-  const CoachCue(this.kind, this.text);
+  const CoachCue(this.kind, this.text, {this.detail});
   final CueKind kind;
   final String text;
+
+  /// What the system TTS reads after a recorded clip (voice/coach): the move
+  /// after 「下一个动作：」, what comes after 「休息一下」, the set count after
+  /// 「练完了」. Null: [text] is read as a whole.
+  final String? detail;
   @override
   String toString() => 'CoachCue($kind, $text)';
 }
@@ -66,6 +71,7 @@ class CoachSession extends ChangeNotifier {
   int? _lastTick;
   bool _halfCued = false;
   bool _almostCued = false;
+  bool _last10Cued = false;
 
   WorkoutStep get step => workout.steps[stepIndex];
   bool get started => phase != CoachPhase.ready;
@@ -96,8 +102,8 @@ class CoachSession extends ChangeNotifier {
     return '最后一组，坚持住';
   }
 
-  void _cue(CueKind k, String text) {
-    lastCue = CoachCue(k, text);
+  void _cue(CueKind k, String text, {String? detail}) {
+    lastCue = CoachCue(k, text, detail: detail);
     onCue?.call(lastCue!);
   }
 
@@ -154,6 +160,11 @@ class CoachSession extends ChangeNotifier {
           if (!_halfCued && step.target >= 10 && remainingMs <= half && remainingMs > 0) {
             _halfCued = true;
             _cue(CueKind.half, '已经一半了，坚持住');
+          }
+          // 「最后十秒」 for sets long enough that it is not right after the halfway cue.
+          if (!_last10Cued && step.target >= 30 && remainingMs <= 10000 && before > 10000) {
+            _last10Cued = true;
+            _cue(CueKind.last10, '最后十秒');
           }
           _countdown(before, remainingMs);
           if (remainingMs <= 0) _completeSet();
@@ -253,10 +264,13 @@ class CoachSession extends ChangeNotifier {
     workSerial++;
     _halfCued = false;
     _almostCued = false;
+    _last10Cued = false;
     remainingMs = step.isTime ? step.target * 1000 : 0;
     if (setIndex == 0) {
       final cue = step.cue.isEmpty ? '' : '${step.cue}。';
-      _cue(CueKind.start, '${step.name}，${step.targetText}，共 ${step.sets} 组。$cue开始');
+      final text = '${step.name}，${step.targetText}，共 ${step.sets} 组。$cue开始';
+      // From the second move on: 「下一个动作：」 (recorded) + the move.
+      _cue(CueKind.start, text, detail: stepIndex > 0 ? text : null);
     } else {
       _cue(CueKind.start, '第 $setNumber 组，开始');
     }
@@ -281,14 +295,15 @@ class CoachSession extends ChangeNotifier {
     phase = CoachPhase.rest;
     remainingMs = rest * 1000;
     final next = setIndex == 0 ? '下一个：${step.name}' : '准备第 $setNumber 组';
-    _cue(CueKind.rest, '休息 $rest 秒。$next');
+    _cue(CueKind.rest, '休息 $rest 秒。$next', detail: '$next，$rest 秒后开始');
   }
 
   void _finish() {
     phase = CoachPhase.done;
     paused = false;
     remainingMs = 0;
-    _cue(CueKind.done, setsDone == 0 ? '训练结束' : '训练完成，一共 $setsDone 组，太棒了');
+    _cue(CueKind.done, setsDone == 0 ? '训练结束' : '训练完成，一共 $setsDone 组，太棒了',
+        detail: setsDone == 0 ? null : '一共 $setsDone 组');
   }
 
   void _countdown(int before, int after) {
