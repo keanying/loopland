@@ -130,7 +130,7 @@ class _JoinByCodePageState extends ConsumerState<JoinByCodePage> {
     await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
     ref.invalidate(communityHomeProvider);
     if (!mounted) return;
-    toast(context, '已加入跑团');
+    toast(context, '已加入跑团', kind: ToastKind.success);
     context.pushReplacement('/crews/$id');
   }
 
@@ -232,7 +232,7 @@ class _CrewEditPageState extends ConsumerState<CrewEditPage> {
     if (c == null) return;
     final name = _name.text.trim();
     if (name.runes.length < 2 || name.runes.length > 16) {
-      toast(context, '跑团名称需要 2–16 个字');
+      toast(context, '跑团名称需要 2–16 个字', kind: ToastKind.warning);
       return;
     }
     if (_district.text.trim().isEmpty) {

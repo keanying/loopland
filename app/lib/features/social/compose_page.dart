@@ -100,7 +100,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
     try {
       picked = await ref.read(mediaPickerProvider).pickImages(room);
     } catch (e) {
-      if (mounted) toast(context, '无法打开相册，请在系统设置里允许圈圈访问照片');
+      if (mounted) toast(context, '无法打开相册，请在系统设置里允许圈圈访问照片', kind: ToastKind.warning);
       return;
     }
     if (picked.isEmpty || !mounted) return;
@@ -153,12 +153,11 @@ class _ComposePageState extends ConsumerState<ComposePage> {
       if (!mounted) return;
       ref.read(postCacheProvider.notifier).put(p);
       ref.invalidate(myProfileProvider);
-      final messenger = ScaffoldMessenger.maybeOf(context);
+      final show = toaster(context);
       final nav = Navigator.of(context);
       // Opened directly (deep link) there is nothing to return to: show the feed.
       nav.canPop() ? nav.pop(p) : context.go('/community/feed?tab=following');
-      messenger?..removeCurrentSnackBar()..showSnackBar(SnackBar(
-          content: Text(p.reviewStatus == ReviewStatus.pending ? '已提交，审核通过后其他人就能看到' : '发布成功')));
+      show(p.reviewStatus == ReviewStatus.pending ? '已提交，审核通过后其他人就能看到' : '发布成功', kind: ToastKind.success);
     } catch (e) {
       if (!mounted) return;
       setState(() => _posting = false);

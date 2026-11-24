@@ -72,7 +72,7 @@ Future<void> openLegal(BuildContext context, {required bool privacy}) async {
   try {
     ok = await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
   } catch (_) {}
-  if (!ok && context.mounted) toast(context, '无法打开链接');
+  if (!ok && context.mounted) toast(context, '无法打开链接', kind: ToastKind.warning);
 }
 
 /// The page shown on first launch before anything else.

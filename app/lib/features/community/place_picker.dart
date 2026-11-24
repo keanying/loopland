@@ -60,7 +60,7 @@ class _PlacePickerPageState extends ConsumerState<PlacePickerPage> {
     final p = await quietLocation(ref);
     if (!mounted) return;
     if (p == null) {
-      if (!move) toast(context, '暂时拿不到定位，可以直接拖动地图选择');
+      if (!move) toast(context, '暂时拿不到定位，可以直接拖动地图选择', kind: ToastKind.warning);
       return;
     }
     setState(() => _me = p);

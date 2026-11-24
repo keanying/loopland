@@ -12,12 +12,12 @@ Future<LatLng?> currentLocation(BuildContext context, WidgetRef ref) async {
   final src = ref.read(locationSourceProvider);
   final p = await src.ensurePermission();
   if (p != LocationPermissionResult.granted) {
-    if (context.mounted) toast(context, '需要定位权限，才能确认你在附近');
+    if (context.mounted) toast(context, '需要定位权限，才能确认你在附近', kind: ToastKind.warning);
     return null;
   }
   final f = await src.current();
   if (f == null) {
-    if (context.mounted) toast(context, '暂时拿不到定位，到开阔的地方再试试');
+    if (context.mounted) toast(context, '暂时拿不到定位，到开阔的地方再试试', kind: ToastKind.warning);
     return null;
   }
   return LatLng(f.lat, f.lng);

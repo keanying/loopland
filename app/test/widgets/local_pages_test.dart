@@ -30,6 +30,8 @@ import 'fake_backend.dart';
 import 'gathering_fake.dart';
 import 'local_fake.dart';
 import 'screens_test.dart' show fixAt;
+import 'package:loopland/widgets/toast.dart';
+
 import 'test_helpers.dart';
 
 class _Stub extends StatelessWidget {
@@ -80,9 +82,7 @@ Future<void> shot(WidgetTester t, String name) async {
 }
 
 Future<void> tapIdle(WidgetTester t, Finder f, [int rounds = 3]) async {
-  for (final m in t.stateList<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))) {
-    m.removeCurrentSnackBar();
-  }
+  dismissToast();
   await t.pump(const Duration(milliseconds: 100));
   await t.ensureVisible(f);
   await t.pump();

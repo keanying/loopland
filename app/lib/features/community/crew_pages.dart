@@ -147,7 +147,7 @@ class _CrewCreatePageState extends ConsumerState<CrewCreatePage> {
   Future<void> _create() async {
     final name = _name.text.trim();
     if (name.runes.length < 2 || name.runes.length > 16) {
-      toast(context, '跑团名称需要 2–16 个字');
+      toast(context, '跑团名称需要 2–16 个字', kind: ToastKind.warning);
       return;
     }
     if (_district.text.trim().isEmpty) {

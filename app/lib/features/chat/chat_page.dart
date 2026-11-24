@@ -364,7 +364,7 @@ class MessageBubble extends StatelessWidget {
       _ => GestureDetector(
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: m.content));
-            toast(context, '已复制');
+            toast(context, '已复制', kind: ToastKind.success);
           },
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

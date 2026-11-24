@@ -167,7 +167,7 @@ class _PostDetailPageState extends ConsumerState<PostDetailPage> {
       _replyStates[c.parentId]?.loaded.removeWhere((r) => r.id == c.id);
       _bumpCommentCount(ref.read(postCacheProvider)[post.id] ?? post, -1);
     }
-    if (mounted) toast(context, '已删除');
+    if (mounted) toast(context, '已删除', kind: ToastKind.success);
   }
 
   Future<void> _moreReplies(Comment parent) async {

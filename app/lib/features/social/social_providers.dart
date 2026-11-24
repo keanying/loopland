@@ -81,7 +81,7 @@ class PostActions {
     });
     if (done == true) {
       ref.read(postCacheProvider.notifier).markDeleted(p.id);
-      if (context.mounted) toast(context, '已删除');
+      if (context.mounted) toast(context, '已删除', kind: ToastKind.success);
       return true;
     }
     return false;

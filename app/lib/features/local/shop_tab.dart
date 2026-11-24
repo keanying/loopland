@@ -76,7 +76,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
   Future<void> _buy(ShopItem item) async {
     final energy = _catalog?.energy ?? 0;
     if (energy < item.priceEnergy) {
-      toast(context, '能量不足，还差 ${item.priceEnergy - energy} 能量，去运动赚一点吧');
+      toast(context, '能量不足，还差 ${item.priceEnergy - energy} 能量，去运动赚一点吧', kind: ToastKind.warning);
       return;
     }
     final ok = await showDialog<bool>(
@@ -106,7 +106,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
           _replace(item.copyWith(owned: true));
           toast(context, '你已经拥有「${item.name}」了，直接装备吧');
         case 'not_enough_energy':
-          toast(context, '能量不足，去运动赚一点再来兑换吧');
+          toast(context, '能量不足，去运动赚一点再来兑换吧', kind: ToastKind.warning);
           _load();
         default:
           showError(context, e);

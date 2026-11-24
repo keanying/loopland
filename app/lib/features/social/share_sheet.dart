@@ -58,7 +58,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
 
   Future<void> _wechat(WeChatScene scene) async {
     final nav = Navigator.of(context);
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final show = toaster(context);
     try {
       await WeChat.ensureReady();
     } catch (e) {
@@ -72,7 +72,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
           title: r.posterTitle.isNotEmpty ? r.posterTitle : _title, description: r.posterSubtitle, scene: scene));
       nav.pop();
     } catch (_) {
-      messenger?..removeCurrentSnackBar()..showSnackBar(const SnackBar(content: Text('无法打开微信')));
+      show('无法打开微信', kind: ToastKind.warning);
     }
   }
 
@@ -81,9 +81,9 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     if (r == null || !mounted) return;
     await Clipboard.setData(ClipboardData(text: r.url));
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final show = toaster(context);
     Navigator.pop(context);
-    messenger?..removeCurrentSnackBar()..showSnackBar(const SnackBar(content: Text('链接已复制')));
+    show('链接已复制', kind: ToastKind.success);
   }
 
   Future<void> _system() async {

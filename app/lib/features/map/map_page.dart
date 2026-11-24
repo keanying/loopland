@@ -153,7 +153,7 @@ class _MapPageState extends ConsumerState<MapPage> {
     if (ask) {
       final p = await src.ensurePermission();
       if (p != LocationPermissionResult.granted) {
-        if (mounted) toast(context, '需要定位权限才能回到你的位置');
+        if (mounted) toast(context, '需要定位权限才能回到你的位置', kind: ToastKind.warning);
         return;
       }
     }

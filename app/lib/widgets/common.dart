@@ -4,18 +4,12 @@ import 'package:material_ui/material_ui.dart';
 import '../api/errors.dart';
 import '../core/theme.dart';
 import 'l_icons.dart';
+import 'toast.dart';
 
-void showError(BuildContext context, Object e) {
-  final m = ScaffoldMessenger.maybeOf(context);
-  m?.hideCurrentSnackBar();
-  m?.showSnackBar(SnackBar(content: Text(errorText(e))));
-}
+export 'toast.dart';
 
-void toast(BuildContext context, String msg) {
-  final m = ScaffoldMessenger.maybeOf(context);
-  m?.hideCurrentSnackBar();
-  m?.showSnackBar(SnackBar(content: Text(msg)));
-}
+void showError(BuildContext context, Object e) => toast(context, errorText(e), kind: ToastKind.error);
+
 
 /// Rounded dark card.
 class LLCard extends StatelessWidget {

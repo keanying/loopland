@@ -23,6 +23,7 @@ import 'package:loopland/map/venue_marker.dart';
 import 'package:loopland/pay/payment_service.dart';
 import 'package:loopland/run/location_source.dart';
 import 'package:loopland/run/run_controller.dart';
+import 'package:loopland/widgets/toast.dart';
 import 'package:loopland/widgets/common.dart' show ChipTabs;
 import 'package:material_ui/material_ui.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -78,9 +79,7 @@ Future<void> shot(WidgetTester t, String name) async {
 }
 
 Future<void> tapIdle(WidgetTester t, Finder f, [int rounds = 3]) async {
-  for (final m in t.stateList<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))) {
-    m.removeCurrentSnackBar();
-  }
+  dismissToast();
   await t.pump(const Duration(milliseconds: 100));
   await t.ensureVisible(f);
   await t.pump();

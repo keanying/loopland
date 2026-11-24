@@ -28,6 +28,8 @@ import '../realtime/realtime_client_test.dart' show FakeChannel;
 import 'fake_backend.dart';
 import 'gathering_fake.dart';
 import 'screens_test.dart' show fixAt;
+import 'package:loopland/widgets/toast.dart';
+
 import 'test_helpers.dart';
 import 'v2_pages_test.dart' show fakeRealtime;
 
@@ -97,9 +99,7 @@ Future<void> back(WidgetTester t) async {
 Future<void> tapAndIdle(WidgetTester t, Finder f, [int rounds = 3]) async {
   // Floating snackbars from the previous action would swallow taps on the
   // bottom buttons.
-  for (final m in t.stateList<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))) {
-    m.removeCurrentSnackBar();
-  }
+  dismissToast();
   await t.pump(const Duration(milliseconds: 100));
   await t.pump(const Duration(milliseconds: 100));
   await t.ensureVisible(f);

@@ -506,7 +506,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     try {
       img = await ref.read(mediaPickerProvider).pickOne();
     } catch (_) {
-      if (mounted) toast(context, '无法打开相册，请在系统设置里允许圈圈访问照片');
+      if (mounted) toast(context, '无法打开相册，请在系统设置里允许圈圈访问照片', kind: ToastKind.warning);
       return;
     }
     if (img == null || !mounted) return;
@@ -531,7 +531,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     final name = _name.text.trim();
     final bio = _bio.text.trim();
     if (name.isEmpty) {
-      toast(context, '昵称不能为空');
+      toast(context, '昵称不能为空', kind: ToastKind.warning);
       return;
     }
     final changedName = name != p.user.nickname;
@@ -551,9 +551,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     if (u == null) return;
     ref.read(authProvider.notifier).setUser(u);
     ref.invalidate(myProfileProvider);
-    final messenger = ScaffoldMessenger.maybeOf(context);
+    final show = toaster(context);
     Navigator.of(context).maybePop();
-    messenger?..removeCurrentSnackBar()..showSnackBar(const SnackBar(content: Text('已保存，审核中（未通过会恢复默认并通知你）')));
+    show('已保存，审核中（未通过会恢复默认并通知你）', kind: ToastKind.success);
   }
 
   @override

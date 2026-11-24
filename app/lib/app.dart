@@ -282,7 +282,7 @@ class _StartupGateState extends ConsumerState<StartupGate> {
       if (sent.isNotEmpty && mounted) {
         ref.invalidate(pendingUploadsProvider);
         ref.read(authProvider.notifier).refreshUser().ignore();
-        toast(context, '已补传 ${sent.length} 条离线运动记录');
+        toast(context, '已补传 ${sent.length} 条离线运动记录', kind: ToastKind.success);
       }
     } catch (_) {
       // Startup housekeeping must never block the app.
@@ -309,7 +309,7 @@ class _StartupGateState extends ConsumerState<StartupGate> {
     final nu = await runGuarded(context, () => ref.read(apiProvider).cancelDeletion());
     if (nu != null && mounted) {
       ref.read(authProvider.notifier).setUser(nu);
-      toast(context, '已撤回注销，欢迎回来');
+      toast(context, '已撤回注销，欢迎回来', kind: ToastKind.success);
     }
   }
 

@@ -45,9 +45,9 @@ class _ReportSheetState extends ConsumerState<ReportSheet> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (id != null) {
-      final messenger = ScaffoldMessenger.maybeOf(context);
+      final show = toaster(context);
       Navigator.pop(context, true);
-      messenger?..removeCurrentSnackBar()..showSnackBar(const SnackBar(content: Text('举报已提交，我们会尽快处理')));
+      show('举报已提交，我们会尽快处理', kind: ToastKind.success);
     }
   }
 

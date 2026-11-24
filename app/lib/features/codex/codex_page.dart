@@ -320,7 +320,7 @@ class _CodexDetailSheetState extends ConsumerState<CodexDetailSheet> {
     if (c != null) {
       ref.invalidate(codexProvider);
       Navigator.pop(context);
-      toast(context, '已设为陪跑');
+      toast(context, '已设为陪跑', kind: ToastKind.success);
     }
   }
 

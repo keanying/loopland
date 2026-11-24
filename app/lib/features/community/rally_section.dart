@@ -314,7 +314,7 @@ class _RallyCreatePageState extends ConsumerState<RallyCreatePage> {
       return;
     }
     if (!_start.isAfter(widget.now ?? DateTime.now())) {
-      toast(context, '开始时间需要晚于现在');
+      toast(context, '开始时间需要晚于现在', kind: ToastKind.warning);
       return;
     }
     setState(() => _busy = true);
@@ -327,7 +327,7 @@ class _RallyCreatePageState extends ConsumerState<RallyCreatePage> {
     setState(() => _busy = false);
     if (r == null) return;
     ref.invalidate(communityHomeProvider);
-    toast(context, '已发起，全体团员会收到通知');
+    toast(context, '已发起，全体团员会收到通知', kind: ToastKind.success);
     Navigator.of(context).pop(r);
   }
 

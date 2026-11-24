@@ -50,7 +50,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     try {
       final text = await ref.read(apiProvider).exportData();
       if (kIsWeb) {
-        if (mounted) toast(context, '已导出 ${text.length} 字节（网页版请在 App 中导出文件）');
+        if (mounted) toast(context, '已导出 ${text.length} 字节（网页版请在 App 中导出文件）', kind: ToastKind.success);
         return;
       }
       final dir = await getApplicationDocumentsDirectory();
@@ -69,7 +69,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final nu = await runGuarded(context, () => ref.read(apiProvider).cancelDeletion());
       if (nu != null && mounted) {
         ref.read(authProvider.notifier).setUser(nu);
-        toast(context, '已撤回注销');
+        toast(context, '已撤回注销', kind: ToastKind.success);
       }
       return;
     }
@@ -92,7 +92,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final when = await runGuarded(context, () => ref.read(apiProvider).requestDeletion());
     if (!mounted) return;
     await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
-    if (mounted && when != null) toast(context, '已申请注销，将于 ${Fmt.dateTime(when)} 生效，期间可撤回');
+    if (mounted && when != null) toast(context, '已申请注销，将于 ${Fmt.dateTime(when)} 生效，期间可撤回', kind: ToastKind.success);
   }
 
   @override
