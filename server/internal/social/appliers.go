@@ -10,12 +10,13 @@ import (
 
 	"github.com/keanying/loopland/server/internal/inbox"
 	"github.com/keanying/loopland/server/internal/moderation"
+	"github.com/keanying/loopland/server/internal/nickname"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 )
 
 // Default names restored when a reviewer rejects a name.
-func DefaultNickname(id int64) string { return fmt.Sprintf("跑者%d", id) }
+func DefaultNickname(id int64) string { return nickname.ForID(id) }
 
 // DefaultCrewName is the crew name restored on rejection.
 func DefaultCrewName(id int64) string { return fmt.Sprintf("跑团%d", id) }

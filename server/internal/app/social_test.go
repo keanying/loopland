@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/keanying/loopland/server/internal/geo"
+	"github.com/keanying/loopland/server/internal/nickname"
 )
 
 type socUser struct {
@@ -479,7 +480,7 @@ func TestSocialEndToEnd(t *testing.T) {
 	}
 	ad.must("POST", fmt.Sprintf("/admin/v1/reviews/%d/reject", at.ID), map[string]string{"reason": "不适宜"}, nil)
 	b.must("GET", "/v1/me", nil, &me)
-	if me.Nickname != fmt.Sprintf("跑者%d", bid) || me.AvatarURL != nil || me.Bio != "每天 5 公里" {
+	if me.Nickname != nickname.ForID(bid) || me.AvatarURL != nil || me.Bio != "每天 5 公里" {
 		t.Fatalf("after reject: %+v", me)
 	}
 	if n := len(slices.DeleteFunc(b.inboxTypes(), func(s string) bool { return s != "review_rejected" })); n != 2 {

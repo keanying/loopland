@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/keanying/loopland/server/internal/gameplay"
+	"github.com/keanying/loopland/server/internal/nickname"
 	"github.com/keanying/loopland/server/internal/platform/db"
 	"github.com/keanying/loopland/server/internal/platform/httpx"
 	"github.com/keanying/loopland/server/internal/platform/secure"
@@ -250,10 +251,9 @@ func (s *Service) checkStatus(ctx context.Context, uid int64) error {
 	return nil
 }
 
-func randomNick() string {
-	n, _ := rand.Int(rand.Reader, big.NewInt(9000))
-	return "跑者" + strconv.FormatInt(n.Int64()+1000, 10)
-}
+// randomNick is the default nickname at registration: 「圈圈」+ a sports
+// description (e.g. 圈圈晨跑侠).
+func randomNick() string { return nickname.Random() }
 
 func (s *Service) byPhone(ctx context.Context, phone, source string) (int64, bool, error) {
 	if !phoneRe.MatchString(phone) {

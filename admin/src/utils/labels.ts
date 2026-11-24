@@ -263,7 +263,7 @@ export const REVIEW_STATUS: Record<string, { text: string; color: string }> = {
 export const REJECT_EFFECT: Record<string, string> = {
   post: '动态只有作者自己能看到，并带上拒绝原因',
   comment: '评论对其他人隐藏',
-  nickname: '昵称恢复为默认的「跑者+id」',
+  nickname: '昵称恢复为默认的「圈圈 + 运动描述」（如圈圈晨跑侠）',
   avatar: '头像清空，恢复默认头像',
   crew_name: '跑团名称恢复为默认的「跑团+id」',
   crew_avatar: '跑团头像清空',
