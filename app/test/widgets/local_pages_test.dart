@@ -105,7 +105,7 @@ void main() {
 
   setUp(() {
     local = LocalFake();
-    gathering = GatheringFake();
+    gathering = GatheringFake(now: local.now);
     gateways = FakeGateways();
     scanned = null;
     saved = SdkConfig.current;

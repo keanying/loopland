@@ -17,7 +17,10 @@ final gDeer = _brief(8, '小鹿', crew: true);
 final gKai = _brief(7, 'Kai');
 final gZhen = _brief(11, '阿珍');
 
-String _at(Duration d) => DateTime.now().add(d).toUtc().toIso8601String();
+/// Times in the fixtures are relative to this clock (real now by default; a
+/// page with a fixed clock passes the same one, see [GatheringFake.new]).
+DateTime _base = DateTime.now();
+String _at(Duration d) => _base.add(d).toUtc().toIso8601String();
 
 /// A point [dx], [dy] metres from the test origin.
 J placeAt(String name, double dx, double dy) {
@@ -26,7 +29,10 @@ J placeAt(String name, double dx, double dy) {
 }
 
 class GatheringFake {
-  GatheringFake() {
+  /// [now]: the clock of the page under test (e.g. LocalFake's fixed 10:00),
+  /// so "starts in 5 hours" stays in the future whatever the real time is.
+  GatheringFake({DateTime? now}) {
+    _base = now ?? DateTime.now();
     _seed();
   }
 

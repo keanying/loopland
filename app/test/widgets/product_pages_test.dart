@@ -100,7 +100,7 @@ void main() {
   setUp(() {
     products = ProductFake();
     local = LocalFake();
-    gathering = GatheringFake();
+    gathering = GatheringFake(now: local.now);
     gateways = FakeGateways();
     // Venue 8 sells three products (one sold out).
     local.venues.first['products'] = [products.products[31], products.products[32], products.products[33], products.products[34]];
