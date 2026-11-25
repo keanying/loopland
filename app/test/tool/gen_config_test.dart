@@ -168,9 +168,15 @@ void main() {
 
     test('required keys', () {
       final app = _app();
-      ((app['shared'] as Map)['links'] as Map).remove('privacy_policy');
+      ((app['shared'] as Map)['api'] as Map).remove('base_url');
       final errs = _gen('dev', app: app).validation.errors;
-      expect(errs.single, allOf(contains('links.privacy_policy'), contains('必填')));
+      expect(errs.single, allOf(contains('api.base_url'), contains('必填')));
+      // 协议链接可以不填：App 跟随 api.base_url（<base>/legal/terms、/legal/privacy）
+      final noLinks = _app();
+      ((noLinks['shared'] as Map)['links'] as Map)
+        ..remove('privacy_policy')
+        ..remove('user_agreement');
+      expect(_gen('dev', app: noLinks).validation.errors, isEmpty);
       expect(_errors('dev', sets: {'env': ''}).single, contains('env'));
       expect(_errors('dev', sets: {'env': 'staging'}).single, contains('只能是 dev 或 prod'));
     });
