@@ -157,9 +157,39 @@ body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: ant
 .plan-card.rec { border: 2px solid var(--ink); }
 .plan-card.off { background: #f7f7f8; border-style: dashed; }
 
-/* login */
-.login-bg { min-height: 100vh; background: radial-gradient(circle at 20% 20%, #23232a 0, var(--night) 60%); display: flex; align-items: center; justify-content: center; padding: 24px; }
-.login-card { width: 400px; max-width: 100%; background: #fff; border-radius: 28px; padding: 36px 32px; }
+/* login：版画山野动态背景（components/loginScene.ts），左侧标语，右侧登录卡 */
+.login-bg {
+  --lg-sky: #213E9F; --lg-ink: #1A338C; --lg-ink-deep: #13286F; --lg-paper: #F3E8CC; --lg-rule: rgba(26, 51, 140, .28);
+  --lg-serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "SimSun", serif;
+  position: fixed; inset: 0; overflow-y: auto; background: var(--lg-sky); color: var(--lg-paper);
+}
+.login-scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .9s ease; }
+.login-scene.on { opacity: 1; }
+.login-grain { position: fixed; inset: 0; pointer-events: none; opacity: .6; }
+.login-stage { position: relative; z-index: 1; box-sizing: border-box; min-height: 100%; display: flex; justify-content: center; align-items: flex-start; padding: clamp(28px, 10vh, 110px) 16px 32px; }
+.login-wrap { width: min(1080px, 100%); display: flex; justify-content: space-between; align-items: flex-start; gap: 48px; }
+.login-pitch { max-width: 460px; padding-top: 18px; display: flex; flex-direction: column; gap: 18px; }
+.login-mark { display: flex; align-items: center; gap: 12px; font-family: var(--lg-serif); font-size: 22px; letter-spacing: .04em; }
+.login-eyebrow { font-size: 12px; letter-spacing: .32em; color: rgba(243, 232, 204, .7); display: flex; flex-direction: column; gap: 10px; }
+.login-eyebrow::after { content: ""; width: 28px; height: 1px; background: rgba(243, 232, 204, .7); }
+.login-pitch h1 { margin: 0; color: var(--lg-paper); font-family: var(--lg-serif); font-weight: 600; font-size: clamp(30px, 3.4vw, 42px); line-height: 1.35; letter-spacing: .06em; text-wrap: balance; }
+.login-pitch p { margin: 0; font-size: 15px; line-height: 1.8; color: rgba(243, 232, 204, .78); }
+.login-card {
+  width: 380px; max-width: 100%; box-sizing: border-box; background: var(--lg-paper); color: var(--lg-ink);
+  border-radius: 4px; padding: 30px 28px 22px;
+  box-shadow: inset 0 0 0 1px var(--lg-rule), 0 18px 50px rgba(8, 20, 70, .35);
+  outline: 1px solid rgba(243, 232, 204, .45); outline-offset: 7px;
+}
+.login-head { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--lg-rule); }
+.login-tile { background: var(--lg-ink); border-radius: 12px; padding: 3px; display: flex; }
+.login-head b { display: block; font-family: var(--lg-serif); font-size: 21px; letter-spacing: .03em; }
+.login-head span { font-size: 13px; color: rgba(26, 51, 140, .7); }
+.login-card .ant-form-item-label > label { color: rgba(26, 51, 140, .85); }
+.login-card .ant-btn-primary { letter-spacing: .4em; padding-left: calc(15px + .4em); }
+@media (max-width: 900px) {
+  .login-pitch { display: none; }
+  .login-wrap { justify-content: center; }
+}
 
 @media (max-width: 900px) {
   .shell { padding: 0; }
