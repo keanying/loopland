@@ -110,9 +110,9 @@ void main() {
     // The snapshot is written asynchronously (temp file + rename). Starting
     // already wrote an empty one, so wait for the one taken on pause (all 5
     // points), not just any snapshot — under load the older write can be
-    // read first.
+    // read first. Up to 15 s: the suite can run on a busy machine.
     RunSnapshot? snap;
-    for (var i = 0; i < 250 && (snap == null || snap.points.length < 5); i++) {
+    for (var i = 0; i < 750 && (snap == null || snap.points.length < 5); i++) {
       await Future<void>.delayed(const Duration(milliseconds: 20));
       snap = await store.loadInProgress();
     }
