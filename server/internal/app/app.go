@@ -179,7 +179,9 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 		return httpx.OK(w, store.For(uid))
 	}))
 	mux.Handle("GET /v1/config/features", httpx.Wrap(func(w http.ResponseWriter, r *http.Request) error {
-		return httpx.OK(w, features(reg.Current(), opt, aiSvc.Available()))
+		f := features(reg.Current(), opt, aiSvc.Available())
+		f.Wearable = cfg.Wearable
+		return httpx.OK(w, f)
 	}))
 	(&auth.Handler{Svc: authSvc}).Routes(mux)
 	userH.Routes(mux, authed, authAny)
@@ -295,6 +297,8 @@ type Features struct {
 	Pay     []string `json:"pay"`
 	Captcha bool     `json:"captcha"`
 	AI      bool     `json:"ai"`
+	// Wearable: the reserved wearable-device data path is on (features.wearable).
+	Wearable bool `json:"wearable"`
 }
 
 // features is computed per request from the live snapshot; test

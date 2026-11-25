@@ -42,6 +42,9 @@ type Config struct {
 	Apple   Apple
 	Alipay  Alipay
 	JobsOff bool
+	// Wearable turns on the reserved wearable-device data path (心率、步频、
+	// 穿戴设备赛事; docs/设备接入预留.md). Off: the app and admin hide it.
+	Wearable bool
 	// Disabled lists features switched off for this deployment
 	// (LOOPLAND_DISABLE=wechat_login,alipay,...). See Features.
 	Disabled []string
@@ -203,6 +206,7 @@ func Load() (Config, error) {
 		PublicBaseURL:  strings.TrimRight(env("LOOPLAND_PUBLIC_BASE_URL", "http://localhost:8080"), "/"),
 		CORSOrigins:    splitList(get("LOOPLAND_CORS_ORIGINS")),
 		JobsOff:        get("LOOPLAND_JOBS_OFF") == "1",
+		Wearable:       get("LOOPLAND_FEATURE_WEARABLE") == "1",
 		MediaDir:       env("LOOPLAND_MEDIA_DIR", "data/media"),
 		Aliyun: Aliyun{
 			AccessKeyID:     get("ALIYUN_ACCESS_KEY_ID"),

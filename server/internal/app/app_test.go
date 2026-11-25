@@ -250,12 +250,14 @@ func TestEndToEnd(t *testing.T) {
 	e := newEnv(t)
 
 	var feats struct {
-		Login   []string `json:"login"`
-		Pay     []string `json:"pay"`
-		Captcha bool     `json:"captcha"`
+		Login    []string `json:"login"`
+		Pay      []string `json:"pay"`
+		Captcha  bool     `json:"captcha"`
+		Wearable bool     `json:"wearable"`
 	}
 	e.anon().must("GET", "/v1/config/features", nil, &feats)
-	if len(feats.Login) != 4 || feats.Captcha || !slices.Contains(feats.Pay, "mock") || !slices.Contains(feats.Pay, "apple_iap") {
+	// 穿戴设备是预留口子，默认关闭（docs/设备接入预留.md）
+	if len(feats.Login) != 4 || feats.Captcha || feats.Wearable || !slices.Contains(feats.Pay, "mock") || !slices.Contains(feats.Pay, "apple_iap") {
 		t.Fatalf("features: %+v", feats)
 	}
 
@@ -643,4 +645,18 @@ func TestSMSRateLimit(t *testing.T) {
 	c.expectErr("POST", "/v1/auth/sms/send", map[string]string{"phone": "13900000000"}, 429, "rate_limited")
 	c.expectErr("POST", "/v1/auth/sms/send", map[string]string{"phone": "12345"}, 400, "invalid_phone")
 	c.expectErr("POST", "/v1/auth/login", map[string]any{"provider": "sms", "credential": map[string]string{"phone": "13900000000", "code": "111111"}}, 400, "invalid_code")
+}
+
+// The reserved wearable-device switch: off by default, on with
+// LOOPLAND_FEATURE_WEARABLE=1 (features.wearable in config.yaml).
+func TestWearableFeatureSwitch(t *testing.T) {
+	t.Setenv("LOOPLAND_FEATURE_WEARABLE", "1")
+	e := newEnv(t)
+	var feats struct {
+		Wearable bool `json:"wearable"`
+	}
+	e.anon().must("GET", "/v1/config/features", nil, &feats)
+	if !feats.Wearable {
+		t.Fatal("wearable switch not on")
+	}
 }

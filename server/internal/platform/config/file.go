@@ -49,6 +49,7 @@ type File struct {
 	} `yaml:"media"`
 	Features struct {
 		Disabled []string `yaml:"disabled"` // LOOPLAND_DISABLE
+		Wearable bool     `yaml:"wearable"` // LOOPLAND_FEATURE_WEARABLE=1：穿戴设备数据（预留，见 docs/设备接入预留.md）
 	} `yaml:"features"`
 	Aliyun struct {
 		AccessKeyID         string `yaml:"access_key_id"`          // ALIYUN_ACCESS_KEY_ID
@@ -152,6 +153,9 @@ func (f File) env(dir string) map[string]string {
 	}
 	if f.Jobs.Enabled != nil && !*f.Jobs.Enabled {
 		m["LOOPLAND_JOBS_OFF"] = "1"
+	}
+	if f.Features.Wearable {
+		m["LOOPLAND_FEATURE_WEARABLE"] = "1"
 	}
 	for k, v := range m {
 		if v == "" {

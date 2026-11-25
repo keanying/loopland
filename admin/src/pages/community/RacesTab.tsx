@@ -6,6 +6,7 @@ import type { Dayjs } from 'dayjs';
 import { api, PAGE_SIZE } from '../../api/admin';
 import type { Race, RaceEntry, RaceInput, RaceType } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
+import { useWearableEnabled } from '../../hooks/useServerFeatures';
 import SvgMap from '../../components/map/SvgMap';
 import { Panel, Tile } from '../../components/ui';
 import { dayjs, dt, duration, num, pace } from '../../utils/format';
@@ -41,6 +42,7 @@ export default function RacesTab() {
   const writable = can('community.write');
   const [page, setPage] = useState(1);
   const list = useQuery({ queryKey: ['races', page], queryFn: () => api.races({ page }), placeholderData: (p) => p });
+  const wearableOn = useWearableEnabled();
   const [editing, setEditing] = useState<Race | 'new' | null>(null);
   const [entriesOf, setEntriesOf] = useState<Race | null>(null);
   const cancel = useMutation({
@@ -118,7 +120,10 @@ export default function RacesTab() {
                 <span className="muted">—</span>
               ),
           },
-          { title: '穿戴设备', width: 96, dataIndex: 'requires_wearable', render: (v: boolean, r) => (r.type === 'online' ? (v ? <Tag bordered={false} color="purple">必须</Tag> : <span className="muted">不要求</span>) : <span className="muted">—</span>) },
+          // 穿戴设备是预留口子：开关打开、或已有赛事设过时才显示这一列
+          ...(wearableOn || (list.data?.items ?? []).some((r) => r.requires_wearable)
+            ? [{ title: '穿戴设备', width: 96, dataIndex: 'requires_wearable', render: (v: boolean, r: Race) => (r.type === 'online' ? (v ? <Tag bordered={false} color="purple">必须</Tag> : <span className="muted">不要求</span>) : <span className="muted">—</span>) }]
+            : []),
           { title: '发布', dataIndex: 'published', render: (v: boolean) => (v ? <Tag bordered={false} color="green">已发布</Tag> : <Tag bordered={false}>草稿</Tag>) },
           { title: '状态', dataIndex: 'status', render: (v: string) => <Tag bordered={false} color={RACE_STATUS[v]?.color}>{RACE_STATUS[v]?.text ?? v}</Tag> },
           {
@@ -196,6 +201,8 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
   const editing = value && value !== 'new' ? value : null;
   const running = editing?.status === 'running';
   const type = Form.useWatch('type', form) ?? 'online';
+  const wearableOn = useWearableEnabled();
+  const requiresWearable = Form.useWatch('requires_wearable', form);
   const lat = Form.useWatch('lat', form);
   const lng = Form.useWatch('lng', form);
   const placeName = Form.useWatch('place_name', form);
@@ -365,7 +372,7 @@ function RaceDrawer({ value, onClose }: { value: Race | 'new' | null; onClose: (
                 </Form.Item>
               </Col>
             </Row>
-            {type === 'online' && (
+            {type === 'online' && (wearableOn || requiresWearable) && (
               <Form.Item name="requires_wearable" label="要求穿戴设备数据" valuePropName="checked" extra="打开后，只有带手表 / 手环数据（心率、步频）的运动才算完赛">
                 <Switch />
               </Form.Item>

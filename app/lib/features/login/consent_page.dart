@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../core/env.dart';
+import '../../core/features.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 
@@ -66,13 +67,16 @@ class _ConsentPageState extends ConsumerState<ConsentPage> {
   }
 }
 
-class ConsentSwitches extends StatelessWidget {
+/// 隐私授权开关。「运动健康数据」只在穿戴设备口子打开时出现（[wearableEnabledProvider]），
+/// 现在 App 只用手机自己的数据，不申请用不到的授权。
+class ConsentSwitches extends ConsumerWidget {
   const ConsentSwitches({super.key, required this.location, required this.health, required this.onLocation, required this.onHealth});
   final bool location, health;
   final ValueChanged<bool> onLocation, onHealth;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wearable = ref.watch(wearableEnabledProvider);
     return LLCard(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(children: [
@@ -83,14 +87,16 @@ class ConsentSwitches extends StatelessWidget {
           subtitle: const Text('运动时记录 GPS 轨迹用于圈地。开始第一次户外运动前必须开启。',
               style: TextStyle(color: LL.text3, fontSize: 12)),
         ),
-        const Divider(indent: 16, endIndent: 16),
-        SwitchListTile(
-          value: health,
-          onChanged: onHealth,
-          title: const Text('运动健康数据', style: TextStyle(fontWeight: FontWeight.w800)),
-          subtitle: const Text('心率、步频（来自手表或系统健康）用于防作弊佐证和数据分析，可选。',
-              style: TextStyle(color: LL.text3, fontSize: 12)),
-        ),
+        if (wearable) ...[
+          const Divider(indent: 16, endIndent: 16),
+          SwitchListTile(
+            value: health,
+            onChanged: onHealth,
+            title: const Text('运动健康数据', style: TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: const Text('心率、步频（来自穿戴设备）用于防作弊佐证和数据分析，可选。',
+                style: TextStyle(color: LL.text3, fontSize: 12)),
+          ),
+        ],
       ]),
     );
   }

@@ -36,6 +36,7 @@ media:
 
 features:
   disabled: []                   # LOOPLAND_DISABLE：暂不上线的功能，见 config.prod.example.yaml
+  wearable: false                # LOOPLAND_FEATURE_WEARABLE=1：穿戴设备数据（心率、步频、要求穿戴设备的赛事）。预留口子，接入自有设备后再打开，见 docs/设备接入预留.md
 
 # 第三方服务：dev 模式下不填就用假实现（短信验证码固定 000000、mock 支付）。
 aliyun:
