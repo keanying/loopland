@@ -7,7 +7,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../api/errors.dart';
 import '../../api/models.dart';
-import '../../auth/auth_controller.dart';
 import '../../coach/coach_api.dart';
 import '../../coach/coach_session.dart';
 import '../../coach/pose.dart';
@@ -18,6 +17,7 @@ import '../../coach/voice.dart';
 import '../../coach/workout.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../run/device.dart';
 import '../../run/run_controller.dart' show clockProvider;
@@ -328,7 +328,7 @@ class _CoachSessionViewState extends ConsumerState<CoachSessionView> with Widget
     );
     try {
       final r = await ref.read(uploaderProvider).submit(upload);
-      ref.read(authProvider.notifier).refreshUser().ignore();
+      ref.read(refreshProvider).afterRunSettled().ignore();
       if (mounted) context.go('/result', extra: ResultArgs(result: r));
     } catch (e) {
       if (!mounted) return;

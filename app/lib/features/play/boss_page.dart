@@ -22,6 +22,7 @@ import 'play_providers.dart';
 import 'play_widgets.dart';
 import '../../widgets/sound_refresh.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 /// Damage rules grouped for the 2-column grid: "跑步 / 骑行" · "每 1 km = 100 伤害".
 List<(String, String)> damageTiles(List<DamageRule> rules, BossStrikeInfo strike) {
@@ -118,7 +119,13 @@ class _BossPageState extends ConsumerState<BossPage> {
         _myExtraDamage = (_myExtraDamage ?? 0) + r.damage;
         _cooldownUntil = DateTime.now().add(Duration(seconds: b.strike.cooldownS));
       });
-      ref.read(authProvider.notifier).refreshUser().ignore();
+      ref.read(refreshProvider).afterEnergyChange().ignore();
+      if (r.status != 'active') {
+        // Defeated: medals (怪兽猎人), season tasks, the boss leaves the map.
+        ref.invalidate(codexProvider);
+        ref.invalidate(seasonProvider);
+        ref.read(refreshProvider).bump(DataTopic.territory);
+      }
       final audio = ref.read(audioProvider);
       if (r.status != 'active') {
         // 最后一击：泄气 + 胜利小号角

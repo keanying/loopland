@@ -8,6 +8,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
@@ -48,8 +49,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
     if (!mounted) return;
     setState(() => _restoring = false);
     if (n == null) return;
-    await ref.read(authProvider.notifier).refreshUser();
-    ref.invalidate(membershipProvider);
+    await ref.read(refreshProvider).afterMembershipChange();
     if (mounted) toast(context, n > 0 ? '已恢复 $n 笔购买' : '没有可恢复的购买记录');
   }
 
@@ -66,11 +66,13 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       final o = await ref.read(paymentServiceProvider).purchase(p, channel);
       if (!mounted) return;
       if (o.isPaid) {
-        await ref.read(authProvider.notifier).refreshUser();
-        ref.invalidate(membershipProvider);
-        if (mounted) toast(context, '开通成功，欢迎成为会员');
+        // User, membership card, AI quota, … (数据刷新约定).
+        await ref.read(refreshProvider).afterMembershipChange();
+        if (!mounted) return;
+        toast(context, '开通成功，欢迎成为会员');
         setState(() => _status = null);
       } else {
+        // Re-checked when the app comes back to the foreground (Refresh.resumed).
         setState(() => _status = '订单 ${o.orderNo} 状态：${_orderStatus(o.status)}。支付结果以服务端为准，稍后可下拉刷新查看。');
       }
     } catch (e) {
@@ -115,14 +117,16 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
       if (ok != true || !mounted) return;
     }
     final r = await runGuarded(context, () => ref.read(apiProvider).setAutoRenew(v));
-    if (r != null) {
-      ref.invalidate(membershipProvider);
-      ref.read(authProvider.notifier).refreshUser().ignore();
-    }
+    if (r != null) ref.read(refreshProvider).afterMembershipChange().ignore();
   }
 
   @override
   Widget build(BuildContext context) {
+    // The payment came through later (resume / pull to refresh): drop the
+    // "waiting for the result" note.
+    ref.listen<bool>(userProvider.select((u) => u?.membership?.active ?? false), (was, now) {
+      if (now && was != true && _status != null) setState(() => _status = null);
+    });
     final user = ref.watch(userProvider);
     final channels = ref.watch(paymentServiceProvider).channels(ref.watch(featuresProvider).value);
     if (!channels.contains(_channel)) _channel = channels.firstOrNull;
@@ -143,7 +147,7 @@ class _MembershipPageState extends ConsumerState<MembershipPage> {
         child: SoundRefresh(
           onRefresh: () async {
             ref.invalidate(plansProvider);
-            ref.invalidate(membershipProvider);
+            await ref.read(refreshProvider).afterMembershipChange();
           },
           child: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
             const BackHeader(title: '会员', subtitle: '只给体验类权益，花钱买不到抢地优势'),

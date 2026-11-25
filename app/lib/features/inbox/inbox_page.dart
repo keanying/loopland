@@ -9,6 +9,7 @@ import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
@@ -132,11 +133,7 @@ class _InboxPageState extends ConsumerState<InboxPage> {
     await Future.wait([_load(), _loadConversations()]);
   }
 
-  void _unreadChanged() {
-    ref.invalidate(inboxSummaryProvider);
-    ref.invalidate(inboxUnreadProvider);
-    ref.invalidate(communityHomeProvider);
-  }
+  void _unreadChanged() => ref.read(refreshProvider).afterInboxRead();
 
   Future<void> _readAll() async {
     final n = await runGuarded(context, () => ref.read(apiProvider).markRead(all: true));

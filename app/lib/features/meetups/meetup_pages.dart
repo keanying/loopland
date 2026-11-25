@@ -10,6 +10,7 @@ import '../../api/gathering_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../widgets/common.dart';
@@ -73,21 +74,28 @@ class _MeetupsPageState extends ConsumerState<MeetupsPage> {
     setState(() => _busy.remove(m.id));
     if (r == null) return;
     _pager.replaceWhere((x) => x.id == m.id, (_) => r.withDistance(m.distanceM));
-    ref.invalidate(myMeetupsProvider);
-    ref.invalidate(communityHomeProvider);
+    _ownChange = true;
+    ref.read(refreshProvider).afterGatheringChange();
+    _ownChange = false;
     toast(context, '报名成功，已加入群聊');
   }
 
   Future<void> _create() async {
     final m = await context.push<Meetup>('/meetups/new');
-    if (m != null && mounted) {
-      _pager.refresh();
-      ref.invalidate(myMeetupsProvider);
-    }
+    // The create page already ran afterGatheringChange (→ _pager.refresh).
+    if (m != null && mounted) ref.invalidate(myMeetupsProvider);
   }
+
+  /// Set while this page's own change bumps [DataTopic.gathering] (the list
+  /// already shows it).
+  bool _ownChange = false;
 
   @override
   Widget build(BuildContext context) {
+    // Joined / left / cancelled on the detail page, created a meetup.
+    ref.onDataChanged([DataTopic.gathering, DataTopic.resume], () {
+      if (!_ownChange) _pager.refresh();
+    });
     return Scaffold(
       body: SafeArea(
         child: Column(children: [
@@ -187,9 +195,7 @@ class _MeetupDetailPageState extends ConsumerState<MeetupDetailPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r == null) return;
-    ref.invalidate(meetupProvider(widget.meetupId));
-    ref.invalidate(myMeetupsProvider);
-    ref.invalidate(communityHomeProvider);
+    ref.read(refreshProvider).afterGatheringChange();
     toast(context, done);
   }
 
@@ -534,8 +540,7 @@ class _MeetupCreatePageState extends ConsumerState<MeetupCreatePage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (m == null) return;
-    ref.invalidate(myMeetupsProvider);
-    ref.invalidate(communityHomeProvider);
+    ref.read(refreshProvider).afterGatheringChange();
     toast(context, m.isPending ? '已提交，审核通过后会出现在附近列表' : '发起成功，群聊已创建');
     final pick = _pick;
     if (booking && pick != null) {

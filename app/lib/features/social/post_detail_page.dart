@@ -19,6 +19,7 @@ import 'share_sheet.dart';
 import 'social_providers.dart';
 import 'social_widgets.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 final postDetailProvider = FutureProvider.autoDispose.family<Post, int>((ref, id) async {
   final p = await ref.watch(communityApiProvider).post(id);
@@ -464,7 +465,7 @@ class _AuthorFollowState extends ConsumerState<_AuthorFollow> {
     try {
       final r = await ref.read(communityApiProvider).follow(widget.user.id, on);
       if (mounted) setState(() => _following = r);
-      ref.invalidate(myProfileProvider);
+      ref.read(refreshProvider).afterFollowChange();
     } catch (e) {
       if (mounted) {
         setState(() => _following = !on);

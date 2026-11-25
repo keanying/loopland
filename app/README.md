@@ -179,7 +179,7 @@ screenshots/  组件测试生成的界面截图
   - AI 助手圈圈（`/ai`，设计稿 12_AI_助手）：入口在地图右侧「AI」、我的「AI 助手圈圈」、他人领地弹层和怪兽页的「问 AI」（`/ai?context=territory|boss&id=&name=`，预填问题并显示「关于领地「xx」」，只随下一条消息发送 `context`）。顶部公示模型名称 + 备案号（点开「关于 AI 助手」：免责声明、图片识别、额度、180 天保存说明）和本周剩余次数（会员显示「不限次数」）；开场白 + 快捷问题；历史倒序分页（`before=`，滚到顶加载更早的）；菜单「清空对话」。
   - 流式回答：`POST /v1/ai/chat` 带 `Accept: text/event-stream`，dio `ResponseType.stream` + 自写 SSE 解析（`parseSse`：`event:` / 多行 `data:` / 注释 / CRLF / 任意切块），`delta` 实时追加（等待首字时显示三点动画，生成中有光标），`card` 立即渲染，`done.message` 为准（输出被拦截时替换文字、去掉卡片），`event: error` 显示在回答气泡里并可重试；流在第一个事件前就失败（网络 / 代理）时自动改用 JSON 请求，后端直接回 JSON 也能处理。每条 AI 回答下方都有「内容由 AI 生成」。
   - 卡片：路线卡（缩略轨迹、距离 / 可圈面积 / 用时、理由、「一键开跑」→ 开跑页预选该路线并自动开始）、领地卡（→ 地图定位并高亮，`mapFocusProvider`）、怪兽卡（→ 怪兽页）。
-  - 拍照 / 相册（`purpose=chat` 上传），`vision=false` 时不显示相机按钮，`ai_image_unsupported` 后也隐藏；`ai_quota_exceeded` 弹「开通会员」→ 会员页（之后本地记为用完，直接弹窗不再请求）；`content_blocked` / `rate_limited` 退回草稿；`ai_unavailable`（信息接口 503 或 `enabled=false`）整页提示不可用。
+  - 拍照 / 相册（`purpose=chat` 上传），`vision=false` 时不显示相机按钮，`ai_image_unsupported` 后也隐藏；`ai_quota_exceeded` 弹「开通会员」→ 会员页（之后本地记为用完，直接弹窗不再请求；从会员页返回、会员状态变化、回到前台时重新读 `/v1/ai/info`，开通后不用重启即可继续问）；`content_blocked` / `rate_limited` 退回草稿；`ai_unavailable`（信息接口 503 或 `enabled=false`）整页提示不可用。
   - 开跑页「本次目标」：自由圈地之后是 `GET /v1/ai/routes` 的 AI 推荐闭环 / 夺回 xx / 守卫 xx / 顺路打怪兽（定位中 / 加载中 / 空 / 失败可重试 / 「刷新 AI 路线」），选中后展开距离·用时·面积、理由（`ai_generated` 时标「内容由 AI 生成」）、途经目标，闭环可选 3 / 5 / 10 km；预览地图画路线虚线和编号目标并自动取景。开跑时 `goal = {type: ai_route, route_id, route_type}`，运动页沿用城市定向的路线虚线层画引导线 + 编号目标，接近目标时提示（引导线不写入断点续跑快照）。
   - 结算页 AI 战报：结算后请求 `POST /v1/activities/{id}/ai-report`，柠檬绿卡片逐字打出、标「内容由 AI 生成 · 模型名」，「换一换 · 剩 N 次」（用完显示「已换完」，409 `regenerate_limit` 提示）；「一键带上战报发动态」把战报带进发布页，作为单独的「AI 战报」块（可移除，不计入 500 字），发布时 `ai_report: true`。发布页也可以对选中的运动「AI 写战报 / 换一篇」，换运动时自动移除。动态卡片和详情把 `post.ai_report` 显示为单独的「AI 战报」块并标注 AI 生成。
 - **AI 跟练（V2 第三批 C-09，接口 `docs/api/v2-3-AI.md`「App · AI 跟练」）**：
@@ -206,6 +206,35 @@ screenshots/  组件测试生成的界面截图
   - 装扮：`UserBrief.avatar_frame` 由 `UserAvatar` 按 key 画框（服务端默认 `frame_gold` / `frame_runner` / `frame_night`，另有几种备用；未知 key 画通用框，尺寸不变）；领地 `skin` 的 fill / stroke / pattern（`grid`、`stripe(s)`、`wave(s)`、`dot(s)`、`hex`）在备用地图上完整绘制，高德只用颜色；`/v1/me` 的 `equipped.map_marker` 替换我的位置标记（高德作为定位图标）。
   - 联调：`LOOPLAND_LIVE_API=… LOOPLAND_LIVE_DB=<同一个库的 psql 连接串> flutter test integration_live/perks_live_test.dart`（`LOOPLAND_LIVE_DB` 用来给测试账号加能量；不设时只测能量不足）。
 - 离线：进行中的运动每 5 秒和每次暂停写入 `runs/in_progress.json`（先写临时文件再改名）；结束后先写入 `runs/pending/<client_id>.json` 再上传；启动时提示恢复中断的运动并补传，补传使用相同 `client_id`（服务端幂等）。
+
+## 数据刷新约定
+
+底部五个标签页放在 `IndexedStack` 里一直不销毁，push 出来的页面下面的页面也一直挂着，所以它们 `watch` 的 provider（哪怕是 `autoDispose`）会一直缓存。**改了服务端状态的操作成功后，必须让所有显示这份数据的地方重新读**，否则用户要重启 App 才能看到（例：买了会员，AI 助手还说免费次数用完了）。
+
+- 统一入口 `lib/core/refresh.dart` 的 `ref.read(refreshProvider).afterXxx()`，不要在页面里零散地 `ref.invalidate(...)` / `refreshUser()`。invalidate 一个没人在看的 `autoDispose` provider 几乎没有开销，宁可多刷不要漏刷。新功能有新的缓存，就把它加进对应的 `afterXxx()`；有新的一类操作，就加一个 `afterXxx()`。
+- `refreshUser()`（`/v1/me`：能量、等级、统计、会员、跑团、装扮）单飞：并发调用合并成「当前这次之后再读一次」，不会拿到改动之前的资料。
+- 页面自己用 `State` 存的数据（`CursorPager` 列表、地图上的领地、商城的能量）不能被 invalidate：在 `build` 里 `ref.onDataChanged([DataTopic.x], _reload)` 订阅主题（`territory` / `gathering` / `social` / `resume`），`afterXxx()` 会 bump 主题；或者像能量商城那样 `ref.listen(userProvider.select(...))` 跟着 `/v1/me` 走。
+- 支付：`PaymentService.pollOrder` 到超时还是 `created` 的订单记进 `unsettled`；回到前台时 `recheckUnsettled()` 再问一次服务端，付了就 `afterPayment()`（用户在微信 / 支付宝里付完很久才切回来，或回调晚到）。
+- `lib/widgets/data_sync.dart`（挂在 `MaterialApp.builder`）：从后台回来（真正离开过 App，`hidden` → `resumed`）调用 `Refresh.resumed()`：用户、会员、AI 额度、未读数、订单、待确认的支付；离开超过 2 分钟再刷各标签页主数据（图鉴、社区首页、赛季、我的主页）并 bump `resume`（地图、赛事 / 组局列表重载）。WebSocket：`territory_attacked` → 该领地 + 地图（被抢走时刷用户）；`rally` → 集结跑 + 社区首页；`chat_message` / `conversation_read` → 未读数（2 秒合并）；断线重连后补刷未读数和地图。
+
+| 操作 | 之前没刷新的 | 现在 |
+| --- | --- | --- |
+| 开通 / 恢复会员、自动续费开关 | AI 助手额度（`aiInfoProvider` + 页面里记住的「已用完」）、高清回放导出 | `afterMembershipChange()`；AI 页从会员页返回、会员状态变化、拿到新的 `/v1/ai/info` 时丢掉本地记住的额度 |
+| 任意订单付款成功（会员 / 订场 / 团购商品 / 赛事报名费），退款、取消、继续支付 | 我的订场 / 订单、时段、关联组局、卡券包、赛事、社区首页 | `afterPayment()`；付款结果晚到：回到前台 `recheckUnsettled()` |
+| 运动结算（户外、居家、AI 跟练、离线补传） | 地图领地、图鉴（居家 / 跟练）、赛季任务、联赛、限时活动、定向、接力、赛事进度、社区首页、我的主页、联名券、未读数 | `afterRunSettled()`（用户 + 上述 provider + bump `territory` / `gathering`） |
+| 能量商城兑换 | 商城里的能量在别处变化后不更新 | `afterEnergyChange()`；商城跟随 `/v1/me` 的能量 |
+| 装备 / 卸下装扮 | 我的主页头像框、地图皮肤 / 标记 | `afterCosmeticsChange()` |
+| 建造、派驻 / 撤下角色 | 地图、图鉴（驻守位置） | `afterTerritoryChange(id)` |
+| 开宝箱、合击怪兽、喂伙伴、场馆签到 | 图鉴奖牌、赛季任务、附近场馆的「今日已签」 | `afterEnergyChange()` + 对应 provider |
+| 加入 / 退出 / 创建 / 编辑跑团，审批、踢人、转让，邀请码加入 | 社区首页的跑团卡（一直显示「还没有跑团」）、跑团成员 / 申请、地图上的跑团领地 | `afterCrewChange()` |
+| 组局 / 集结跑 / 赛事报名、取消、发起 | 组局列表、赛事列表（在详情页操作后返回） | `afterGatheringChange()` + 列表订阅 `gathering` |
+| 关注 / 取关、拉黑 / 取消拉黑 | 我的关注数、黑名单、动态流里被拉黑的人 | `afterFollowChange()` / `afterBlockChange()`（动态流订阅 `social`） |
+| 发 / 删动态，改昵称、头像、简介、设置 | 我的主页（动态数、头像） | `afterProfileChange()` |
+| 消息已读、私信已读 / 删除会话 | 社区首页、地图铃铛的未读数 | `afterInboxRead()` |
+| 补给站领券 | 卡券包、联名活动 | `afterCouponChange()` |
+| 实名认证、申请 / 撤回注销 | 会员页（未成年不展示付费） | `afterAccountChange()` |
+
+测试：`test/widgets/data_refresh_test.dart`（会员 → AI 不再拦截、回到前台刷新额度、商城 → 我的能量、加入跑团 → 社区、结算 → 我的 / 地图），`test/pay/payment_service_test.dart`（`recheckUnsettled`）。
 
 ## 坐标系
 

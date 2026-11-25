@@ -77,7 +77,23 @@ const featuresJson = {
   'captcha': false,
 };
 
+/// [AuthController] that starts signed in as [user] (for tests that watch
+/// `refreshUser()` / `setUser()` reach the screens; see `liveUser`).
+class SeededAuth extends AuthController {
+  SeededAuth(this.user);
+  final User user;
+  @override
+  AuthState build() {
+    super.build();
+    return AuthState(status: AuthStatus.loggedIn, user: user);
+  }
+}
+
 /// Overrides that make every screen render against canned data.
+///
+/// By default [userProvider] is pinned to [user]. With [liveUser] the user
+/// lives in [authProvider] instead (signed in as [user]), so `GET /v1/me`
+/// answered by a handler updates every screen like in the app.
 ///
 /// [handlers] are consulted first, in order; a handler returns null to pass
 /// (e.g. `communityHandler` in community_fake.dart, method-aware and stateful).
@@ -88,6 +104,7 @@ List<Override> fakeBackend({
   Map<String, Object?> extra = const {},
   List<(int, Object?)? Function(RequestOptions o)> handlers = const [],
   HttpClientAdapter Function(HttpClientAdapter inner)? wrapAdapter,
+  bool liveUser = false,
 }) {
   final adapter = FakeAdapter((o) {
     final p = o.path;
@@ -139,6 +156,6 @@ List<Override> fakeBackend({
     kvCacheProvider.overrideWithValue(MemoryCache()),
     apiClientProvider.overrideWithValue(ApiClient(
         tokens: MemoryTokenStore(access: 'A'), baseUrl: 'http://x', adapter: wrapAdapter == null ? adapter : wrapAdapter(adapter))),
-    userProvider.overrideWithValue(u),
+    if (liveUser) authProvider.overrideWith(() => SeededAuth(u)) else userProvider.overrideWithValue(u),
   ];
 }

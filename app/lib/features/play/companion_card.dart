@@ -5,6 +5,7 @@ import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/card_art.dart';
 import '../../widgets/common.dart';
@@ -38,7 +39,7 @@ class _CompanionCardState extends ConsumerState<CompanionCard> {
     final up = c != null && c.level > widget.companion.level;
     toast(context, up ? '${c.name} 升到 Lv.${c.level} 了！' : '喂食成功，经验 +${cfg?.feedExp ?? 10}');
     ref.invalidate(codexProvider);
-    ref.read(authProvider.notifier).refreshUser().ignore();
+    ref.read(refreshProvider).afterEnergyChange().ignore();
     widget.onFed?.call(codex);
   }
 

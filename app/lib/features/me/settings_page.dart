@@ -14,6 +14,7 @@ import '../../core/env.dart';
 import '../../core/format.dart';
 import '../../core/privacy.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
@@ -41,7 +42,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   Future<void> _patch(Map<String, dynamic> settings) async {
     final u = await runGuarded(context, () => ref.read(apiProvider).updateMe(settings: settings));
-    if (u != null) ref.read(authProvider.notifier).setUser(u);
+    if (u != null) {
+      ref.read(authProvider.notifier).setUser(u);
+      // Track visibility / avatar on the map show on my profile and the map.
+      ref.read(refreshProvider)
+        ..afterProfileChange()
+        ..bump(DataTopic.territory);
+    }
   }
 
   Future<void> _consent({bool? location, bool? health}) async {
@@ -100,7 +107,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     if (ok != true || !mounted) return;
     final when = await runGuarded(context, () => ref.read(apiProvider).requestDeletion());
     if (!mounted) return;
-    await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
+    await ref.read(refreshProvider).afterAccountChange();
     if (mounted && when != null) toast(context, '已申请注销，将于 ${Fmt.dateTime(when)} 生效，期间可撤回', kind: ToastKind.success);
   }
 
@@ -262,6 +269,8 @@ class _RealnamePageState extends ConsumerState<RealnamePage> {
     setState(() => _busy = false);
     if (u != null) {
       ref.read(authProvider.notifier).setUser(u);
+      // Adult / minor decides the paid entries (plans, membership).
+      ref.read(refreshProvider).afterAccountChange().ignore();
       toast(context, u.isAdult == false ? '认证成功。未成年账号将不展示付费服务。' : '实名认证成功');
       Navigator.of(context).maybePop();
     }

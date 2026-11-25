@@ -308,7 +308,11 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
         ],
       ),
     );
-    if (go == true && mounted) context.push('/membership');
+    if (go != true || !mounted) return;
+    await context.push('/membership');
+    // Back from the membership page (bought or not): re-read the quota so the
+    // chat works right away without restarting the app.
+    if (mounted) ref.invalidate(aiInfoProvider);
   }
 
   Future<void> _alert(String title, String body) => showDialog<void>(
@@ -451,6 +455,16 @@ class _AIAssistantPageState extends ConsumerState<AIAssistantPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Fresh `/v1/ai/info` (after buying membership, on resume, …) is newer
+    // than the quota remembered from the last answer / quota error.
+    ref.listen<AsyncValue<AIInfo>>(aiInfoProvider, (_, next) {
+      if (next.hasValue && !next.isLoading && _quota != null) setState(() => _quota = null);
+    });
+    // Membership started / ended by any path (purchase, restore, renewal
+    // seen on resume): members are unlimited, so ask the server again.
+    ref.listen<bool>(userProvider.select((u) => u?.membership?.active ?? false), (was, now) {
+      if (was != now) ref.invalidate(aiInfoProvider);
+    });
     final infoAsync = ref.watch(aiInfoProvider);
     final info = infoAsync.value;
     final unavailable =

@@ -6,6 +6,7 @@ import '../../api/errors.dart';
 import '../../api/local_api.dart';
 import '../../api/local_models.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart' show channelNames, paymentServiceProvider;
 import '../../widgets/common.dart';
@@ -155,8 +156,7 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
       await pay.ensureChannelReady(channel);
       await pay.payOrder(no, channel, r.payParams);
       if (!mounted) return;
-      ref.invalidate(bookingProvider(widget.bookingId));
-      ref.invalidate(myBookingsProvider);
+      ref.read(refreshProvider).afterPayment().ignore();
     } catch (e) {
       final ex = ApiException.from(e);
       if (!mounted) return;
@@ -185,8 +185,8 @@ class _BookingDetailPageState extends ConsumerState<BookingDetailPage> {
     try {
       final r = await ref.read(localApiProvider).cancelBooking(b.id);
       if (!mounted) return;
-      ref.invalidate(bookingProvider(widget.bookingId));
-      ref.invalidate(myBookingsProvider);
+      // Refund: the booking, the list, the slot grid, a linked meetup.
+      ref.read(refreshProvider).afterPayment().ignore();
       toast(context, r.status == 'refunding' || r.status == 'refunded' ? '已取消，退款原路退回' : '已取消');
     } catch (e) {
       final ex = ApiException.from(e);

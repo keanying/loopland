@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../api/errors.dart';
 import '../../api/models.dart';
-import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
 import '../../core/providers.dart';
 import '../../core/theme.dart';
@@ -11,8 +10,10 @@ import '../../widgets/l_icons.dart';
 import '../../widgets/monster_art.dart';
 import '../local/coupons_pages.dart';
 import 'locate.dart';
+import 'play_providers.dart';
 import 'play_widgets.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 /// Bottom sheet for a tapped energy chest. Pops with `true` when the chest
 /// is gone for this user (opened / already opened / expired) so the map can
@@ -48,7 +49,10 @@ class _ChestSheetState extends ConsumerState<ChestSheet> {
         _opened = r;
         _gone = true;
       });
-      ref.read(authProvider.notifier).refreshUser().ignore();
+      // Energy, the 寻宝人 medal, season tasks.
+      ref.read(refreshProvider).afterEnergyChange().ignore();
+      ref.invalidate(codexProvider);
+      ref.invalidate(seasonProvider);
     } on ApiException catch (e) {
       if (!mounted) return;
       final here = _at;

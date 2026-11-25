@@ -10,6 +10,7 @@ import '../../api/errors.dart';
 import '../../api/perks_api.dart';
 import '../../api/perks_models.dart';
 import '../../claim/geo.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/cosmetics.dart';
 import '../../widgets/l_icons.dart';
@@ -51,6 +52,8 @@ class _SupplySheetState extends ConsumerState<SupplySheet> {
         return;
       }
       final c = await ref.read(perksApiProvider).claimDrop(_s.id, at);
+      // 卡券包 / 联名活动 counts.
+      ref.read(refreshProvider).afterCouponChange();
       if (!mounted) return;
       setState(() {
         _coupon = c;

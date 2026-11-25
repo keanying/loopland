@@ -7,6 +7,7 @@ import 'core/env.dart';
 import 'core/format.dart';
 import 'core/privacy.dart';
 import 'core/providers.dart';
+import 'core/refresh.dart';
 import 'core/theme.dart';
 import 'features/ai/ai_providers.dart';
 import 'features/ai/ai_routes.dart';
@@ -43,6 +44,7 @@ import 'run/run_controller.dart';
 import 'run/uploader.dart';
 import 'widgets/card_art.dart';
 import 'widgets/common.dart';
+import 'widgets/data_sync.dart';
 import 'realtime/realtime_banner.dart';
 import 'widgets/nav_bar_cover.dart';
 import 'widgets/nav_shell.dart';
@@ -179,10 +181,13 @@ class _LooplandAppState extends ConsumerState<LooplandApp> {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       routerConfig: ref.watch(routerProvider),
-      // In-app banners for WebSocket pushes (领地被攻击 / 合击召集).
-      builder: (context, child) => RealtimeBannerHost(
-        onOpen: (path) => ref.read(routerProvider).push(path),
-        child: child ?? const SizedBox.shrink(),
+      // In-app banners for WebSocket pushes (领地被攻击 / 合击召集); DataSync
+      // refreshes cached data on resume and on pushes（数据刷新约定）.
+      builder: (context, child) => DataSync(
+        child: RealtimeBannerHost(
+          onOpen: (path) => ref.read(routerProvider).push(path),
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -270,6 +275,7 @@ class _StartupGateState extends ConsumerState<StartupGate> {
             ctrl.reset();
             try {
               final r = await ref.read(uploaderProvider).submit(upload);
+              ref.read(refreshProvider).afterRunSettled().ignore();
               if (mounted) context.push('/result', extra: ResultArgs(result: r));
             } catch (e) {
               if (mounted) showError(context, e);
@@ -280,8 +286,7 @@ class _StartupGateState extends ConsumerState<StartupGate> {
       await _deletionNotice();
       final sent = await ref.read(uploaderProvider).flush();
       if (sent.isNotEmpty && mounted) {
-        ref.invalidate(pendingUploadsProvider);
-        ref.read(authProvider.notifier).refreshUser().ignore();
+        ref.read(refreshProvider).afterRunSettled().ignore();
         toast(context, '已补传 ${sent.length} 条离线运动记录', kind: ToastKind.success);
       }
     } catch (_) {

@@ -8,6 +8,7 @@ import '../../api/local_api.dart';
 import '../../api/local_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../claim/geo.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
@@ -135,7 +136,7 @@ class _MeetupBookingCardState extends ConsumerState<MeetupBookingCard> {
     final pick = await pickVenueSlots(context, now: widget.now);
     if (pick == null || !mounted) return;
     final b = await bookVenue(context, ref, venue: pick.venue, selection: pick.selection, meetupId: m.id);
-    if (b != null) ref.invalidate(myBookingsProvider);
+    if (b != null) ref.read(refreshProvider).afterPayment().ignore();
   }
 
   @override

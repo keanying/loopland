@@ -8,6 +8,7 @@ import '../../api/errors.dart';
 import '../../api/product_api.dart';
 import '../../api/product_models.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../community/gathering_widgets.dart' show Tag;
@@ -117,9 +118,11 @@ class ProductOrderDetailPage extends ConsumerStatefulWidget {
 class _ProductOrderDetailPageState extends ConsumerState<ProductOrderDetailPage> {
   bool _busy = false;
 
+  /// After repay / cancel / refund: this order, the order list, my coupons
+  /// (bought or voided by a refund), stock.
   void _reload() {
     ref.invalidate(productOrderProvider(widget.orderId));
-    ref.invalidate(myProductOrdersProvider);
+    ref.read(refreshProvider).afterPayment().ignore();
   }
 
   Future<void> _run(Future<void> Function() f) async {

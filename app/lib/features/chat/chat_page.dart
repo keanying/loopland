@@ -21,6 +21,7 @@ import '../social/social_widgets.dart';
 import 'conversations_page.dart';
 import 'pick_image.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 /// `/chat/direct/:userId`: opens (or creates) the direct conversation via
 /// `POST /v1/conversations/direct`, then shows it.
@@ -125,7 +126,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     if (newest == null || newest.id <= _markedRead) return;
     _markedRead = newest.id;
     _api.markConversationRead(_id, newest.id).then((_) {
-      if (mounted) ref.invalidate(inboxSummaryProvider);
+      // Unread badges on 消息, 社区, the map.
+      if (mounted) ref.read(refreshProvider).afterInboxRead();
     }).catchError((_) {});
   }
 
@@ -241,7 +243,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           return true;
         });
         if (ok == true && mounted) {
-          ref.invalidate(inboxSummaryProvider);
+          ref.read(refreshProvider).afterInboxRead();
           if (context.canPop()) {
             context.pop();
           } else {

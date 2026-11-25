@@ -8,6 +8,7 @@ import '../../api/local_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
@@ -134,7 +135,8 @@ class _BookingConfirmSheetState extends ConsumerState<BookingConfirmSheet> {
         return;
       }
       b = await api.booking(b.id).catchError((_) => b);
-      ref.invalidate(myBookingsProvider);
+      // My bookings, the slot grid, the meetup it was booked for, …
+      ref.read(refreshProvider).afterPayment().ignore();
       if (mounted) Navigator.pop(context, BookingOutcome(booking: b));
     } catch (e) {
       final ex = ApiException.from(e);

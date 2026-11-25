@@ -329,14 +329,49 @@ class PaymentService {
   }
 
   /// Polls `GET /v1/orders/{no}` until it leaves `created` or [timeout].
+  /// An order still `created` at the deadline is remembered and checked
+  /// again by [recheckUnsettled] (the callback can arrive after the user
+  /// came back from the WeChat / Alipay app, or after the poll gave up).
   Future<Order> pollOrder(String orderNo, {Duration? timeout}) async {
     final deadline = DateTime.now().add(timeout ?? pollTimeout);
     while (true) {
       final o = await api.order(orderNo);
-      if (o.isFinal) return o;
-      if (DateTime.now().isAfter(deadline)) return o;
+      if (o.isFinal) {
+        _unsettled.remove(orderNo);
+        return o;
+      }
+      if (DateTime.now().isAfter(deadline)) {
+        _unsettled.add(orderNo);
+        return o;
+      }
       await Future<void>.delayed(pollInterval);
     }
+  }
+
+  final _unsettled = <String>{};
+
+  /// Orders whose last poll ended still unpaid (`created`).
+  Set<String> get unsettled => Set.unmodifiable(_unsettled);
+
+  /// Asks the server once about every [unsettled] order (on app resume).
+  /// Returns those that are paid now; orders that reached any final state
+  /// are forgotten.
+  Future<List<Order>> recheckUnsettled() async {
+    final paid = <Order>[];
+    for (final no in List.of(_unsettled)) {
+      try {
+        final o = await api.order(no);
+        if (!o.isFinal) continue;
+        _unsettled.remove(no);
+        if (o.isPaid) {
+          paid.add(o);
+          onPaid?.call();
+        }
+      } catch (_) {
+        // Try again on the next resume.
+      }
+    }
+    return paid;
   }
 
   void dispose() => _iapSub?.cancel();
