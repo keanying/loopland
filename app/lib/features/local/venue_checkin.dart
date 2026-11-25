@@ -9,12 +9,14 @@ import '../../api/perks_models.dart' show Coupon;
 import '../../audio/audio.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../community/place_picker.dart' show quietLocation;
 import 'local_providers.dart';
 import 'qr_scan_page.dart';
+import 'venue_section.dart' show nearbyVenuesProvider;
 
 /// 场馆签到（C-07）: by location (inside `checkin_radius_m`) or by the venue
 /// QR code. Shows the result sheet and returns the result (null on failure).
@@ -67,7 +69,8 @@ class VenueCheckin {
         ..play(Sounds.scanOk)
         ..haptic(HapticKind.medium);
       ref.invalidate(venueProvider(venueId));
-      ref.read(authProvider.notifier).refreshUser().ignore();
+      ref.invalidate(nearbyVenuesProvider);
+      ref.read(refreshProvider).afterEnergyChange().ignore();
       if (context.mounted) await showCheckinResult(context, r, venue: venue);
       return r;
     } catch (e) {

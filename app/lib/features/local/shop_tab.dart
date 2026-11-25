@@ -10,6 +10,7 @@ import '../../api/perks_api.dart';
 import '../../api/perks_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cosmetics.dart';
@@ -53,7 +54,6 @@ class _ShopTabState extends ConsumerState<ShopTab> {
     }
   }
 
-  void _refreshUser() => ref.read(authProvider.notifier).refreshUser().ignore();
 
   void _replace(ShopItem item, {int? energy}) {
     final c = _catalog;
@@ -98,7 +98,7 @@ class _ShopTabState extends ConsumerState<ShopTab> {
       final r = await ref.read(perksApiProvider).buy(item.key);
       if (!mounted) return;
       _replace(r.item, energy: r.energy);
-      _refreshUser();
+      ref.read(refreshProvider).afterEnergyChange().ignore();
       toast(context, '兑换成功！点「装备」就能用上');
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -124,7 +124,8 @@ class _ShopTabState extends ConsumerState<ShopTab> {
       final r = on ? await api.equip(item.key) : await api.unequip(item.key);
       if (!mounted) return;
       _replace(r);
-      _refreshUser();
+      // Avatar frame on profiles / 我的, skins and markers on the map.
+      ref.read(refreshProvider).afterCosmeticsChange().ignore();
       toast(context, on ? '已装备「${item.name}」' : '已卸下「${item.name}」');
     } catch (e) {
       if (mounted) showError(context, e);
@@ -135,6 +136,12 @@ class _ShopTabState extends ConsumerState<ShopTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Energy earned / spent elsewhere (a run, a chest, building) while this
+    // tab is open or kept in the stack: the balance follows `/v1/me`.
+    ref.listen<int?>(userProvider.select((u) => u?.energy), (_, e) {
+      final c = _catalog;
+      if (e != null && c != null && c.energy != e) setState(() => _catalog = ShopCatalog(energy: e, items: c.items));
+    });
     final c = _catalog;
     final energy = c?.energy ?? ref.watch(userProvider)?.energy ?? 0;
     final items = c == null

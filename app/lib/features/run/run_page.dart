@@ -9,11 +9,11 @@ import '../../api/errors.dart';
 import '../../audio/audio.dart';
 import '../../audio/run_sounds.dart';
 import '../../api/models.dart';
-import '../../auth/auth_controller.dart';
 import '../../claim/claim.dart';
 import '../../claim/geo.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../map/territory_map.dart';
 import '../../run/run_controller.dart';
@@ -373,8 +373,8 @@ class _RunPageState extends ConsumerState<RunPage> {
       // finish() 也放在 try 里：任何一步出错都要关掉「正在结算」遮罩
       final upload = await ctrl.finish();
       final r = await ref.read(uploaderProvider).submit(upload);
-      ref.read(authProvider.notifier).refreshUser().ignore();
-      ref.invalidate(codexProvider);
+      // Energy, level, stats, territories, codex, season, …（数据刷新约定）
+      ref.read(refreshProvider).afterRunSettled().ignore();
       ctrl.reset();
       if (mounted) context.go('/result', extra: ResultArgs(result: r, localTrack: track));
     } catch (e) {

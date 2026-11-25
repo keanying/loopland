@@ -11,6 +11,7 @@ import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
@@ -152,7 +153,7 @@ class _ComposePageState extends ConsumerState<ComposePage> {
           ));
       if (!mounted) return;
       ref.read(postCacheProvider.notifier).put(p);
-      ref.invalidate(myProfileProvider);
+      ref.read(refreshProvider).afterProfileChange(); // my post count
       final show = toaster(context);
       final nav = Navigator.of(context);
       // Opened directly (deep link) there is nothing to return to: show the feed.

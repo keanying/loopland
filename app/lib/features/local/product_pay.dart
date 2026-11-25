@@ -10,6 +10,7 @@ import '../../api/product_api.dart';
 import '../../api/product_models.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/common.dart';
@@ -157,6 +158,8 @@ class _ProductBuySheetState extends ConsumerState<ProductBuySheet> {
         return;
       }
       flow.invalidate(p.id);
+      // Coupons bought, stock, orders, …（数据刷新约定）
+      if (o.isPaid) ref.read(refreshProvider).afterPayment().ignore();
       if (mounted) Navigator.pop(context, ProductBuyOutcome(order: o));
     } catch (e) {
       final ex = ApiException.from(e);

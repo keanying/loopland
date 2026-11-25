@@ -9,6 +9,7 @@ import '../../core/format.dart';
 import '../../core/providers.dart';
 import '../../widgets/common.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 /// Latest known version of every post the user touched (like / collect /
 /// comment counts), so the feed, the detail page and profiles stay in sync
@@ -87,6 +88,7 @@ class PostActions {
     });
     if (done == true) {
       ref.read(postCacheProvider.notifier).markDeleted(p.id);
+      ref.read(refreshProvider).afterProfileChange(); // my post count
       if (context.mounted) toast(context, '已删除', kind: ToastKind.success);
       return true;
     }

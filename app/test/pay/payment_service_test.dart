@@ -268,6 +268,32 @@ void main() {
     });
   });
 
+  test('an order still unpaid when polling gives up is re-checked later (app resumed)', () async {
+    // The callback arrives after the poll timeout (paid in the WeChat app,
+    // came back minutes later).
+    final b = Backend(channel: 'alipay_app', statuses: ['created'], payParams: {'order_string': 'x'});
+    var sounds = 0;
+    final s = PaymentService(b.service().api,
+        gateways: FakeGateways(),
+        pollInterval: const Duration(milliseconds: 1),
+        pollTimeout: const Duration(milliseconds: 5),
+        onPaid: () => sounds++);
+    final o = await s.purchase(plan, 'alipay_app');
+    expect(o.isPaid, isFalse);
+    expect(s.unsettled, {'LP1'});
+    // Still unpaid: kept for the next resume.
+    expect(await s.recheckUnsettled(), isEmpty);
+    expect(s.unsettled, {'LP1'});
+    b.statuses
+      ..clear()
+      ..add('paid');
+    final paid = await s.recheckUnsettled();
+    expect(paid.single.orderNo, 'LP1');
+    expect(sounds, 1);
+    expect(s.unsettled, isEmpty);
+    expect(await s.recheckUnsettled(), isEmpty);
+  });
+
   test('looksLikeJws', () {
     expect(looksLikeJws(jws), isTrue);
     expect(looksLikeJws('MIIT0gYJKoZIhvcNAQcC+/='), isFalse);

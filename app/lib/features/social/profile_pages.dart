@@ -7,6 +7,7 @@ import '../../api/community_common.dart';
 import '../../api/community_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
@@ -39,8 +40,10 @@ Future<bool> confirmBlock(BuildContext context, WidgetRef ref, UserBrief u, {req
     await ref.read(communityApiProvider).block(u.id, block);
     return true;
   });
-  if (done == true && context.mounted) toast(context, block ? '已拉黑' : '已取消拉黑');
-  return done == true;
+  if (done != true) return false;
+  ref.read(refreshProvider).afterBlockChange();
+  if (context.mounted) toast(context, block ? '已拉黑' : '已取消拉黑');
+  return true;
 }
 
 /// D-07 他人主页 (`/users/:id`; my own id shows my page with 编辑资料).
@@ -79,7 +82,7 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
           _followerDelta += r ? 1 : -1;
         });
       }
-      ref.invalidate(myProfileProvider);
+      ref.read(refreshProvider).afterFollowChange();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -101,7 +104,6 @@ class _UserProfilePageState extends ConsumerState<UserProfilePage> {
       _rel = rel.copyWith(blocked: block, following: block ? false : rel.following);
     });
     _posts.refresh();
-    ref.invalidate(myProfileProvider);
   }
 
   Future<void> _menu(Profile p) async {
@@ -338,7 +340,7 @@ class _FollowListPageState extends ConsumerState<FollowListPage> {
     _pager.replaceWhere((x) => x.user.id == e.user.id, (x) => x.copyWith(following: on));
     try {
       await ref.read(communityApiProvider).follow(e.user.id, on);
-      ref.invalidate(myProfileProvider);
+      ref.read(refreshProvider).afterFollowChange();
     } catch (err) {
       _pager.replaceWhere((x) => x.user.id == e.user.id, (x) => x.copyWith(following: !on));
       if (mounted) showError(context, err);
@@ -431,7 +433,7 @@ class BlocksPage extends ConsumerWidget {
                             trailing: OutlinedButton(
                               style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
                               onPressed: () async {
-                                if (await confirmBlock(context, ref, b.user, block: false)) ref.invalidate(blocksProvider);
+                                await confirmBlock(context, ref, b.user, block: false);
                               },
                               child: const Text('取消拉黑'),
                             ),
@@ -523,7 +525,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _avatarProgress = null);
     if (u != null) {
       ref.read(authProvider.notifier).setUser(u);
-      ref.invalidate(myProfileProvider);
+      ref.read(refreshProvider).afterProfileChange();
       toast(context, '头像已更新，审核中（未通过会恢复默认头像）');
     }
   }
@@ -551,7 +553,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     setState(() => _saving = false);
     if (u == null) return;
     ref.read(authProvider.notifier).setUser(u);
-    ref.invalidate(myProfileProvider);
+    ref.read(refreshProvider).afterProfileChange();
     final show = toaster(context);
     Navigator.of(context).maybePop();
     show('已保存，审核中（未通过会恢复默认并通知你）', kind: ToastKind.success);

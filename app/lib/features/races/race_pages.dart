@@ -9,6 +9,7 @@ import '../../api/gathering_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../pay/payment_service.dart';
 import '../../widgets/card_art.dart';
@@ -43,6 +44,8 @@ class _RacesPageState extends ConsumerState<RacesPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Signed up / cancelled on the detail page, a run counted towards a race.
+    ref.onDataChanged([DataTopic.gathering, DataTopic.resume], _pager.refresh);
     return Scaffold(
       body: SafeArea(
         child: Column(children: [
@@ -109,8 +112,8 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r == null) return;
-    ref.invalidate(raceProvider(widget.raceId));
-    ref.invalidate(communityHomeProvider);
+    // The race, 社区 home, the race list, …（数据刷新约定）
+    ref.read(refreshProvider).afterGatheringChange();
     toast(context, done);
   }
 
@@ -146,9 +149,10 @@ class _RaceDetailPageState extends ConsumerState<RaceDetailPage> {
           paid = await _waitSigned(r.id);
         }
       }
+      ref.read(refreshProvider)
+        ..afterGatheringChange()
+        ..afterPayment().ignore();
       if (!mounted) return;
-      ref.invalidate(raceProvider(widget.raceId));
-      ref.invalidate(communityHomeProvider);
       toast(context, paid ? '报名成功，已支付 ${Fmt.yuan(r.feeAmt)}' : '支付结果确认中，稍后刷新查看；15 分钟内未支付自动取消');
     } catch (e) {
       final ex = ApiException.from(e);

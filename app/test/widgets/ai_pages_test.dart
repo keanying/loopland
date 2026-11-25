@@ -246,6 +246,8 @@ void main() {
     expect(find.text('本周免费次数已用完'), findsOneWidget);
     expect(find.textContaining('开通会员不限次数'), findsWidgets);
     await shot(t, 'ai_quota');
+    // The server's count after the 429 (re-read when the membership page closes).
+    ai.remaining = 0;
     await t.tap(find.text('开通会员'));
     await ui(t);
     expect(find.text('会员页'), findsOneWidget);

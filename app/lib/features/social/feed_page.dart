@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../api/community_api.dart';
 import '../../api/community_common.dart';
 import '../../api/community_models.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
@@ -47,6 +48,12 @@ class _FeedPageState extends ConsumerState<FeedPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Blocked / unblocked someone on a profile opened from here.
+    ref.onDataChanged([DataTopic.social], () {
+      for (final i in _visited) {
+        _pagers[i].refresh();
+      }
+    });
     return Scaffold(
       body: SafeArea(
         bottom: false,

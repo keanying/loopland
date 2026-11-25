@@ -8,14 +8,13 @@ import '../../api/community_api.dart';
 import '../../api/gathering_api.dart';
 import '../../api/gathering_models.dart';
 import '../../api/models.dart';
-import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
 import '../chat/pick_image.dart';
 import 'community_page.dart';
-import 'gathering_providers.dart';
 import 'gathering_widgets.dart';
 
 /// 团长生成邀请码（7 天有效，可多次使用），复制或分享。
@@ -127,8 +126,7 @@ class _JoinByCodePageState extends ConsumerState<JoinByCodePage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (id == null) return;
-    await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
-    ref.invalidate(communityHomeProvider);
+    await ref.read(refreshProvider).afterCrewChange();
     if (!mounted) return;
     toast(context, '已加入跑团', kind: ToastKind.success);
     context.pushReplacement('/crews/$id');
@@ -253,9 +251,7 @@ class _CrewEditPageState extends ConsumerState<CrewEditPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r == null) return;
-    ref.invalidate(crewProvider(c.id));
-    ref.invalidate(communityHomeProvider);
-    await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
+    await ref.read(refreshProvider).afterCrewChange();
     if (!mounted) return;
     toast(context, name != c.name || _avatarId != null ? '已保存，名称和头像会在审核后保留' : '已保存');
     if (context.canPop()) {

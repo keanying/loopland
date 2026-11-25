@@ -9,6 +9,7 @@ import '../../api/gathering_api.dart';
 import '../../api/gathering_models.dart';
 import '../../api/models.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
@@ -81,8 +82,7 @@ class _RallyCardState extends ConsumerState<RallyCard> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r == null) return;
-    ref.invalidate(ralliesProvider(widget.crew.id));
-    ref.invalidate(communityHomeProvider);
+    ref.read(refreshProvider).afterGatheringChange();
     toast(context, done);
   }
 
@@ -97,8 +97,7 @@ class _RallyCardState extends ConsumerState<RallyCard> {
     try {
       final r = await _api.checkinRally(widget.rally.id, at);
       if (!mounted) return;
-      ref.invalidate(ralliesProvider(widget.crew.id));
-      ref.invalidate(communityHomeProvider);
+      ref.read(refreshProvider).afterGatheringChange();
       toast(context, r.bonusActive ? '签到成功！集结加成已生效' : '签到成功，再有 1 名团友签到即可激活加成');
     } catch (e) {
       if (!mounted) return;
@@ -326,7 +325,7 @@ class _RallyCreatePageState extends ConsumerState<RallyCreatePage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r == null) return;
-    ref.invalidate(communityHomeProvider);
+    ref.read(refreshProvider).afterGatheringChange();
     toast(context, '已发起，全体团员会收到通知', kind: ToastKind.success);
     Navigator.of(context).pop(r);
   }

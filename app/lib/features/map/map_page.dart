@@ -30,6 +30,7 @@ import '../play/chest_sheet.dart';
 import '../play/defense_banner.dart';
 import '../play/play_providers.dart';
 import '../../audio/audio.dart';
+import '../../core/refresh.dart';
 
 /// 领地地图（App 首页）。
 class MapPage extends ConsumerStatefulWidget {
@@ -208,6 +209,9 @@ class _MapPageState extends ConsumerState<MapPage> {
     ref.listen<MapFocus?>(mapFocusProvider, (_, f) {
       if (f != null) _focus(f);
     });
+    // A run settled (captures), crew joined / left, skin equipped, a
+    // territory attacked (push), back after a while: reload what is in view.
+    ref.onDataChanged([DataTopic.territory, DataTopic.resume], _load);
     return Scaffold(
       body: Stack(children: [
         Positioned.fill(

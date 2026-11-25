@@ -6,6 +6,7 @@ import '../../api/community_common.dart' show CursorPager;
 import '../../api/gathering_api.dart';
 import '../../api/gathering_models.dart';
 import '../../core/format.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/cursor_list.dart';
@@ -133,7 +134,7 @@ class _ConversationsPageState extends ConsumerState<ConversationsPage> {
       });
       if (ok == true) {
         _pager.removeWhere((x) => x.id == c.id);
-        ref.invalidate(inboxSummaryProvider);
+        ref.read(refreshProvider).afterInboxRead();
       }
     }
   }

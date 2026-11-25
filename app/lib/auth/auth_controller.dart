@@ -132,7 +132,21 @@ class AuthController extends Notifier<AuthState> {
     return r;
   }
 
-  Future<void> refreshUser() async {
+  Future<void>? _refreshing, _queued;
+
+  /// Re-reads `/v1/me`. Calls made while a request is in flight share one
+  /// follow-up request (started after it), so a caller never gets a profile
+  /// fetched before its own change was made.
+  Future<void> refreshUser() {
+    final cur = _refreshing;
+    if (cur == null) return _refreshing = _fetchUser().whenComplete(() => _refreshing = null);
+    return _queued ??= cur.catchError((_) {}).then((_) {
+      _queued = null;
+      return refreshUser();
+    });
+  }
+
+  Future<void> _fetchUser() async {
     final raw = await ref.read(apiClientProvider).get('/v1/me');
     final m = (raw as Map).cast<String, dynamic>();
     final u = User.fromJson(m);

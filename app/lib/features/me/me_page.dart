@@ -8,6 +8,7 @@ import '../../auth/auth_controller.dart';
 import '../../core/features.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../run/run_store.dart';
 import '../../run/uploader.dart';
@@ -218,10 +219,10 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
     setState(() => _busy = true);
     final results = await ref.read(uploaderProvider).flush();
     ref.invalidate(pendingUploadsProvider);
+    if (results.isNotEmpty) ref.read(refreshProvider).afterRunSettled().ignore();
     if (!mounted) return;
     setState(() => _busy = false);
     if (results.isNotEmpty) {
-      ref.read(authProvider.notifier).refreshUser().ignore();
       context.push('/result', extra: ResultArgs(result: results.last));
     } else {
       toast(context, '还是没有上传成功，请检查网络后再试');

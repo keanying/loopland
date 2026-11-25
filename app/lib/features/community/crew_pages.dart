@@ -7,6 +7,7 @@ import '../../api/models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/format.dart';
 import '../../core/providers.dart';
+import '../../core/refresh.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
 import '../../widgets/l_icons.dart';
@@ -160,7 +161,8 @@ class _CrewCreatePageState extends ConsumerState<CrewCreatePage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (c != null) {
-      await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
+      // My crew on the user, 社区 home card, …（数据刷新约定）
+      await ref.read(refreshProvider).afterCrewChange();
       if (mounted) context.pushReplacement('/crews/${c.id}');
     }
   }
@@ -208,8 +210,8 @@ class CrewDetailPage extends ConsumerWidget {
     final s = await runGuarded(context, () => ref.read(apiProvider).joinCrew(crewId));
     if (s == null || !context.mounted) return;
     toast(context, s == 'joined' ? '已加入跑团' : '申请已提交，等待团长审核');
-    ref.invalidate(crewProvider(crewId));
-    await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
+    // This page, 社区 home card, my crew on 我的 / the map, …
+    await ref.read(refreshProvider).afterCrewChange();
   }
 
   Future<void> _leave(BuildContext context, WidgetRef ref, Crew c) async {
@@ -230,7 +232,7 @@ class CrewDetailPage extends ConsumerWidget {
       return true;
     });
     if (done == true && context.mounted) {
-      await ref.read(authProvider.notifier).refreshUser().catchError((_) {});
+      await ref.read(refreshProvider).afterCrewChange();
       if (context.mounted) context.pop();
     }
   }
@@ -357,15 +359,14 @@ class _CrewManagePageState extends ConsumerState<CrewManagePage> {
   Future<void> _kick(CrewMember m) async {
     if (!await _confirm('移出成员', '确定把 ${m.user.nickname} 移出跑团？') || !mounted) return;
     await runGuarded(context, () => ref.read(apiProvider).kick(widget.crewId, m.user.id));
-    ref.invalidate(crewMembersProvider(widget.crewId));
-    ref.invalidate(crewProvider(widget.crewId));
+    ref.read(refreshProvider).afterCrewChange().ignore();
   }
 
   Future<void> _transfer(CrewMember m) async {
     if (!await _confirm('转让团长', '转让后 ${m.user.nickname} 成为团长，你变为普通成员。') || !mounted) return;
     final c = await runGuarded(context, () => ref.read(apiProvider).transfer(widget.crewId, m.user.id));
     if (c != null && mounted) {
-      ref.invalidate(crewProvider(widget.crewId));
+      ref.read(refreshProvider).afterCrewChange().ignore();
       context.pop();
     }
   }
@@ -377,8 +378,7 @@ class _CrewManagePageState extends ConsumerState<CrewManagePage> {
         () => approve
             ? api.approveApplication(widget.crewId, a.user.id)
             : api.rejectApplication(widget.crewId, a.user.id));
-    ref.invalidate(crewApplicationsProvider(widget.crewId));
-    ref.invalidate(crewMembersProvider(widget.crewId));
+    ref.read(refreshProvider).afterCrewChange().ignore();
   }
 
   @override
