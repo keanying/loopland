@@ -37,8 +37,11 @@ shared:
 
   links:
     # 启动隐私弹窗、登录页、一键登录授权页、设置页里的协议链接。
-    user_agreement: https://loopland.example.com/legal/terms
-    privacy_policy: https://loopland.example.com/legal/privacy
+    # 留空 = 跟随 api.base_url：<base_url>/legal/terms、<base_url>/legal/privacy（后端提供页面，
+    # 运营主体等信息在 server/config.yaml 的 legal 里填）。上线用独立域名时在这里写完整地址，
+    # 或让 nginx 把 /legal/ 转给后端（见 docs/上线接入清单.md「协议页面」）。
+    user_agreement: ""
+    privacy_policy: ""
     # Universal Link 域名（只写域名）：iOS Associated Domains（applinks:<域名>），
     # 微信 / 支付宝的 universal_link 必须在这个域名下。
     universal_link_domain: loopland.example.com

@@ -41,7 +41,9 @@ void main() {
       expect(c.amapConfigured, isFalse);
       expect(c.captchaConfigured, isFalse);
       // Non-secret values are kept.
-      expect(c.privacyPolicyUrl, 'https://loopland.example.com/legal/privacy');
+      // 协议链接没单独配置：跟随接口地址
+      expect(c.privacyPolicyUrl, SdkConfig.legalUrl(prod['API_BASE'] as String? ?? ConfigFallbacks.apiBase, 'privacy'));
+      expect(c.userAgreementUrl, endsWith('/legal/terms'));
       expect(c.captchaJsUrl, ConfigFallbacks.captchaJsUrl);
     });
 

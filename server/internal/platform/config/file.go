@@ -47,6 +47,12 @@ type File struct {
 	Media struct {
 		Dir string `yaml:"dir"` // LOOPLAND_MEDIA_DIR: local upload storage without OSS (dev)
 	} `yaml:"media"`
+	Legal struct {
+		Company       string `yaml:"company"`        // LOOPLAND_LEGAL_COMPANY：运营主体（公司全称）
+		Email         string `yaml:"email"`          // LOOPLAND_LEGAL_EMAIL：个人信息保护联系邮箱
+		Address       string `yaml:"address"`        // LOOPLAND_LEGAL_ADDRESS：注册地址 / 联系地址
+		EffectiveDate string `yaml:"effective_date"` // LOOPLAND_LEGAL_EFFECTIVE_DATE：生效日期，如 2026-12-01
+	} `yaml:"legal"`
 	Features struct {
 		Disabled []string `yaml:"disabled"` // LOOPLAND_DISABLE
 		Wearable bool     `yaml:"wearable"` // LOOPLAND_FEATURE_WEARABLE=1：穿戴设备数据（预留，见 docs/设备接入预留.md）
@@ -126,6 +132,10 @@ func (f File) env(dir string) map[string]string {
 		"LOOPLAND_BOOTSTRAP_ADMIN":       f.Auth.BootstrapAdmin,
 		"LOOPLAND_DISABLE":               strings.Join(f.Features.Disabled, ","),
 		"LOOPLAND_MEDIA_DIR":             path(f.Media.Dir),
+		"LOOPLAND_LEGAL_COMPANY":         f.Legal.Company,
+		"LOOPLAND_LEGAL_EMAIL":           f.Legal.Email,
+		"LOOPLAND_LEGAL_ADDRESS":         f.Legal.Address,
+		"LOOPLAND_LEGAL_EFFECTIVE_DATE":  f.Legal.EffectiveDate,
 		"ALIYUN_ACCESS_KEY_ID":           f.Aliyun.AccessKeyID,
 		"ALIYUN_ACCESS_KEY_SECRET":       f.Aliyun.AccessKeySecret,
 		"ALIYUN_ACCESS_KEY_SECRET_FILE":  path(f.Aliyun.AccessKeySecretFile),

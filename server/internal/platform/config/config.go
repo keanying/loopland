@@ -36,6 +36,9 @@ type Config struct {
 	// MediaDir is where uploads are stored when 对象存储 OSS is not enabled
 	// (dev); relative paths in config.yaml are against the file's directory.
 	MediaDir string
+	// Legal fills the 用户协议 / 隐私政策 pages served at /legal/terms and
+	// /legal/privacy (operator, contact, effective date).
+	Legal Legal
 
 	Aliyun  Aliyun
 	WeChat  WeChat
@@ -48,6 +51,11 @@ type Config struct {
 	// Disabled lists features switched off for this deployment
 	// (LOOPLAND_DISABLE=wechat_login,alipay,...). See Features.
 	Disabled []string
+}
+
+// Legal is the operator information on the 用户协议 / 隐私政策 pages.
+type Legal struct {
+	Company, Email, Address, EffectiveDate string
 }
 
 // Features that need external credentials. Production refuses to start
@@ -208,6 +216,12 @@ func Load() (Config, error) {
 		JobsOff:        get("LOOPLAND_JOBS_OFF") == "1",
 		Wearable:       get("LOOPLAND_FEATURE_WEARABLE") == "1",
 		MediaDir:       env("LOOPLAND_MEDIA_DIR", "data/media"),
+		Legal: Legal{
+			Company:       get("LOOPLAND_LEGAL_COMPANY"),
+			Email:         get("LOOPLAND_LEGAL_EMAIL"),
+			Address:       get("LOOPLAND_LEGAL_ADDRESS"),
+			EffectiveDate: get("LOOPLAND_LEGAL_EFFECTIVE_DATE"),
+		},
 		Aliyun: Aliyun{
 			AccessKeyID:     get("ALIYUN_ACCESS_KEY_ID"),
 			AccessKeySecret: secretEnv("ALIYUN_ACCESS_KEY_SECRET"),

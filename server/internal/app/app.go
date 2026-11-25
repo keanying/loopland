@@ -30,6 +30,7 @@ import (
 	"github.com/keanying/loopland/server/internal/gameplay"
 	"github.com/keanying/loopland/server/internal/inbox"
 	"github.com/keanying/loopland/server/internal/jobs"
+	"github.com/keanying/loopland/server/internal/legal"
 	"github.com/keanying/loopland/server/internal/media"
 	"github.com/keanying/loopland/server/internal/moderation"
 	"github.com/keanying/loopland/server/internal/openapi"
@@ -164,6 +165,12 @@ func New(ctx context.Context, cfg config.Config, pool *pgxpool.Pool, rdb *redis.
 
 	mux := http.NewServeMux()
 	authed, authAny := authSvc.Middleware(true), authSvc.Middleware(false)
+	// 用户协议 / 隐私政策（App 的协议链接默认指向这里）
+	legalPages, err := legal.New(cfg.Legal)
+	if err != nil {
+		return nil, err
+	}
+	legalPages.Routes(mux)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		if err := pool.Ping(r.Context()); err != nil {
 			http.Error(w, "db", http.StatusServiceUnavailable)

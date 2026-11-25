@@ -82,8 +82,8 @@ const fields = <Field>[
   Field('env', FieldKind.env, define: 'LOOPLAND_ENV', required: true, label: '环境'),
   Field('api.base_url', FieldKind.url, define: 'API_BASE', required: true, label: '后端地址'),
   Field('api.ws_url', FieldKind.wsUrl, define: 'WS_URL', label: 'WebSocket 地址（留空由 base_url 推导）'),
-  Field('links.user_agreement', FieldKind.url, define: 'USER_AGREEMENT_URL', required: true, label: '用户协议'),
-  Field('links.privacy_policy', FieldKind.url, define: 'PRIVACY_POLICY_URL', required: true, label: '隐私政策'),
+  Field('links.user_agreement', FieldKind.url, define: 'USER_AGREEMENT_URL', label: '用户协议（留空跟随 api.base_url/legal/…）'),
+  Field('links.privacy_policy', FieldKind.url, define: 'PRIVACY_POLICY_URL', label: '隐私政策（留空跟随 api.base_url/legal/…）'),
   Field('links.universal_link_domain', FieldKind.domain, required: true, label: 'Universal Link 域名'),
   Field('wechat.app_id', FieldKind.wechatAppId, define: 'WECHAT_APP_ID', sdkKey: true, label: '微信 AppID'),
   Field(

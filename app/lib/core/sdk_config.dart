@@ -41,6 +41,15 @@ class SdkConfig {
   /// All dart-define names, in the order of the generated `config/<p>.json`.
   static const keys = dartDefineKeys;
 
+  /// 协议页面地址：`<apiBase>/legal/<page>`（page = terms | privacy）。
+  static String legalUrl(String apiBase, String page) {
+    var b = apiBase.trim();
+    while (b.endsWith('/')) {
+      b = b.substring(0, b.length - 1);
+    }
+    return '$b/legal/$page';
+  }
+
   /// Reads the compile-time `--dart-define`s. `String.fromEnvironment` must be
   /// called with constant names, hence the explicit list.
   factory SdkConfig.fromEnvironment() => SdkConfig.fromMap(const {
@@ -57,6 +66,7 @@ class SdkConfig {
         'AMAP_STYLE_EXTRA_DATA': String.fromEnvironment('AMAP_STYLE_EXTRA_DATA'),
         'ALIYUN_CAPTCHA_PREFIX': String.fromEnvironment('ALIYUN_CAPTCHA_PREFIX'),
         'ALIYUN_CAPTCHA_SCENE_ID': String.fromEnvironment('ALIYUN_CAPTCHA_SCENE_ID'),
+        'API_BASE': String.fromEnvironment('API_BASE'),
         'USER_AGREEMENT_URL': String.fromEnvironment('USER_AGREEMENT_URL'),
         'PRIVACY_POLICY_URL': String.fromEnvironment('PRIVACY_POLICY_URL'),
         'AMAP_NAVIGATION_URL': String.fromEnvironment('AMAP_NAVIGATION_URL'),
@@ -93,8 +103,10 @@ class SdkConfig {
       amapStyleExtraData: s('AMAP_STYLE_EXTRA_DATA'),
       captchaPrefix: s('ALIYUN_CAPTCHA_PREFIX'),
       captchaSceneId: s('ALIYUN_CAPTCHA_SCENE_ID'),
-      userAgreementUrl: s('USER_AGREEMENT_URL'),
-      privacyPolicyUrl: s('PRIVACY_POLICY_URL'),
+      // 没单独配置时跟随 App 的接口地址：后端在 /legal/terms、/legal/privacy 提供协议页面
+      // （上线后可在 nginx 把 /legal/ 转给后端，或在 app.yaml 的 links 里配独立地址）。
+      userAgreementUrl: or('USER_AGREEMENT_URL', legalUrl(or('API_BASE', ConfigFallbacks.apiBase), 'terms')),
+      privacyPolicyUrl: or('PRIVACY_POLICY_URL', legalUrl(or('API_BASE', ConfigFallbacks.apiBase), 'privacy')),
       amapNavigationUrl: or('AMAP_NAVIGATION_URL', ConfigFallbacks.amapNavigationUrl),
       captchaJsUrl: or('ALIYUN_CAPTCHA_JS_URL', ConfigFallbacks.captchaJsUrl),
       captchaPageUrl: or('ALIYUN_CAPTCHA_PAGE_URL', ConfigFallbacks.captchaPageUrl),

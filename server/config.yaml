@@ -34,6 +34,14 @@ jobs:
 media:
   dir: data/media                # LOOPLAND_MEDIA_DIR：没启用对象存储 OSS 时（开发环境）上传图片存这里，相对本文件所在目录
 
+# 用户协议 / 隐私政策页面（后端 /legal/terms、/legal/privacy，App 的协议链接默认指向这里）。
+# 上线前必须填写真实的运营主体和联系方式，并请法务审阅协议正文（server/internal/legal/pages/）。
+legal:
+  company: ""            # LOOPLAND_LEGAL_COMPANY：运营主体（公司全称）；不填时页面显示「待填写」
+  email: ""              # LOOPLAND_LEGAL_EMAIL：个人信息保护联系邮箱
+  address: ""            # LOOPLAND_LEGAL_ADDRESS：注册地址 / 联系地址
+  effective_date: ""     # LOOPLAND_LEGAL_EFFECTIVE_DATE：生效日期（如 2026-12-01）；不填显示协议版本对应月份
+
 features:
   disabled: []                   # LOOPLAND_DISABLE：暂不上线的功能，见 config.prod.example.yaml
   wearable: false                # LOOPLAND_FEATURE_WEARABLE=1：穿戴设备数据（心率、步频、要求穿戴设备的赛事）。预留口子，接入自有设备后再打开，见 docs/设备接入预留.md
