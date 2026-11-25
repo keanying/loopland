@@ -33,7 +33,6 @@ enum DataTopic {
   /// Territories / map objects on the map (runs, captures, crew changes, skins).
   territory,
 
-
   /// Meetup / race lists (join, leave, signup, create, cancel).
   gathering,
 
